@@ -36,8 +36,7 @@ export default function HomeScreen() {
           <ThemedText type="defaultSemiBold">Developer</ThemedText> — has notes from the Expo
           starter; it is omitted from release builds. Product flows (map, timer, photos,
           admin review) are not built yet—see{' '}
-          <ThemedText type="defaultSemiBold">Current.md</ThemedText> in the repo for a full
-          checklist.
+          <ThemedText type="defaultSemiBold">docs/</ThemedText> in the repo for status and plans.
         </ThemedText>
       </ThemedView>
     </ParallaxScrollView>

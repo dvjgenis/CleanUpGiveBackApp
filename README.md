@@ -10,7 +10,7 @@
   for both volunteers and court-ordered participants.
 </p>
 
-<p align="center">Version 0.0.1 (product vision) · codebase is an Expo starter—see <a href="./Current.md">Current.md</a> for implementation status.</p>
+<p align="center">Version 0.0.1 (product vision) · see <a href="./docs/current.md">docs/current.md</a> for implementation status · <a href="./docs/README.md">docs index</a></p>
 
 <p align="center">
   <a href="#what-were-building">What we’re building</a> ·
@@ -27,14 +27,14 @@ The app is intended to replace manual texting and photo submissions with a struc
 
 ### Planned capabilities
 
-- **Authentication** — Sign-in for volunteers and court-ordered participants; program-fee flows as needed.
+- **Authentication** — Sign-in for volunteers and court-ordered participants after **App Store / Play Store purchase** ($49.99 upfront; see [ADR-001](./docs/adr/ADR-001-upfront-app-store-monetization.md)).
 - **Profile** — Participant identity (including ID), optional profile photo.
 - **Cleanup session** — GPS during an active session, optional live selfie check-in, timer.
 - **Activity log** — Post-cleanup photos, history of sessions (time, route, photos), PDF export.
 - **Admin** — Review/approval for court hours, lockout when requirements are met.
 - **Other** — In-app supplies, safety guidance.
 
-Details of **what is coded today** versus **not started** live in [**Current.md**](./Current.md).
+Details of **what is coded today** versus **not started** live in [**docs/current.md**](./docs/current.md). Full context-engineering index: [**docs/README.md**](./docs/README.md).
 
 ## Local development
 
@@ -99,7 +99,7 @@ npx expo run:android --variant release
 | Language | TypeScript |
 | Builds | [EAS Build](https://docs.expo.dev/build/introduction/) (`eas.json` + `app.json` `extra.eas`) |
 
-Backend, auth, and maps are **not wired up yet**; see [Current.md](./Current.md).
+Backend, auth, and maps are **not wired up yet**; see [docs/current.md](./docs/current.md).
 
 ## FAQ
 
@@ -117,7 +117,11 @@ The product intent is to track location **only during an active cleanup session*
 
 ### Is Firebase used in the repo today?
 
-Not yet. The longer-term plan may include **Google Firebase** (or another backend); that will be documented in **Current.md** when it lands.
+Not yet. **Google Firebase** (Auth, Firestore, Storage) is the planned backend for Phase 1; see [docs/specs/001-core-auth-profiles.md](./docs/specs/001-core-auth-profiles.md) and `.env.example`.
+
+### How is the app paid for?
+
+**$49.99 upfront** on the Apple App Store and Google Play Store. There is no in-app Stripe checkout (see [ADR-001](./docs/adr/ADR-001-upfront-app-store-monetization.md)).
 
 ### iOS and Android?
 

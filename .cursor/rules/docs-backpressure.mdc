@@ -1,0 +1,48 @@
+---
+description: Mandatory living-doc updates after code or product changes
+alwaysApply: true
+---
+
+# Documentation backpressure
+
+A task is **not complete** until living docs under `docs/` match the change. Templates are copy-only.
+
+**Templates:** `docs/context/TEMPLATE.md`, `docs/adr/template.md`, `docs/specs/TEMPLATE.md`
+
+**Index:** [docs/README.md](../docs/README.md). Root keeps only `README.md` + `.cursor/rules/`.
+
+## After every code or behavior change
+
+| Change type | Update |
+|-------------|--------|
+| Edits under `app/` | [docs/context/app.md](../docs/context/app.md) |
+| Edits under `assets/` (brand kit or app media) | [docs/context/assets.md](../docs/context/assets.md) |
+| Edits under `components/` | `docs/context/components.md` (create from template if missing) |
+| Edits under `hooks/` or `constants/` | `docs/context/<scope>.md` if that scope file exists |
+| New domain term or role | [docs/context/project.md](../docs/context/project.md) → Ontology |
+| Local design choice | relevant `docs/context/*.md` → Decisions |
+| Code pattern change | relevant `docs/context/*.md` → Patterns |
+| New hard rule | relevant `docs/context/*.md` → Policies |
+| Shipped feature with spec | matching `docs/specs/*.md` — check ACs |
+| Architecture decision | `docs/adr/ADR-NNN-*.md` + [overview.md](../docs/adr/overview.md) |
+| Completed planned work | [implementation-plan.md](../docs/implementation-plan.md) |
+| End of session | [progress.md](../docs/progress.md) |
+| User-visible capability changed | [current.md](../docs/current.md) |
+| Brand, UI tokens, or copy tone | [brand.md](../docs/brand.md) |
+| Org account access (no secrets in repo) | [accounts-and-access.md](../docs/accounts-and-access.md) |
+| Agent commands or repo layout | [agents.md](../docs/agents.md) |
+| Product vision or setup | root `README.md` only |
+
+## Verification before “done”
+
+```bash
+npx tsc --noEmit
+npm run lint    # when relevant
+npm test        # when relevant
+```
+
+## When unsure
+
+- Spec exists? Check off ACs in `docs/specs/` before claiming done.
+- Architectural? ADR + link from [project.md](../docs/context/project.md).
+- What runs today changed? Update [current.md](../docs/current.md).

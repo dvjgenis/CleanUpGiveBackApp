@@ -1,3 +1,9 @@
 ---
 alwaysApply: true
 ---
+
+# Agent workflow
+
+1. **Spec-first:** Read or add specs in `docs/specs/` before feature work.
+2. **Verify:** `npx tsc --noEmit` before marking done; Expo Go or EAS dev build for native checks.
+3. **Sync docs:** Follow `.cursor/rules/docs-backpressure.mdc` — update files under `docs/` as appropriate.
