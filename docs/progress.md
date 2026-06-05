@@ -7,7 +7,8 @@
 | 1 | 2026-05-19 | Repo flatten, branded Home, docs-backpressure rule + hook | Done |
 | 2 | 2026-05-19 | Context-engineering readiness (specs, ADR, `.env.example`) | Done |
 | 3 | 2026-05-19 | Consolidate all context docs under `docs/` | Done |
-| 4 | TBD | Phase 1 — Firebase Auth + profile schema + signup UI | Planned |
+| 4 | 2026-06-04 | MCP usage rules in `.cursor/` + `docs/agents.md` | Done |
+| 5 | TBD | Phase 1 — Firebase Auth + profile schema + signup UI | Planned |
 
 ## Open items
 
