@@ -1,136 +1,62 @@
-<h1 align="center">Clean-Up Give-Back</h1>
+# CleanUpGiveBack Mobile App
 
-<p align="center">
-  <img src="https://github.com/user-attachments/assets/e4cc36b4-f5d8-4ace-b828-5da0dec79107" alt="Clean-Up Give-Back logo" width="180" />
-</p>
+Welcome to the CleanUpGiveBack Mobile App repository! This app is built using React Native and [Expo](https://expo.dev/).
 
-<p align="center">
-  Mobile app for <strong>Clean Up - Give Back</strong>, an environmental nonprofit in Des Plaines, IL.
-  The goal is to automate tracking of community service hours with location and activity verification,
-  for both volunteers and court-ordered participants.
-</p>
+## 📱 Running the App with Expo Go
 
-<p align="center">Version 0.0.1 (product vision) · see <a href="./docs/current.md">docs/current.md</a> for implementation status · <a href="./docs/README.md">docs index</a></p>
+Expo Go is the easiest way to run and test the app directly on your physical iOS or Android device. It allows you to see live updates to the app as you code.
 
-<p align="center">
-  <a href="#what-were-building">What we’re building</a> ·
-  <a href="#local-development">Local development</a> ·
-  <a href="#tech-stack">Tech stack</a> ·
-  <a href="#faq">FAQ</a>
-</p>
+### Prerequisites
 
----
+Before you begin, ensure you have the following installed on your computer:
+- [Node.js](https://nodejs.org/en/) (LTS version recommended)
+- `npm` (comes with Node.js) or `yarn`
 
-## What we’re building
+### Step 1: Install the Expo Go App on Your Phone
+Download the **Expo Go** app from your device's app store:
+- **iOS**: [Download on the App Store](https://apps.apple.com/us/app/expo-go/id982107779)
+- **Android**: [Download on Google Play](https://play.google.com/store/apps/details?id=host.exp.exponent)
 
-The app is intended to replace manual texting and photo submissions with a structured flow: verify who is on site, record time and route, capture cleanup evidence, and produce exports suitable for schools, employers, or courts.
-
-### Planned capabilities
-
-- **Authentication** — Sign-in for volunteers and court-ordered participants after **App Store / Play Store purchase** ($49.99 upfront; see [ADR-001](./docs/adr/ADR-001-upfront-app-store-monetization.md)).
-- **Profile** — Participant identity (including ID), optional profile photo.
-- **Cleanup session** — GPS during an active session, optional live selfie check-in, timer.
-- **Activity log** — Post-cleanup photos, history of sessions (time, route, photos), PDF export.
-- **Admin** — Review/approval for court hours, lockout when requirements are met.
-- **Other** — In-app supplies, safety guidance.
-
-Details of **what is coded today** versus **not started** live in [**docs/current.md**](./docs/current.md). Full context-engineering index: [**docs/README.md**](./docs/README.md).
-
-## Local development
-
-The app lives at the **repository root** (same folder as this `README.md`).
-
-1. **Clone**
-
-   ```bash
-   git clone <repository-url>
-   cd CleanUpGiveBackApp
-   ```
-
-2. **Install dependencies**
-
-   ```bash
-   npm install
-   ```
-
-3. **Run Expo**
-
-   ```bash
-   npx expo start
-   ```
-
-   Then open the iOS simulator, Android emulator, web preview, or scan the QR code with [Expo Go](https://expo.dev/go). For full native modules later, follow [Expo’s environment setup](https://docs.expo.dev/get-started/set-up-your-environment/) (this repo includes `expo-dev-client` and EAS build profiles).
-
-### Home and Developer tabs
-
-- **Home** is always shown: product branding and status copy.
-- **Developer** is the leftover Expo Router template screen (`app/(tabs)/explore.tsx`). It appears in the tab bar only while **`__DEV__` is true** (typical `npx expo start` workflow). In **release** builds it is hidden (`href: null`), and opening that route directly redirects to Home.
-
-### Verifying the production tab bar
-
-Locally you still see both tabs because development runs with `__DEV__ === true`. To confirm **Home-only** behavior, run a **release** native build (or install an EAS **production** / **preview** build), for example:
+### Step 2: Install Project Dependencies
+On your computer, open a terminal, navigate to this project folder (`nonprofit-mobile-app`), and install the required packages:
 
 ```bash
-npx expo run:ios --configuration Release
-# or
-npx expo run:android --variant release
+npm install
 ```
 
-(You may need a [development or release setup](https://docs.expo.dev/workflow/overview/) appropriate to your machine; EAS Build is the usual path for CI and store-like binaries.)
+### Step 3: Start the Development Server
+Run the following command to start the Expo Metro bundler:
 
-### Useful scripts
+```bash
+npx expo start
+```
+This will start a local development server and display a large QR code in your terminal.
 
-| Command | Purpose |
-|--------|--------|
-| `npm start` | Start Metro / Expo dev server (`expo start`) |
-| `npm run ios` | Start and target iOS |
-| `npm run android` | Start and target Android |
-| `npm run web` | Web build preview |
-| `npm test` | Jest (with watch) |
-| `npm run lint` | Expo lint |
-| `npm run reset-project` | Moves current `app` to `app-example` for a blank slate (Expo template helper) |
+### Step 4: Connect Your Device
+1. Make sure your phone and your computer are connected to the **same Wi-Fi network**.
+2. Open the app to scan the QR code:
+   - **On iOS**: Open the built-in **Camera** app and point it at the QR code in the terminal. Tap the prompt that appears at the top to open it in Expo Go.
+   - **On Android**: Open the **Expo Go** app and tap "Scan QR Code" from the Home tab.
 
-## Tech stack
+The app will now bundle its JavaScript and load on your phone. You will see a loading percentage in your terminal and on your device. Once it reaches 100%, the app will launch!
 
-| Layer | Choice |
-|--------|--------|
-| Framework | [Expo](https://expo.dev) SDK 51, [React Native](https://reactnative.dev) 0.74 |
-| Navigation | [Expo Router](https://docs.expo.dev/router/introduction/) (file-based routes) |
-| Language | TypeScript |
-| Builds | [EAS Build](https://docs.expo.dev/build/introduction/) (`eas.json` + `app.json` `extra.eas`) |
+### 💡 Tips & Troubleshooting
+- **Live Reloading**: If you modify any code in your editor and save it, the app will instantly update on your phone!
+- **Developer Menu**: Shake your device to open the Expo Developer Menu. From here, you can reload the app, enable performance monitors, or view network requests.
+- **Connection Issues**: If Expo Go gets stuck loading or cannot connect:
+  - Verify your computer and phone are on the *exact same network*.
+  - Try disabling any active VPNs on either device.
+  - Press `c` in the terminal to clear the Metro cache and restart the server (`npx expo start -c`).
+  - Press `s` in the terminal to switch to a different connection type (e.g., from `LAN` to `Tunnel`). A tunnel routes the connection through Expo's servers, which helps bypass tricky local network firewalls.
 
-Backend, auth, and maps are **not wired up yet**; see [docs/current.md](./docs/current.md).
+## 🛠️ Project Structure
+This app is built using [Expo Router](https://docs.expo.dev/router/introduction/) for file-based routing. The main screens and components can be found inside the `src/app` and `src/components` directories.
 
-## FAQ
+- `src/app/` - The entry point and main navigational screens.
+- `src/app/prototype/` - Prototype screen implementations and standardizations.
+- `assets/` - Static assets like images, fonts, and HTML Stitch outputs.
 
-### What problem does this solve?
-
-Clean Up - Give Back today relies heavily on manual hour reporting. The app is meant to reduce admin work, cut errors, and improve verifiability of service.
-
-### Who is it for?
-
-Court-ordered participants and volunteers using the same core flows, with different policy rules (e.g. approvals) where needed.
-
-### Will location run in the background forever?
-
-The product intent is to track location **only during an active cleanup session**, not continuously.
-
-### Is Firebase used in the repo today?
-
-Not yet. **Google Firebase** (Auth, Firestore, Storage) is the planned backend for Phase 1; see [docs/specs/001-core-auth-profiles.md](./docs/specs/001-core-auth-profiles.md) and `.env.example`.
-
-### How is the app paid for?
-
-**$49.99 upfront** on the Apple App Store and Google Play Store. There is no in-app Stripe checkout (see [ADR-001](./docs/adr/ADR-001-upfront-app-store-monetization.md)).
-
-### iOS and Android?
-
-Yes—the Expo project targets both; web is also available for quick UI checks.
-
-### Why do I see a “Developer” tab when I use Expo Go or Metro?
-
-That tab is intentionally available in **development** so contributors can still read the Expo starter notes. It is **not** part of the tab bar in **release** builds. See [Home and Developer tabs](#home-and-developer-tabs) above.
-
-## License
-
-See [LICENSE](./LICENSE).
+## 💻 Running on Emulators (Optional)
+If you prefer developing on your computer instead of a physical phone, you can run the app on simulators:
+- Press `i` in the terminal to open the iOS Simulator (requires macOS and Xcode).
+- Press `a` in the terminal to open an Android Emulator (requires Android Studio).
