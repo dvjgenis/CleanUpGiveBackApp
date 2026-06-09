@@ -1,0 +1,32 @@
+- generic [ref=e2]:
+  - generic [ref=e9]:
+    - generic [ref=e21]:
+      - generic [ref=e22]:
+        - generic [ref=e23]: Clean-Up Give-Back
+        - generic [ref=e24]: Version 0.0.1
+      - generic [ref=e25]:
+        - generic [ref=e26]: Service tracking, simplified
+        - generic [ref=e27]: This app is for volunteers and court-ordered participants cleaning up with Clean Up - Give Back in Des Plaines, IL. Upcoming releases will add sign-in, verified sessions, and hour logs you can share with school, work, or court.
+      - generic [ref=e28]:
+        - generic [ref=e29]: Where things stand
+        - generic [ref=e30]: You’re viewing the early shell. In development, a second tab — Developer — has notes from the Expo starter; it is omitted from release builds. Product flows (map, timer, photos, admin review) are not built yet—see Current.md in the repo for a full checklist.
+    - tablist [ref=e32]:
+      - link "  Home" [ref=e33] [cursor=pointer]:
+        - /url: /
+        - generic:
+          - generic [ref=e35]: 
+          - generic [ref=e37]: 
+        - generic [ref=e38]: Home
+      - link "  Developer" [ref=e39] [cursor=pointer]:
+        - /url: /explore
+        - generic:
+          - generic [ref=e41]: 
+          - generic [ref=e43]: 
+        - generic [ref=e44]: Developer
+  - generic:
+    - generic:
+      - generic:
+        - generic:
+          - generic: Refreshing...
+        - generic:
+          - generic: Don't see your changes? Reload the app

@@ -106,7 +106,7 @@
 <!-- Overlay Backdrop -->
 <div class="absolute inset-0 bg-on-background/40 backdrop-blur-sm z-10 flex flex-col justify-end md:justify-center items-center pb-8 md:pb-0 px-margin-side">
 <!-- Bottom Sheet / Modal -->
-<div class="bg-surface w-full max-w-md rounded-t-xl md:rounded-xl shadow-xl overflow-hidden flex flex-col transform transition-transform duration-300 ease-out translate-y-0 relative z-20 border border-outline-variant">
+<div id="bottom-sheet" class="bg-surface w-full max-w-md rounded-t-xl md:rounded-xl shadow-xl overflow-hidden flex flex-col transform transition-transform duration-300 ease-out translate-y-0 relative z-20 border border-outline-variant">
 <!-- Handle (Mobile) -->
 <div class="w-full flex justify-center pt-4 pb-2 md:hidden">
 <div class="w-12 h-1.5 bg-outline-variant rounded-full"></div>
@@ -144,6 +144,39 @@
 </div>
 </div>
 </div>
+<a id="nav-back" href="live_session___refined_map_tracker.html" style="display:none"></a>
+<script>
+  const sheet = document.getElementById('bottom-sheet');
+  let startY = 0;
+  let currentY = 0;
+  let isDragging = false;
 
+  sheet.addEventListener('touchstart', (e) => {
+    startY = e.touches[0].clientY;
+    isDragging = true;
+    sheet.style.transition = 'none';
+  });
 
+  sheet.addEventListener('touchmove', (e) => {
+    if (!isDragging) return;
+    const y = e.touches[0].clientY;
+    currentY = Math.max(0, y - startY);
+    sheet.style.transform = `translateY(${currentY}px)`;
+    if(currentY > 0) e.preventDefault();
+  }, { passive: false });
+
+  sheet.addEventListener('touchend', (e) => {
+    isDragging = false;
+    sheet.style.transition = 'transform 0.3s ease-out';
+    if (currentY > 100) {
+      sheet.style.transform = `translateY(100vh)`;
+      setTimeout(() => {
+        document.getElementById('nav-back').click();
+      }, 300);
+    } else {
+      sheet.style.transform = 'translateY(0)';
+      currentY = 0;
+    }
+  });
+</script>
 </body></html>
