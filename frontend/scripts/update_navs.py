@@ -1,14 +1,18 @@
 import re
 import os
+from pathlib import Path
+
+FRONTEND_ROOT = Path(__file__).resolve().parent.parent
+STITCH = FRONTEND_ROOT / "assets" / "stitch"
 
 target_files = [
-    'assets/stitch/shop_home___prd___reference_aligned.html',
-    'assets/stitch/sessions_list_view___standardized_refined.html',
-    'assets/stitch/sessions_calendar_view___with_toggle.html',
-    'assets/stitch/account.html'
+    STITCH / "shop_home___prd___reference_aligned.html",
+    STITCH / "sessions_list_view___standardized_refined.html",
+    STITCH / "sessions_calendar_view___with_toggle.html",
+    STITCH / "account.html",
 ]
 
-with open('assets/stitch/home_dashboard___final_branding.html', 'r') as f:
+with open(STITCH / "home_dashboard___final_branding.html", "r") as f:
     home_content = f.read()
 
 # Extract the bottom nav from home dashboard
@@ -21,7 +25,7 @@ nav_html = nav_match.group(0)
 
 # Replace in target files
 for file_path in target_files:
-    if not os.path.exists(file_path):
+    if not file_path.exists():
         print(f"File not found: {file_path}")
         continue
     

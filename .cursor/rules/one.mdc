@@ -3,7 +3,8 @@ alwaysApply: true
 ---
 
 # Project Identity: Clean Up - Give Back
-- Stack: Expo SDK 51, React Native 0.74, TypeScript, Expo Router.
-- Path aliases: `@/*` → repo root.
+- Stack: Expo SDK 54, React Native 0.81, TypeScript, Expo Router.
+- Monorepo: `frontend/` (app), `backend/` (services), `docs/` (living docs).
+- Path aliases: `@/*` → `frontend/src/*`, `@/assets/*` → `frontend/assets/*`.
 - Context docs: `docs/` — start at [docs/README.md](../../docs/README.md)
-- Builds: EAS (development, preview, production). Location/camera need `app.json` plugins when implemented.
+- Builds: EAS (development, preview, production). Location/camera need `frontend/app.json` plugins when implemented.

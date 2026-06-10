@@ -1,62 +1,54 @@
-# CleanUpGiveBack Mobile App
+# Clean Up - Give Back
 
-Welcome to the CleanUpGiveBack Mobile App repository! This app is built using React Native and [Expo](https://expo.dev/).
+Monorepo for the Clean Up - Give Back mobile app and supporting services.
 
-## 📱 Running the App with Expo Go
+## Repository layout
 
-Expo Go is the easiest way to run and test the app directly on your physical iOS or Android device. It allows you to see live updates to the app as you code.
+| Path | Purpose |
+|------|---------|
+| [`frontend/`](frontend/) | Expo React Native app, UI prototype, design assets, and tooling |
+| [`backend/`](backend/) | Backend services (maps, payments, session tracking) — planned |
+| [`docs/`](docs/) | Living documentation, specs, ADRs, and agent context |
+| [`.cursor/`](.cursor/) | Cursor IDE rules and hooks (stays at repo root) |
 
-### Prerequisites
+## Quick start
 
-Before you begin, ensure you have the following installed on your computer:
-- [Node.js](https://nodejs.org/en/) (LTS version recommended)
-- `npm` (comes with Node.js) or `yarn`
-
-### Step 1: Install the Expo Go App on Your Phone
-Download the **Expo Go** app from your device's app store:
-- **iOS**: [Download on the App Store](https://apps.apple.com/us/app/expo-go/id982107779)
-- **Android**: [Download on Google Play](https://play.google.com/store/apps/details?id=host.exp.exponent)
-
-### Step 2: Install Project Dependencies
-On your computer, open a terminal, navigate to this project folder (`nonprofit-mobile-app`), and install the required packages:
+From the repo root:
 
 ```bash
-npm install
+npm install --prefix frontend
+npm start
 ```
 
-### Step 3: Start the Development Server
-Run the following command to start the Expo Metro bundler:
+Or work directly inside `frontend/`:
 
 ```bash
+cd frontend
+npm install
 npx expo start
 ```
-This will start a local development server and display a large QR code in your terminal.
 
-### Step 4: Connect Your Device
-1. Make sure your phone and your computer are connected to the **same Wi-Fi network**.
-2. Open the app to scan the QR code:
-   - **On iOS**: Open the built-in **Camera** app and point it at the QR code in the terminal. Tap the prompt that appears at the top to open it in Expo Go.
-   - **On Android**: Open the **Expo Go** app and tap "Scan QR Code" from the Home tab.
+Scan the QR code with **Expo Go** on a device on the same Wi-Fi network, or press `i` / `a` for simulators.
 
-The app will now bundle its JavaScript and load on your phone. You will see a loading percentage in your terminal and on your device. Once it reaches 100%, the app will launch!
+**Physical device won't connect?** If Expo shows `exp://127.0.0.1:8081`, your phone is trying to reach itself — not your Mac. Stop the server and restart with LAN mode (default after this fix), or use tunnel mode if you're on a restrictive network:
 
-### 💡 Tips & Troubleshooting
-- **Live Reloading**: If you modify any code in your editor and save it, the app will instantly update on your phone!
-- **Developer Menu**: Shake your device to open the Expo Developer Menu. From here, you can reload the app, enable performance monitors, or view network requests.
-- **Connection Issues**: If Expo Go gets stuck loading or cannot connect:
-  - Verify your computer and phone are on the *exact same network*.
-  - Try disabling any active VPNs on either device.
-  - Press `c` in the terminal to clear the Metro cache and restart the server (`npx expo start -c`).
-  - Press `s` in the terminal to switch to a different connection type (e.g., from `LAN` to `Tunnel`). A tunnel routes the connection through Expo's servers, which helps bypass tricky local network firewalls.
+```bash
+npm start              # uses --lan (your Mac's IP, e.g. exp://192.168.x.x:8081)
+npm run start:tunnel   # routes through Expo's servers if LAN fails
+```
 
-## 🛠️ Project Structure
-This app is built using [Expo Router](https://docs.expo.dev/router/introduction/) for file-based routing. The main screens and components can be found inside the `src/app` and `src/components` directories.
+## Frontend structure
 
-- `src/app/` - The entry point and main navigational screens.
-- `src/app/prototype/` - Prototype screen implementations and standardizations.
-- `assets/` - Static assets like images, fonts, and HTML Stitch outputs.
+- `frontend/src/app/` — Expo Router screens and navigation
+- `frontend/src/components/` — shared UI components
+- `frontend/assets/` — images, fonts, and bundled Stitch HTML screens
+- `frontend/design/` — design tokens, Stitch exports, and HTML prototypes
+- `frontend/prototype/` — TypeScript prototype screens (optional `EXPO_PROTOTYPE=1` mode)
 
-## 💻 Running on Emulators (Optional)
-If you prefer developing on your computer instead of a physical phone, you can run the app on simulators:
-- Press `i` in the terminal to open the iOS Simulator (requires macOS and Xcode).
-- Press `a` in the terminal to open an Android Emulator (requires Android Studio).
+## Documentation
+
+Start at [docs/README.md](docs/README.md). Agent instructions live in [docs/agents/](docs/agents/).
+
+## License
+
+See [LICENSE](LICENSE).
