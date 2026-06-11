@@ -103,13 +103,6 @@
 <body class="bg-background text-on-background h-screen flex flex-col font-body antialiased selection:bg-primary-container selection:text-on-primary-container">
 <!-- TopAppBar -->
 <header class="docked full-width top-0 bg-surface dark:bg-on-background text-primary dark:text-primary-fixed flex justify-between items-center w-full px-6 py-4 flat no shadows z-40">
-<div class="flex items-center gap-3">
-<span class="material-symbols-outlined text-headline-sm">account_circle</span>
-<h1 class="text-headline-md font-headline font-bold text-primary dark:text-primary-fixed">Activity</h1>
-</div>
-<button class="hover:text-primary dark:hover:text-primary-fixed opacity-80 transition-opacity p-2 -mr-2 rounded-full focus:outline-none focus:ring-2 focus:ring-primary">
-<span class="material-symbols-outlined">sensors</span>
-</button>
 </header>
 <!-- Main Scrollable Canvas -->
 <main class="flex-1 overflow-y-auto px-6 py-6 pb-28 space-y-8">
@@ -152,7 +145,7 @@
 <h3 class="text-headline-sm font-headline text-on-background">Records</h3>
 </div>
 <ul class="space-y-1 flex-1">
-<li class="">
+<li class="hidden">
 <button class="w-full flex justify-between items-center px-3 py-3 rounded-md hover:bg-surface-container-low transition-colors text-left focus:outline-none focus:ring-2 focus:ring-primary/50">
 <span class="font-body text-body-md text-on-background">Export Service Record</span>
 <span class="material-symbols-outlined text-on-surface-variant text-[20px]">download</span>
@@ -167,7 +160,7 @@
 </ul>
 </div>
 <!-- Shop Card -->
-<div class="bg-surface-container-lowest border border-outline-variant rounded-lg p-5 flex flex-col">
+<div class="hidden bg-surface-container-lowest border border-outline-variant rounded-lg p-5 flex flex-col">
 <div class="flex items-center gap-2 mb-4">
 <span class="material-symbols-outlined text-primary text-[20px]">shopping_bag</span>
 <h3 class="text-headline-sm font-headline text-on-background">Shop</h3>

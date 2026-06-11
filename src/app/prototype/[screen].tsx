@@ -30,6 +30,7 @@ const HTML_MAP: Record<string, any> = {
   'home_dashboard___final_branding': require('../../../assets/stitch/home_dashboard___final_branding.html'),
   'shop_home___prd___reference_aligned': require('../../../assets/stitch/shop_home___prd___reference_aligned.html'),
   'live_session___refined_map_tracker': require('../../../assets/stitch/live_session___refined_map_tracker.html'),
+  'sessions_list___hybrid_redesign': require('../../../assets/stitch/sessions_list___hybrid_redesign.html'),
   'sessions_list_view___standardized_refined': require('../../../assets/stitch/sessions_list_view___standardized_refined.html'),
   'account': require('../../../assets/stitch/account.html'),
   'order_history': require('../../../assets/stitch/order_history.html'),
@@ -83,7 +84,7 @@ const NAV_RULES: [string, string, string][] = [
   ['Donation History',   'button',    'donation_history'],
   ['Notifications',      'button',    'notification_settings___refined_toggles'],
   ['Calendar',           'button,a',  'sessions_calendar_view___with_toggle'],
-  ['List',               'button,a',  'sessions_list_view___standardized_refined'],
+  ['List',               'button,a',  'sessions_list___hybrid_redesign'],
 ];
 
 const SCREEN_RULES: Record<string, [string, string, string][]> = {
@@ -136,11 +137,11 @@ const ICON_NAV: Record<string, string> = {
   'shopping_bag': 'shop_home___prd___reference_aligned',
   'shopping_cart': 'shopping_cart__no_tote_bag_',
   'add': 'session_setup___prd_aligned_standardized',
-  'history': 'sessions_list_view___standardized_refined',
+  'history': 'sessions_list___hybrid_redesign',
   'person': 'account',
   'add_circle': 'session_setup___prd_aligned_standardized',
-  'map': 'sessions_list_view___standardized_refined',
-  'event_note': 'sessions_list_view___standardized_refined',
+  'map': 'sessions_list___hybrid_redesign',
+  'event_note': 'sessions_list___hybrid_redesign',
   'arrow_back': '__back__',
   'close': '__back__',
 };

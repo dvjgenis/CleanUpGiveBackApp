@@ -16,7 +16,6 @@ import {
 import { Screen } from '../../App';
 import { Colors } from '../../constants/Colors';
 import { Typography, Spacing, Radius } from '../../constants/Typography';
-import { StatusTag } from '../../components/ui/StatusTag';
 import { ScreenHeader } from '../../components/ui/ScreenHeader';
 import type { StatusType } from '../../components/ui/StatusTag';
 
@@ -25,14 +24,13 @@ interface Props {
 }
 
 type FilterOption = 'All' | 'Approved' | 'Under Review' | 'Not Approved';
-type ViewMode = 'list' | 'cal';
 
 interface SessionCard {
   id: string;
   title: string;
   status: StatusType;
-  date: string;
-  duration: string;
+  date: string;      // "Jun 3 · 9:30–11:00 AM"
+  duration: string;  // "1.5 hrs · River Cleanup"
   group: 'This Week' | 'Last Week';
 }
 
@@ -65,28 +63,50 @@ const SESSIONS: SessionCard[] = [
 
 const FILTERS: FilterOption[] = ['All', 'Approved', 'Under Review', 'Not Approved'];
 
+const STATUS_MAP: Record<FilterOption, StatusType | null> = {
+  'All': null,
+  'Approved': 'approved',
+  'Under Review': 'under-review',
+  'Not Approved': 'not-approved',
+};
+
+const STATUS_DOT_COLOR: Record<string, string> = {
+  'approved': Colors.approved,
+  'under-review': Colors.underReview,
+  'not-approved': Colors.notApproved,
+  'photo-due': Colors.accent,
+  'restart-required': Colors.error,
+  'gps-active': Colors.primary,
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  'approved': 'Approved',
+  'under-review': 'Under Review',
+  'not-approved': 'Not Approved',
+  'photo-due': 'Photo Due',
+  'restart-required': 'Restart Required',
+  'gps-active': 'GPS Active',
+};
+
+function parseDateParts(dateStr: string): { month: string; day: string; time: string } {
+  const [datePart, timePart = ''] = dateStr.split(' · ');
+  const [month = '', day = ''] = datePart.trim().split(' ');
+  return { month: month.toUpperCase(), day, time: timePart };
+}
+
 export function SessionsList({ go }: Props) {
   const [activeFilter, setActiveFilter] = useState<FilterOption>('All');
-  const [view, setView] = useState<ViewMode>('list');
   const [searchQuery, setSearchQuery] = useState('');
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  function handleViewToggle(v: ViewMode) {
-    setView(v);
-    if (v === 'cal') {
-      go('sessions-calendar');
-    }
+  function handleRowToggle(id: string) {
+    setExpandedId((prev) => (prev === id ? null : id));
   }
-
-  const STATUS_MAP: Record<FilterOption, StatusType | null> = {
-    'All': null,
-    'Approved': 'approved',
-    'Under Review': 'under-review',
-    'Not Approved': 'not-approved',
-  };
 
   const filtered = SESSIONS.filter((s) => {
     const matchesFilter = activeFilter === 'All' || s.status === STATUS_MAP[activeFilter];
-    const matchesSearch = searchQuery.trim() === '' ||
+    const matchesSearch =
+      searchQuery.trim() === '' ||
       s.title.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesFilter && matchesSearch;
   });
@@ -102,7 +122,7 @@ export function SessionsList({ go }: Props) {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Subheadline */}
+        {/* Hours summary */}
         <View style={styles.header}>
           <Text style={styles.subheadline}>
             <Text style={styles.hoursNumber}>42.5</Text>
@@ -123,67 +143,36 @@ export function SessionsList({ go }: Props) {
           />
         </View>
 
-        {/* Filter chips + view toggle row */}
-        <View style={styles.filterRow}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.chipsContainer}
-            style={styles.chipsScroll}
-          >
-            {FILTERS.map((filter) => {
-              const isActive = activeFilter === filter;
-              return (
-                <TouchableOpacity
-                  key={filter}
-                  onPress={() => setActiveFilter(filter)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Filter by ${filter}`}
-                  accessibilityState={{ selected: isActive }}
-                  style={[
-                    styles.chip,
-                    isActive ? styles.chipActive : styles.chipInactive,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.chipText,
-                      isActive ? styles.chipTextActive : styles.chipTextInactive,
-                    ]}
-                  >
-                    {filter}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-
-          {/* List / Cal toggle */}
-          <View style={styles.viewToggle}>
-            {(['list', 'cal'] as ViewMode[]).map((v) => (
+        {/* Filter chips */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.chipsContainer}
+          style={styles.chipsScroll}
+        >
+          {FILTERS.map((filter) => {
+            const isActive = activeFilter === filter;
+            return (
               <TouchableOpacity
-                key={v}
-                onPress={() => handleViewToggle(v)}
+                key={filter}
+                onPress={() => setActiveFilter(filter)}
                 accessibilityRole="button"
-                accessibilityLabel={v === 'list' ? 'List view' : 'Calendar view'}
-                accessibilityState={{ selected: view === v }}
-                style={[
-                  styles.toggleBtn,
-                  view === v && styles.toggleBtnActive,
-                ]}
+                accessibilityLabel={`Filter by ${filter}`}
+                accessibilityState={{ selected: isActive }}
+                style={[styles.chip, isActive ? styles.chipActive : styles.chipInactive]}
               >
                 <Text
                   style={[
-                    styles.toggleText,
-                    view === v ? styles.toggleTextActive : styles.toggleTextInactive,
+                    styles.chipText,
+                    isActive ? styles.chipTextActive : styles.chipTextInactive,
                   ]}
                 >
-                  {v === 'list' ? 'List' : 'Cal'}
+                  {filter}
                 </Text>
               </TouchableOpacity>
-            ))}
-          </View>
-        </View>
+            );
+          })}
+        </ScrollView>
 
         {filtered.length === 0 && (
           <Text style={styles.emptyText}>No sessions match your filter.</Text>
@@ -191,30 +180,36 @@ export function SessionsList({ go }: Props) {
 
         {/* This Week group */}
         {thisWeek.length > 0 && (
-          <>
+          <View style={styles.group}>
             <Text style={styles.groupLabel}>THIS WEEK</Text>
+            <View style={styles.groupDivider} />
             {thisWeek.map((session) => (
-              <SessionCardItem
+              <SessionRow
                 key={session.id}
                 session={session}
-                onPress={() => go('session-detail')}
+                expanded={expandedId === session.id}
+                onToggle={() => handleRowToggle(session.id)}
+                onNavigate={() => go('session-detail')}
               />
             ))}
-          </>
+          </View>
         )}
 
         {/* Last Week group */}
         {lastWeek.length > 0 && (
-          <>
-            <Text style={[styles.groupLabel, styles.groupLabelSpacing]}>LAST WEEK</Text>
+          <View style={styles.group}>
+            <Text style={styles.groupLabel}>LAST WEEK</Text>
+            <View style={styles.groupDivider} />
             {lastWeek.map((session) => (
-              <SessionCardItem
+              <SessionRow
                 key={session.id}
                 session={session}
-                onPress={() => go('session-detail')}
+                expanded={expandedId === session.id}
+                onToggle={() => handleRowToggle(session.id)}
+                onNavigate={() => go('session-detail')}
               />
             ))}
-          </>
+          </View>
         )}
 
         <View style={styles.bottomPad} />
@@ -223,35 +218,75 @@ export function SessionsList({ go }: Props) {
   );
 }
 
-interface SessionCardItemProps {
+interface SessionRowProps {
   session: SessionCard;
-  onPress: () => void;
+  expanded: boolean;
+  onToggle: () => void;
+  onNavigate: () => void;
 }
 
-function SessionCardItem({ session, onPress }: SessionCardItemProps) {
-  return (
-    <TouchableOpacity
-      style={styles.card}
-      onPress={onPress}
-      activeOpacity={0.85}
-      accessibilityRole="button"
-      accessibilityLabel={`${session.title} session, ${session.status}, ${session.date}`}
-    >
-      {/* Map placeholder */}
-      <View style={styles.mapPlaceholder} />
+function SessionRow({ session, expanded, onToggle, onNavigate }: SessionRowProps) {
+  const { month, day, time } = parseDateParts(session.date);
+  const dotColor = STATUS_DOT_COLOR[session.status] ?? Colors.textSecondary;
+  const statusLabel = STATUS_LABEL[session.status] ?? session.status;
 
-      {/* Content */}
-      <View style={styles.cardContent}>
-        <View style={styles.cardTitleRow}>
-          <Text style={styles.cardTitle}>{session.title}</Text>
-          <StatusTag status={session.status} />
+  return (
+    <View style={styles.row}>
+      {/* Collapsed header — always visible, tap to expand/collapse */}
+      <TouchableOpacity
+        style={styles.rowHeader}
+        onPress={onToggle}
+        activeOpacity={0.85}
+        accessibilityRole="button"
+        accessibilityLabel={`${session.title}, ${statusLabel}, ${session.date}. ${expanded ? 'Collapse' : 'Expand'}`}
+        accessibilityState={{ expanded }}
+      >
+        {/* Date column */}
+        <View style={styles.dateCol}>
+          <Text style={styles.dateMonth}>{month}</Text>
+          <Text style={styles.dateDay}>{day}</Text>
+          <View style={[styles.statusDot, { backgroundColor: dotColor }]} />
         </View>
-        <Text style={styles.cardDate}>{session.date}</Text>
-        <Text style={styles.cardDuration}>{session.duration}</Text>
-      </View>
-    </TouchableOpacity>
+
+        {/* Vertical separator */}
+        <View style={styles.colDivider} />
+
+        {/* Location + time */}
+        <View style={styles.rowContent}>
+          <Text style={styles.rowTitle} numberOfLines={1}>{session.title}</Text>
+          <Text style={styles.rowTime}>{time}</Text>
+        </View>
+
+        {/* Expand/collapse chevron */}
+        <Text style={[styles.chevron, expanded && styles.chevronExpanded]}>
+          {expanded ? '⌃' : '›'}
+        </Text>
+      </TouchableOpacity>
+
+      {/* Expanded detail — inline, no navigation */}
+      {expanded && (
+        <View style={styles.expandedArea}>
+          {/* Spacer aligns content with the row's text column */}
+          <View style={styles.expandedSpacer} />
+          <View style={styles.expandedContent}>
+            <Text style={styles.expandedDuration}>{session.duration}</Text>
+            <Text style={[styles.expandedStatus, { color: dotColor }]}>{statusLabel}</Text>
+            <TouchableOpacity
+              onPress={onNavigate}
+              accessibilityRole="link"
+              accessibilityLabel="View full session details"
+              style={styles.detailLink}
+            >
+              <Text style={styles.detailLinkText}>View full details  →</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+    </View>
   );
 }
+
+const DATE_COL_WIDTH = 56;
 
 const styles = StyleSheet.create({
   root: {
@@ -262,6 +297,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.screenPadding,
     paddingTop: 16,
   } as ViewStyle,
+
+  // Hours summary
   header: {
     marginBottom: 20,
   } as ViewStyle,
@@ -283,7 +320,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     height: 48,
     justifyContent: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   } as ViewStyle,
   searchInput: {
     ...(Typography.bodyMedium as TextStyle),
@@ -291,19 +328,13 @@ const styles = StyleSheet.create({
     flex: 1,
   } as TextStyle,
 
-  // Filter row
-  filterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
-  } as ViewStyle,
+  // Filter chips
   chipsScroll: {
-    flex: 1,
+    marginBottom: 28,
   } as ViewStyle,
   chipsContainer: {
     flexDirection: 'row',
     gap: 8,
-    paddingRight: 8,
   } as ViewStyle,
   chip: {
     height: 36,
@@ -328,79 +359,137 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
   } as TextStyle,
 
-  // View toggle
-  viewToggle: {
-    flexDirection: 'row',
-    backgroundColor: Colors.surface,
-    borderRadius: Radius.sm,
-    overflow: 'hidden',
-    marginLeft: 8,
+  // Section group
+  group: {
+    marginBottom: 24,
   } as ViewStyle,
-  toggleBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  } as ViewStyle,
-  toggleBtnActive: {
-    backgroundColor: Colors.primary,
-  } as ViewStyle,
-  toggleText: {
-    ...(Typography.labelSmall as TextStyle),
-  } as TextStyle,
-  toggleTextActive: {
-    color: Colors.white,
-  } as TextStyle,
-  toggleTextInactive: {
-    color: Colors.textSecondary,
-  } as TextStyle,
-
-  // Group labels
   groupLabel: {
     ...(Typography.labelSmall as TextStyle),
     color: Colors.textSecondary,
     letterSpacing: 0.8,
-    marginBottom: 12,
+    marginBottom: 8,
   } as TextStyle,
-  groupLabelSpacing: {
-    marginTop: 8,
-  } as TextStyle,
+  groupDivider: {
+    height: 1,
+    backgroundColor: Colors.surfaceVariant,
+    marginBottom: 4,
+  } as ViewStyle,
 
-  // Session card
-  card: {
+  // Session row container
+  row: {
     backgroundColor: Colors.surface,
     borderRadius: Radius.md,
     overflow: 'hidden',
-    marginBottom: 12,
+    marginBottom: 8,
   } as ViewStyle,
-  mapPlaceholder: {
-    height: 80,
+
+  // Collapsed row header
+  rowHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 72,
+    paddingVertical: 12,
+    paddingLeft: 12,
+    paddingRight: 16,
+  } as ViewStyle,
+
+  // Date column
+  dateCol: {
+    width: DATE_COL_WIDTH,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+  } as ViewStyle,
+  dateMonth: {
+    fontFamily: 'IBMPlexSans',
+    fontSize: 11,
+    lineHeight: 14,
+    color: Colors.textSecondary,
+    letterSpacing: 0.5,
+  } as TextStyle,
+  dateDay: {
+    ...(Typography.labelMedium as TextStyle),
+    fontSize: 22,
+    lineHeight: 26,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+  } as TextStyle,
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginTop: 4,
+  } as ViewStyle,
+
+  // Vertical separator
+  colDivider: {
+    width: 1,
+    alignSelf: 'stretch',
     backgroundColor: Colors.surfaceVariant,
+    marginHorizontal: 12,
   } as ViewStyle,
-  cardContent: {
-    padding: 12,
+
+  // Row main content
+  rowContent: {
+    flex: 1,
     gap: 4,
   } as ViewStyle,
-  cardTitleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  } as ViewStyle,
-  cardTitle: {
+  rowTitle: {
     ...(Typography.labelMedium as TextStyle),
+    fontWeight: '600',
     color: Colors.textPrimary,
-    fontWeight: '700',
   } as TextStyle,
-  cardDate: {
+  rowTime: {
     ...(Typography.bodySmall as TextStyle),
     color: Colors.textSecondary,
   } as TextStyle,
-  cardDuration: {
+
+  // Chevron
+  chevron: {
+    ...(Typography.labelMedium as TextStyle),
+    color: Colors.textSecondary,
+    paddingLeft: 12,
+    fontSize: 18,
+  } as TextStyle,
+  chevronExpanded: {
+    color: Colors.primary,
+  } as TextStyle,
+
+  // Expanded inline detail
+  expandedArea: {
+    flexDirection: 'row',
+    paddingBottom: 16,
+    paddingLeft: 12,
+    paddingRight: 16,
+    borderTopWidth: 1,
+    borderTopColor: Colors.surfaceVariant,
+  } as ViewStyle,
+  expandedSpacer: {
+    width: DATE_COL_WIDTH,
+    marginRight: 13, // matches colDivider width (1) + marginHorizontal (12) = 13
+  } as ViewStyle,
+  expandedContent: {
+    flex: 1,
+    paddingTop: 12,
+    gap: 4,
+  } as ViewStyle,
+  expandedDuration: {
     fontFamily: 'JetBrainsMono',
     fontSize: 13,
     lineHeight: 18,
     color: Colors.textPrimary,
+  } as TextStyle,
+  expandedStatus: {
+    ...(Typography.labelSmall as TextStyle),
+    fontWeight: '600',
+  } as TextStyle,
+  detailLink: {
+    marginTop: 12,
+  } as ViewStyle,
+  detailLinkText: {
+    ...(Typography.labelSmall as TextStyle),
+    color: Colors.primary,
+    fontWeight: '600',
   } as TextStyle,
 
   emptyText: {
