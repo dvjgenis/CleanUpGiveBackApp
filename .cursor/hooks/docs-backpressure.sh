@@ -46,11 +46,11 @@ LIVING_DOC_MARKERS = (
 )
 
 SCOPE_MAP = {
-    "app": "docs/context/app.md",
-    "assets": "docs/context/assets.md",
-    "components": "docs/context/components.md",
-    "hooks": "docs/context/hooks.md",
-    "constants": "docs/context/constants.md",
+    "app": "docs/frontend/context/app.md",
+    "assets": "docs/frontend/context/assets.md",
+    "components": "docs/frontend/context/components.md",
+    "hooks": "docs/frontend/context/hooks.md",
+    "constants": "docs/frontend/context/constants.md",
 }
 
 SOURCE_SUFFIXES = (".ts", ".tsx", ".js", ".jsx")
@@ -59,22 +59,42 @@ ASSET_SUFFIXES = (".png", ".jpg", ".jpeg", ".webp", ".svg", ".gif", ".ttf", ".ot
 def is_living_doc(path: str) -> bool:
     return any(marker in path for marker in LIVING_DOC_MARKERS)
 
-def top_scope(path: str) -> str | None:
+def rel_under_frontend(path: str) -> str | None:
     rel = path.lstrip("./")
-    top = rel.split("/", 1)[0]
-    return top if top in SCOPE_MAP else None
+    if rel.startswith("frontend/"):
+        return rel[len("frontend/"):]
+    return None
+
+def top_scope(path: str) -> str | None:
+    rel = rel_under_frontend(path)
+    if rel is None:
+        return None
+    parts = rel.split("/")
+    if len(parts) < 2:
+        return None
+    if parts[0] == "src" and len(parts) >= 3:
+        scope = parts[1]
+        return scope if scope in SCOPE_MAP else None
+    if parts[0] == "assets":
+        return "assets"
+    return None
 
 def is_source_code(path: str) -> bool:
-    rel = path.lstrip("./")
+    rel = rel_under_frontend(path)
+    if rel is None:
+        return False
     if top_scope(path) is None:
         return False
     return rel.endswith(SOURCE_SUFFIXES) and "/__tests__/" not in rel
 
 def is_asset_file(path: str) -> bool:
-    rel = path.lstrip("./").lower()
-    if not rel.startswith("assets/"):
+    rel = rel_under_frontend(path)
+    if rel is None:
         return False
-    return rel.endswith(ASSET_SUFFIXES)
+    rel_lower = rel.lower()
+    if not rel_lower.startswith("assets/"):
+        return False
+    return rel_lower.endswith(ASSET_SUFFIXES)
 
 edited_source = [p for p in paths if is_source_code(p)]
 edited_assets = [p for p in paths if is_asset_file(p)]
@@ -95,7 +115,7 @@ scope_text = ", ".join(f"`{s}`" for s in scopes)
 message = (
     "Documentation backpressure: source edited without a docs update in the same turn. "
     "Follow `.cursor/rules/docs-backpressure.mdc` — update "
-    f"{scope_text}, `docs/context/project.md`, and `docs/implementation-plan.md` / relevant `docs/specs/*.md` if applicable."
+    f"{scope_text}, `docs/frontend/context/project.md`, and `docs/implementation-plan.md` / relevant `docs/*/specs/*.md` if applicable."
 )
 
 print(json.dumps({"additional_context": message}))

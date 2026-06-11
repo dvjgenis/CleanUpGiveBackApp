@@ -5,11 +5,12 @@ import urllib.request
 import ssl
 from pathlib import Path
 
-# Paths
-source_dir = "/Users/shivpat/CleanUpGiveBackApp/stitch_htmls"
-target_dir = "/Users/shivpat/CleanUpGiveBack App Development/nonprofit-mobile-app/assets/stitch"
+# Paths (relative to frontend/)
+FRONTEND_ROOT = Path(__file__).resolve().parent.parent
+source_dir = FRONTEND_ROOT / "design" / "stitch_htmls"
+target_dir = FRONTEND_ROOT / "assets" / "stitch"
 
-os.makedirs(target_dir, exist_ok=True)
+target_dir.mkdir(parents=True, exist_ok=True)
 
 # Regex to find img src and background-image url
 # It matches src="https://..." and url('https://...')
@@ -49,7 +50,7 @@ for filename in os.listdir(source_dir):
     if not filename.endswith(".html"):
         continue
         
-    filepath = os.path.join(source_dir, filename)
+    filepath = source_dir / filename
     with open(filepath, "r", encoding="utf-8") as f:
         content = f.read()
         
@@ -67,7 +68,7 @@ for filename in os.listdir(source_dir):
 
     new_content = url_pattern.sub(replace_match, content)
     
-    target_filepath = os.path.join(target_dir, filename)
+    target_filepath = target_dir / filename
     with open(target_filepath, "w", encoding="utf-8") as f:
         f.write(new_content)
         

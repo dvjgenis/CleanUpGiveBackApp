@@ -1,8 +1,8 @@
 const fs = require("fs");
 const path = require("path");
 
-const htmlDir = path.join(__dirname, "stitch_htmls");
-const outDir = path.join(__dirname, "html_prototype");
+const htmlDir = path.join(__dirname, '../design/stitch_htmls');
+const outDir = path.join(__dirname, '../design/html_prototype');
 
 if (!fs.existsSync(outDir)) {
   fs.mkdirSync(outDir);
