@@ -15,6 +15,9 @@ web-build/
 # macOS
 .DS_Store
 
+# iOS native build output
+ios/
+
 # Secrets — never commit
 .env
 .env.*

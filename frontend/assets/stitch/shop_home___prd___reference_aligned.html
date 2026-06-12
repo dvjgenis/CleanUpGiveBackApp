@@ -89,19 +89,53 @@
     </style>
 
 </head>
-<body class="bg-white text-on-background pb-24 md:pb-0 font-body">
+<body class="bg-background text-on-background pb-24 md:pb-0 font-body">
 <!-- Sticky Shop Header -->
-<header class="sticky top-0 w-full z-40 bg-white border-b border-outline-variant">
-  <div class="max-w-md mx-auto px-6 h-16 flex items-center justify-between">
-    <h1 class="font-headline text-[28px] text-primary">Shop</h1>
+<header class="sticky top-0 w-full z-40 bg-surface border-b border-outline-variant flex justify-between items-center px-6 py-2 h-16">
+  <div class="flex items-center gap-4">
+    <button id="sidebar-toggle" class="text-on-surface-variant hover:bg-surface-container rounded-full p-2 transition-colors active:scale-95" aria-label="Open menu">
+      <span class="material-symbols-outlined text-2xl">menu</span>
+    </button>
+    <span class="font-headline text-xl font-bold text-primary">Clean Up Give Back</span>
+  </div>
+  <nav class="hidden md:flex items-center gap-6">
+    <a class="text-on-surface-variant hover:text-primary font-label text-sm font-semibold transition-colors py-4" href="#">Home</a>
+    <a class="text-primary font-label text-sm font-semibold border-b-2 border-primary py-4" href="#">Shop</a>
+    <a class="text-on-surface-variant hover:text-primary font-label text-sm font-semibold transition-colors py-4" href="#">Sessions</a>
+    <button class="bg-primary text-on-primary px-4 py-2 rounded-full font-label text-sm font-semibold hover:bg-primary-container transition-colors shadow-sm">Track</button>
+  </nav>
+  <div class="flex items-center gap-4">
     <a href="shopping_cart__no_tote_bag_.html" class="relative block hover:opacity-80 transition-opacity active:scale-95 p-1">
-      <span class="material-symbols-outlined text-[24px] text-on-surface" data-icon="shopping_cart">shopping_cart</span>
+      <span class="material-symbols-outlined text-2xl text-on-surface" data-icon="shopping_cart">shopping_cart</span>
       <span class="absolute -top-0.5 -right-0.5 bg-primary text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full">1</span>
     </a>
   </div>
 </header>
+
+<!-- Sidebar overlay backdrop -->
+<div id="sidebar-backdrop" class="fixed inset-0 z-50 bg-black/40 hidden transition-opacity duration-200" aria-hidden="true"></div>
+
+<!-- Left sidebar drawer -->
+<aside id="sidebar" class="fixed top-0 left-0 z-50 h-full w-72 bg-surface shadow-xl transform -translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+  <div class="flex justify-end px-3 pt-3">
+    <button id="sidebar-close" class="text-on-surface-variant hover:bg-surface-container rounded-full p-2 transition-colors active:scale-95" aria-label="Close menu">
+      <span class="material-symbols-outlined text-2xl">close</span>
+    </button>
+  </div>
+  <nav class="flex flex-col gap-1 px-3 py-2">
+    <button data-sidebar-nav="shop" class="flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-surface-container transition-colors active:scale-[0.98] w-full text-left">
+      <span class="material-symbols-outlined text-2xl text-on-surface-variant">shopping_bag</span>
+      <span class="font-label text-sm font-semibold text-on-surface">Shop</span>
+    </button>
+    <button data-sidebar-nav="account" class="flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-surface-container transition-colors active:scale-[0.98] w-full text-left">
+      <span class="material-symbols-outlined text-2xl text-on-surface-variant">person</span>
+      <span class="font-label text-sm font-semibold text-on-surface">Account</span>
+    </button>
+  </nav>
+</aside>
+
 <!-- Main Content Canvas -->
-<main class="max-w-md mx-auto px-6 py-8 space-y-8">
+<main class="max-w-md mx-auto px-6 pt-8 pb-8 space-y-8">
 <!-- Hero / Mission Statement -->
 <section class="space-y-4"><p class="font-body text-[16px] text-on-surface-variant leading-relaxed">Support cleanup work. Every purchase funds our mission to clean up local communities.</p></section>
 <!-- Bento Grid: Donate -->
@@ -183,24 +217,16 @@
 <!-- MD3 Navigation Bar -->
 <nav class="md:hidden fixed bottom-0 w-full z-50 h-20 flex items-center justify-around bg-[#ece8e6] border-t border-outline-variant px-4">
   <button class="flex flex-col items-center gap-0.5 min-w-[48px] justify-center px-3 py-1 rounded-xl hover:bg-surface-container transition-colors duration-150 active:scale-[0.95]">
-    <span class="flex items-center justify-center w-12 h-8 "><span class="material-symbols-outlined text-2xl" data-icon="home" style="font-variation-settings: 'FILL' 0;">home</span></span>
+    <span class="flex items-center justify-center w-12 h-8"><span class="material-symbols-outlined text-2xl" data-icon="home" style="font-variation-settings: 'FILL' 0;">home</span></span>
     <span class="font-label text-[11px] text-on-surface-variant">Home</span>
-  </button>
-  <button class="flex flex-col items-center gap-0.5 min-w-[48px] justify-center px-3 py-1 rounded-xl hover:bg-surface-container transition-colors duration-150 active:scale-[0.95]">
-    <span class="flex items-center justify-center w-12 h-8 rounded-full bg-[#c2ecce]"><span class="material-symbols-outlined text-2xl" data-icon="shopping_bag" style="font-variation-settings: 'FILL' 1;">shopping_bag</span></span>
-    <span class="font-label text-[11px] font-semibold text-on-surface">Shop</span>
   </button>
   <button class="flex flex-col items-center justify-center -mt-5 px-2 active:scale-[0.95] transition-transform duration-150">
     <span class="flex items-center justify-center w-14 h-14 rounded-full bg-primary text-on-primary shadow-md hover:opacity-90 transition-opacity duration-150"><span class="material-symbols-outlined text-[28px]" data-icon="add" style="font-variation-settings: 'FILL' 1;">add</span></span>
     <span class="font-label text-[11px] text-on-surface-variant mt-1">Track</span>
   </button>
   <button class="flex flex-col items-center gap-0.5 min-w-[48px] justify-center px-3 py-1 rounded-xl hover:bg-surface-container transition-colors duration-150 active:scale-[0.95]">
-    <span class="flex items-center justify-center w-12 h-8 "><span class="material-symbols-outlined text-2xl" data-icon="history" style="font-variation-settings: 'FILL' 0;">history</span></span>
+    <span class="flex items-center justify-center w-12 h-8"><span class="material-symbols-outlined text-2xl" data-icon="history" style="font-variation-settings: 'FILL' 0;">history</span></span>
     <span class="font-label text-[11px] text-on-surface-variant">Sessions</span>
-  </button>
-  <button class="flex flex-col items-center gap-0.5 min-w-[48px] justify-center px-3 py-1 rounded-xl hover:bg-surface-container transition-colors duration-150 active:scale-[0.95]">
-    <span class="flex items-center justify-center w-12 h-8 "><span class="material-symbols-outlined text-2xl" data-icon="person" style="font-variation-settings: 'FILL' 0;">person</span></span>
-    <span class="font-label text-[11px] text-on-surface-variant">Account</span>
   </button>
 </nav>
 
@@ -213,4 +239,43 @@
 
 
 
+<script>
+(function() {
+  var toggle   = document.getElementById('sidebar-toggle');
+  var close    = document.getElementById('sidebar-close');
+  var backdrop = document.getElementById('sidebar-backdrop');
+  var sidebar  = document.getElementById('sidebar');
+
+  function openSidebar() {
+    sidebar.classList.remove('-translate-x-full');
+    backdrop.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeSidebar() {
+    sidebar.classList.add('-translate-x-full');
+    backdrop.classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+
+  toggle.addEventListener('click', openSidebar);
+  close.addEventListener('click', closeSidebar);
+  backdrop.addEventListener('click', closeSidebar);
+
+  document.querySelectorAll('[data-sidebar-nav]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var target = btn.getAttribute('data-sidebar-nav');
+      var screenMap = { shop: 'shop_home___prd___reference_aligned', account: 'account' };
+      var screen = screenMap[target];
+      if (!screen) return;
+      closeSidebar();
+      var msg = JSON.stringify({ type: 'nav', screen: screen });
+      if (window.ReactNativeWebView) {
+        window.ReactNativeWebView.postMessage(msg);
+      } else if (window.parent !== window) {
+        window.parent.postMessage(msg, '*');
+      }
+    });
+  });
+})();
+</script>
 </body></html>

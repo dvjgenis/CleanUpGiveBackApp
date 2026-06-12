@@ -92,11 +92,6 @@
             background-color: #009540;
         }
         
-        canvas#signature-pad {
-            border: 1px dashed #bdcaba;
-            border-radius: 0.5rem;
-            cursor: crosshair;
-        }
     </style>
 </head>
 <body class="bg-background text-on-background min-h-screen flex flex-col">
@@ -143,20 +138,7 @@
 <label class="block font-label text-label-md text-on-surface mb-2" for="description">Description (Optional)</label>
 <textarea class="w-full bg-surface border border-outline-variant rounded-lg px-4 py-3 text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary font-body text-body-md placeholder:text-on-surface-variant/50 transition-colors resize-none" id="description" placeholder="Add any specific goals or details about this session..." rows="3"></textarea>
 </div>
-<!-- Digital Signature -->
-<div class="mt-8 pt-6 border-t border-outline-variant/30">
-<label class="block font-label text-label-md text-on-surface mb-2 flex items-center justify-between">
-<span class="">Digital Signature</span>
-<button class="text-sm text-primary hover:text-primary-container font-label" onclick="clearSignature()" type="button">Clear</button>
-</label>
-<div class="bg-surface rounded-lg relative overflow-hidden">
-<canvas class="w-full h-32 bg-white" height="128" id="signature-pad" width="600"></canvas>
-<div class="absolute bottom-2 left-4 right-4 pointer-events-none flex justify-between items-center opacity-40">
-<span class="material-symbols-outlined text-outline">draw</span>
-<span class="font-data text-xs text-outline">Sign here</span>
-</div>
-</div>
-</div>
+
 <!-- Permissions Check -->
 <div class="bg-surface-container-low p-4 rounded-lg flex flex-col gap-3">
 <h3 class="font-label text-sm text-on-surface-variant uppercase tracking-wider">Required Permissions</h3>
@@ -189,79 +171,6 @@
 </form>
 </div>
 </main>
-<script>
-        // Simple Signature Pad Implementation
-        const canvas = document.getElementById('signature-pad');
-        const ctx = canvas.getContext('2d');
-        let isDrawing = false;
-        let lastX = 0;
-        let lastY = 0;
-
-        // Set up context
-        ctx.strokeStyle = '#1c1b1b';
-        ctx.lineWidth = 2;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-
-        function draw(e) {
-            if (!isDrawing) return;
-            
-            // Get correct coordinates relative to canvas
-            const rect = canvas.getBoundingClientRect();
-            const scaleX = canvas.width / rect.width;
-            const scaleY = canvas.height / rect.height;
-            
-            let clientX = e.clientX || (e.touches && e.touches[0].clientX);
-            let clientY = e.clientY || (e.touches && e.touches[0].clientY);
-            
-            const x = (clientX - rect.left) * scaleX;
-            const y = (clientY - rect.top) * scaleY;
-
-            ctx.beginPath();
-            ctx.moveTo(lastX, lastY);
-            ctx.lineTo(x, y);
-            ctx.stroke();
-            
-            [lastX, lastY] = [x, y];
-        }
-
-        function startDrawing(e) {
-            isDrawing = true;
-            
-            const rect = canvas.getBoundingClientRect();
-            const scaleX = canvas.width / rect.width;
-            const scaleY = canvas.height / rect.height;
-            
-            let clientX = e.clientX || (e.touches && e.touches[0].clientX);
-            let clientY = e.clientY || (e.touches && e.touches[0].clientY);
-            
-            lastX = (clientX - rect.left) * scaleX;
-            lastY = (clientY - rect.top) * scaleY;
-        }
-
-        canvas.addEventListener('mousedown', startDrawing);
-        canvas.addEventListener('mousemove', draw);
-        canvas.addEventListener('mouseup', () => isDrawing = false);
-        canvas.addEventListener('mouseout', () => isDrawing = false);
-
-        canvas.addEventListener('touchstart', startDrawing, {passive: true});
-        canvas.addEventListener('touchmove', draw, {passive: true});
-        canvas.addEventListener('touchend', () => isDrawing = false);
-
-        function clearSignature() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-        }
-        
-        // Handle window resize
-        function resizeCanvas() {
-            // Keep aspect ratio but fit container
-            const ratio = Math.max(window.devicePixelRatio || 1, 1);
-            // We maintain the internal resolution defined in HTML attributes,
-            // CSS handles visual scaling.
-        }
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
-    </script>
 
 
 </body></html>
