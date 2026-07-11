@@ -266,12 +266,13 @@ export function SubmissionConfirmationScreen() {
         </Animated.View>
 
         <Animated.View style={photosStyle}>
-        <Text style={s.sectionTitle}>Photos</Text>
-        {sessionPhotos.length > 0 ? (
-        <View
-          style={s.photosSection}
-          onLayout={(event) => setPhotoViewportWidth(event.nativeEvent.layout.width)}
-        >
+        <View style={s.sectionBlock}>
+          <Text style={s.sectionHeading}>Photos</Text>
+          {sessionPhotos.length > 0 ? (
+          <View
+            style={s.photosSection}
+            onLayout={(event) => setPhotoViewportWidth(event.nativeEvent.layout.width)}
+          >
           <ScrollView
             ref={photoScrollRef}
             horizontal
@@ -329,12 +330,13 @@ export function SubmissionConfirmationScreen() {
             </AnimatedPressable>
           </View>
         </View>
-        ) : (
-          <Text style={s.emptyPhotosText}>No checkpoint photos were submitted for this session.</Text>
-        )}
+          ) : (
+            <Text style={s.emptyPhotosText}>No checkpoint photos were submitted for this session.</Text>
+          )}
+        </View>
         </Animated.View>
 
-        <Animated.View style={timelineStyle}>
+        <Animated.View style={[s.timelineBlock, timelineStyle]}>
         {checkpoints.length > 0 ? (
         <View style={s.checkpointsCard}>
           <Text style={s.sectionTitleCompact}>Photo Checkpoints</Text>
@@ -346,8 +348,8 @@ export function SubmissionConfirmationScreen() {
         </View>
         ) : null}
 
-        <View style={s.descriptionBlock}>
-          <Text style={s.sectionTitleCompact}>Description</Text>
+        <View style={s.sectionBlock}>
+          <Text style={s.sectionHeading}>Description</Text>
           <Text style={s.descriptionText}>{sessionDescription}</Text>
         </View>
 
@@ -542,18 +544,30 @@ const s = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     color: C.textTertiary,
+    includeFontPadding: false,
   },
 
-  sectionTitle: {
+  sectionBlock: {
+    gap: 0,
+  },
+
+  sectionHeading: {
     fontFamily: 'Sanchez_400Regular',
     fontSize: 16,
+    lineHeight: 20,
     color: C.textPrimary,
+    marginBottom: 6,
   },
 
   sectionTitleCompact: {
     fontFamily: 'Sanchez_400Regular',
     fontSize: 16,
+    lineHeight: 20,
     color: C.textPrimary,
+  },
+
+  timelineBlock: {
+    gap: 16,
   },
 
   photosSection: {
@@ -684,15 +698,12 @@ const s = StyleSheet.create({
     color: C.textTertiary,
   },
 
-  descriptionBlock: {
-    gap: 15,
-  },
-
   descriptionText: {
     fontFamily: 'NotoSans_400Regular',
     fontSize: 14,
     lineHeight: 20,
     color: C.textTertiary,
+    includeFontPadding: false,
   },
 
   courtOrderedRow: {
