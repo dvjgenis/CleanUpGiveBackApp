@@ -54,7 +54,7 @@ const s = StyleSheet.create({
     flex: 1,
     gap: 15,
     marginRight: 8,
-    maxWidth: 204,
+    minWidth: 0,
   },
   title: {
     fontFamily: fontFamilies.sanchezRegular,
@@ -63,14 +63,15 @@ const s = StyleSheet.create({
   },
   detailsRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 9,
     alignItems: 'center',
+    gap: 9,
+    alignSelf: 'flex-start',
   },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    flexShrink: 0,
     backgroundColor: colors.borderOutline,
     borderRadius: radius.sm,
     padding: 5,
@@ -79,6 +80,7 @@ const s = StyleSheet.create({
     fontFamily: fontFamilies.ibmPlexSansRegular,
     fontSize: 12,
     color: colors.textNavInactive,
+    flexShrink: 0,
   },
   duration: {
     flexShrink: 0,
