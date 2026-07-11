@@ -370,14 +370,17 @@ export function SubmissionConfirmationScreen() {
             </Text>
           </View>
 
-          <AnimatedPressable
-            style={s.goHomeBtn}
-            onPress={() => router.replace('/')}
-            accessibilityRole="button"
-            accessibilityLabel="Go home"
-          >
-            <Text style={s.goHomeBtnText}>Go Home</Text>
-          </AnimatedPressable>
+          <View style={s.goHomeBtnWrap}>
+            <AnimatedPressable
+              style={s.goHomeBtn}
+              scaleTo={0.98}
+              onPress={() => router.replace('/')}
+              accessibilityRole="button"
+              accessibilityLabel="Go home"
+            >
+              <Text style={s.goHomeBtnText}>Go Home</Text>
+            </AnimatedPressable>
+          </View>
         </View>
       </Animated.View>
 
@@ -744,13 +747,14 @@ const s = StyleSheet.create({
   },
 
   footerContent: {
-    gap: 10,
+    width: '100%',
+    gap: 18,
     alignItems: 'center',
   },
 
   footerMessageBlock: {
     alignItems: 'center',
-    gap: 6,
+    gap: 10,
     maxWidth: 310,
   },
 
@@ -762,20 +766,26 @@ const s = StyleSheet.create({
     textAlign: 'center',
   },
 
+  goHomeBtnWrap: {
+    width: '100%',
+  },
+
   goHomeBtn: {
     width: '100%',
-    height: 48,
+    minHeight: 54,
     backgroundColor: C.primary,
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 24,
-    paddingVertical: 12,
+    paddingVertical: 16,
+    overflow: 'hidden',
   },
 
   goHomeBtnText: {
     fontFamily: 'NotoSans_600SemiBold',
     fontSize: 16,
     color: C.textOnPrimary,
+    textAlign: 'center',
   },
 });
