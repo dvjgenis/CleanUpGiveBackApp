@@ -85,98 +85,101 @@ export function Compass({ size = 44, borderColor = '#C8C8C8', backgroundColor = 
     transform: [{ rotate: `${headingAngle.value}deg` }],
   }));
 
-  const fontSize = Math.max(7, Math.round(size * 0.27));
-  const lineHeight = Math.round(fontSize * 1.15);
-  // Vertically center the text by explicit top offset
-  const labelTop = Math.round((size - lineHeight) / 2);
+  const borderWidth = 1;
+  const innerSize = size - borderWidth * 2;
+  const fontSize = Math.max(7, Math.round(innerSize * 0.27));
 
   return (
     <View
       style={[
         styles.ring,
-        { width: size, height: size, borderRadius: size / 2, borderColor, backgroundColor },
+        {
+          width: size,
+          height: size,
+          borderRadius: size / 2,
+          borderColor,
+          backgroundColor,
+          borderWidth,
+        },
       ]}
     >
-      {/* Static compass background */}
-      <Svg
-        width={size}
-        height={size}
-        viewBox={`0 0 ${VIEW} ${VIEW}`}
-        style={StyleSheet.absoluteFill}
-      >
-        <G transform={`translate(${CENTER}, ${CENTER})`}>
-
-          {/* Grey intercardinal ticks — pair at each end of each spoke */}
-          {INTERCARDINAL_ANGLES.map((a) => (
-            <G key={a} transform={`rotate(${a})`} opacity={0.5}>
-              <Polygon
-                points={`0,${-DIAG_HALF} ${-DIAG_W},${-DIAG_HALF + 3} ${DIAG_W},${-DIAG_HALF + 3}`}
-                fill={TICK_COLOR}
-              />
-              <Polygon
-                points={`0,${DIAG_HALF} ${-DIAG_W},${DIAG_HALF - 3} ${DIAG_W},${DIAG_HALF - 3}`}
-                fill={TICK_COLOR}
-              />
-            </G>
-          ))}
-
-          {/* Green cardinal ticks at N / E / S / W (tip points outward) */}
-          {CARDINAL_ANGLES.map((a) => (
-            <G key={a} transform={`rotate(${a})`} opacity={0.8}>
-              <Polygon
-                points={`0,${-NEEDLE_HALF} ${-DIAG_W},${-NEEDLE_HALF + 3} ${DIAG_W},${-NEEDLE_HALF + 3}`}
-                fill={GREEN}
-              />
-            </G>
-          ))}
-
-        </G>
-      </Svg>
-
-      {/* Rotating red tick — top = current facing direction */}
-      <Animated.View style={[StyleSheet.absoluteFill, styles.center, tickStyle]}>
-        <Svg width={size} height={size} viewBox={`0 0 ${VIEW} ${VIEW}`}>
+      <View style={[styles.content, { width: innerSize, height: innerSize }]}>
+        <Svg
+          width={innerSize}
+          height={innerSize}
+          viewBox={`0 0 ${VIEW} ${VIEW}`}
+          style={StyleSheet.absoluteFill}
+        >
           <G transform={`translate(${CENTER}, ${CENTER})`}>
-            <Polygon
-              points={`0,${-NEEDLE_HALF} ${-DIAG_W},${-NEEDLE_HALF + 3} ${DIAG_W},${-NEEDLE_HALF + 3}`}
-              fill={RED}
-              opacity={0.9}
-            />
+            {INTERCARDINAL_ANGLES.map((a) => (
+              <G key={a} transform={`rotate(${a})`} opacity={0.5}>
+                <Polygon
+                  points={`0,${-DIAG_HALF} ${-DIAG_W},${-DIAG_HALF + 3} ${DIAG_W},${-DIAG_HALF + 3}`}
+                  fill={TICK_COLOR}
+                />
+                <Polygon
+                  points={`0,${DIAG_HALF} ${-DIAG_W},${DIAG_HALF - 3} ${DIAG_W},${DIAG_HALF - 3}`}
+                  fill={TICK_COLOR}
+                />
+              </G>
+            ))}
+
+            {CARDINAL_ANGLES.map((a) => (
+              <G key={a} transform={`rotate(${a})`} opacity={0.8}>
+                <Polygon
+                  points={`0,${-NEEDLE_HALF} ${-DIAG_W},${-NEEDLE_HALF + 3} ${DIAG_W},${-NEEDLE_HALF + 3}`}
+                  fill={GREEN}
+                />
+              </G>
+            ))}
           </G>
         </Svg>
-      </Animated.View>
 
-      {/* Direction label — explicitly centered by computed top + full-width textAlign */}
-      <Text
-        style={[
-          styles.directionLabel,
-          { fontSize, lineHeight, top: labelTop },
-        ]}
-        pointerEvents="none"
-      >
-        {directionLabel}
-      </Text>
+        <Animated.View style={[StyleSheet.absoluteFill, tickStyle]}>
+          <Svg width={innerSize} height={innerSize} viewBox={`0 0 ${VIEW} ${VIEW}`}>
+            <G transform={`translate(${CENTER}, ${CENTER})`}>
+              <Polygon
+                points={`0,${-NEEDLE_HALF} ${-DIAG_W},${-NEEDLE_HALF + 3} ${DIAG_W},${-NEEDLE_HALF + 3}`}
+                fill={RED}
+                opacity={0.9}
+              />
+            </G>
+          </Svg>
+        </Animated.View>
+
+        <View style={styles.labelLayer} pointerEvents="none">
+          <Text
+            style={[styles.directionLabel, { fontSize, lineHeight: fontSize }]}
+            accessibilityLabel={`Facing ${directionLabel}`}
+          >
+            {directionLabel}
+          </Text>
+        </View>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   ring: {
-    borderWidth: 1,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  center: {
+  content: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  labelLayer: {
+    ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
   },
   directionLabel: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
     fontWeight: '700',
     color: TICK_COLOR,
     textAlign: 'center',
+    includeFontPadding: false,
   },
 });

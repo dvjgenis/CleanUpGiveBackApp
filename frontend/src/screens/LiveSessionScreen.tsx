@@ -15,7 +15,9 @@ import {
   Text,
   View,
 } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Compass } from '@/components/ui/Compass';
 import { SessionSetupBackChevronIcon } from '@/components/session-setup/icons/SessionSetupBackChevronIcon';
 import { LiveSessionMap } from '@/features/session-tracking/components/LiveSessionMap';
 import { TrackerActionButton } from '@/features/session-tracking/components/TrackerActionButton';
@@ -38,6 +40,7 @@ import {
   useLiveSession,
 } from '@/features/session-tracking/liveSessionStore';
 import { useLiveWeather } from '@/features/session-tracking/hooks/useLiveWeather';
+import { useLiveSessionMapReveal } from '@/features/session-tracking/hooks/useLiveSessionMapReveal';
 import { colors, radius } from '@/features/session-tracking/tokens';
 
 const C = {
@@ -75,12 +78,10 @@ function TrackerBackButton({ onPress }: { onPress: () => void }) {
   );
 }
 
-import { Compass } from '@/components/ui/Compass';
-
 function TrackerCompassControl() {
   return (
     <Compass
-      size={44}
+      size={48}
       borderColor={C.borderOutline}
       backgroundColor={C.textOnPrimary}
     />
@@ -114,6 +115,7 @@ export function LiveSessionScreen() {
   const router = useRouter();
   const { elapsedSeconds, checkpointSecondsRemaining, distanceMiles, submittedCheckpoints } =
     useLiveSession();
+  const { mapRevealStyle, chromeStyle } = useLiveSessionMapReveal();
   const submittedCheckpointCount = submittedCheckpoints.length;
   const showSubmissionCount = shouldShowCheckpointSubmissionCount(submittedCheckpoints);
   const submittedCheckpointLabel = formatSubmittedCheckpointCount(submittedCheckpointCount);
@@ -139,12 +141,12 @@ export function LiveSessionScreen() {
 
   return (
     <View style={s.root}>
-      <View style={s.mapLayer}>
+      <Animated.View style={[s.mapLayer, mapRevealStyle]}>
         <LiveSessionMap style={s.map} />
-      </View>
+      </Animated.View>
 
       <SafeAreaView style={s.overlay} edges={['top', 'bottom']} pointerEvents="box-none">
-        <View style={s.main}>
+        <Animated.View style={[s.main, chromeStyle]}>
           <View style={s.navbar}>
             <TrackerBackButton onPress={() => router.replace('/')} />
 
@@ -252,7 +254,7 @@ export function LiveSessionScreen() {
               </View>
             </View>
           </View>
-        </View>
+        </Animated.View>
       </SafeAreaView>
     </View>
   );
@@ -262,6 +264,7 @@ const s = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: C.mapTint,
+    overflow: 'hidden',
   },
 
   mapLayer: {
@@ -491,7 +494,7 @@ const s = StyleSheet.create({
   nextPhotoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 4,
   },
 
   nextPhotoLabel: {

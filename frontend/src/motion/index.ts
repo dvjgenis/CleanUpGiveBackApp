@@ -25,6 +25,7 @@ export const durations = {
   modalEnter: 280,
   modalExit: 200,
   sheetDismiss: 360,
+  mapRevealWipe: 480,
   screenEnter: 220,
   staggerStep: 50,
   coachmark: 200,

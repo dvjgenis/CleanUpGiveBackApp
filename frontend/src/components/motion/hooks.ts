@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import {
   useAnimatedStyle,
   useReducedMotion,
@@ -10,6 +10,29 @@ import {
 } from 'react-native-reanimated';
 
 import { durations, easing, enterFrom, modalSpring } from '@/motion';
+
+/** Animates a 0–1 progress fraction into track fill width (enter + live updates). */
+export function useAnimatedProgressFill(fraction: number, enterDuration = 300) {
+  const reducedMotion = useReducedMotion();
+  const clamped = Math.min(1, Math.max(0, fraction));
+  const animated = useSharedValue(reducedMotion ? clamped : 0);
+  const hasEntered = useRef(false);
+
+  useEffect(() => {
+    if (reducedMotion) {
+      animated.value = clamped;
+      return;
+    }
+
+    const duration = hasEntered.current ? durations.screenEnter : enterDuration;
+    hasEntered.current = true;
+    animated.value = withTiming(clamped, { duration, easing: easing.easeOut });
+  }, [animated, clamped, enterDuration, reducedMotion]);
+
+  return useAnimatedStyle(() => ({
+    width: `${animated.value * 100}%`,
+  }));
+}
 
 /** Fade-up screen enter — opacity + translateY only. Skipped when reduced motion is on. */
 export function useFadeUpEnter(delayMs = 0) {

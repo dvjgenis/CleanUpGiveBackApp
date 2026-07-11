@@ -17,7 +17,7 @@ export default function RootLayout() {
       <Stack.Screen name="session-setup-step6" />
       <Stack.Screen name="session-setup-step7" options={guideBackwardScreenOptions} />
       <Stack.Screen name="session-setup-complete" options={guideBackwardScreenOptions} />
-      <Stack.Screen name="live-session" />
+      <Stack.Screen name="live-session" options={{ animation: 'none' }} />
       <Stack.Screen name="photo-checkpoint" />
       <Stack.Screen name="photo-capture" />
       <Stack.Screen name="photo-submitted" />

@@ -1,20 +1,18 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import Animated from 'react-native-reanimated';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { BottomNavBar, type BottomNavTab } from '@/components/navigation/BottomNavBar';
-import {
-  formatCountdown,
-  formatElapsed,
-} from '@/features/session-tracking/mocks/session';
+import { LiveSessionMinimizedPill, LIVE_SESSION_PILL_MIN_HEIGHT } from '@/features/session-tracking/components/LiveSessionMinimizedPill';
+import { useLiveSessionBarExit } from '@/features/session-tracking/hooks/useLiveSessionBarExit';
 import {
   getCheckpointProgress,
   useLiveSession,
 } from '@/features/session-tracking/liveSessionStore';
 import { useRecentSessions } from '@/features/session-tracking/recentSessionsStore';
-import { formatSubmittedCheckpointCount, shouldShowCheckpointSubmissionCount } from '@/features/session-tracking/utils/sessionFormat';
 
 import { EventsViewAllModal } from '../components/EventsViewAllModal';
 import { RecentSessionCard } from '../components/RecentSessionCard';
@@ -23,7 +21,6 @@ import {
   EventCalendarDayBadge,
   EventLocationIcon,
   EventOrganizationIcon,
-  ExpandIcon,
   ImpactStatIcon,
   NotificationIcon,
   StreakIcon,
@@ -41,7 +38,7 @@ const CHART_H = 184;
 const CHART_Y_LABELS = [200, 150, 100, 50, 0] as const;
 
 const BOTTOM_NAV_HEIGHT = 64;
-const LIVE_BAR_HEIGHT = 112;
+const LIVE_BAR_HEIGHT = LIVE_SESSION_PILL_MIN_HEIGHT + 16;
 
 function yLabelTop(index: number, labelCount: number): number {
   if (index === 0) {
@@ -264,69 +261,28 @@ function RecentEventsSection({
   );
 }
 
-function formatDistanceMiles(miles: number): string {
-  if (miles === 0) {
-    return '0';
-  }
-  return miles.toFixed(1);
-}
+type LiveSessionBarProps = {
+  barStyle: ReturnType<typeof useLiveSessionBarExit>['barStyle'];
+  onExpand: () => void;
+};
 
-function LiveSessionBar({ onExpand }: { onExpand: () => void }) {
+function LiveSessionBar({ barStyle, onExpand }: LiveSessionBarProps) {
   const { elapsedSeconds, checkpointSecondsRemaining, distanceMiles, submittedCheckpoints } =
     useLiveSession();
   const checkpointProgress = getCheckpointProgress(checkpointSecondsRemaining);
-  const submittedCheckpointCount = submittedCheckpoints.length;
-  const showSubmissionCount = shouldShowCheckpointSubmissionCount(submittedCheckpoints);
-  const submittedCheckpointLabel = formatSubmittedCheckpointCount(submittedCheckpointCount);
 
   return (
-    <View style={s.liveBar}>
-      <View style={s.liveBarInner}>
-        <AnimatedPressable
-          onPress={onExpand}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel={
-            showSubmissionCount
-              ? `Expand live session tracker. ${submittedCheckpointLabel}.`
-              : 'Expand live session tracker'
-          }
-          style={s.expandBtn}
-        >
-          <ExpandIcon />
-        </AnimatedPressable>
-
-        <View style={s.liveStatRow}>
-          <View style={s.liveStatBlock}>
-            <Text style={s.liveStatValue}>{formatDistanceMiles(distanceMiles)}</Text>
-            <Text style={s.liveStatUnit}>mi</Text>
-          </View>
-          <View style={s.liveStatBlock}>
-            <Text style={s.liveStatValue}>{formatElapsed(elapsedSeconds)}</Text>
-            <Text style={s.liveStatUnit}>time</Text>
-          </View>
-          <View style={s.liveStatBlock}>
-            <Text style={s.liveTimeLeft}>{formatCountdown(checkpointSecondsRemaining)}</Text>
-            <Text style={s.liveStatUnit}>time left</Text>
-          </View>
-        </View>
-
-        {showSubmissionCount && (
-          <View style={s.liveCheckpointRow}>
-            <View style={s.liveCheckpointDots}>
-              {submittedCheckpoints.map((checkpoint) => (
-                <View key={checkpoint.id} style={s.liveCheckpointDot} />
-              ))}
-            </View>
-            <Text style={s.liveCheckpointLabel}>{submittedCheckpointLabel}</Text>
-          </View>
-        )}
-
-        <View style={s.progressTrack}>
-          <View style={[s.progressFill, { width: `${checkpointProgress * 100}%` }]} />
-        </View>
-      </View>
-    </View>
+    <Animated.View style={[s.liveBar, barStyle]}>
+      <LiveSessionMinimizedPill
+        distanceMiles={distanceMiles}
+        elapsedSeconds={elapsedSeconds}
+        checkpointSecondsRemaining={checkpointSecondsRemaining}
+        checkpointProgress={checkpointProgress}
+        submittedCheckpoints={submittedCheckpoints}
+        onExpand={onExpand}
+        showExpandButton
+      />
+    </Animated.View>
   );
 }
 
@@ -338,6 +294,16 @@ export function HomeScreenWithData({ data }: { data: HomeDashboardData }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { isActive } = useLiveSession();
+  const navigateLiveSession = useCallback(() => router.push('/live-session'), [router]);
+  const { barStyle, expandLiveSession, resetBar } = useLiveSessionBarExit({
+    onNavigate: navigateLiveSession,
+  });
+
+  useFocusEffect(
+    useCallback(() => {
+      resetBar();
+    }, [resetBar]),
+  );
   const [activeTab, setActiveTab] = useState<BottomNavTab>('home');
   const greeting = useMemo(() => getTimeOfDayGreeting(), []);
   const bottomInset = Math.max(insets.bottom, 0);
@@ -395,14 +361,16 @@ export function HomeScreenWithData({ data }: { data: HomeDashboardData }) {
       </ScrollView>
 
       <View style={[s.bottomStack, { paddingBottom: bottomInset }]}>
-        {isActive && <LiveSessionBar onExpand={() => router.push('/live-session')} />}
+        {isActive && (
+          <LiveSessionBar barStyle={barStyle} onExpand={expandLiveSession} />
+        )}
         <BottomNavBar
           activeTab={activeTab}
           onHomePress={() => setActiveTab('home')}
           onShopPress={() => setActiveTab('shop')}
           onTrackPress={() => {
             if (isActive) {
-              router.push('/live-session');
+              expandLiveSession();
             } else {
               router.push('/session-setup-guide');
             }
@@ -734,80 +702,5 @@ const s = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 8,
     backgroundColor: colors.bgApp,
-  },
-  liveBarInner: {
-    backgroundColor: colors.primary,
-    borderRadius: R.md,
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 12,
-    minHeight: LIVE_BAR_HEIGHT,
-    justifyContent: 'space-between',
-    gap: 10,
-    position: 'relative',
-  },
-  expandBtn: {
-    position: 'absolute',
-    top: 12,
-    right: 20,
-    zIndex: 1,
-  },
-  liveStatRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    paddingRight: 28,
-  },
-  liveStatBlock: {
-    alignItems: 'center',
-    gap: 2,
-  },
-  liveStatValue: {
-    fontFamily: fontFamilies.notoSansSemiBold,
-    fontSize: 24,
-    color: colors.textOnPrimary,
-  },
-  liveTimeLeft: {
-    fontFamily: fontFamilies.ibmPlexSansSemiBold,
-    fontSize: 24,
-    color: colors.statusPendingBorder,
-  },
-  liveStatUnit: {
-    fontFamily: fontFamilies.notoSansSemiBold,
-    fontSize: 12,
-    color: colors.borderOutline,
-    textAlign: 'center',
-  },
-  progressTrack: {
-    height: 6,
-    backgroundColor: colors.borderOutline,
-    borderRadius: R.full,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: 6,
-    backgroundColor: colors.statusPendingBorder,
-    borderRadius: R.full,
-  },
-  liveCheckpointRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  liveCheckpointDots: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  liveCheckpointDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.textOnPrimary,
-  },
-  liveCheckpointLabel: {
-    fontFamily: fontFamilies.notoSansSemiBold,
-    fontSize: 11,
-    color: colors.textOnPrimary,
   },
 });

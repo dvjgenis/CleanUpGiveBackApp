@@ -51,6 +51,15 @@ Shared UI components in `frontend/src/components/`.
 | NotificationsScreen | `screens/NotificationsScreen.tsx` | Notification preferences (Figma `649:774`); category cards with toggles; opened from home bell |
 | home mocks | `mocks/home.ts`, `mocks/home.returningUser.ts`, `mocks/home.types.ts` | `firstTimeHomeDashboard` vs `returningUserHomeDashboard` variants |
 
+### Session tracking (live session UI)
+
+| Component | Path | Role |
+|-----------|------|------|
+| LiveSessionMinimizedPill | `features/session-tracking/components/LiveSessionMinimizedPill.tsx` | Green minimized tracker pill (Figma `622:176`); checkpoint progress fill animates via `useAnimatedProgressFill` |
+| useLiveSessionBarExit | `features/session-tracking/hooks/useLiveSessionBarExit.ts` | Pill slides down on expand; resets slide-up on Home refocus (`useFocusEffect`) |
+| useLiveSessionMapReveal | `features/session-tracking/hooks/useLiveSessionMapReveal.ts` | Bottom-up map wipe (`mapRevealWipe` 480ms) + chrome fade when expanding from Home |
+| useAnimatedProgressFill | `components/motion/hooks.ts` | Progress track fill animation (300ms enter, 220ms live updates) |
+
 ## Patterns
 
 - Use `useColorScheme` / theme constants from `frontend/src/constants/theme.ts`
