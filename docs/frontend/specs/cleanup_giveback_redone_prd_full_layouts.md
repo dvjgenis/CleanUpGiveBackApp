@@ -2,6 +2,8 @@
 
 This Stitch-ready PRD includes layouts for every major product section, screen, state, flow, and system area.
 
+> **Privacy & compliance (2026-06-30):** Nationwide minor protection and CCPA requirements are integrated below (§6.0a–6.37). Framework: [privacy-and-data-protection.md](../../compliance/privacy-and-data-protection.md). Screen split decision: [privacy-screen-split-decision.md](../../compliance/privacy-screen-split-decision.md).
+
 ## Layout Coverage Checklist
 
 ```text
@@ -11,7 +13,9 @@ Included layout coverage
 ├── Product principles
 ├── Primary navigation
 ├── Full app flow
+├── Age-gate and parental consent (pre-auth)
 ├── Sign up screens
+├── Compliance and legal viewers
 ├── Optional coachmark tutorial
 ├── Home dashboard
 ├── Event detail
@@ -275,14 +279,21 @@ The Track item should be visually emphasized as the center action.
 ## 5. Full App Flow
 
 ```text
-Sign Up / Login
+Age Gate (§6.0a)
+├── Under 13 → Parental Consent (§6.0b–6.0d) → Welcome (after verified)
+├── 13–17 → Teen Privacy Notice (§6.0e) → Welcome
+└── 18+ → Welcome
+
+Sign Up / Login (§6.1)
 ↓
-Onboarding Setup
+Create Account + legal acceptance (§6.2)
 ↓
-Notification Preference
+Account Details — no age field (§6.3)
 ↓
-Setup Complete
-├── Optional Coachmark Tutorial
+Notification Preference (§6.4)
+↓
+Setup Complete (§6.5)
+├── Optional Coachmark Tutorial (§6.6)
 │   ├── Complete Tutorial → Start Tracking
 │   └── Complete Tutorial → Go to Home
 ├── Start Tracking → Session Setup
@@ -294,11 +305,107 @@ Main App
 ├── Track
 ├── Sessions
 └── Account
+    └── Preferences → Privacy → Account Privacy hub (§6.37)
 ```
+
+**Compliance entry points (in-app):** Account → Privacy hub (§6.37); Settings → About → policy viewers (§6.31–6.32); Delete Account → confirmation (§6.35).
 
 ---
 
 # 6. Screen Layouts and Requirements
+
+## 6.0a Age Gate
+
+### Purpose
+
+Neutral age screening before any personal data collection or account creation.
+
+### Required fields
+
+- Month of birth (picker)
+- Year of birth (picker)
+
+### Rules
+
+- No other fields on this screen.
+- Continue disabled until both pickers have valid values.
+- Do not use encouraging or discouraging language about age selection.
+
+### Primary action
+
+Continue → branch by age: under 13 → §6.0b; 13–17 → §6.0e; 18+ → §6.1 Welcome.
+
+---
+
+## 6.0b Parental Consent — Notice
+
+### Purpose
+
+Provide direct notice to parent/guardian and collect contact for verifiable consent (COPPA).
+
+### Required fields
+
+- Parent/guardian email
+
+### Content
+
+Plain-language disclosure that the app will collect photos (selfies, trash-bag images) and precise GPS location during cleanup sessions.
+
+### Primary action
+
+Send notice → §6.0c Parental Consent — Verify
+
+---
+
+## 6.0c Parental Consent — Verify
+
+### Purpose
+
+Obtain verifiable parental consent (method TBD with counsel).
+
+### Options (design placeholders)
+
+- Credit card micro-charge verification
+- Signed consent form upload
+- Third-party COPPA service redirect
+
+### Primary action
+
+Complete verification → §6.1 Welcome (on success) or §6.0d (on failure/wait)
+
+---
+
+## 6.0d Parental Consent — Pending
+
+### Purpose
+
+Block app use until parental consent is verified.
+
+### Content
+
+- Waiting state message
+- Support contact
+- Cannot access camera, GPS, or session features until verified
+
+---
+
+## 6.0e Teen Privacy Notice
+
+### Purpose
+
+Inform users aged 13–17 of highest-privacy defaults (state teen-privacy laws).
+
+### Content
+
+- Highest privacy settings are on by default
+- No dark patterns to reduce privacy
+- Link to full Privacy Policy (§6.31)
+
+### Primary action
+
+I understand → §6.1 Welcome
+
+---
 
 ## 6.1 Welcome / Auth
 
@@ -314,6 +421,8 @@ Allow users to sign up or log in.
 - Continue with Apple
 - Sign up with Email
 - Log in link
+- **Reachable only after age-gate passes** (§6.0a)
+- Optional footer link to Privacy Policy (§6.31)
 
 ### Layout
 
@@ -358,6 +467,9 @@ Collect basic account credentials.
 - Full Name
 - Email
 - Password
+- Street address
+- Phone number
+- **Required checkbox:** I agree to the [Terms of Service](§6.32) and [Privacy Policy](§6.31) — Continue disabled until checked
 
 ### Layout
 
@@ -380,6 +492,19 @@ Collect basic account credentials.
 │ │                               │  │
 │ └───────────────────────────────┘  │
 │                                     │
+│ Street Address                      │
+│ ┌───────────────────────────────┐  │
+│ │                               │  │
+│ └───────────────────────────────┘  │
+│                                     │
+│ Phone                               │
+│ ┌───────────────────────────────┐  │
+│ │                               │  │
+│ └───────────────────────────────┘  │
+│                                     │
+│ [ ] I agree to Terms of Service     │
+│     and Privacy Policy              │
+│                                     │
 │ ┌───────────────────────────────┐  │
 │ │ Continue                      │  │
 │ └───────────────────────────────┘  │
@@ -400,19 +525,15 @@ Collect required profile information for service records.
 
 ### Required Fields
 
-- Age
 - Court-ordered service status
+
+> **Note:** Age is collected at the age-gate (§6.0a), not on this screen.
 
 ### Layout
 
 ```text
 ┌─────────────────────────────────────┐
 │ A few details                       │
-│                                     │
-│ Age                                 │
-│ ┌───────────────────────────────┐  │
-│ │                               │  │
-│ └───────────────────────────────┘  │
 │                                     │
 │ Are you completing court-ordered    │
 │ service hours?                      │
@@ -778,9 +899,10 @@ Home
 - “Good morning, [Name]”
 - “[X] hours this week”
 - Greeting changes by time of day:
-  - Good morning
-  - Good afternoon
-  - Good evening
+  - Good night (midnight – 4:59 AM)
+  - Good morning (5:00 AM – 11:59 AM)
+  - Good afternoon (12:00 PM – 4:59 PM)
+  - Good evening (5:00 PM – 11:59 PM)
 - Optional notification icon
 
 #### Service Hours Visualization
@@ -1108,6 +1230,7 @@ Track volunteer activity in real time.
 ### Requirements
 
 - Running timer
+- **Persistent location-tracking indicator** visible for the entire active session (not only a one-time coachmark) — e.g. "Location tracking active" banner or badge with GPS status
 - GPS status indicator
 - Route map preview
 - Distance tracked
@@ -1132,7 +1255,7 @@ Track volunteer activity in real time.
 ```text
 ┌─────────────────────────────────────┐
 │ Live Session                        │
-│ GPS Active                          │
+│ Location tracking active            │
 │                                     │
 │              00:42:18               │
 │                                     │
@@ -2043,7 +2166,7 @@ Account
 #### Preferences
 
 - Notifications toggle
-- Privacy & Permissions
+- Privacy → routes to **Account Privacy hub** (§6.37), not directly to OS permissions
 
 #### Notification Settings
 
@@ -2092,7 +2215,7 @@ Users should be able to enable or disable:
 │                                     │
 │ Preferences                         │
 │ Notifications                 On    │
-│ Privacy & Permissions            >  │
+│ Privacy                          >  │
 │                                     │
 │ Account                             │
 │ Settings                         >  │
@@ -2100,6 +2223,19 @@ Users should be able to enable or disable:
 └─────────────────────────────────────┘
 Home     Shop     Track     Sessions     Account
 ```
+
+### Settings screen (routeKey: `settings`)
+
+Entry: Account → Settings.
+
+| Section | Rows | Target |
+|---------|------|--------|
+| Account | Profile, Notifications | `notification-settings` |
+| App Preferences | Dark Mode | In-screen toggle |
+| About | Version, Terms of Service, Privacy Policy | §6.32, §6.31 viewers |
+| Actions | Log Out, Delete Account | `welcome`; Delete → §6.35 |
+
+> **Privacy split:** Settings no longer routes to legacy `privacy-security`. Account-tab **Privacy** row (above) is the canonical compliance entry. See [privacy-screen-split-decision.md](../../compliance/privacy-screen-split-decision.md).
 
 ---
 
@@ -2137,7 +2273,9 @@ Allow users to manage notification preferences.
 
 ### Purpose
 
-Allow users to view and manage app permissions.
+Allow users to view and manage **OS-level app permissions** only. Route key: `privacy-permissions`. Entry: Account Privacy hub (§6.37) → App permissions.
+
+> **Legacy note:** The Stitch prototype screen `privacy-security` mixed permissions with auth and analytics. That screen is deprecated in favor of this screen plus §6.37. See [privacy-screen-split-decision.md](../../compliance/privacy-screen-split-decision.md).
 
 ### Layout
 
@@ -2255,6 +2393,131 @@ Allow users to export verified service records.
 │ ┌───────────────────────────────┐  │
 │ │ Export Record                 │  │
 │ └───────────────────────────────┘  │
+└─────────────────────────────────────┘
+```
+
+---
+
+## 6.31 Privacy Policy Viewer
+
+### Purpose
+
+Display the full Mobile App Privacy Policy in plain, teen-friendly language.
+
+### Entry points
+
+- Account Privacy hub (§6.37)
+- Create Account legal checkbox (§6.2)
+- Settings → About
+- Optional Welcome footer (§6.1)
+
+### Layout requirements
+
+- Scrollable content
+- Last-updated date prominent
+- Back navigation
+
+---
+
+## 6.32 Terms of Service Viewer
+
+### Purpose
+
+Display Terms of Service.
+
+### Entry points
+
+Same as §6.31.
+
+---
+
+## 6.33 Privacy Rights Request
+
+### Purpose
+
+Allow users to exercise CCPA rights: access, portability, deletion.
+
+### Fields
+
+- Request type (access / deletion / other)
+- Confirmation checkbox
+- Expected response time copy
+
+### Primary action
+
+Submit request → confirmation state
+
+---
+
+## 6.35 Delete Account Confirmation
+
+### Purpose
+
+Confirm destructive account deletion with re-authentication and retention disclosure.
+
+### Content
+
+- Re-enter password or biometric
+- Explain what will be deleted
+- Explain exceptions (court-ordered logs, legal retention)
+- Non-discrimination reminder
+
+### Primary actions
+
+- Confirm deletion → account erased, navigate to welcome
+- Cancel → back
+
+### Entry points
+
+- Settings → Delete Account
+- Account Privacy hub (§6.37) → Request deletion
+
+---
+
+## 6.37 Account Privacy Hub
+
+### Purpose
+
+Primary privacy destination under the Account tab. Compliance-first landing page for all privacy controls and disclosures.
+
+### Entry point
+
+**Account tab (§6.25) → Preferences → Privacy**
+
+### Sections
+
+| Section | Rows |
+|---------|------|
+| Your data | Plain-language summary + "Learn more" → §6.31 |
+| Legal | Privacy Policy, Terms of Service |
+| Your rights | Request my data, Request deletion, Export service record |
+| Controls | App permissions → §6.27 (`privacy-permissions`) |
+| Sharing | "We do not sell your personal information." |
+| Teens | Privacy tier badge when `privacy_tier = teen` |
+
+### Layout
+
+```text
+┌─────────────────────────────────────┐
+│ ← Privacy                           │
+│                                     │
+│ Your data                           │
+│ [summary card]                      │
+│                                     │
+│ Legal                               │
+│ Privacy Policy                   >  │
+│ Terms of Service                 >  │
+│                                     │
+│ Your rights                         │
+│ Request my data                  >  │
+│ Request deletion                 >  │
+│ Export service record            >  │
+│                                     │
+│ Controls                            │
+│ App permissions                  >  │
+│                                     │
+│ We do not sell your personal        │
+│ information.                        │
 └─────────────────────────────────────┘
 ```
 

@@ -56,7 +56,14 @@ module.exports = {
           "inverse-primary": "#66de7f",
           "on-tertiary-fixed": "#3f0016",
           "surface-container-low": "#f6f3f2",
-          "on-surface-variant": "#3e4a3d"
+          "on-surface-variant": "#3e4a3d",
+          "status-approved-bg": "#f7fff1",
+          "status-approved-text": "#009540",
+          "status-pending-bg": "#ffddb5",
+          "status-pending-text": "#835400",
+          "status-pending-border": "#fcab29",
+          "status-declined-bg": "#ffd9de",
+          "status-declined-text": "#ba1a1a"
       },
       "borderRadius": {
           "DEFAULT": "0.25rem",

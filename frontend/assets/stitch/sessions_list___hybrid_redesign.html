@@ -50,7 +50,14 @@
           "primary-container": "#008739",
           "background": "#fcf9f8",
           "on-background": "#1c1b1b",
-          "inverse-on-surface": "#f3f0ef"
+          "inverse-on-surface": "#f3f0ef",
+          "status-approved-bg": "#f7fff1",
+          "status-approved-text": "#009540",
+          "status-pending-bg": "#ffddb5",
+          "status-pending-text": "#835400",
+          "status-pending-border": "#fcab29",
+          "status-declined-bg": "#ffd9de",
+          "status-declined-text": "#ba1a1a"
         },
         borderRadius: {
           DEFAULT: "0.5rem",
@@ -82,6 +89,10 @@
   .row-detail { display: none; }
   .row-detail.open { display: flex; }
   .session-row.hidden-row { display: none; }
+  .status-tag { padding: 3px 8px; border-radius: 8px; font-size: 11px; font-weight: 600; line-height: normal; white-space: nowrap; }
+  .status-tag--approved { background-color: #f7fff1; color: #009540; }
+  .status-tag--pending { background-color: #ffddb5; color: #835400; }
+  .status-tag--declined { background-color: #ffd9de; color: #ba1a1a; }
 </style>
 </head>
 <body class="font-body antialiased min-h-screen flex flex-col pb-safe">
@@ -181,7 +192,7 @@
       data-filter="under-review"
       aria-pressed="false"
     >
-      <span class="chip-label">Under Review</span>
+      <span class="chip-label">Pending</span>
       <span class="chip-count font-label text-sm font-normal ml-1" data-status="under-review"></span>
     </button>
 
@@ -192,7 +203,7 @@
       data-filter="not-approved"
       aria-pressed="false"
     >
-      <span class="chip-label">Not Approved</span>
+      <span class="chip-label">Declined</span>
       <span class="chip-count font-label text-sm font-normal ml-1" data-status="not-approved"></span>
     </button>
 
@@ -214,9 +225,7 @@
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-2 mb-0.5">
             <p class="font-label text-sm font-semibold text-on-surface truncate flex-1">Lake Park</p>
-            <div class="bg-primary/10 border border-primary/20 text-primary px-2 py-0.5 rounded text-[10px] font-label uppercase tracking-wide flex items-center gap-1 shrink-0">
-              <span class="material-symbols-outlined text-[12px]">check_circle</span> Approved
-            </div>
+            <div class="status-tag status-tag--approved shrink-0">Approved</div>
           </div>
           <p class="font-body text-xs text-outline">9:30–11:00 AM</p>
         </div>
@@ -246,9 +255,7 @@
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-2 mb-0.5">
             <p class="font-label text-sm font-semibold text-on-surface truncate flex-1">River Trail</p>
-            <div class="bg-secondary-container/20 border border-secondary-container text-on-secondary-container px-2 py-0.5 rounded text-[10px] font-label uppercase tracking-wide flex items-center gap-1 shrink-0">
-              <span class="material-symbols-outlined text-[12px]">pending</span> Under Review
-            </div>
+            <div class="status-tag status-tag--pending shrink-0">Pending</div>
           </div>
           <p class="font-body text-xs text-outline">10:00–12:00 PM</p>
         </div>
@@ -284,9 +291,7 @@
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-2 mb-0.5">
             <p class="font-label text-sm font-semibold text-on-surface truncate flex-1">Downtown Des Plaines</p>
-            <div class="bg-error/10 border border-error/30 text-error px-2 py-0.5 rounded text-[10px] font-label uppercase tracking-wide flex items-center gap-1 shrink-0">
-              <span class="material-symbols-outlined text-[12px]">cancel</span> Not Approved
-            </div>
+            <div class="status-tag status-tag--declined shrink-0">Declined</div>
           </div>
           <p class="font-body text-xs text-outline">1:00–2:00 PM</p>
         </div>
@@ -330,9 +335,9 @@
   // ── Chip active-state styles per filter ──────────────────────────────
   var CHIP_ACTIVE = {
     'all':          'bg-primary text-on-primary border-primary',
-    'approved':     'bg-primary text-on-primary border-primary',
-    'under-review': 'bg-secondary-container text-on-secondary-fixed border-secondary-container',
-    'not-approved': 'bg-error-container text-on-error-container border-error-container'
+    'approved':     'bg-status-approved-bg text-status-approved-text border-primary',
+    'under-review': 'bg-status-pending-bg text-status-pending-text border-status-pending-border',
+    'not-approved': 'bg-status-declined-bg text-status-declined-text border-status-declined-text'
   };
   var CHIP_INACTIVE = 'bg-surface-container-low text-outline border-outline-variant';
 

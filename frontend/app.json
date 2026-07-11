@@ -7,6 +7,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "nonprofitmobileapp",
     "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
     "ios": {
       "icon": "./assets/expo.icon",
       "bundleIdentifier": "com.anonymous.nonprofitmobileapp"
@@ -23,7 +24,8 @@
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/favicon.png",
+      "bundler": "metro"
     },
     "plugins": [
       "expo-router",
@@ -38,7 +40,21 @@
         }
       ],
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-dev-client",
+      "@maplibre/maplibre-react-native",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow Clean Up Give Back to use your location during cleanup sessions to show local weather and track your route."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Clean Up Give Back to use your camera for photo checkpoints during cleanup sessions."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

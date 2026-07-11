@@ -1,0 +1,461 @@
+# Figma screen manifest
+# Single source of truth mapping Figma screens to future Expo Router route keys.
+#
+# status values:
+#   designed     — screen exists in Figma; not yet built as native RN
+#   bound        — design tokens fully applied in Figma; ready for RN implementation
+#   implemented  — native RN screen shipped in src/app/; legacy HTML route can be removed
+#
+# legacyHtmlKey — the HTML_MAP key in frontend/src/app/prototype/[screen].tsx (migration reference only)
+# figmaNode     — Figma node-id (fill in as MCP exports are run; format "NNN:NNN")
+
+fileKey: DrDcQH14n7ntDQ80F7au9S
+designSystemNode: "1:3"
+
+# ---------------------------------------------------------------------------
+# Page 1 · Onboarding
+# Figma node: 627:29
+# ---------------------------------------------------------------------------
+screens:
+  - routeKey: splash-loading
+    figmaPage: "1·Onboarding"
+    figmaNode: "827:111"
+    legacyHtmlKey: ""
+    prdSection: "—"
+    status: designed
+    notes: "Disney-style app loading splash — dark radial bg, lime glow arc, brand mark, tagline. Maps to expo-splash-screen."
+    implNotes: "@route splash-loading @motion enter=opacity duration=400ms easing=easeOut @emil decorative=false purposeful=true"
+
+  - routeKey: parent-permission-confirmation
+    figmaPage: "1·Onboarding"
+    figmaNode: "728:901"
+    legacyHtmlKey: ""
+    prdSection: "6.0d"
+    status: bound
+    notes: "Minor blocker — program admin must approve before app use. Amber warning chrome; green Contact Admin CTA; Learn why link. Token binding complete 2026-07-10."
+    implNotes: "@route parent-permission-confirmation @motion none @nav push=parent-permission-learn-why"
+
+  - routeKey: parent-permission-learn-why
+    figmaPage: "1·Onboarding"
+    figmaNode: "833:314"
+    legacyHtmlKey: ""
+    prdSection: "6.0d"
+    status: bound
+    notes: "Learn why follow-up — plain-language explainer for minors. Entry from admin_permission_contact. Token binding complete 2026-07-10."
+    implNotes: "@route parent-permission-learn-why @nav back=parent-permission-confirmation @motion enter=opacity+translateY(8) duration=220ms"
+
+  - routeKey: welcome
+    figmaPage: "1·Onboarding"
+    figmaNode: ""
+    legacyHtmlKey: welcome___standardized_progress
+    prdSection: "6.1"
+    status: designed
+    notes: "Canonical welcome screen. welcome.html is the retired duplicate."
+
+  - routeKey: create-account
+    figmaPage: "1·Onboarding"
+    figmaNode: ""
+    legacyHtmlKey: create_account___standardized_progress
+    prdSection: "6.2"
+    status: designed
+
+  - routeKey: account-details
+    figmaPage: "1·Onboarding"
+    figmaNode: ""
+    legacyHtmlKey: account_details___standardized_progress
+    prdSection: "6.3"
+    status: designed
+
+  - routeKey: notification-preference
+    figmaPage: "1·Onboarding"
+    figmaNode: ""
+    legacyHtmlKey: notification_preference___standardized_redo
+    prdSection: "6.4"
+    status: designed
+
+  - routeKey: setup-complete
+    figmaPage: "1·Onboarding"
+    figmaNode: ""
+    legacyHtmlKey: setup_complete
+    prdSection: "6.5"
+    status: designed
+
+  - routeKey: coachmark-tutorial
+    figmaPage: "1·Onboarding"
+    figmaNode: ""
+    legacyHtmlKey: coachmark_tutorial
+    prdSection: "6.6"
+    status: designed
+    notes: "6-step sequence in prototype."
+
+# ---------------------------------------------------------------------------
+# Page 2 · Home & Events
+# ---------------------------------------------------------------------------
+  - routeKey: home
+    figmaPage: "2·Home & Events"
+    figmaNode: "137:2174"
+    legacyHtmlKey: home_hamburger
+    prdSection: "6.7"
+    status: designed
+    notes: "Canonical frame home_dashboard (137:2174). home_dashboard___final_branding (406:291) and home_hamburger HTML are earlier iterations."
+
+  - routeKey: event-detail
+    figmaPage: "2·Home & Events"
+    figmaNode: "196:226"
+    legacyHtmlKey: events_detail
+    prdSection: "6.8"
+    status: bound
+    notes: "events_detail frame. Address block (196:384) rebound to color/text/tertiary 2026-07-10."
+
+# ---------------------------------------------------------------------------
+# Page 3 · Shop & Payments
+# ---------------------------------------------------------------------------
+  - routeKey: shop
+    figmaPage: "3·Shop & Payments"
+    figmaNode: "498:606"
+    legacyHtmlKey: shop_home___prd___reference_aligned
+    prdSection: "6.19"
+    status: designed
+    notes: "Frame name shop_home. Product prices corrected 2026-07-10 to match cleanupgiveback.org/shop: Tote Bags $3.00, Trash Grabber $23.99, Child Clean Up Kit $9.99, Adult Clean Up Kit $12.99, featured Trash Clean Up Kit $29.99."
+
+  - routeKey: product-detail
+    figmaPage: "3·Shop & Payments"
+    figmaNode: "492:114"
+    legacyHtmlKey: product_detail__cleanup_kit___high_fidelity
+    prdSection: "6.21"
+    status: designed
+    notes: "Kit frame shop_product_view (Trash Clean Up Kit, $29.99). Per-SKU frames added 2026-07-10: trash-grabber 909:126, tote-bags 905:166 (Earth/Ocean swatches), adult-safety-vest 905:236, child-safety-vest 905:306. Copy from cleanupgiveback.org/products; hero placeholders until media added. Native RN will use one parameterized route."
+
+  - routeKey: product-detail/trash-grabber
+    figmaPage: "3·Shop & Payments"
+    figmaNode: "909:126"
+    legacyHtmlKey: ""
+    prdSection: "6.21"
+    status: designed
+    notes: "shop_product_view_trash_grabber. $23.99. Prototype link from shop_home View."
+
+  - routeKey: product-detail/tote-bags
+    figmaPage: "3·Shop & Payments"
+    figmaNode: "905:166"
+    legacyHtmlKey: ""
+    prdSection: "6.21"
+    status: designed
+    notes: "shop_product_view_tote_bags. $3.00. H1 Reusable Earth and Ocean Tote Bags. Color swatches Earth/Ocean."
+
+  - routeKey: product-detail/adult-safety-vest
+    figmaPage: "3·Shop & Payments"
+    figmaNode: "905:236"
+    legacyHtmlKey: ""
+    prdSection: "6.21"
+    status: designed
+    notes: "shop_product_view_adult_safety_vest. $12.99. Live-site name Adult Safety Vest."
+
+  - routeKey: product-detail/child-safety-vest
+    figmaPage: "3·Shop & Payments"
+    figmaNode: "905:306"
+    legacyHtmlKey: ""
+    prdSection: "6.21"
+    status: designed
+    notes: "shop_product_view_child_safety_vest. $9.99. Live-site name Child Safety Vest."
+
+  - routeKey: cart
+    figmaPage: "3·Shop & Payments"
+    figmaNode: "657:1585"
+    legacyHtmlKey: shopping_cart__no_tote_bag_
+    prdSection: "6.22"
+    status: designed
+    notes: "Frame name shop_checkout (\"Your Cart\" header, Continue CTA) — despite the frame name, this is the cart screen, not the payment checkout."
+
+  - routeKey: checkout
+    figmaPage: "3·Shop & Payments"
+    figmaNode: "657:1809"
+    legacyHtmlKey: checkout_form
+    prdSection: "6.23"
+    status: designed
+    notes: "Frame name shop_checkout_final (Shipping Information, Payment, Place Order)."
+
+  - routeKey: purchase-confirmation
+    figmaPage: "3·Shop & Payments"
+    figmaNode: "494:262"
+    legacyHtmlKey: thank_you___no_tote_bag_
+    prdSection: "6.24"
+    status: designed
+    notes: "Frame name shop_confirmation (\"Thank you!\")."
+
+  - routeKey: donate
+    figmaPage: "3·Shop & Payments"
+    figmaNode: "412:4"
+    legacyHtmlKey: donate
+    prdSection: "6.20"
+    status: designed
+    notes: "Frame name shop_donate."
+
+  - routeKey: donation-checkout
+    figmaPage: "3·Shop & Payments"
+    figmaNode: ""
+    legacyHtmlKey: donation_checkout
+    prdSection: "6.20"
+    status: designed
+
+  - routeKey: donation-confirmation
+    figmaPage: "3·Shop & Payments"
+    figmaNode: ""
+    legacyHtmlKey: donation_confirmation
+    prdSection: "6.20"
+    status: designed
+
+# ---------------------------------------------------------------------------
+# Page 4 · Session Tracking
+# ---------------------------------------------------------------------------
+  - routeKey: session-setup
+    figmaPage: "4·Session Tracking"
+    figmaNode: ""
+    legacyHtmlKey: session_setup___prd_aligned_standardized
+    prdSection: "6.9"
+    status: designed
+
+  - routeKey: live-session
+    figmaPage: "4·Session Tracking"
+    figmaNode: "251:439"
+    legacyHtmlKey: live_session___refined_map_tracker
+    prdSection: "6.11"
+    status: implemented
+
+  - routeKey: photo-checkpoint
+    figmaPage: "4·Session Tracking"
+    figmaNode: "364:115"
+    legacyHtmlKey: photo_checkpoint
+    prdSection: "6.12"
+    status: implemented
+
+  - routeKey: photo-submitted
+    figmaPage: "4·Session Tracking"
+    figmaNode: "260:1571"
+    legacyHtmlKey: photo_submitted
+    prdSection: "6.12"
+    status: implemented
+
+  - routeKey: missed-checkpoint
+    figmaPage: "4·Session Tracking"
+    figmaNode: "269:1587"
+    legacyHtmlKey: restart_required
+    prdSection: "6.13"
+    status: implemented
+
+  - routeKey: submission-confirmation
+    figmaPage: "4·Session Tracking"
+    figmaNode: "269:1615"
+    legacyHtmlKey: submission_confirmation___prd_aligned
+    prdSection: "6.15"
+    status: implemented
+    notes: "submission_confirmation___refined_design is the retired duplicate."
+
+# ---------------------------------------------------------------------------
+# Page 5 · Sessions History
+# ---------------------------------------------------------------------------
+  - routeKey: sessions-list
+    figmaPage: "5·Sessions History"
+    figmaNode: "515:1791"
+    legacyHtmlKey: sessions_list___hybrid_redesign
+    prdSection: "6.16"
+    status: bound
+    notes: "Frame sessions_list___hybrid_redesign. Filter chip corrected to Under Review (515:1906) 2026-07-10."
+
+  - routeKey: sessions-calendar
+    figmaPage: "5·Sessions History"
+    figmaNode: ""
+    legacyHtmlKey: sessions_calendar_view___standardized_refined
+    prdSection: "6.17"
+    status: designed
+    notes: "Not in current Sessions History flow section (627:357). Legacy frames only: sessions_calendar_view___standardized_refined (88:123), sessions_calendar_view___with_toggle (93:2)."
+
+  - routeKey: session-detail
+    figmaPage: "5·Sessions History"
+    figmaNode: "515:1848"
+    legacyHtmlKey: session_detail
+    prdSection: "6.18"
+    status: designed
+
+# ---------------------------------------------------------------------------
+# Page 6 · Account & Settings
+# ---------------------------------------------------------------------------
+  - routeKey: account
+    figmaPage: "6·Account & Settings"
+    figmaNode: ""
+    legacyHtmlKey: account
+    prdSection: "6.25"
+    status: designed
+
+  - routeKey: settings
+    figmaPage: "6·Account & Settings"
+    figmaNode: ""
+    legacyHtmlKey: settings
+    prdSection: "6.26"
+    status: designed
+    notes: "FRAME MISSING in Figma (2026-07-10 audit). HTML prototype only."
+
+  - routeKey: privacy-security
+    figmaPage: "6·Account & Settings"
+    figmaNode: ""
+    legacyHtmlKey: privacy_security
+    prdSection: "6.27"
+    status: designed
+    notes: "DEPRECATED — split into account-privacy + privacy-permissions. Do not implement natively."
+
+  - routeKey: notification-settings
+    figmaPage: "6·Account & Settings"
+    figmaNode: ""
+    legacyHtmlKey: notification_settings___refined_toggles
+    prdSection: "6.26"
+    status: designed
+
+  - routeKey: order-history
+    figmaPage: "6·Account & Settings"
+    figmaNode: "854:116"
+    legacyHtmlKey: order_history
+    prdSection: "6.28"
+    status: bound
+    notes: "Built as a real Figma frame in the Account Flow section (was legacy-HTML-only). Order cards use the StatusTag/Approved component (relabeled Delivered), Data/Stat price in color/primary, muted color/text/tertiary for $0.00 lines. Token binding complete 2026-07-10."
+
+  - routeKey: donation-history
+    figmaPage: "6·Account & Settings"
+    figmaNode: "854:205"
+    legacyHtmlKey: donation_history
+    prdSection: "6.29"
+    status: bound
+    notes: "Built as a real Figma frame; content corrected against PRD §6.29 (date + Donation amount + confirmation) — the legacy donation_history.html was a copy-paste of order_history.html and is still bugged, do not use it as a content reference. Token binding complete 2026-07-10."
+
+  - routeKey: export-service-record
+    figmaPage: "6·Account & Settings"
+    figmaNode: "854:383"
+    legacyHtmlKey: export_service_record
+    prdSection: "6.30"
+    status: bound
+    notes: "Built as a real Figma frame: Timeframe card (2 stacked Input/State=Default instances, not the HTML's side-by-side layout), Include Statuses checklist (Approved + Under Review pre-checked, Not Approved unchecked), File Format tiles (PDF selected), sticky Button/Style=Primary CTA. Bottom Navbar kept for consistency with sibling account-privacy form frames (request_data), diverging intentionally from the HTML's nav-suppressed flow. Token binding complete 2026-07-10."
+
+  - routeKey: approval-history
+    figmaPage: "6·Account & Settings"
+    figmaNode: "854:294"
+    legacyHtmlKey: approval_history
+    prdSection: "7"
+    status: bound
+    notes: "Built as a real Figma frame: 3-up summary stat row + session cards using StatusTag/Approved|Pending|Declined instances (relabeled Approved/Under Review/Not Approved), contextual footer notes on non-Approved cards. Token binding complete 2026-07-10."
+
+  - routeKey: account-privacy
+    figmaPage: "6·Account & Settings"
+    figmaNode: ""
+    legacyHtmlKey: ""
+    prdSection: "6.37"
+    status: designed
+    notes: "NODE RETIRED — 723:405 not found (2026-07-10). Account tab → Preferences → Privacy hub; recreate frame or locate replacement."
+
+  - routeKey: privacy-permissions
+    figmaPage: "6·Account & Settings"
+    figmaNode: ""
+    legacyHtmlKey: ""
+    prdSection: "6.27"
+    status: designed
+    notes: "NODE RETIRED — 723:455 not found (2026-07-10). OS permissions only; split from deprecated privacy-security."
+
+# ---------------------------------------------------------------------------
+# Page 7 · Compliance & Legal
+# Section node 718:236 retired — frames live at file root (audit 2026-07-10)
+# ---------------------------------------------------------------------------
+  - routeKey: age-gate
+    figmaPage: "7·Compliance & Legal"
+    figmaNode: "722:51"
+    legacyHtmlKey: ""
+    prdSection: "6.0a"
+    status: designed
+
+  - routeKey: parental-consent-notice
+    figmaPage: "7·Compliance & Legal"
+    figmaNode: "723:307"
+    legacyHtmlKey: ""
+    prdSection: "6.0b"
+    status: designed
+
+  - routeKey: parental-consent-verify
+    figmaPage: "7·Compliance & Legal"
+    figmaNode: "723:317"
+    legacyHtmlKey: ""
+    prdSection: "6.0c"
+    status: designed
+
+  - routeKey: parental-consent-pending
+    figmaPage: "7·Compliance & Legal"
+    figmaNode: "723:332"
+    legacyHtmlKey: ""
+    prdSection: "6.0d"
+    status: designed
+
+  - routeKey: teen-privacy-notice
+    figmaPage: "7·Compliance & Legal"
+    figmaNode: "723:49"
+    legacyHtmlKey: ""
+    prdSection: "6.0e"
+    status: designed
+
+  - routeKey: privacy-policy
+    figmaPage: "7·Compliance & Legal"
+    figmaNode: "723:339"
+    legacyHtmlKey: ""
+    prdSection: "6.31"
+    status: designed
+    notes: "Page 6 drill-down set also designed — index 728:995; sections what-we-collect 728:1295, how-we-use-it 735:101, who-we-share-it-with 735:160, how-we-protect-it 735:219; request_data 728:1385"
+
+  - routeKey: terms-of-service
+    figmaPage: "7·Compliance & Legal"
+    figmaNode: "723:352"
+    legacyHtmlKey: ""
+    prdSection: "6.32"
+    status: designed
+
+  - routeKey: privacy-rights-request
+    figmaPage: "7·Compliance & Legal"
+    figmaNode: "723:365"
+    legacyHtmlKey: ""
+    prdSection: "6.33"
+    status: designed
+
+  - routeKey: delete-account-confirm
+    figmaPage: "7·Compliance & Legal"
+    figmaNode: "723:378"
+    legacyHtmlKey: ""
+    prdSection: "6.35"
+    status: designed
+
+  - routeKey: permission-location
+    figmaPage: "4·Session Tracking"
+    figmaNode: "728:639"
+    legacyHtmlKey: ""
+    prdSection: "6.10"
+    status: designed
+    notes: "Also on Page 1 Onboarding (725:553). Title: Sanchez 30px — matches session_setup_guide headers."
+
+  - routeKey: permission-camera
+    figmaPage: "4·Session Tracking"
+    figmaNode: "728:658"
+    legacyHtmlKey: ""
+    prdSection: "6.10"
+    status: designed
+    notes: "Also on Page 1 Onboarding (725:613). Title: Sanchez 30px — matches session_setup_guide headers."
+
+# ---------------------------------------------------------------------------
+# Legacy / retired HTML keys (not canonical screens — do not implement)
+# ---------------------------------------------------------------------------
+legacy:
+  - htmlKey: welcome
+    notes: "Retired duplicate of welcome___standardized_progress."
+  - htmlKey: home_dashboard___final_branding
+    notes: "Earlier iteration of home_hamburger."
+  - htmlKey: sessions_list_view___standardized_refined
+    notes: "Earlier iteration of sessions_list___hybrid_redesign."
+  - htmlKey: sessions_calendar_view___with_toggle
+    notes: "Earlier iteration of sessions_calendar_view___standardized_refined."
+  - htmlKey: submission_confirmation___refined_design
+    notes: "Retired duplicate of submission_confirmation___prd_aligned."
+  - htmlKey: cleanup_giveback_redone_prd_full_layouts_md
+    notes: "PRD reference document bundled as HTML — not a screen."
+  - htmlKey: welcome___standardized_progress
+    notes: "Alias used in SCREEN_RULES navigation; canonical routeKey is welcome."

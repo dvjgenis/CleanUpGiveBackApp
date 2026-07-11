@@ -1,0 +1,128 @@
+import type { HomeDashboardData } from './home.types';
+
+/**
+ * Returning-user snapshot of the Home dashboard (Figma `406:291` with populated
+ * mock data). Preserved when the live `home.ts` mock was switched to the
+ * first-time-user empty state.
+ */
+export const returningUserHomeDashboard: HomeDashboardData = {
+  homeUser: { firstName: 'Shivam' },
+  weeklyStreakHours: 5,
+  serviceHoursTotalLabel: '20.5 hrs',
+  weekRangeLabel: 'October 21 - 28, 2026',
+  weekNumberLabel: 'Week 16',
+  weekStartIso: '2026-10-21',
+  weeklyHoursChart: [
+    { day: 'Mon', value: 40 },
+    { day: 'Tue', value: 105 },
+    { day: 'Wed', value: 160 },
+    { day: 'Thu', value: 75 },
+    { day: 'Fri', value: 120 },
+    { day: 'Sat', value: 110 },
+    { day: 'Sun', value: 180 },
+  ],
+  impactStats: [
+    { id: 'miles', value: '12.5', label: 'MILES COVERED', icon: 'miles' },
+    { id: 'locations', value: '15.0', label: 'LOCATIONS CLEANED', icon: 'locations' },
+    { id: 'sessions', value: '20.3', label: 'SESSIONS COMPLETED', icon: 'sessions' },
+    { id: 'photos', value: '9.8', label: 'PHOTOS SUBMITTED', icon: 'photos' },
+  ],
+  recentSessions: [
+    {
+      id: 'rs-1',
+      title: 'City Park Trail Clean-up',
+      dateLabel: 'Oct 24',
+      timeLabel: '9:00-11:00 AM',
+      durationLabel: '2.5 hrs',
+    },
+    {
+      id: 'rs-2',
+      title: 'City Park Trail Clean-up',
+      dateLabel: 'Oct 24',
+      timeLabel: '9:00-11:00 AM',
+      durationLabel: '2.5 hrs',
+    },
+    {
+      id: 'rs-3',
+      title: 'City Park Trail Clean-up',
+      dateLabel: 'Oct 24',
+      timeLabel: '9:00-11:00 AM',
+      durationLabel: '2.5 hrs',
+    },
+  ],
+  recentEvents: [
+    {
+      id: 'ev-1',
+      day: '15',
+      month: 'June',
+      weekday: 'Mon',
+      year: '2026',
+      location: '600 E Algonquin Rd, Des Plaines, IL 60016, USA',
+      timeLabel: '10:30 AM - 12:30 PM',
+      organization: 'D214 Life Program',
+    },
+    {
+      id: 'ev-2',
+      day: '15',
+      month: 'June',
+      weekday: 'Mon',
+      year: '2026',
+      location: '600 E Algonquin Rd, Des Plaines, IL 60016, USA',
+      timeLabel: '10:30 AM - 12:30 PM',
+      organization: 'D214 Life Program',
+    },
+  ],
+  allEvents: [
+    {
+      id: 'ev-1',
+      day: '15',
+      month: 'June',
+      weekday: 'Mon',
+      year: '2026',
+      location: '600 E Algonquin Rd, Des Plaines, IL 60016, USA',
+      timeLabel: '10:30 AM - 12:30 PM',
+      organization: 'D214 Life Program',
+    },
+    {
+      id: 'ev-2',
+      day: '15',
+      month: 'June',
+      weekday: 'Mon',
+      year: '2026',
+      location: '600 E Algonquin Rd, Des Plaines, IL 60016, USA',
+      timeLabel: '10:30 AM - 12:30 PM',
+      organization: 'D214 Life Program',
+    },
+    {
+      id: 'ev-3',
+      day: '22',
+      month: 'June',
+      weekday: 'Mon',
+      year: '2026',
+      location: '1425 N McKinley Rd, Des Plaines, IL 60016, USA',
+      timeLabel: '9:00 AM - 11:00 AM',
+      organization: 'Park District Volunteer Corps',
+    },
+    {
+      id: 'ev-4',
+      day: '29',
+      month: 'June',
+      weekday: 'Mon',
+      year: '2026',
+      location: '2200 E Algonquin Rd, Mt Prospect, IL 60056, USA',
+      timeLabel: '1:00 PM - 3:30 PM',
+      organization: 'Northwest Community Partners',
+    },
+    {
+      id: 'ev-5',
+      day: '6',
+      month: 'July',
+      weekday: 'Mon',
+      year: '2026',
+      location: '800 Central Rd, Glenview, IL 60025, USA',
+      timeLabel: '8:30 AM - 10:30 AM',
+      organization: 'Glenview Green Team',
+    },
+  ],
+  notificationCount: 1,
+};

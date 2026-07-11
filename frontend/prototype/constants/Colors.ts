@@ -18,7 +18,7 @@ export const Colors = {
   primaryDark: '#006e2d',      // Pressed/hover state
   primaryDeep: '#005320',      // Headers, deep surfaces
   primaryLight: '#66de7f',     // Active indicators, success tints
-  primaryContainer: '#f7fff2', // Very light green — approved chip background
+  primaryContainer: '#f7fff1', // Very light green — approved chip background (Figma green/50)
 
   // ─── Surfaces (from Stitch) ──────────────────────────────────────────────
   background: '#fcf9f8',       // App background (warm near-white)
@@ -35,11 +35,16 @@ export const Colors = {
   textDisabled: '#bdcaba',     // Inactive / disabled labels
 
   // ─── Status (approval workflow) ──────────────────────────────────────────
-  approved: '#009540',         // = primary
-  approvedContainer: '#f7fff2',
-  underReview: '#fcab29',      // = accent
+  approved: '#009540',         // = primary; Figma color/status/approved/text
+  approvedContainer: '#f7fff1', // Figma color/status/approved/bg
+  pending: '#835400',          // Figma color/status/pending/text (amber/700)
+  pendingContainer: '#ffddb5', // Figma color/status/pending/bg (amber/100)
+  pendingBorder: '#fcab29',    // Figma color/status/pending/border (amber/500)
+  underReview: '#835400',      // alias — pending status text
   underReviewContainer: '#ffddb5',
-  notApproved: '#ba1a1a',      // Error red (from Stitch)
+  declined: '#ba1a1a',         // Figma color/status/declined/text (red/600)
+  declinedContainer: '#ffd9de', // Figma color/status/declined/bg (red/50)
+  notApproved: '#ba1a1a',      // alias — declined status text
   notApprovedContainer: '#ffd9de',
 
   // ─── Semantic ────────────────────────────────────────────────────────────

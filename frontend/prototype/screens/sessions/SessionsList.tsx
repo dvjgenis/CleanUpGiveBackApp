@@ -23,7 +23,7 @@ interface Props {
   go: (screen: Screen) => void;
 }
 
-type FilterOption = 'All' | 'Approved' | 'Under Review' | 'Not Approved';
+type FilterOption = 'All' | 'Approved' | 'Pending' | 'Declined';
 
 interface SessionCard {
   id: string;
@@ -61,19 +61,19 @@ const SESSIONS: SessionCard[] = [
   },
 ];
 
-const FILTERS: FilterOption[] = ['All', 'Approved', 'Under Review', 'Not Approved'];
+const FILTERS: FilterOption[] = ['All', 'Approved', 'Pending', 'Declined'];
 
 const STATUS_MAP: Record<FilterOption, StatusType | null> = {
   'All': null,
   'Approved': 'approved',
-  'Under Review': 'under-review',
-  'Not Approved': 'not-approved',
+  'Pending': 'under-review',
+  'Declined': 'not-approved',
 };
 
 const STATUS_DOT_COLOR: Record<string, string> = {
   'approved': Colors.approved,
-  'under-review': Colors.underReview,
-  'not-approved': Colors.notApproved,
+  'under-review': Colors.pending,
+  'not-approved': Colors.declined,
   'photo-due': Colors.accent,
   'restart-required': Colors.error,
   'gps-active': Colors.primary,
@@ -81,8 +81,8 @@ const STATUS_DOT_COLOR: Record<string, string> = {
 
 const STATUS_LABEL: Record<string, string> = {
   'approved': 'Approved',
-  'under-review': 'Under Review',
-  'not-approved': 'Not Approved',
+  'under-review': 'Pending',
+  'not-approved': 'Declined',
   'photo-due': 'Photo Due',
   'restart-required': 'Restart Required',
   'gps-active': 'GPS Active',

@@ -8,7 +8,7 @@ Powers route display, GPS sampling, and geofencing during cleanup sessions. UI p
 
 ## Planned responsibilities
 
-- Stream or batch GPS coordinates during an active session
+- Stream or batch GPS coordinates during an active session — **wired in app** via `liveSessionStore` (`watchPositionAsync`, route polyline, haversine distance)
 - Render route polyline and session stats
 - Geofence validation for checkpoint zones
 - Map provider abstraction (tiles, geocoding)
@@ -16,7 +16,7 @@ Powers route display, GPS sampling, and geofencing during cleanup sessions. UI p
 ## Integrations
 
 - Map provider TBD — see [accounts-and-access.md](../../accounts-and-access.md)
-- Frontend: `expo-location` + map component (not yet in `app.json` plugins)
+- Frontend: `expo-location` + map component; live tracker weather via [Open-Meteo](https://open-meteo.com/) (current temperature + reverse geocoding, no API key)
 
 ## Code
 

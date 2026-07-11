@@ -1,3 +1,4 @@
+/** @deprecated Legacy Stitch HTML prototype. Superseded by Figma designs → native RN. See frontend/design/figma/manifest.yaml */
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, ActivityIndicator, Text, Platform } from 'react-native';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';

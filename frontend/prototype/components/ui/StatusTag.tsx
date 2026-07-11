@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
+import { Colors } from '../../constants/Colors';
 
 export type StatusType =
   | 'approved'
@@ -10,13 +11,40 @@ export type StatusType =
   | 'restart-required'
   | 'gps-active';
 
-const STATUS_CONFIG: Record<StatusType, { label: string; bgClass: string; textClass: string }> = {
-  'approved': { label: 'Approved', bgClass: 'bg-primary-container', textClass: 'text-on-primary-container' },
-  'under-review': { label: 'Under Review', bgClass: 'bg-secondary-container', textClass: 'text-on-secondary-container' },
-  'not-approved': { label: 'Not Approved', bgClass: 'bg-error-container', textClass: 'text-on-error-container' },
-  'photo-due': { label: 'Photo Due', bgClass: 'bg-secondary-container', textClass: 'text-on-secondary-container' },
-  'restart-required': { label: 'Restart Required', bgClass: 'bg-error-container', textClass: 'text-on-error-container' },
-  'gps-active': { label: 'GPS Active', bgClass: 'bg-primary-container', textClass: 'text-on-primary-container' },
+const STATUS_CONFIG: Record<
+  StatusType,
+  { label: string; backgroundColor: string; color: string }
+> = {
+  approved: {
+    label: 'Approved',
+    backgroundColor: Colors.approvedContainer,
+    color: Colors.approved,
+  },
+  'under-review': {
+    label: 'Pending',
+    backgroundColor: Colors.pendingContainer,
+    color: Colors.pending,
+  },
+  'not-approved': {
+    label: 'Declined',
+    backgroundColor: Colors.declinedContainer,
+    color: Colors.declined,
+  },
+  'photo-due': {
+    label: 'Photo Due',
+    backgroundColor: Colors.pendingContainer,
+    color: Colors.pending,
+  },
+  'restart-required': {
+    label: 'Restart Required',
+    backgroundColor: Colors.declinedContainer,
+    color: Colors.declined,
+  },
+  'gps-active': {
+    label: 'GPS Active',
+    backgroundColor: Colors.approvedContainer,
+    color: Colors.approved,
+  },
 };
 
 interface StatusTagProps {
@@ -29,14 +57,27 @@ export function StatusTag({ status }: StatusTagProps) {
   return (
     <Animated.View entering={FadeIn.duration(150)}>
       <View
-        className={`self-start px-2.5 py-1 rounded-sm ${config.bgClass}`}
+        style={[styles.tag, { backgroundColor: config.backgroundColor }]}
         accessibilityRole="text"
         accessibilityLabel={`${config.label} status`}
       >
-        <Text className={`font-label text-[11px] font-semibold tracking-wide ${config.textClass}`}>
-          {config.label}
-        </Text>
+        <Text style={[styles.label, { color: config.color }]}>{config.label}</Text>
       </View>
     </Animated.View>
   );
 }
+
+const styles = StyleSheet.create({
+  tag: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  label: {
+    fontFamily: 'NotoSans',
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.2,
+  },
+});

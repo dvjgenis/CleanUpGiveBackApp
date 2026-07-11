@@ -1,0 +1,103 @@
+import type { HomeDashboardData, ImpactStat, RecentSessionSummary, UpcomingEventSummary } from './home.types';
+import { getCurrentWeekMeta } from '../utils/weekCalendar';
+
+export type { HomeDashboardData, ImpactStat, RecentSessionSummary, UpcomingEventSummary };
+
+/** First-time user — empty stats; week fields are merged at render time in `HomeScreen`. */
+export const firstTimeHomeDashboard: HomeDashboardData = {
+  homeUser: { firstName: 'Shivam' },
+  weeklyStreakHours: 0,
+  serviceHoursTotalLabel: '0.0 hrs',
+  ...getCurrentWeekMeta(),
+  weeklyHoursChart: [
+    { day: 'Mon', value: 0 },
+    { day: 'Tue', value: 0 },
+    { day: 'Wed', value: 0 },
+    { day: 'Thu', value: 0 },
+    { day: 'Fri', value: 0 },
+    { day: 'Sat', value: 0 },
+    { day: 'Sun', value: 0 },
+  ],
+  impactStats: [
+    { id: 'miles', value: '0.0', label: 'MILES COVERED', icon: 'miles' },
+    { id: 'locations', value: '0.0', label: 'LOCATIONS CLEANED', icon: 'locations' },
+    { id: 'sessions', value: '0.0', label: 'SESSIONS COMPLETED', icon: 'sessions' },
+    { id: 'photos', value: '0.0', label: 'PHOTOS SUBMITTED', icon: 'photos' },
+  ],
+  recentSessions: [],
+  recentEvents: [
+    {
+      id: 'ev-1',
+      day: '20',
+      month: 'July',
+      weekday: 'Mon',
+      year: '2026',
+      location: '600 E Algonquin Rd, Des Plaines, IL 60016, USA',
+      timeLabel: '10:30 AM - 12:30 PM',
+      organization: 'D214 Life Program',
+    },
+    {
+      id: 'ev-2',
+      day: '27',
+      month: 'July',
+      weekday: 'Mon',
+      year: '2026',
+      location: '1425 N McKinley Rd, Des Plaines, IL 60016, USA',
+      timeLabel: '9:00 AM - 11:00 AM',
+      organization: 'Park District Volunteer Corps',
+    },
+    {
+      id: 'ev-3',
+      day: '3',
+      month: 'August',
+      weekday: 'Mon',
+      year: '2026',
+      location: '2200 E Algonquin Rd, Mt Prospect, IL 60056, USA',
+      timeLabel: '1:00 PM - 3:30 PM',
+      organization: 'Northwest Community Partners',
+    },
+  ],
+  allEvents: [
+    {
+      id: 'ev-1',
+      day: '20',
+      month: 'July',
+      weekday: 'Mon',
+      year: '2026',
+      location: '600 E Algonquin Rd, Des Plaines, IL 60016, USA',
+      timeLabel: '10:30 AM - 12:30 PM',
+      organization: 'D214 Life Program',
+    },
+    {
+      id: 'ev-2',
+      day: '27',
+      month: 'July',
+      weekday: 'Mon',
+      year: '2026',
+      location: '1425 N McKinley Rd, Des Plaines, IL 60016, USA',
+      timeLabel: '9:00 AM - 11:00 AM',
+      organization: 'Park District Volunteer Corps',
+    },
+    {
+      id: 'ev-3',
+      day: '3',
+      month: 'August',
+      weekday: 'Mon',
+      year: '2026',
+      location: '2200 E Algonquin Rd, Mt Prospect, IL 60056, USA',
+      timeLabel: '1:00 PM - 3:30 PM',
+      organization: 'Northwest Community Partners',
+    },
+    {
+      id: 'ev-4',
+      day: '10',
+      month: 'August',
+      weekday: 'Mon',
+      year: '2026',
+      location: '800 Central Rd, Glenview, IL 60025, USA',
+      timeLabel: '8:30 AM - 10:30 AM',
+      organization: 'Glenview Green Team',
+    },
+  ],
+  notificationCount: 0,
+};

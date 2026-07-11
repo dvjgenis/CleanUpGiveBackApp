@@ -1,41 +1,30 @@
 # CleanUpGiveBack — Screen Map
 
-> ⚠️ **ROUGH DRAFT ITERATION. Nothing here is final.**
-> This document maps PRD screens → Stitch counterparts → prototype code files.
-> All screens, tokens, layouts, and navigation are subject to change.
+> This document maps PRD screens → Figma frames → Stitch counterparts (legacy) → prototype code files.
+> **Figma is now the design ground truth.** See [`frontend/design/figma/manifest.yaml`](../../frontend/design/figma/manifest.yaml) for the migration index.
 
-Generated: 2026-06-05
+Updated: 2026-06-30
 
 ---
 
-## Design System Applied
+## Design System
 
-| Token | Source | Value |
-|---|---|---|
-| Primary green | User-specified | `#009540` |
-| Black | User-specified | `#161616` |
-| White | User-specified | `#FFFFFF` |
-| Accent (CTA / amber) | Stitch HTML | `#fcab29` |
-| Background | Stitch HTML | `#fcf9f8` |
-| Surface (cards/inputs) | Stitch HTML | `#f6f3f2` |
-| Secondary text | Stitch HTML | `#6e7a6c` |
-| Error / Not Approved | Stitch HTML | `#ba1a1a` |
-| Primary dark (pressed) | Stitch HTML | `#006e2d` |
+Token authority: **Figma Design System page** ([`1:3`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=1-3)) — 104 variables, 14 text styles.
+Full token reference: [`docs/frontend/brand.md`](../brand.md).
 
-| Font | Role |
-|---|---|
-| Sanchez | Headlines |
-| Noto Sans | Body text |
-| IBM Plex Sans | Labels, buttons, navigation |
-| JetBrains Mono | Timers, session data, GPS values |
+> The token table previously in this document has been removed — it contained Stitch-era values that are superseded by the Figma variable collections. Refer to `brand.md` for all current token values.
 
 ---
 
 ## Auth / Onboarding
 
-| # | PRD Screen | PRD § | Stitch Match | Stitch ID | Code File | Status |
-|---|---|---|---|---|---|---|
-| 1 | Welcome / Auth | 6.1 | Welcome - Standardized Progress ★ | `e77c3364e32f4b22823b7a0c9cd0cbdd` | `prototype/screens/auth/Welcome.tsx` | ✅ |
+> Figma page: **1·Onboarding** ([node 627:29](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=627-29)) · Token binding: ✅ complete (2026-06-30)
+> Figma `routeKey` values: `splash-loading`, `welcome`, `create-account`, `account-details`, `notification-preference`, `setup-complete`, `coachmark-tutorial` — see [manifest.yaml](../../frontend/design/figma/manifest.yaml)
+
+| # | PRD Screen | PRD § | Figma node | Stitch Match *(legacy)* | Stitch ID *(legacy)* | Code File | Status |
+|---|---|---|---|---|---|---|---|
+| 0 | Splash / App Loading | — | [`827:111`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=827-111) | — | — | `expo-splash-screen` (`app.json`) | 🎨 Figma designed |
+| 1 | Welcome / Auth | 6.1 | — | Welcome - Standardized Progress ★ | `e77c3364e32f4b22823b7a0c9cd0cbdd` | `prototype/screens/auth/Welcome.tsx` | ✅ |
 | 2 | Create Account | 6.2 | Create Account - Standardized Progress | `e2433a03392344ac97a58c93420583fc` | `prototype/screens/auth/CreateAccount.tsx` | ✅ |
 | 3 | Account Details | 6.3 | Account Details - Standardized Progress | `91668378750f490ea367ba08af63b86e` | `prototype/screens/auth/AccountDetails.tsx` | ✅ |
 | 4 | Notification Preference | 6.4 | Notification Preference - Standardized Redo | `095341a446e448a2904d0ee93ea78e4b` | `prototype/screens/auth/NotificationPreference.tsx` | ✅ |
@@ -46,7 +35,10 @@ Generated: 2026-06-05
 
 ## Main App
 
-| # | PRD Screen | PRD § | Stitch Match | Stitch ID | Code File | Status |
+> Figma pages: **2·Home & Events** · **3·Shop & Payments** · **4·Session Tracking** · **5·Sessions History**
+> See [manifest.yaml](../../frontend/design/figma/manifest.yaml) for `routeKey` values and Figma node IDs.
+
+| # | PRD Screen | PRD § | Stitch Match *(legacy)* | Stitch ID *(legacy)* | Code File | Status |
 |---|---|---|---|---|---|---|
 | 7 | Home | 6.7 | Home Dashboard - Final Branding | `68fe23e48c51440aa28e15830b3236c6` | `prototype/screens/home/Home.tsx` | ✅ |
 | 8 | Event Detail | 6.8 | — | — | `prototype/screens/event/EventDetail.tsx` | ✅ Generated |
@@ -63,7 +55,7 @@ Generated: 2026-06-05
 | 19 | Session Detail | 6.18 | — | — | `prototype/screens/sessions/SessionDetail.tsx` | ✅ Generated |
 | 20 | Shop Home | 6.19 | Shop Home - PRD & Reference Aligned | `851c8e35bde84ed48af36bd305da0311` | `prototype/screens/shop/ShopHome.tsx` | ✅ |
 | 21 | Donate | 6.20 | Donate | `1ebb06ee3aab4f79b373714156a51e6d` | `prototype/screens/shop/Donate.tsx` | ✅ |
-| 22 | Product Detail | 6.21 | Product Detail: Cleanup Kit - High Fidelity | `cd53f4835cf1487ab5f43ad9b375092f` | `prototype/screens/shop/ProductDetail.tsx` | ✅ |
+| 22 | Product Detail | 6.21 | Product Detail: Cleanup Kit - High Fidelity | `492:114` (+ SKU frames `909:126`, `905:166`, `905:236`, `905:306` in Figma) | `prototype/screens/shop/ProductDetail.tsx` | ✅ Figma · RN placeholder |
 | 23 | Cart | 6.22 | Shopping Cart (No Tote Bag) | `62818b1ae3d24b928b85c0a6e53cad28` | `prototype/screens/shop/Cart.tsx` | ✅ |
 | 24 | Checkout | 6.23 | — | — | `prototype/screens/shop/Checkout.tsx` | ✅ Generated |
 | 25 | Purchase / Donation Confirmation | 6.24 | Thank You! (No Tote Bag) | `d38314d06d2e4d58ba492326a7e2dceb` | `prototype/screens/shop/PurchaseConfirmation.tsx` | ✅ |
@@ -73,13 +65,16 @@ Generated: 2026-06-05
 
 ## Account Sub-pages
 
-| # | PRD Screen | PRD § | Stitch Match | Stitch ID | Code File | Status |
+> Figma page: **6·Account & Settings** — see [manifest.yaml](../../frontend/design/figma/manifest.yaml)
+
+| # | PRD Screen | PRD § | Stitch Match *(legacy)* | Stitch ID *(legacy)* | Code File | Status |
 |---|---|---|---|---|---|---|
 | 27 | Notification Settings | 6.26 | Notification Settings - Refined Toggles | `83a91d33190545b49c11af078e4ff4e7` | `prototype/screens/account/NotificationSettings.tsx` | ✅ |
 | 28 | Privacy & Permissions | 6.27 | — | — | `prototype/screens/account/PrivacyPermissions.tsx` | ✅ Generated |
 | 29 | Order History | 6.28 | Order History | `da9870f8fbb1470887beaee7a93e0fec` | `prototype/screens/account/OrderHistory.tsx` | ✅ |
 | 30 | Donation History | 6.29 | Donation History | `360ff7413c6d4660a9b4fd0a74ea6c77` | `prototype/screens/account/DonationHistory.tsx` | ✅ |
 | 31 | Export Service Record | 6.30 | Export Service Record | `69ae4c567c2d48448cbd4b2b847c791d` | `prototype/screens/account/ExportServiceRecord.tsx` | ✅ |
+| 32 | Approval History | 7 | — | — | — | 🎨 Figma designed (`854:294`) |
 
 ---
 
@@ -165,3 +160,34 @@ Applied across all 31 code files:
 | PrimaryButton (all) | Scale 0.97 press / 1.0 release, spring |
 
 All other screens: instant, no decorative animation.
+
+---
+
+## Compliance & Privacy (designed — 2026-06-30)
+
+> 13 screens in [manifest.yaml](../../frontend/design/figma/manifest.yaml) — Figma frames designed on Page 6 + Page 7. Existing screen modifications still pending — see [figma-compliance-screen-gap-audit.md](../compliance/figma-compliance-screen-gap-audit.md).
+
+### Page 6 · Account (2 new)
+
+| Route key | PRD § | Purpose | Figma node | Status |
+|-----------|-------|---------|------------|--------|
+| `account-privacy` | 6.37 | Account tab → Preferences → Privacy hub | `723:405` | designed |
+| `privacy-permissions` | 6.27 | OS permissions (split from privacy-security) | `723:455` | designed |
+
+### Page 7 · Compliance & Legal (11 new)
+
+| Route key | PRD § | Purpose | Figma node | Status |
+|-----------|-------|---------|------------|--------|
+| `age-gate` | 6.0a | Neutral DOB screening (pre-auth) | `722:51` | designed |
+| `parental-consent-notice` | 6.0b | Parent direct notice | `723:307` | designed |
+| `parental-consent-verify` | 6.0c | Verifiable consent | `723:317` | designed |
+| `parental-consent-pending` | 6.0d | Blocked until verified | `723:332` | designed |
+| `teen-privacy-notice` | 6.0e | Teen highest-privacy defaults | `723:49` | designed |
+| `privacy-policy` | 6.31 | Policy viewer | `723:339` | designed |
+| `terms-of-service` | 6.32 | ToS viewer | `723:352` | designed |
+| `privacy-rights-request` | 6.33 | CCPA access/deletion form | `723:365` | designed |
+| `delete-account-confirm` | 6.35 | Account deletion + re-auth | `723:378` | designed |
+| `permission-location` | 6.10 | Location permission explainer | `728:639` | designed |
+| `permission-camera` | 6.10 | Camera permission explainer | `728:658` | designed |
+
+**Docs:** [privacy-and-data-protection.md](../compliance/privacy-and-data-protection.md) · [privacy-compliance-prd-addendum.md](specs/privacy-compliance-prd-addendum.md)
