@@ -2,7 +2,7 @@ import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { OnboardingProgressPills } from '@/components/onboarding/OnboardingProgressPills';
 import { COUNTRIES, DEFAULT_COUNTRY, type Country } from '@/constants/countries';
 import { colors as C } from '@/features/figma-screens/tokens';
-import { modalSpring, sheetDismissSpring } from '@/motion';
+import { durations, easing, modalSpring } from '@/motion';
 import {
   IBMPlexSans_600SemiBold,
 } from '@expo-google-fonts/ibm-plex-sans';
@@ -34,6 +34,7 @@ import Animated, {
   useReducedMotion,
   useSharedValue,
   withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
@@ -41,6 +42,17 @@ import Svg, { Path } from 'react-native-svg';
 
 /** Extra travel so the sheet starts fully off-screen below the fold. */
 const SHEET_BOTTOM_BLEED = 48;
+
+function validatePhone(digits: string, country: Country) {
+  if (!digits) return 'Phone number is required';
+  const minDigits = country.iso2 === 'US' || country.iso2 === 'CA' ? 10 : 4;
+  if (digits.length < minDigits) {
+    return country.iso2 === 'US' || country.iso2 === 'CA'
+      ? 'Enter a valid 10-digit number'
+      : 'Enter a valid phone number';
+  }
+  return undefined;
+}
 
 function ChevronDown({ size = 24 }: { size?: number }) {
   return (
@@ -103,31 +115,42 @@ function CountryPickerModal({
   const sheetMaxHeight = windowHeight * 0.7;
   const dismissTravel = sheetMaxHeight + insets.bottom + SHEET_BOTTOM_BLEED;
   const translateY = useSharedValue(dismissTravel);
+  const scrimOpacity = useSharedValue(0);
 
   const dismiss = useCallback(() => {
     if (reducedMotion) {
       onClose();
       return;
     }
-    translateY.value = withSpring(dismissTravel, sheetDismissSpring, (finished) => {
-      if (finished) {
-        runOnJS(onClose)();
-      }
-    });
-  }, [dismissTravel, onClose, reducedMotion, translateY]);
+    scrimOpacity.value = withTiming(0, { duration: 320, easing: easing.drawer });
+    translateY.value = withTiming(
+      dismissTravel,
+      { duration: 320, easing: easing.drawer },
+      (finished) => {
+        if (finished) runOnJS(onClose)();
+      },
+    );
+  }, [dismissTravel, onClose, reducedMotion, scrimOpacity, translateY]);
 
   useEffect(() => {
-    if (!visible) {
-      return;
-    }
+    if (!visible) return;
     translateY.value = dismissTravel;
-    translateY.value = reducedMotion
-      ? 0
-      : withSpring(0, { ...modalSpring, overshootClamping: true });
-  }, [dismissTravel, reducedMotion, translateY, visible]);
+    scrimOpacity.value = 0;
+    if (reducedMotion) {
+      translateY.value = 0;
+      scrimOpacity.value = 1;
+    } else {
+      translateY.value = withSpring(0, { ...modalSpring, overshootClamping: true });
+      scrimOpacity.value = withTiming(1, { duration: durations.modalEnter, easing: easing.easeOut });
+    }
+  }, [dismissTravel, reducedMotion, scrimOpacity, translateY, visible]);
 
   const sheetStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }],
+  }));
+
+  const scrimStyle = useAnimatedStyle(() => ({
+    opacity: scrimOpacity.value,
   }));
 
   return (
@@ -139,7 +162,7 @@ function CountryPickerModal({
       onRequestClose={dismiss}
     >
       <View style={s.modalRoot}>
-        <View style={s.modalScrim} pointerEvents="none" />
+        <Animated.View style={[s.modalScrim, scrimStyle]} pointerEvents="none" />
         <Pressable
           style={StyleSheet.absoluteFillObject}
           onPress={dismiss}
@@ -204,6 +227,8 @@ export function AccountPhoneScreen() {
   const [country, setCountry] = useState<Country>(DEFAULT_COUNTRY);
   const [digits, setDigits] = useState('');
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [touched, setTouched] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
   const [fontsLoaded] = useFonts({
     Sanchez_400Regular,
@@ -218,6 +243,9 @@ export function AccountPhoneScreen() {
   );
 
   if (!fontsLoaded) return <View style={s.root} />;
+
+  const phoneError = validatePhone(digits, country);
+  const showPhoneError = (submitted || touched) ? phoneError : undefined;
 
   const dismissKeyboard = () => Keyboard.dismiss();
 
@@ -263,20 +291,24 @@ export function AccountPhoneScreen() {
                     <ChevronDown />
                   </AnimatedPressable>
 
-                  <View style={s.phoneField}>
-                    <Text style={s.dialCode}>+{country.dialCode}</Text>
-                    <TextInput
-                      style={s.phoneInput}
-                      value={display}
-                      onChangeText={(text) =>
-                        setDigits(digitsOnly(text, country.maxDigits))
-                      }
-                      keyboardType="phone-pad"
-                      placeholder={phonePlaceholder(country)}
-                      placeholderTextColor={C.textNavInactive}
-                      accessibilityLabel="Phone number"
-                      textContentType="telephoneNumber"
-                    />
+                  <View style={s.phoneFieldCol}>
+                    <View style={[s.phoneField, showPhoneError ? s.fieldError : null]}>
+                      <Text style={s.dialCode}>+{country.dialCode}</Text>
+                      <TextInput
+                        style={s.phoneInput}
+                        value={display}
+                        onChangeText={(text) =>
+                          setDigits(digitsOnly(text, country.maxDigits))
+                        }
+                        onBlur={() => setTouched(true)}
+                        keyboardType="phone-pad"
+                        placeholder={phonePlaceholder(country)}
+                        placeholderTextColor={C.textNavInactive}
+                        accessibilityLabel="Phone number"
+                        textContentType="telephoneNumber"
+                      />
+                    </View>
+                    {showPhoneError ? <Text style={s.errorText}>{showPhoneError}</Text> : null}
                   </View>
                 </View>
               </View>
@@ -287,6 +319,8 @@ export function AccountPhoneScreen() {
                 style={s.continueBtn}
                 onPress={() => {
                   dismissKeyboard();
+                  setSubmitted(true);
+                  if (phoneError) return;
                   router.push('/account-details');
                 }}
                 accessibilityRole="button"
@@ -369,11 +403,12 @@ const s = StyleSheet.create({
   },
   phoneRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: 10,
   },
   countryBtn: {
+    height: 56,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
@@ -392,6 +427,19 @@ const s = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 10,
     gap: 10,
+  },
+  phoneFieldCol: {
+    flex: 1,
+  },
+  fieldError: {
+    borderColor: C.statusDeclinedBorder,
+  },
+  errorText: {
+    fontFamily: 'NotoSans_400Regular',
+    fontSize: 12,
+    color: C.statusDeclinedText,
+    marginTop: 2,
+    marginLeft: 4,
   },
   dialCode: {
     fontFamily: 'NotoSans_400Regular',

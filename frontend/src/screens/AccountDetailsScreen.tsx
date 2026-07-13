@@ -41,6 +41,17 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 const SERVICE_TYPES = ['Court Ordered', 'Volunteering', 'School', 'Other'] as const;
 type ServiceType = (typeof SERVICE_TYPES)[number];
 
+function validate(birthday: Date | null, birthdayText: string, serviceType: ServiceType | null) {
+  const errors: { birthday?: string; serviceType?: string } = {};
+  if (!birthdayText.trim()) {
+    errors.birthday = 'Birthday is required';
+  } else if (!birthday) {
+    errors.birthday = 'Enter a valid birthday (MM/YYYY)';
+  }
+  if (!serviceType) errors.serviceType = 'Select a service type';
+  return errors;
+}
+
 const SHEET_BOTTOM_BLEED = 48;
 const DEFAULT_PICKER_DATE = new Date(2000, 0, 1);
 
@@ -199,6 +210,8 @@ export function AccountDetailsScreen() {
   const [pickerDate, setPickerDate] = useState(DEFAULT_PICKER_DATE);
   const [showPicker, setShowPicker] = useState(false);
   const [serviceType, setServiceType] = useState<ServiceType | null>(null);
+  const [touched, setTouched] = useState<{ birthday?: boolean; serviceType?: boolean }>({});
+  const [submitted, setSubmitted] = useState(false);
 
   const [fontsLoaded] = useFonts({
     Sanchez_400Regular,
@@ -209,6 +222,10 @@ export function AccountDetailsScreen() {
   });
 
   if (!fontsLoaded) return <View style={s.root} />;
+
+  const errors = validate(birthday, birthdayText, serviceType);
+  const showError = (field: keyof typeof errors) =>
+    (submitted || touched[field]) ? errors[field] : undefined;
 
   const commitTypedBirthday = () => {
     const parsed = parseBirthdayDraft(birthdayText);
@@ -245,7 +262,7 @@ export function AccountDetailsScreen() {
         >
           <Pressable style={s.content} onPress={Keyboard.dismiss}>
             <View style={s.form}>
-              <OnboardingProgressPills active={3} />
+              <OnboardingProgressPills active={2} />
 
               <View style={s.titleSection}>
                 <Text style={s.title}>A few details</Text>
@@ -256,7 +273,7 @@ export function AccountDetailsScreen() {
 
               <View style={s.formSection}>
                 <Text style={s.sectionTitle}>Birthday</Text>
-                <View style={s.dateField}>
+                <View style={[s.dateField, showError('birthday') ? s.fieldError : null]}>
                   <TextInput
                     style={s.dateInput}
                     value={birthdayText}
@@ -271,7 +288,10 @@ export function AccountDetailsScreen() {
                         setBirthday(null);
                       }
                     }}
-                    onBlur={commitTypedBirthday}
+                    onBlur={() => {
+                      commitTypedBirthday();
+                      setTouched((t) => ({ ...t, birthday: true }));
+                    }}
                     onSubmitEditing={commitTypedBirthday}
                     placeholder="MM/YYYY"
                     placeholderTextColor={C.textTertiary}
@@ -287,9 +307,10 @@ export function AccountDetailsScreen() {
                     accessibilityLabel="Open birthday picker"
                     hitSlop={8}
                   >
-                    <CalendarIcon />
+                    <CalendarIcon color={showError('birthday') ? C.statusDeclinedText : C.textTertiary} />
                   </AnimatedPressable>
                 </View>
+                {showError('birthday') ? <Text style={s.errorText}>{showError('birthday')}</Text> : null}
               </View>
 
               <View style={s.formSection}>
@@ -301,7 +322,10 @@ export function AccountDetailsScreen() {
                         key={type}
                         label={type}
                         selected={serviceType === type}
-                        onPress={() => setServiceType(type)}
+                        onPress={() => {
+                          setServiceType(type);
+                          setTouched((t) => ({ ...t, serviceType: true }));
+                        }}
                       />
                     ))}
                   </View>
@@ -311,11 +335,15 @@ export function AccountDetailsScreen() {
                         key={type}
                         label={type}
                         selected={serviceType === type}
-                        onPress={() => setServiceType(type)}
+                        onPress={() => {
+                          setServiceType(type);
+                          setTouched((t) => ({ ...t, serviceType: true }));
+                        }}
                       />
                     ))}
                   </View>
                 </View>
+                {showError('serviceType') ? <Text style={s.errorText}>{showError('serviceType')}</Text> : null}
               </View>
             </View>
 
@@ -325,12 +353,15 @@ export function AccountDetailsScreen() {
                 onPress={() => {
                   Keyboard.dismiss();
                   commitTypedBirthday();
+                  setSubmitted(true);
                   const resolved = parseBirthdayDraft(birthdayText) ?? birthday;
+                  const currentErrors = validate(resolved, birthdayText, serviceType);
+                  if (Object.keys(currentErrors).length > 0) return;
                   if (resolved && ageFromMonthYear(resolved) < 18) {
                     router.push('/under-age');
                     return;
                   }
-                  router.push('/notification-preference');
+                  router.push('/location-permission');
                 }}
                 accessibilityRole="button"
                 accessibilityLabel="Continue"
@@ -455,6 +486,16 @@ const s = StyleSheet.create({
     height: 36,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  fieldError: {
+    borderColor: C.statusDeclinedBorder,
+  },
+  errorText: {
+    fontFamily: 'NotoSans_400Regular',
+    fontSize: 12,
+    color: C.statusDeclinedText,
+    marginTop: 2,
+    marginLeft: 4,
   },
   serviceGrid: {
     gap: 16,

@@ -1,7 +1,7 @@
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { CameraPermissionIllustration } from '@/components/onboarding/OnboardingIcons';
 import { OnboardingProgressPills } from '@/components/onboarding/OnboardingProgressPills';
-import { colors as C, radius } from '@/features/figma-screens/tokens';
+import { colors as C } from '@/features/figma-screens/tokens';
 import { requestSessionCameraPermission } from '@/utils/sessionPermissions';
 import { IBMPlexSans_600SemiBold } from '@expo-google-fonts/ibm-plex-sans';
 import { NotoSans_400Regular, NotoSans_600SemiBold } from '@expo-google-fonts/noto-sans';
@@ -27,7 +27,7 @@ export function CameraPermissionScreen() {
     router.push('/notification-preference');
   }
 
-  function handleSkip() {
+  function handleNotNow() {
     router.push('/notification-preference');
   }
 
@@ -39,10 +39,10 @@ export function CameraPermissionScreen() {
         <CameraPermissionIllustration />
       </View>
 
-      <View style={s.safe}>
-        <View style={s.header}>
+      <View style={s.flex}>
+        <View style={s.main}>
           <OnboardingProgressPills active={4} />
-          <View style={s.headingBlock}>
+          <View style={s.titleSection}>
             <Text style={s.title} accessibilityRole="header">
               Allow camera?
             </Text>
@@ -52,32 +52,30 @@ export function CameraPermissionScreen() {
           </View>
         </View>
 
-        <View style={s.actions}>
+        <View style={s.footer}>
           <AnimatedPressable
-            style={s.ghostBtn}
-            onPress={handleSkip}
-            accessibilityRole="button"
-            accessibilityLabel="Not now"
-          >
-            <Text style={s.ghostBtnText}>Not now</Text>
-          </AnimatedPressable>
-
-          <AnimatedPressable
-            style={s.primaryBtn}
+            style={s.enableBtn}
             onPress={handleEnable}
             accessibilityRole="button"
             accessibilityLabel="Enable camera"
           >
-            <Text style={s.primaryBtnText}>Enable camera</Text>
+            <Text style={s.enableBtnText}>Enable camera</Text>
           </AnimatedPressable>
-
           <AnimatedPressable
-            style={s.outlineBtn}
+            style={s.previousBtn}
             onPress={() => router.back()}
             accessibilityRole="button"
             accessibilityLabel="Previous"
           >
-            <Text style={s.outlineBtnText}>Previous</Text>
+            <Text style={s.previousBtnText}>Previous</Text>
+          </AnimatedPressable>
+          <AnimatedPressable
+            style={s.notNowBtn}
+            onPress={handleNotNow}
+            accessibilityRole="button"
+            accessibilityLabel="Not now"
+          >
+            <Text style={s.notNowText}>Not now</Text>
           </AnimatedPressable>
         </View>
       </View>
@@ -91,6 +89,10 @@ const s = StyleSheet.create({
     backgroundColor: C.bgApp,
     overflow: 'hidden',
   },
+  flex: {
+    flex: 1,
+    justifyContent: 'space-between',
+  },
   illustration: {
     position: 'absolute',
     left: '40.77%',
@@ -98,17 +100,12 @@ const s = StyleSheet.create({
     width: 240,
     height: 210,
   },
-  safe: {
-    flex: 1,
+  main: {
     paddingHorizontal: 16,
     paddingTop: 16,
-    justifyContent: 'space-between',
-    paddingBottom: 24,
-  },
-  header: {
     gap: 30,
   },
-  headingBlock: {
+  titleSection: {
     gap: 15,
   },
   title: {
@@ -122,40 +119,42 @@ const s = StyleSheet.create({
     color: C.textNavInactive,
     lineHeight: 24,
   },
-  actions: {
+  footer: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
     gap: 20,
   },
-  primaryBtn: {
+  enableBtn: {
     backgroundColor: C.primary,
-    borderRadius: radius.md,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 20,
   },
-  primaryBtnText: {
+  enableBtnText: {
     fontFamily: 'IBMPlexSans_600SemiBold',
     fontSize: 18,
     color: C.textOnPrimary,
   },
-  outlineBtn: {
+  previousBtn: {
     borderWidth: 1,
     borderColor: C.textPrimary,
-    borderRadius: radius.md,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 20,
   },
-  outlineBtnText: {
+  previousBtnText: {
     fontFamily: 'IBMPlexSans_600SemiBold',
     fontSize: 18,
     color: C.textPrimary,
   },
-  ghostBtn: {
+  notNowBtn: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 20,
+    paddingVertical: 12,
   },
-  ghostBtnText: {
+  notNowText: {
     fontFamily: 'NotoSans_600SemiBold',
     fontSize: 16,
     color: C.textPrimary,

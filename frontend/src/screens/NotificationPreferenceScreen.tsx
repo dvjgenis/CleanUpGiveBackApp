@@ -6,7 +6,7 @@ import {
   NotifPhotoIcon,
 } from '@/components/onboarding/OnboardingIcons';
 import { OnboardingProgressPills } from '@/components/onboarding/OnboardingProgressPills';
-import { colors as C, radius } from '@/features/figma-screens/tokens';
+import { colors as C } from '@/features/figma-screens/tokens';
 import {
   IBMPlexSans_600SemiBold,
 } from '@expo-google-fonts/ibm-plex-sans';
@@ -21,7 +21,6 @@ import { useRouter } from 'expo-router';
 import { type ComponentType } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
 
 const PREFS: { key: string; label: string; Icon: ComponentType<{ color?: string }> }[] = [
   { key: 'approval', label: 'Approval Updates', Icon: NotifApprovalIcon },
@@ -70,52 +69,55 @@ export function NotificationPreferenceScreen() {
   return (
     <SafeAreaView style={s.root} edges={['top', 'bottom']}>
       <ScrollView
+        style={s.flex}
         contentContainerStyle={s.scroll}
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
       >
-        <View style={s.header}>
-          <OnboardingProgressPills active={5} />
-          <View style={s.titleRow}>
-            <Text style={s.title}>Stay updated</Text>
-            <NotifBellIcon size={24} />
+        <View style={s.content}>
+          <View style={s.main}>
+            <OnboardingProgressPills active={5} />
+            <View style={s.titleSection}>
+              <View style={s.titleRow}>
+                <Text style={s.title}>Stay updated</Text>
+                <NotifBellIcon size={24} />
+              </View>
+              <Text style={s.subtitle}>
+                Get alerts about approvals, events, and photo checkpoints.
+              </Text>
+            </View>
+            <View style={s.prefList}>
+              {PREFS.map(({ key, label, Icon }) => (
+                <PreferenceChip key={key} label={label} Icon={Icon} />
+              ))}
+            </View>
           </View>
-          <Text style={s.subtitle}>
-            Get alerts about approvals, events, and photo checkpoints.
-          </Text>
-        </View>
 
-        <View style={s.prefList}>
-          {PREFS.map(({ key, label, Icon }) => (
-            <PreferenceChip key={key} label={label} Icon={Icon} />
-          ))}
-        </View>
-
-        <View style={s.actions}>
-          <AnimatedPressable
-            style={s.primaryBtn}
-            onPress={finish}
-            accessibilityRole="button"
-            accessibilityLabel="Enable notifications"
-          >
-            <Text style={s.primaryBtnText}>Enable notifications</Text>
-          </AnimatedPressable>
-          <AnimatedPressable
-            style={s.previousBtn}
-            onPress={() => router.back()}
-            accessibilityRole="button"
-            accessibilityLabel="Previous"
-          >
-            <Text style={s.previousBtnText}>Previous</Text>
-          </AnimatedPressable>
-          <AnimatedPressable
-            style={s.notNowBtn}
-            onPress={finish}
-            accessibilityRole="button"
-            accessibilityLabel="Not now"
-          >
-            <Text style={s.notNowText}>Not now</Text>
-          </AnimatedPressable>
+          <View style={s.footer}>
+            <AnimatedPressable
+              style={s.enableBtn}
+              onPress={finish}
+              accessibilityRole="button"
+              accessibilityLabel="Enable notifications"
+            >
+              <Text style={s.enableBtnText}>Enable notifications</Text>
+            </AnimatedPressable>
+            <AnimatedPressable
+              style={s.previousBtn}
+              onPress={() => router.back()}
+              accessibilityRole="button"
+              accessibilityLabel="Previous"
+            >
+              <Text style={s.previousBtnText}>Previous</Text>
+            </AnimatedPressable>
+            <AnimatedPressable
+              style={s.notNowBtn}
+              onPress={finish}
+              accessibilityRole="button"
+              accessibilityLabel="Not now"
+            >
+              <Text style={s.notNowText}>Not now</Text>
+            </AnimatedPressable>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -127,14 +129,24 @@ const s = StyleSheet.create({
     flex: 1,
     backgroundColor: C.bgApp,
   },
+  flex: {
+    flex: 1,
+  },
   scroll: {
+    flexGrow: 1,
     paddingHorizontal: 16,
     paddingTop: 16,
-    paddingBottom: 32,
-    gap: 49,
+    paddingBottom: 16,
   },
-  header: {
+  content: {
+    flexGrow: 1,
+    justifyContent: 'space-between',
+  },
+  main: {
     gap: 30,
+  },
+  titleSection: {
+    gap: 15,
   },
   titleRow: {
     flexDirection: 'row',
@@ -161,13 +173,12 @@ const s = StyleSheet.create({
     width: '100%',
     height: 56,
     borderWidth: 1,
-    borderRadius: radius.md,
+    borderRadius: 16,
     borderColor: C.borderOutline,
     backgroundColor: C.chipBg,
     alignItems: 'center',
     justifyContent: 'center',
   },
-
   prefInner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -178,17 +189,17 @@ const s = StyleSheet.create({
     fontSize: 16,
     color: C.textPrimary,
   },
-  actions: {
+  footer: {
     gap: 20,
   },
-  primaryBtn: {
+  enableBtn: {
     backgroundColor: C.primary,
-    borderRadius: radius.md,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 20,
   },
-  primaryBtnText: {
+  enableBtnText: {
     fontFamily: 'IBMPlexSans_600SemiBold',
     fontSize: 18,
     color: C.textOnPrimary,
@@ -196,7 +207,7 @@ const s = StyleSheet.create({
   previousBtn: {
     borderWidth: 1,
     borderColor: C.textPrimary,
-    borderRadius: radius.md,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 20,
@@ -209,7 +220,7 @@ const s = StyleSheet.create({
   notNowBtn: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 20,
+    paddingVertical: 12,
   },
   notNowText: {
     fontFamily: 'NotoSans_600SemiBold',
