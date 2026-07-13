@@ -6,7 +6,7 @@ type Props = {
 };
 
 /**
- * Ported from `figma_assets/react-icons/io/IoIosInformationCircle.svg`
+ * Ported from `assets/figma/session-setup/info-circle.svg`
  * (Figma 260:1312 permissions header).
  */
 export function SessionSetupInfoIcon({ color = '#3E4A3D', size = 18 }: Props) {

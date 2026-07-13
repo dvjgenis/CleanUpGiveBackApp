@@ -3,13 +3,16 @@ import { useFonts } from 'expo-font';
 import { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
 import { StyleSheet, TextInput } from 'react-native';
 
+import { colors as tokens } from '@/constants/tokens';
+
 const C = {
-  textPrimary: '#1c1b1b',
-  textOnPrimary: '#ffffff',
-  borderOutline: '#bdcaba',
-  labelOptional: '#bdcaba',
-  statusDeclined: '#ba1a1a',
+  textPrimary: tokens.textPrimary,
+  textOnPrimary: tokens.textOnPrimary,
+  borderOutline: tokens.borderOutline,
+  labelOptional: tokens.borderOutline,
+  statusDeclined: tokens.statusDeclinedText,
 } as const;
+
 
 const MONTHS_SHORT = [
   'Jan',

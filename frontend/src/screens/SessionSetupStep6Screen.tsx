@@ -17,15 +17,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
 import { requestSessionLocationPermission } from '@/utils/sessionPermissions';
+import { colors as C } from '@/constants/tokens';
 
-const C = {
-  bgApp: '#fcf9f8',
-  primary: '#009540',
-  textPrimary: '#1c1b1b',
-  textTertiary: '#3e4a3d',
-  textOnPrimary: '#ffffff',
-  borderOutline: '#bdcaba',
-} as const;
 
 function ProgressPills({ total = 6, active = 5 }: { total?: number; active?: number }) {
   return (
@@ -96,7 +89,7 @@ export function SessionSetupStep6Screen() {
 
       <CoachmarkEnter style={s.main}>
         <Image
-          source={require('../../assets/images/screens/location-permission-pin.png')}
+          source={require('../../assets/images/screens/permissions/location-pin.png')}
           style={s.decorativePin}
           resizeMode="contain"
           accessibilityElementsHidden

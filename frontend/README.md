@@ -16,13 +16,21 @@ From repo root: `npm start` (delegates here).
 
 | Path | Purpose |
 |------|---------|
-| `src/app/` | Expo Router routes |
-| `src/components/` | Shared UI |
-| `src/hooks/`, `src/constants/` | Theme and utilities |
-| `assets/` | Images and bundled Stitch HTML |
-| `design/` | Tokens, Stitch exports, HTML prototypes |
+| `src/app/` | Expo Router routes (thin wrappers) |
+| `src/screens/` | Onboarding + session-tracking screen components |
+| `src/features/figma-screens/` | Shop, account, home, sessions, events screens + mocks |
+| `src/features/session-tracking/` | Live session store, map, checkpoint flow |
+| `src/features/onboarding/` | Onboarding feature helpers |
+| `src/components/` | Shared UI (nav, motion, onboarding chrome, session-setup) |
+| `src/hooks/`, `src/constants/`, `src/motion/`, `src/lib/` | Theme, tokens, motion helpers |
+| `assets/figma/<screen>/` | **Per-screen** Figma icons/media — see [`assets/figma/README.md`](assets/figma/README.md) |
+| `assets/images/screens/<screen>/` | Per-flow raster illustrations / backgrounds |
+| `assets/animations/` | Lottie / GIF motion exports |
+| `assets/stitch/` | Legacy Stitch HTML (**frozen**) |
+| `design/figma/` | Manifest, page notes, tokens, exports |
+| `design/figma/exports/library/` | Raw Figma library dump (design-time only) |
 | `prototype/` | TypeScript prototype (`EXPO_PROTOTYPE=1`) |
-| `scripts/` | Import/link tooling for Stitch HTML |
+| `scripts/` | Asset organize + legacy Stitch tooling |
 
 ## Docs
 

@@ -22,8 +22,8 @@ screens:
     figmaNode: "827:111"
     legacyHtmlKey: ""
     prdSection: "—"
-    status: designed
-    notes: "Disney-style app loading splash — dark radial bg, lime glow arc, brand mark, tagline. Maps to expo-splash-screen."
+    status: implemented
+    notes: "Figma node 827:111 stale/missing (2026-07-13). Native AppSplashScreen uses color/primary + cream brand mark (not dark cinematic green)."
     implNotes: "@route splash-loading @motion enter=opacity duration=400ms easing=easeOut @emil decorative=false purposeful=true"
 
   - routeKey: parent-permission-confirmation
@@ -31,8 +31,8 @@ screens:
     figmaNode: "728:901"
     legacyHtmlKey: ""
     prdSection: "6.0d"
-    status: bound
-    notes: "Minor blocker — program admin must approve before app use. Amber warning chrome; green Contact Admin CTA; Learn why link. Token binding complete 2026-07-10."
+    status: implemented
+    notes: "Minor blocker — program admin must approve before app use. Amber warning chrome; green Contact Admin CTA; Learn why link. Native `/under-age`."
     implNotes: "@route parent-permission-confirmation @motion none @nav push=parent-permission-learn-why"
 
   - routeKey: parent-permission-learn-why
@@ -40,53 +40,99 @@ screens:
     figmaNode: "833:314"
     legacyHtmlKey: ""
     prdSection: "6.0d"
-    status: bound
-    notes: "Learn why follow-up — plain-language explainer for minors. Entry from admin_permission_contact. Token binding complete 2026-07-10."
+    status: implemented
+    notes: "Learn why follow-up — plain-language explainer for minors. Native `/under-age-learn-why`."
     implNotes: "@route parent-permission-learn-why @nav back=parent-permission-confirmation @motion enter=opacity+translateY(8) duration=220ms"
 
   - routeKey: welcome
     figmaPage: "1·Onboarding"
-    figmaNode: ""
+    figmaNode: "112:6776"
     legacyHtmlKey: welcome___standardized_progress
     prdSection: "6.1"
-    status: designed
-    notes: "Canonical welcome screen. welcome.html is the retired duplicate."
+    status: implemented
+    notes: "Canonical welcome screen. Native `/welcome` after splash."
 
   - routeKey: create-account
     figmaPage: "1·Onboarding"
-    figmaNode: ""
+    figmaNode: "105:2"
     legacyHtmlKey: create_account___standardized_progress
     prdSection: "6.2"
-    status: designed
+    status: implemented
+
+  - routeKey: creating-account
+    figmaPage: "1·Onboarding"
+    figmaNode: "137:73"
+    legacyHtmlKey: ""
+    prdSection: "6.2"
+    status: implemented
+    notes: "Interstitial while account is created — rotating Did-you-know facts + linear progress bar; then account-phone."
+    implNotes: "@route creating-account @motion progress=linear 4200ms facts=rotate+fade @nav replace=account-phone"
 
   - routeKey: account-details
     figmaPage: "1·Onboarding"
-    figmaNode: ""
+    figmaNode: "112:6882"
     legacyHtmlKey: account_details___standardized_progress
     prdSection: "6.3"
-    status: designed
+    status: implemented
 
   - routeKey: notification-preference
     figmaPage: "1·Onboarding"
-    figmaNode: ""
+    figmaNode: "112:7130"
     legacyHtmlKey: notification_preference___standardized_redo
     prdSection: "6.4"
-    status: designed
+    status: implemented
 
   - routeKey: setup-complete
     figmaPage: "1·Onboarding"
-    figmaNode: ""
+    figmaNode: "133:93"
     legacyHtmlKey: setup_complete
     prdSection: "6.5"
-    status: designed
+    status: implemented
+    notes: "create_account_success frame (133:93). Continue → home-tour."
+
+  - routeKey: home-tour
+    figmaPage: "1·Onboarding"
+    figmaNode: "137:527"
+    legacyHtmlKey: coachmark_tutorial
+    prdSection: "6.6"
+    status: implemented
+    notes: "Tour step 1 — home impact dashboard preview."
+
+  - routeKey: shop-tour
+    figmaPage: "1·Onboarding"
+    figmaNode: "137:115"
+    prdSection: "6.6"
+    status: implemented
+    notes: "Tour step 2 — shop gear preview."
+
+  - routeKey: track-tour
+    figmaPage: "1·Onboarding"
+    figmaNode: "137:431"
+    prdSection: "6.6"
+    status: implemented
+    notes: "Tour step 3 — live tracking map preview."
+
+  - routeKey: session-tour
+    figmaPage: "1·Onboarding"
+    figmaNode: "137:173"
+    prdSection: "6.6"
+    status: implemented
+    notes: "Tour step 4 — previous sessions list preview."
+
+  - routeKey: set-tour
+    figmaPage: "1·Onboarding"
+    figmaNode: "112:7170"
+    prdSection: "6.6"
+    status: implemented
+    notes: "Tour finale — Replay tour / Start Tracking / Go Home."
 
   - routeKey: coachmark-tutorial
     figmaPage: "1·Onboarding"
-    figmaNode: ""
+    figmaNode: "137:527"
     legacyHtmlKey: coachmark_tutorial
     prdSection: "6.6"
-    status: designed
-    notes: "6-step sequence in prototype."
+    status: implemented
+    notes: "Superseded by native home-tour → shop-tour → track-tour → session-tour → set-tour sequence."
 
 # ---------------------------------------------------------------------------
 # Page 2 · Home & Events
@@ -104,8 +150,8 @@ screens:
     figmaNode: "196:226"
     legacyHtmlKey: events_detail
     prdSection: "6.8"
-    status: bound
-    notes: "events_detail frame. Address block (196:384) rebound to color/text/tertiary 2026-07-10."
+    status: implemented
+    notes: "events_detail frame (196:226). Register opens events_registration_confirmation (787:406). Address block (196:384) rebound to color/text/tertiary 2026-07-10."
 
 # ---------------------------------------------------------------------------
 # Page 3 · Shop & Payments
@@ -115,80 +161,80 @@ screens:
     figmaNode: "498:606"
     legacyHtmlKey: shop_home___prd___reference_aligned
     prdSection: "6.19"
-    status: designed
-    notes: "Frame name shop_home. Product prices corrected 2026-07-10 to match cleanupgiveback.org/shop: Tote Bags $3.00, Trash Grabber $23.99, Child Clean Up Kit $9.99, Adult Clean Up Kit $12.99, featured Trash Clean Up Kit $29.99."
+    status: implemented
+    notes: "Frame name shop_home. Native ShopScreen at /shop. Product prices match cleanupgiveback.org/shop: Tote Bags $3.00, Trash Grabber $23.99, Child Safety Vest $9.99, Adult Safety Vest $12.99, featured Trash Clean Up Kit $29.99."
 
   - routeKey: product-detail
     figmaPage: "3·Shop & Payments"
     figmaNode: "492:114"
     legacyHtmlKey: product_detail__cleanup_kit___high_fidelity
     prdSection: "6.21"
-    status: designed
-    notes: "Kit frame shop_product_view (Trash Clean Up Kit, $29.99). Per-SKU frames added 2026-07-10: trash-grabber 909:126, tote-bags 905:166 (Earth/Ocean swatches), adult-safety-vest 905:236, child-safety-vest 905:306. Copy from cleanupgiveback.org/products; hero placeholders until media added. Native RN will use one parameterized route."
+    status: implemented
+    notes: "Kit frame shop_product_view (Trash Clean Up Kit, $29.99). Per-SKU frames: trash-grabber 909:126, tote-bags 905:166 (Earth/Ocean swatches), adult-safety-vest 905:236, child-safety-vest 905:306. Native RN: parameterized `/product-detail?id=`."
 
   - routeKey: product-detail/trash-grabber
     figmaPage: "3·Shop & Payments"
     figmaNode: "909:126"
     legacyHtmlKey: ""
     prdSection: "6.21"
-    status: designed
-    notes: "shop_product_view_trash_grabber. $23.99. Prototype link from shop_home View."
+    status: implemented
+    notes: "shop_product_view_trash_grabber. $23.99. Routed via `/product-detail?id=trash-grabber`."
 
   - routeKey: product-detail/tote-bags
     figmaPage: "3·Shop & Payments"
     figmaNode: "905:166"
     legacyHtmlKey: ""
     prdSection: "6.21"
-    status: designed
-    notes: "shop_product_view_tote_bags. $3.00. H1 Reusable Earth and Ocean Tote Bags. Color swatches Earth/Ocean."
+    status: implemented
+    notes: "shop_product_view_tote_bags. $3.00. H1 Reusable Earth and Ocean Tote Bags. Color swatches Earth/Ocean. Routed via `/product-detail?id=tote-bags`."
 
   - routeKey: product-detail/adult-safety-vest
     figmaPage: "3·Shop & Payments"
     figmaNode: "905:236"
     legacyHtmlKey: ""
     prdSection: "6.21"
-    status: designed
-    notes: "shop_product_view_adult_safety_vest. $12.99. Live-site name Adult Safety Vest."
+    status: implemented
+    notes: "shop_product_view_adult_safety_vest. $12.99. Routed via `/product-detail?id=adult-safety-vest`."
 
   - routeKey: product-detail/child-safety-vest
     figmaPage: "3·Shop & Payments"
     figmaNode: "905:306"
     legacyHtmlKey: ""
     prdSection: "6.21"
-    status: designed
-    notes: "shop_product_view_child_safety_vest. $9.99. Live-site name Child Safety Vest."
+    status: implemented
+    notes: "shop_product_view_child_safety_vest. $9.99. Routed via `/product-detail?id=child-safety-vest`."
 
   - routeKey: cart
     figmaPage: "3·Shop & Payments"
     figmaNode: "657:1585"
     legacyHtmlKey: shopping_cart__no_tote_bag_
     prdSection: "6.22"
-    status: designed
-    notes: "Frame name shop_checkout (\"Your Cart\" header, Continue CTA) — despite the frame name, this is the cart screen, not the payment checkout."
+    status: implemented
+    notes: "Frame name shop_checkout (\"Your Cart\" header, Continue CTA) — despite the frame name, this is the cart screen, not the payment checkout. Native `/cart`."
 
   - routeKey: checkout
     figmaPage: "3·Shop & Payments"
     figmaNode: "657:1809"
     legacyHtmlKey: checkout_form
     prdSection: "6.23"
-    status: designed
-    notes: "Frame name shop_checkout_final (Shipping Information, Payment, Place Order)."
+    status: implemented
+    notes: "Frame name shop_checkout_final (Shipping Information, Payment, Place Order). Native `/checkout`."
 
   - routeKey: purchase-confirmation
     figmaPage: "3·Shop & Payments"
     figmaNode: "494:262"
     legacyHtmlKey: thank_you___no_tote_bag_
     prdSection: "6.24"
-    status: designed
-    notes: "Frame name shop_confirmation (\"Thank you!\")."
+    status: implemented
+    notes: "Frame name shop_confirmation (\"Thank you!\"). Native `/purchase-confirmation` from Checkout Place Order."
 
   - routeKey: donate
     figmaPage: "3·Shop & Payments"
     figmaNode: "412:4"
     legacyHtmlKey: donate
     prdSection: "6.20"
-    status: designed
-    notes: "Frame name shop_donate."
+    status: implemented
+    notes: "Frame name shop_donate. Native /donate; Shop $5/$10/$15/Custom → ?amount=."
 
   - routeKey: donation-checkout
     figmaPage: "3·Shop & Payments"
@@ -258,8 +304,8 @@ screens:
     figmaNode: "515:1791"
     legacyHtmlKey: sessions_list___hybrid_redesign
     prdSection: "6.16"
-    status: bound
-    notes: "Frame sessions_list___hybrid_redesign. Filter chip corrected to Under Review (515:1906) 2026-07-10."
+    status: implemented
+    notes: "Frame sessions_list___hybrid_redesign. Filter chip corrected to Under Review (515:1906) 2026-07-10. Native RN at /sessions-list; icons from assets/figma/sessions-list/."
 
   - routeKey: sessions-calendar
     figmaPage: "5·Sessions History"
@@ -274,17 +320,18 @@ screens:
     figmaNode: "515:1848"
     legacyHtmlKey: session_detail
     prdSection: "6.18"
-    status: designed
+    status: implemented
+    notes: "Native RN at /session-detail?id=; opened from sessions list rows. Icons/map/photos from frontend/assets/figma/session-detail and images/screens/session-detail."
 
 # ---------------------------------------------------------------------------
 # Page 6 · Account & Settings
 # ---------------------------------------------------------------------------
   - routeKey: account
     figmaPage: "6·Account & Settings"
-    figmaNode: ""
+    figmaNode: "569:896"
     legacyHtmlKey: account
     prdSection: "6.25"
-    status: designed
+    status: implemented
 
   - routeKey: settings
     figmaPage: "6·Account & Settings"
@@ -314,32 +361,40 @@ screens:
     figmaNode: "854:116"
     legacyHtmlKey: order_history
     prdSection: "6.28"
-    status: bound
-    notes: "Built as a real Figma frame in the Account Flow section (was legacy-HTML-only). Order cards use the StatusTag/Approved component (relabeled Delivered), Data/Stat price in color/primary, muted color/text/tertiary for $0.00 lines. Token binding complete 2026-07-10."
+    status: implemented
+    notes: "Native /order-history (Figma order_history 854:116). Order cards with Delivered StatusTag, Data/Stat price, email receipt chip."
 
   - routeKey: donation-history
     figmaPage: "6·Account & Settings"
     figmaNode: "854:205"
     legacyHtmlKey: donation_history
     prdSection: "6.29"
-    status: bound
-    notes: "Built as a real Figma frame; content corrected against PRD §6.29 (date + Donation amount + confirmation) — the legacy donation_history.html was a copy-paste of order_history.html and is still bugged, do not use it as a content reference. Token binding complete 2026-07-10."
+    status: implemented
+    notes: "Native /donation-history (Figma donation_history 854:205). Date + Donation amount (Data/Stat) + email confirmation chip. Legacy donation_history.html was a copy-paste of order_history — not used as content reference."
 
   - routeKey: export-service-record
     figmaPage: "6·Account & Settings"
     figmaNode: "854:383"
     legacyHtmlKey: export_service_record
     prdSection: "6.30"
-    status: bound
-    notes: "Built as a real Figma frame: Timeframe card (2 stacked Input/State=Default instances, not the HTML's side-by-side layout), Include Statuses checklist (Approved + Under Review pre-checked, Not Approved unchecked), File Format tiles (PDF selected), sticky Button/Style=Primary CTA. Bottom Navbar kept for consistency with sibling account-privacy form frames (request_data), diverging intentionally from the HTML's nav-suppressed flow. Token binding complete 2026-07-10."
+    status: implemented
+    notes: "Native /export-service-record (Figma export_service_record 854:383). Timeframe dates, Include Statuses multi-select (Approved+Under Review default), File Format PDF/CSV tiles, Export Record CTA → /export-record-success."
+
+  - routeKey: export-record-success
+    figmaPage: "6·Account & Settings"
+    figmaNode: "840:561"
+    legacyHtmlKey: ""
+    prdSection: "6.30"
+    status: implemented
+    notes: "Native /export-record-success (Figma export_record_success 840:561). Centered success card; Continue → /account; View PDF/CSV placeholder."
 
   - routeKey: approval-history
     figmaPage: "6·Account & Settings"
     figmaNode: "854:294"
     legacyHtmlKey: approval_history
     prdSection: "7"
-    status: bound
-    notes: "Built as a real Figma frame: 3-up summary stat row + session cards using StatusTag/Approved|Pending|Declined instances (relabeled Approved/Under Review/Not Approved), contextual footer notes on non-Approved cards. Token binding complete 2026-07-10."
+    status: implemented
+    notes: "Native /approval-history (Figma approval_history 854:294). Summary stats 14/3/1 + session cards with StatusTag Approved/Under Review/Not Approved and contextual notes on non-Approved cards."
 
   - routeKey: account-privacy
     figmaPage: "6·Account & Settings"
@@ -418,12 +473,29 @@ screens:
     prdSection: "6.33"
     status: designed
 
+  - routeKey: request-data
+    figmaPage: "6·Account & Settings"
+    figmaNode: "728:1385"
+    legacyHtmlKey: ""
+    prdSection: "6.33"
+    status: implemented
+    notes: "Native /request-data (Figma request_data). Access selected by default; Submit → /request-data-sent."
+
+  - routeKey: request-data-sent
+    figmaPage: "6·Account & Settings"
+    figmaNode: "728:1648"
+    legacyHtmlKey: ""
+    prdSection: "6.33"
+    status: implemented
+    notes: "Native /request-data-sent confirmation card; Continue → /account."
+
   - routeKey: delete-account-confirm
     figmaPage: "7·Compliance & Legal"
-    figmaNode: "723:378"
+    figmaNode: "725:361"
     legacyHtmlKey: ""
     prdSection: "6.35"
-    status: designed
+    status: implemented
+    notes: "Native screen at /delete-account-confirm (Figma delete_account 725:361). Requires typing DELETE; validation toast matches session-setup pattern."
 
   - routeKey: permission-location
     figmaPage: "4·Session Tracking"

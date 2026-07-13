@@ -54,8 +54,10 @@ export const LiveSessionMinimizedPill = forwardRef<View, Props>(function LiveSes
 
   return (
     <View ref={ref} style={[styles.pill, style]} {...rest}>
-      {showExpandButton && onExpand && (
-        <View style={styles.topRow}>
+      {/* Yellow top bar — always visible */}
+      <View style={styles.liveBar}>
+        <Text style={styles.liveText}>Live</Text>
+        {showExpandButton && onExpand && (
           <AnimatedPressable
             onPress={onExpand}
             hitSlop={8}
@@ -67,10 +69,10 @@ export const LiveSessionMinimizedPill = forwardRef<View, Props>(function LiveSes
             }
             style={styles.expandBtn}
           >
-            <ExpandIcon />
+            <ExpandIcon color={colors.textPrimary} />
           </AnimatedPressable>
-        </View>
-      )}
+        )}
+      </View>
 
       <View style={styles.statRow}>
         <View style={styles.statBlock}>
@@ -109,27 +111,41 @@ const styles = StyleSheet.create({
   pill: {
     backgroundColor: colors.primary,
     borderRadius: R.md,
-    paddingHorizontal: 20,
-    paddingTop: 8,
     paddingBottom: 12,
     minHeight: PILL_MIN_HEIGHT,
     justifyContent: 'space-between',
     gap: 8,
+    overflow: 'hidden',
   },
-  topRow: {
+  liveBar: {
+    backgroundColor: colors.statusPendingBorder,
+    borderTopLeftRadius: R.md,
+    borderTopRightRadius: R.md,
     flexDirection: 'row',
-    justifyContent: 'flex-end',
     alignItems: 'center',
-    minHeight: 22,
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 9,
+    minHeight: 36,
+  },
+  liveText: {
+    fontFamily: fontFamilies.notoSansSemiBold,
+    fontSize: 13,
+    color: colors.textPrimary,
+    flex: 1,
+    textAlign: 'center',
   },
   expandBtn: {
     alignItems: 'center',
     justifyContent: 'center',
+    position: 'absolute',
+    right: 14,
   },
   statRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
+    paddingHorizontal: 20,
   },
   statBlock: {
     alignItems: 'center',
@@ -143,19 +159,21 @@ const styles = StyleSheet.create({
   timeLeftValue: {
     fontFamily: fontFamilies.ibmPlexSansSemiBold,
     fontSize: 24,
-    color: colors.statusPendingBorder,
+    color: colors.textOnPrimary,
   },
   statUnit: {
     fontFamily: fontFamilies.notoSansSemiBold,
     fontSize: 12,
-    color: colors.borderOutline,
+    color: colors.textOnPrimary,
     textAlign: 'center',
+    opacity: 0.75,
   },
   progressTrack: {
     height: 6,
     backgroundColor: colors.borderOutline,
     borderRadius: R.full,
     overflow: 'hidden',
+    marginHorizontal: 20,
   },
   progressFill: {
     height: 6,
@@ -166,6 +184,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    paddingHorizontal: 20,
   },
   checkpointDots: {
     flexDirection: 'row',

@@ -19,9 +19,18 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { CartScreen } from '../screens/CartScreen';
+import { CheckoutScreen } from '../screens/CheckoutScreen';
+import { EventDetailScreen } from '../screens/EventDetailScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { HomeScreenReturningUser } from '../screens/HomeScreenReturningUser';
 import { PlaceholderScreen } from '../screens/PlaceholderScreen';
+import { ProductDetailScreen } from '../screens/ProductDetailScreen';
+import { PurchaseConfirmationScreen } from '../screens/PurchaseConfirmationScreen';
+import { SessionDetailScreen } from '../screens/SessionDetailScreen';
+import { SessionsScreen } from '../screens/SessionsScreen';
+import { DonateScreen } from '../screens/DonateScreen';
+import { ShopScreen } from '../screens/ShopScreen';
 import { colors } from '../tokens';
 
 // ─── Screen registry ────────────────────────────────────────────────────────
@@ -143,6 +152,24 @@ function renderScreen(key: string): React.ReactNode {
       return <HomeScreen />;
     case 'home-returning-user':
       return <HomeScreenReturningUser />;
+    case 'event-detail':
+      return <EventDetailScreen />;
+    case 'shop':
+      return <ShopScreen />;
+    case 'donate':
+      return <DonateScreen />;
+    case 'product-detail':
+      return <ProductDetailScreen />;
+    case 'cart':
+      return <CartScreen />;
+    case 'checkout':
+      return <CheckoutScreen />;
+    case 'purchase-confirmation':
+      return <PurchaseConfirmationScreen />;
+    case 'sessions-list':
+      return <SessionsScreen />;
+    case 'session-detail':
+      return <SessionDetailScreen />;
     default:
       return <PlaceholderScreen routeKey={entry.key} figmaPage={entry.page} />;
   }

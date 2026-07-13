@@ -135,6 +135,12 @@ export function LiveSessionScreen() {
     void ensureLocationWatching();
   }, []);
 
+  useEffect(() => {
+    if (checkpointSecondsRemaining === 0) {
+      router.push('/photo-checkpoint');
+    }
+  }, [checkpointSecondsRemaining]);
+
   if (!fontsLoaded) {
     return <View style={s.root} />;
   }

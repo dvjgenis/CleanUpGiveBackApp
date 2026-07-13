@@ -39,6 +39,7 @@ type Props = {
   visible: boolean;
   events: UpcomingEventSummary[];
   onClose: () => void;
+  onSelectEvent?: (eventId: string) => void;
 };
 
 function EventCalendarBadge({
@@ -64,9 +65,15 @@ function EventCalendarBadge({
   );
 }
 
-function EventCard({ event }: { event: UpcomingEventSummary }) {
-  return (
-    <View style={s.eventCard}>
+function EventCard({
+  event,
+  onPress,
+}: {
+  event: UpcomingEventSummary;
+  onPress?: () => void;
+}) {
+  const content = (
+    <>
       <EventCalendarBadge
         day={event.day}
         month={event.month}
@@ -89,11 +96,27 @@ function EventCard({ event }: { event: UpcomingEventSummary }) {
           <Text style={s.eventDetailText}>{event.organization}</Text>
         </View>
       </View>
-    </View>
+    </>
+  );
+
+  if (!onPress) {
+    return <View style={s.eventCard}>{content}</View>;
+  }
+
+  return (
+    <AnimatedPressable
+      scaleTo={0.98}
+      style={s.eventCard}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`Event on ${event.month} ${event.day} at ${event.location}`}
+    >
+      {content}
+    </AnimatedPressable>
   );
 }
 
-export function EventsViewAllModal({ visible, events, onClose }: Props) {
+export function EventsViewAllModal({ visible, events, onClose, onSelectEvent }: Props) {
   const { height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const sheetMaxHeight = windowHeight * 0.82;
@@ -177,7 +200,11 @@ export function EventsViewAllModal({ visible, events, onClose }: Props) {
               keyboardShouldPersistTaps="handled"
             >
               {events.map((event) => (
-                <EventCard key={event.id} event={event} />
+                <EventCard
+                  key={event.id}
+                  event={event}
+                  onPress={onSelectEvent ? () => onSelectEvent(event.id) : undefined}
+                />
               ))}
             </ScrollView>
           </View>

@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
@@ -12,7 +12,7 @@ import {
   getCheckpointProgress,
   useLiveSession,
 } from '@/features/session-tracking/liveSessionStore';
-import { useRecentSessions } from '@/features/session-tracking/recentSessionsStore';
+import { resetRecentSessions, useRecentSessions } from '@/features/session-tracking/recentSessionsStore';
 
 import { EventsViewAllModal } from '../components/EventsViewAllModal';
 import { RecentSessionCard } from '../components/RecentSessionCard';
@@ -176,7 +176,14 @@ function RecentSessionsSection({
     <View style={s.paddedSection}>
       <View style={s.sectionHeader}>
         <Text style={s.sectionTitle}>Recent Sessions</Text>
-        {recentSessions.length > 0 && <Text style={s.viewAllLink}>View All</Text>}
+        {recentSessions.length > 0 && (
+          <View style={s.sectionHeaderActions}>
+            <AnimatedPressable onPress={resetRecentSessions} hitSlop={8} accessibilityRole="button" accessibilityLabel="Clear recent sessions">
+              <Text style={s.clearLink}>Clear</Text>
+            </AnimatedPressable>
+            <Text style={s.viewAllLink}>View All</Text>
+          </View>
+        )}
       </View>
       {recentSessions.length > 0 ? (
         <View style={s.listGap}>
@@ -210,7 +217,13 @@ function RecentEventsSection({
   recentEvents: HomeDashboardData['recentEvents'];
   allEvents: HomeDashboardData['allEvents'];
 }) {
+  const router = useRouter();
   const [viewAllVisible, setViewAllVisible] = useState(false);
+
+  function openEventDetail(eventId: string) {
+    setViewAllVisible(false);
+    router.push({ pathname: '/event-detail', params: { id: eventId } } as Href);
+  }
 
   if (recentEvents.length === 0) {
     return null;
@@ -231,7 +244,14 @@ function RecentEventsSection({
       </View>
       <View style={s.listGap}>
         {recentEvents.map((event) => (
-          <View key={event.id} style={s.eventCard}>
+          <AnimatedPressable
+            key={event.id}
+            scaleTo={0.98}
+            style={s.eventCard}
+            onPress={() => openEventDetail(event.id)}
+            accessibilityRole="button"
+            accessibilityLabel={`Event on ${event.month} ${event.day} at ${event.location}`}
+          >
             <EventCalendarBadge day={event.day} month={event.month} weekday={event.weekday} />
             <View style={s.eventDetails}>
               <View style={s.eventDetailRow}>
@@ -249,13 +269,14 @@ function RecentEventsSection({
                 <Text style={s.eventDetailText}>{event.organization}</Text>
               </View>
             </View>
-          </View>
+          </AnimatedPressable>
         ))}
       </View>
       <EventsViewAllModal
         visible={viewAllVisible}
         events={allEvents}
         onClose={() => setViewAllVisible(false)}
+        onSelectEvent={openEventDetail}
       />
     </View>
   );
@@ -320,7 +341,7 @@ export function HomeScreenWithData({ data }: { data: HomeDashboardData }) {
           onPress={() => router.push('/notifications')}
           hitSlop={8}
         >
-          <NotificationIcon />
+          <NotificationIcon color={colors.textPrimary} />
           {data.notificationCount > 0 && (
             <View style={s.notifBadge}>
               <Text style={s.notifBadgeText}>{data.notificationCount}</Text>
@@ -360,14 +381,18 @@ export function HomeScreenWithData({ data }: { data: HomeDashboardData }) {
         <RecentEventsSection recentEvents={data.recentEvents} allEvents={data.allEvents} />
       </ScrollView>
 
-      <View style={[s.bottomStack, { paddingBottom: bottomInset }]}>
+      <View style={s.bottomStack}>
         {isActive && (
           <LiveSessionBar barStyle={barStyle} onExpand={expandLiveSession} />
         )}
+        <View style={[s.navBarBg, { paddingBottom: bottomInset }]}>
         <BottomNavBar
           activeTab={activeTab}
           onHomePress={() => setActiveTab('home')}
-          onShopPress={() => setActiveTab('shop')}
+          onShopPress={() => {
+            setActiveTab('shop');
+            router.push('/shop' as Href);
+          }}
           onTrackPress={() => {
             if (isActive) {
               expandLiveSession();
@@ -375,9 +400,16 @@ export function HomeScreenWithData({ data }: { data: HomeDashboardData }) {
               router.push('/session-setup-guide');
             }
           }}
-          onSessionsPress={() => setActiveTab('sessions')}
-          onProfilePress={() => setActiveTab('profile')}
+          onSessionsPress={() => {
+            setActiveTab('sessions');
+            router.push('/sessions-list' as Href);
+          }}
+          onProfilePress={() => {
+            setActiveTab('profile');
+            router.push('/account' as Href);
+          }}
         />
+        </View>
       </View>
     </View>
   );
@@ -578,10 +610,20 @@ const s = StyleSheet.create({
     fontSize: 18,
     color: colors.textPrimary,
   },
+  sectionHeaderActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
   viewAllLink: {
     fontFamily: fontFamilies.notoSansMedium,
     fontSize: 14,
     color: colors.primary,
+  },
+  clearLink: {
+    fontFamily: fontFamilies.notoSansMedium,
+    fontSize: 14,
+    color: colors.textTertiary,
   },
   emptySectionMessage: {
     fontFamily: fontFamilies.notoSansRegular,
@@ -694,6 +736,8 @@ const s = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+  },
+  navBarBg: {
     backgroundColor: colors.white,
     ...shadows.navBottom,
   },
@@ -701,6 +745,5 @@ const s = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 8,
-    backgroundColor: colors.bgApp,
   },
 });

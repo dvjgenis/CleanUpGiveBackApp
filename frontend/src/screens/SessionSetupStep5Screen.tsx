@@ -5,6 +5,7 @@ import { goBackInSessionSetupGuide } from '@/utils/sessionSetupGuideNavigation';
 import {
   NotoSans_400Regular,
   NotoSans_600SemiBold,
+  NotoSans_700Bold,
 } from '@expo-google-fonts/noto-sans';
 import { Sanchez_400Regular } from '@expo-google-fonts/sanchez';
 import { useRouter } from 'expo-router';
@@ -12,16 +13,8 @@ import { useFonts } from 'expo-font';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
+import { colors as C } from '@/constants/tokens';
 
-const C = {
-  bgApp: '#fcf9f8',
-  primary: '#009540',
-  textPrimary: '#1c1b1b',
-  textTertiary: '#3e4a3d',
-  textPending: '#835400',
-  textOnPrimary: '#ffffff',
-  borderOutline: '#bdcaba',
-} as const;
 
 function ProgressPills({ total = 6, active = 5 }: { total?: number; active?: number }) {
   return (
@@ -43,6 +36,7 @@ export function SessionSetupStep5Screen() {
     Sanchez_400Regular,
     NotoSans_400Regular,
     NotoSans_600SemiBold,
+    NotoSans_700Bold,
   });
 
   if (!fontsLoaded) {
@@ -83,7 +77,7 @@ export function SessionSetupStep5Screen() {
 
       <CoachmarkEnter delayMs={staggerDelay(1)} style={s.illustrationZone}>
         <Image
-          source={require('../../assets/images/screens/session-setup-step5-illustration.png')}
+          source={require('../../assets/images/screens/session-setup/step5-illustration.png')}
           style={s.illustration}
           resizeMode="contain"
           accessibilityLabel="Completed session summary with under review status, duration, date, and time"
@@ -170,7 +164,9 @@ const s = StyleSheet.create({
   },
 
   subtitleEmphasis: {
-    color: C.textPending,
+    fontFamily: 'NotoSans_700Bold',
+    color: C.statusPendingText,
+    textDecorationLine: 'underline',
   },
 
   illustrationZone: {

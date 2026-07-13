@@ -1,11 +1,8 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
+import { colors as C } from '@/constants/tokens';
 
-const C = {
-  primary: '#009540',
-  textOnPrimary: '#ffffff',
-} as const;
 
 type Props = {
   continueLabel?: string;

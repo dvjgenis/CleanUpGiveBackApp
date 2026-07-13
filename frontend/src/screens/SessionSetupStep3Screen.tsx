@@ -12,15 +12,8 @@ import { useFonts } from 'expo-font';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
+import { colors as C } from '@/constants/tokens';
 
-const C = {
-  bgApp: '#fcf9f8',
-  primary: '#009540',
-  textPrimary: '#1c1b1b',
-  textTertiary: '#3e4a3d',
-  textOnPrimary: '#ffffff',
-  borderOutline: '#bdcaba',
-} as const;
 
 function ProgressPills({ total = 6, active = 3 }: { total?: number; active?: number }) {
   return (
@@ -78,7 +71,7 @@ export function SessionSetupStep3Screen() {
 
       <CoachmarkEnter delayMs={staggerDelay(1)} style={s.illustrationZone}>
         <Image
-          source={require('../../assets/images/screens/session-setup-step3-illustration.png')}
+          source={require('../../assets/images/screens/session-setup/step3-illustration.png')}
           style={s.illustration}
           resizeMode="contain"
           accessibilityLabel="Live session tracker showing in-progress status, timer, distance, and walking path map"

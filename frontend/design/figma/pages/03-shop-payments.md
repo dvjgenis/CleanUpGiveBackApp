@@ -8,16 +8,16 @@
 
 | Route key | PRD § | Figma node (frame name) | Legacy HTML key | Status |
 |-----------|-------|--------------------------|----------------|--------|
-| `shop` | 6.19 | [`498:606`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=498-606) (`shop_home`) | `shop_home___prd___reference_aligned` | designed |
-| `product-detail` | 6.21 | [`492:114`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=492-114) (`shop_product_view` — Trash Cleanup Kit) | `product_detail__cleanup_kit___high_fidelity` | designed |
-| `product-detail/trash-grabber` | 6.21 | [`909:126`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=909-126) (`shop_product_view_trash_grabber`) | — | designed |
-| `product-detail/tote-bags` | 6.21 | [`905:166`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=905-166) (`shop_product_view_tote_bags` — Earth/Ocean color swatches) | — | designed |
-| `product-detail/adult-safety-vest` | 6.21 | [`905:236`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=905-236) (`shop_product_view_adult_safety_vest`) | — | designed |
-| `product-detail/child-safety-vest` | 6.21 | [`905:306`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=905-306) (`shop_product_view_child_safety_vest`) | — | designed |
-| `cart` | 6.22 | [`657:1585`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=657-1585) (`shop_checkout` — "Your Cart" screen despite the frame name) | `shopping_cart__no_tote_bag_` | designed |
-| `checkout` | 6.23 | [`657:1809`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=657-1809) (`shop_checkout_final`) | `checkout_form` | designed |
-| `purchase-confirmation` | 6.24 | [`494:262`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=494-262) (`shop_confirmation`) | `thank_you___no_tote_bag_` | designed |
-| `donate` | 6.20 | [`412:4`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=412-4) (`shop_donate`) | `donate` | designed |
+| `shop` | 6.19 | [`498:606`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=498-606) (`shop_home`) | `shop_home___prd___reference_aligned` | implemented |
+| `product-detail` | 6.21 | [`492:114`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=492-114) (`shop_product_view` — Trash Cleanup Kit) | `product_detail__cleanup_kit___high_fidelity` | implemented |
+| `product-detail/trash-grabber` | 6.21 | [`909:126`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=909-126) (`shop_product_view_trash_grabber`) | — | implemented |
+| `product-detail/tote-bags` | 6.21 | [`905:166`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=905-166) (`shop_product_view_tote_bags` — Earth/Ocean color swatches) | — | implemented |
+| `product-detail/adult-safety-vest` | 6.21 | [`905:236`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=905-236) (`shop_product_view_adult_safety_vest`) | — | implemented |
+| `product-detail/child-safety-vest` | 6.21 | [`905:306`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=905-306) (`shop_product_view_child_safety_vest`) | — | implemented |
+| `cart` | 6.22 | [`657:1585`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=657-1585) (`shop_checkout` — "Your Cart" screen despite the frame name) | `shopping_cart__no_tote_bag_` | implemented |
+| `checkout` | 6.23 | [`657:1809`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=657-1809) (`shop_checkout_final`) | `checkout_form` | implemented |
+| `purchase-confirmation` | 6.24 | [`494:262`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=494-262) (`shop_confirmation`) | `thank_you___no_tote_bag_` | implemented |
+| `donate` | 6.20 | [`412:4`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=412-4) (`shop_donate`) | `donate` | implemented |
 | `donation-checkout` | 6.20 | not yet located as a distinct frame — donation payment fields appear inline within `shop_checkout_final` | `donation_checkout` | designed |
 | `donation-confirmation` | 6.20 | not yet located as a distinct frame — may reuse `shop_confirmation` | `donation_confirmation` | designed |
 
@@ -52,9 +52,9 @@ shop
 ## Flow — Donate
 
 ```
-home / shop
-  → donate (Donate sidebar / button)
-    → donation-checkout (Continue to Payment)
+shop
+  → donate (Shop $5 / $10 / $15 / Custom → /donate?amount=…)
+    → donation-checkout (Continue — not yet native)
       → donation-confirmation (Complete Donation)
         → home (Return to Home)
         → donation-history (View Donation History)

@@ -67,7 +67,7 @@ function AnimatedStar({
   return (
     <Animated.View style={[s.star, layout.style, animatedStyle]}>
       <Image
-        source={require('@/assets/images/screens/session-setup-complete-star.png')}
+        source={require('@/assets/images/screens/session-setup/complete-star.png')}
         style={s.starImage}
         resizeMode="contain"
         accessibilityElementsHidden
@@ -82,7 +82,7 @@ export function SessionSetupCelebration() {
   return (
     <View style={s.artboard} accessibilityLabel="Celebration smiley with stars">
       <Image
-        source={require('@/assets/images/screens/session-setup-complete-smiley.png')}
+        source={require('@/assets/images/screens/session-setup/complete-smiley.png')}
         style={s.smiley}
         resizeMode="contain"
       />

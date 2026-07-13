@@ -6,7 +6,7 @@ type Props = {
 };
 
 /**
- * Ported from `figma_assets/Calendar Icon.svg`
+ * Ported from `assets/figma/session-setup/calendar.svg`
  * (Figma BsCalendar2Fill — session setup form 260:1312).
  */
 export function SessionSetupCalendarIcon({ color = '#3E4A3D', size = 18 }: Props) {

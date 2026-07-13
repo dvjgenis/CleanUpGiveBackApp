@@ -23,6 +23,7 @@ Design tokens live in the Figma file ([Design System page](https://www.figma.com
 | `white` | `#ffffff` | Pure white; text on primary fills |
 | `cream/50` | `#fcf9f8` | Warm off-white app canvas background |
 | `lime/500` | `#c2d832` | Bright lime accent; highlights and vegetation motif |
+| `tour/mint` | `#dcebe2` | Onboarding home/track tour canvas (Figma `home_tour` / `track_tour`; not yet a Figma variable — code token `colors.bgTour`) |
 | `amber/100` | `#ffddb5` | Pending status chip background |
 | `amber/700` | `#835400` | Pending status chip text |
 | `amber/500` | `#fcab29` | Pending status chip border |
@@ -38,9 +39,11 @@ Design tokens live in the Figma file ([Design System page](https://www.figma.com
 | `color/bg/surface` | `--color-bg-surface` | Elevated surface fill for cards, inputs, and list containers |
 | `color/text/primary` | `--color-text-primary` | Default body and heading text on app and surface backgrounds |
 | `color/text/tertiary` | `--color-text-tertiary` | Sole de-emphasized text token — captions, hints, metadata, section labels, nav inactive tab labels on app bg, surface, and white (8.90:1 on cream) |
-| `color/text/on-primary` | `--color-text-on-primary` | Text and icons on primary (green) filled buttons and Track FAB |
+| `color/text/on-primary` | `--color-text-on-primary` | White text/icons on primary fills — form Continue CTAs and Track FAB |
+| `color/text/on-primary-soft` | *(code: `textOnPrimarySoft`)* | Cream (`cream/50` / `bg-app`) label on primary fills where Figma uses bg-app — Welcome Log In, tour Continue on mint |
 | `color/border/outline` | `--color-border-outline` | Default border for inputs, cards, and list rows |
 | `color/border/chip-selected` | `--color-border-chip-selected` | Border ring for selected filter chips |
+| `color/chip/bg` | *(code: `chipBg` `#f0edec`)* | Neutral chip fill — onboarding notification preference rows (Figma `112:7130`) |
 | `color/accent/lime` | `--color-accent-lime` | Decorative lime accent; vegetation motif and emphasis highlights |
 | `color/status/approved/*` | `--color-status-approved-{bg\|text\|border}` | Approved session chip colors |
 | `color/status/pending/*` | `--color-status-pending-{bg\|text\|border}` | Pending / under-review chip colors |
@@ -89,7 +92,11 @@ Key rules: 44×44px minimum touch targets · `color/text/tertiary` as sole de-em
 
 ## Components
 
-Use `ThemedView`, `ThemedText`, and shared theme hooks (`useColorScheme`, `useThemeColor`). See [context/components.md](context/components.md).
+Native Figma-aligned screens import shared tokens from **`frontend/src/constants/tokens.ts`** (`colors`, `radius`, `fontFamilies`, `textStyles`, `spacing`). Feature paths `figma-screens/tokens.ts` and `session-tracking/tokens.ts` re-export the same module for existing imports.
+
+JSON mirrors of Figma collections live in [`frontend/design/figma/tokens/`](../../frontend/design/figma/tokens/). Prefer tokens over local hex palettes.
+
+Use `ThemedView`, `ThemedText`, and shared theme hooks (`useColorScheme`, `useThemeColor`) for template/chrome surfaces — `frontend/src/constants/theme.ts` is wired to Figma brand tokens. See [context/components.md](context/components.md).
 
 ## Copy tone
 

@@ -10,7 +10,7 @@
 |-----------|-------|----------------|--------|
 | `sessions-list` | 6.16 | `sessions_list___hybrid_redesign` | designed |
 | `sessions-calendar` | 6.17 | `sessions_calendar_view___standardized_refined` | designed |
-| `session-detail` | 6.18 | `session_detail` | designed |
+| `session-detail` | 6.18 | `session_detail` | implemented |
 
 ## Flow
 

@@ -1,10 +1,13 @@
 import { StyleSheet, Text, View } from 'react-native';
 
+import { colors as tokens } from '@/constants/tokens';
+
 const C = {
-  textPrimary: '#1c1b1b',
-  statusDeclined: '#ba1a1a',
-  statusDeclinedBg: '#ffd9de',
+  textPrimary: tokens.textPrimary,
+  statusDeclined: tokens.statusDeclinedText,
+  statusDeclinedBg: tokens.statusDeclinedBg,
 } as const;
+
 
 type Props = {
   visible: boolean;

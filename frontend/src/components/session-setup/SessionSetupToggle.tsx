@@ -1,10 +1,13 @@
 import { Switch } from 'react-native';
 
+import { colors as tokens } from '@/constants/tokens';
+
 const C = {
-  primary: '#009540',
-  borderOutline: '#bdcaba',
-  thumb: '#ffffff',
+  primary: tokens.primary,
+  borderOutline: tokens.borderOutline,
+  thumb: tokens.white,
 } as const;
+
 
 type Props = {
   value: boolean;

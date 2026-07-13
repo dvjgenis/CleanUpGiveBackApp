@@ -6,10 +6,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { SessionSetupBackChevronIcon } from '@/components/session-setup/icons/SessionSetupBackChevronIcon';
 
+import { colors as tokens } from '@/constants/tokens';
+
 const C = {
-  textOnPrimary: '#ffffff',
-  textPrimary: '#1c1b1b',
+  textOnPrimary: tokens.textOnPrimary,
+  textPrimary: tokens.textPrimary,
 } as const;
+
 
 type Props = {
   title: string;

@@ -8,11 +8,11 @@
 
 | Route key | PRD § | Legacy HTML key | Status |
 |-----------|-------|----------------|--------|
-| `account` | 6.25 | `account` | designed |
+| `account` | 6.25 | `account` | **implemented** (`569:896`) |
 | `settings` | 6.26 | `settings` | designed |
 | `privacy-security` | 6.27 | `privacy_security` | designed |
 | `notification-settings` | 6.26 | `notification_settings___refined_toggles` | designed |
-| `order-history` | 6.28 | `order_history` | **bound** (`854:116`) |
+| `order-history` | 6.28 | `order_history` | **implemented** (`854:116`) |
 | `donation-history` | 6.29 | `donation_history` | **bound** (`854:205`) |
 | `export-service-record` | 6.30 | `export_service_record` | **bound** (`854:383`) |
 | `approval-history` | 7 | `approval_history` | **bound** (`854:294`) |
@@ -72,7 +72,7 @@ Index frame `privacy_policy` (`728:995`) lists five sections. Each row navigates
 | `who-we-share-it-with` | `735:160` | designed |
 | `how-we-protect-it` | `735:219` | designed |
 | `request_data` (form — distinct layout) | `728:1385` | designed |
-| `request_data_sent` (confirmation) | `728:1648` | designed |
+| `request_data_sent` (confirmation) | `728:1648` | **implemented** |
 
 ```text
 privacy_policy (728:995)

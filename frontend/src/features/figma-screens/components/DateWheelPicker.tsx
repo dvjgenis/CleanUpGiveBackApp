@@ -10,9 +10,11 @@ const YEAR_OPTIONS = buildYearOptions(new Date().getFullYear(), 81).map(String);
 type Props = {
   value: Date;
   onChange: (date: Date) => void;
+  /** When true, shows Month | Day | Year (export). Home uses month/year only. */
+  includeDay?: boolean;
 };
 
-export function DateWheelPicker({ value, onChange }: Props) {
+export function DateWheelPicker({ value, onChange, includeDay = false }: Props) {
   const month = value.getMonth();
   const day = value.getDate();
   const year = value.getFullYear();
@@ -21,8 +23,15 @@ export function DateWheelPicker({ value, onChange }: Props) {
   const yearItems = YEAR_OPTIONS;
   const yearIndex = Math.max(0, yearItems.indexOf(String(year)));
 
-  const updateDate = (nextMonth: number, nextYear: number) => {
-    const clampedDay = Math.min(day, daysInMonth(nextMonth, nextYear));
+  const dayItems = useMemo(() => {
+    const count = daysInMonth(month, year);
+    return Array.from({ length: count }, (_, i) => String(i + 1));
+  }, [month, year]);
+
+  const dayIndex = Math.max(0, Math.min(dayItems.length - 1, day - 1));
+
+  const updateDate = (nextMonth: number, nextYear: number, nextDay = day) => {
+    const clampedDay = Math.min(nextDay, daysInMonth(nextMonth, nextYear));
     onChange(new Date(nextYear, nextMonth, clampedDay));
   };
 
@@ -34,8 +43,16 @@ export function DateWheelPicker({ value, onChange }: Props) {
           items={monthItems}
           selectedIndex={month}
           onIndexChange={(index) => updateDate(index, year)}
-          style={s.monthColumn}
+          style={includeDay ? s.monthColumnWithDay : s.monthColumn}
         />
+        {includeDay ? (
+          <WheelPickerColumn
+            items={dayItems}
+            selectedIndex={dayIndex}
+            onIndexChange={(index) => updateDate(month, year, index + 1)}
+            style={s.dayColumn}
+          />
+        ) : null}
         <WheelPickerColumn
           items={yearItems}
           selectedIndex={yearIndex}
@@ -59,6 +76,12 @@ const s = StyleSheet.create({
   },
   monthColumn: {
     flex: 1.4,
+  },
+  monthColumnWithDay: {
+    flex: 1.5,
+  },
+  dayColumn: {
+    flex: 0.85,
   },
   yearColumn: {
     flex: 1,

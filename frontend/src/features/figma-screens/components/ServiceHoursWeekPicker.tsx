@@ -114,8 +114,13 @@ export function ServiceHoursWeekPicker({
   };
 
   const confirmPicker = () => {
-    applyWeekStart(startOfWeekMonday(pickerFocusDay), pickerFocusDay);
-    closePicker();
+    if (monthYearPickerVisible) {
+      // Return to calendar view at the selected month/year
+      setMonthYearPickerVisible(false);
+    } else {
+      applyWeekStart(startOfWeekMonday(pickerFocusDay), pickerFocusDay);
+      closePicker();
+    }
   };
 
   const goToPreviousWeek = () => {

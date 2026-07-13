@@ -33,16 +33,18 @@ import { CameraIcon } from '@/features/session-tracking/components/icons/CameraI
 import { LocationPinIcon } from '@/features/session-tracking/components/icons/LocationPinIcon';
 import { startNewLiveSession } from '@/features/session-tracking/liveSessionStore';
 
+import { colors as tokens } from '@/constants/tokens';
+
 const C = {
-  bgApp: '#fcf9f8',
-  bgSurface: '#f0edec',
-  primary: '#009540',
-  textPrimary: '#1c1b1b',
-  textTertiary: '#3e4a3d',
-  textOnPrimary: '#ffffff',
-  borderOutline: '#bdcaba',
-  labelOptional: '#bdcaba',
-  statusDeclined: '#ba1a1a',
+  bgApp: tokens.bgApp,
+  bgSurface: tokens.chipBg,
+  primary: tokens.primary,
+  textPrimary: tokens.textPrimary,
+  textTertiary: tokens.textTertiary,
+  textOnPrimary: tokens.textOnPrimary,
+  borderOutline: tokens.borderOutline,
+  labelOptional: tokens.borderOutline,
+  statusDeclined: tokens.statusDeclinedText,
 } as const;
 
 type FieldErrors = {

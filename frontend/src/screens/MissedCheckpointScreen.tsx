@@ -20,13 +20,15 @@ import { useAttentionShake, useFadeUpEnter } from '@/components/motion/hooks';
 import { PlayOnceLottie } from '@/components/ui/PlayOnceLottie';
 import { staggerDelay } from '@/motion';
 
+import { colors as tokens } from '@/constants/tokens';
+
 const C = {
-  bgApp: '#fcf9f8',
-  textPrimary: '#1c1b1b',
-  textTertiary: '#3e4a3d',
-  textOnPrimary: '#ffffff',
-  borderOutline: '#bdcaba',
-  statusDeclined: '#ba1a1a',
+  bgApp: tokens.bgApp,
+  textPrimary: tokens.textPrimary,
+  textTertiary: tokens.textTertiary,
+  textOnPrimary: tokens.textOnPrimary,
+  borderOutline: tokens.borderOutline,
+  statusDeclined: tokens.statusDeclinedText,
 } as const;
 
 function ExclamationCircleIcon({ size = 18 }: { size?: number }) {
@@ -64,7 +66,7 @@ export function MissedCheckpointScreen() {
   return (
     <View style={s.root}>
       <ImageBackground
-        source={require('../../assets/images/screens/missed-checkpoint-background.png')}
+        source={require('../../assets/images/screens/missed-checkpoint/background.png')}
         style={s.background}
         imageStyle={s.backgroundImage}
         resizeMode="cover"

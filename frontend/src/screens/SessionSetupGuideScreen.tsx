@@ -9,14 +9,8 @@ import { useFonts } from 'expo-font';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
+import { colors as C } from '@/constants/tokens';
 
-const C = {
-  bgApp: '#fcf9f8',
-  primary: '#009540',
-  textDark: '#3e4a3d',
-  textOnPrimary: '#ffffff',
-  borderOutline: '#bdcaba',
-} as const;
 
 function ProgressPills({ total = 6, active = 1 }: { total?: number; active?: number }) {
   return (
@@ -55,7 +49,7 @@ export function SessionSetupGuideScreen() {
                 fillRule="evenodd"
                 clipRule="evenodd"
                 d="M8.70711 0.292893C9.09763 0.683417 9.09763 1.31658 8.70711 1.70711L2.41421 8L8.70711 14.2929C9.09763 14.6834 9.09763 15.3166 8.70711 15.7071C8.31658 16.0976 7.68342 16.0976 7.29289 15.7071L0.292893 8.70711C-0.0976311 8.31658 -0.0976311 7.68342 0.292893 7.29289L7.29289 0.292893C7.68342 -0.0976311 8.31658 -0.0976311 8.70711 0.292893Z"
-                fill={C.textDark}
+                fill={C.textTertiary}
               />
             </Svg>
           </AnimatedPressable>
@@ -72,7 +66,7 @@ export function SessionSetupGuideScreen() {
 
       <CoachmarkEnter delayMs={staggerDelay(1)} style={s.illustrationZone}>
         <Image
-          source={require('../../assets/images/screens/session-setup-guide-illustration.png')}
+          source={require('../../assets/images/screens/session-setup/guide-illustration.png')}
           style={s.illustration}
           resizeMode="contain"
         />
@@ -130,7 +124,7 @@ const s = StyleSheet.create({
   },
   headlineDark: {
     fontFamily: 'Sanchez_400Regular',
-    color: C.textDark,
+    color: C.textTertiary,
   },
   headlineGreen: {
     fontFamily: 'Sanchez_400Regular',

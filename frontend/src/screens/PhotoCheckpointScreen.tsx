@@ -19,12 +19,14 @@ import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { useFadeUpEnter, useModalCardEnter } from '@/components/motion/hooks';
 import { staggerDelay } from '@/motion';
 
+import { colors as tokens } from '@/constants/tokens';
+
 const C = {
-  bgApp: '#fcf9f8',
-  primary: '#009540',
-  textPrimary: '#1c1b1b',
-  textTertiary: '#3e4a3d',
-  textOnPrimary: '#ffffff',
+  bgApp: tokens.bgApp,
+  primary: tokens.primary,
+  textPrimary: tokens.textPrimary,
+  textTertiary: tokens.textTertiary,
+  textOnPrimary: tokens.textOnPrimary,
 } as const;
 
 function PhotoCheckpointCameraIcon({ size = 79 }: { size?: number }) {
@@ -59,7 +61,7 @@ export function PhotoCheckpointScreen() {
   return (
     <View style={s.root}>
       <ImageBackground
-        source={require('../../assets/images/screens/photo-checkpoint-background.png')}
+        source={require('../../assets/images/screens/photo-checkpoint/background.png')}
         style={s.background}
         imageStyle={s.backgroundImage}
         resizeMode="cover"
@@ -91,6 +93,15 @@ export function PhotoCheckpointScreen() {
                 accessibilityLabel="Take photo"
               >
                 <Text style={s.takePhotoBtnText}>Take Photo</Text>
+              </AnimatedPressable>
+
+              <AnimatedPressable
+                style={s.backToTrackerBtn}
+                onPress={() => router.back()}
+                accessibilityRole="button"
+                accessibilityLabel="Back to tracker"
+              >
+                <Text style={s.backToTrackerText}>Back to tracker</Text>
               </AnimatedPressable>
             </Animated.View>
           </View>
@@ -189,5 +200,18 @@ const s = StyleSheet.create({
     fontFamily: 'NotoSans_600SemiBold',
     fontSize: 16,
     color: C.textOnPrimary,
+  },
+
+  backToTrackerBtn: {
+    width: '100%',
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  backToTrackerText: {
+    fontFamily: 'NotoSans_400Regular',
+    fontSize: 14,
+    color: C.textTertiary,
   },
 });

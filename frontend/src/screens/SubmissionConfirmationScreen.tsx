@@ -40,20 +40,22 @@ import {
   getCheckpointLabel,
 } from '@/features/session-tracking/utils/sessionFormat';
 
+import { colors as tokens } from '@/constants/tokens';
+
 const C = {
-  bgApp: '#fcf9f8',
-  bgSurface: '#f0edec',
-  bgSurfaceWhite: '#ffffff',
-  primary: '#009540',
-  textPrimary: '#1c1b1b',
-  textTertiary: '#3e4a3d',
-  textOnPrimary: '#ffffff',
-  borderOutline: '#bdcaba',
+  bgApp: tokens.bgApp,
+  bgSurface: tokens.chipBg,
+  bgSurfaceWhite: tokens.white,
+  primary: tokens.primary,
+  textPrimary: tokens.textPrimary,
+  textTertiary: tokens.textTertiary,
+  textOnPrimary: tokens.textOnPrimary,
+  borderOutline: tokens.borderOutline,
   mapTint: '#eae3d0',
-  statusPendingBg: '#fcab29',
-  statusPendingText: '#835400',
-  statusPendingDot: '#835400',
-  approvalIcon: '#835400',
+  statusPendingBg: tokens.statusPendingBorder,
+  statusPendingText: tokens.statusPendingText,
+  statusPendingDot: tokens.statusPendingText,
+  approvalIcon: tokens.statusPendingText,
 } as const;
 
 const PHOTO_SIZE = 171;

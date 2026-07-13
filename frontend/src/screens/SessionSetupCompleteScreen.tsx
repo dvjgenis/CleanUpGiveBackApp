@@ -12,14 +12,8 @@ import { goBackInSessionSetupGuide } from '@/utils/sessionSetupGuideNavigation';
 import { useFadeUpEnter } from '@/components/motion/hooks';
 import { SessionSetupCelebration } from '@/components/session-setup/SessionSetupCelebration';
 import { staggerDelay } from '@/motion';
+import { colors as C } from '@/constants/tokens';
 
-const C = {
-  bgApp: '#fcf9f8',
-  primary: '#009540',
-  textTertiary: '#3e4a3d',
-  textOnPrimary: '#ffffff',
-  borderOutline: '#bdcaba',
-} as const;
 
 function ProgressPills({ total = 6, active = 6 }: { total?: number; active?: number }) {
   return (

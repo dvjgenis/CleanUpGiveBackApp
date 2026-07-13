@@ -16,10 +16,13 @@ figma/
 ├── design.md          ← complete Figma design system reference
 ├── manifest.yaml      ← screen inventory (Figma page → node → routeKey)
 ├── pages/             ← per-flow notes for each Figma page (7 pages)
-├── tokens/            ← exported Figma variable JSON (when committed)
+├── tokens/            ← Figma variable JSON mirrors (committed) + README
 ├── exports/           ← PNG/SVG screen exports (when committed)
+│   └── library/       ← raw Figma assets-library dump (design-time; not Metro-bundled)
 └── components/        ← Design System component documentation
 ```
+
+**Runtime tokens:** import from [`frontend/src/constants/tokens.ts`](../../src/constants/tokens.ts). Feature `tokens.ts` files re-export that module.
 
 ---
 

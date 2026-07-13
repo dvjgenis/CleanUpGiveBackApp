@@ -11,13 +11,19 @@ import {
 } from '@expo-google-fonts/noto-sans';
 import { Sanchez_400Regular } from '@expo-google-fonts/sanchez';
 import { useFonts } from 'expo-font';
+import { Redirect } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { AppSplashScreen } from '@/components/AppSplashScreen';
+import { isOnboardingComplete } from '@/features/onboarding/onboardingStore';
 import { HomeScreen } from '@/features/figma-screens/screens/HomeScreen';
 import { colors } from '@/features/figma-screens/tokens';
 
 export default function App() {
+  const [splashDone, setSplashDone] = useState(false);
+
   const [fontsLoaded] = useFonts({
     Sanchez_400Regular,
     NotoSans_400Regular,
@@ -29,8 +35,21 @@ export default function App() {
     IBMPlexSans_600SemiBold,
   });
 
-  if (!fontsLoaded) {
-    return <View style={{ flex: 1, backgroundColor: colors.bgApp }} />;
+  const handleSplashReady = useCallback(() => setSplashDone(true), []);
+
+  if (!splashDone) {
+    return (
+      <SafeAreaProvider>
+        <View style={{ flex: 1, backgroundColor: colors.bgApp }}>
+          <AppSplashScreen fontsLoaded={fontsLoaded ?? false} onReady={handleSplashReady} />
+        </View>
+      </SafeAreaProvider>
+    );
+  }
+
+  // Cold start / Expo Go: always enter onboarding until Log In or setup-complete.
+  if (!isOnboardingComplete()) {
+    return <Redirect href="/welcome" />;
   }
 
   return (

@@ -4,6 +4,1092 @@ Session-by-session progress tracker. Distinct from `notes/journey.md` (correctio
 
 ---
 
+## [2026-07-13 Session 115] — Setup-complete blobs + static check
+
+**Session goal:** Opposite-corner drift on lime success blobs; remove broken checkmark animation and reimport static check.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Reimport `success-check.svg` (Figma `137:36`); port to `AccountCreatedCheck` | `assets/figma/onboarding/`, `OnboardingIcons.tsx` | ✅ |
+| Delete `DrawnAccountCreatedCheck` + checkmark pop | `DrawnAccountCreatedCheck.tsx` removed | ✅ |
+| Blob TL→BR / BR→TL drift (~28px) on enter; reduced-motion skip | `SetupCompleteScreen.tsx` | ✅ |
+| Docs | `app.md`, `components.md`, `assets.md`, `progress.md` | ✅ |
+
+### Key Decisions
+
+- No checkmark animation — prior stroke-draw / pop wrappers kept failing; static SVG port matches other onboarding glyphs.
+- Copy/CTA still use screen-enter fade+slide; no longer delayed on checkmark.
+
+---
+
+## [2026-07-13 Session 114] — Per-screen assets + frontend layout cleanup
+
+**Session goal:** Organize icons/media per screen and tidy the frontend asset layout.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Map dump → `assets/figma/<screen>/` (home, calendar, shared, etc.) | `scripts/organize_screen_assets.py`, `assets/figma/**` | ✅ |
+| Group rasters under `images/screens/<flow>/` + update requires | session-setup / permissions / photo flows | ✅ |
+| Move root `figma_assets/` → `design/figma/exports/library/` | design-time dump only | ✅ |
+| Shop ported glyphs → `shop/_source/` | cart/donate/streak source files | ✅ |
+| Inventory + docs | `assets/figma/README.md`, `assets.md`, `frontend/README.md` | ✅ |
+
+### Key Decisions
+
+- Bundled assets stay under `assets/figma/<screen>/`; raw library dump is design-time only.
+- Raster companions mirror screen keys under `images/screens/<screen>/`.
+
+---
+
+## [2026-07-13 Session 114] — Sync Figma design-system tokens into repo
+
+**Session goal:** Close the DS sync gap — commit token JSON, canonicalize RN tokens, wire `theme.ts`, drop hardcoded session-setup hex palettes.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Commit Figma collection JSON mirrors | `design/figma/tokens/*.json` + README | ✅ |
+| Canonical RN tokens module | `src/constants/tokens.ts` | ✅ |
+| Wire Expo chrome theme to Figma tokens | `src/constants/theme.ts` | ✅ |
+| Feature token files → re-export canonical | `figma-screens/tokens.ts`, `session-tracking/tokens.ts`, legacy | ✅ |
+| Session-setup / photo / submission screens use tokens | `screens/SessionSetup*`, `Photo*`, `Missed*`, `Submission*`, session-setup components | ✅ |
+| Docs | `brand.md`, `assets.md`, `components.md`, `progress.md`, `current.md` | ✅ |
+
+### Key Decisions
+
+- Single source: `@/constants/tokens`; feature `tokens.ts` files stay as thin re-exports for existing imports.
+- `colors.bgSurface` remains white for shipped card UIs; Figma elevated `#f6f3f2` is `bgSurfaceElevated` / session-tracking `bgSurface`.
+- JSON exports are documented mirrors of Figma (not live API dump); refresh when DS variables change.
+
+---
+
+## [2026-07-13 Session 113] — Onboarding Figma design-system fixes
+
+**Session goal:** Address onboarding audit gaps vs Figma design system (tokens, chips, splash, CTAs).
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Extend shared tokens (`bgTour`, `chipBg`, `textOnPrimarySoft`, `overlayScrim`, `bgSurface`) | `figma-screens/tokens.ts` | ✅ |
+| Notif chips → `#f0edec` + outline (drop `#e8f5ee` selected look) | `NotificationPreferenceScreen.tsx` | ✅ |
+| Selected fills → `statusApprovedBg` (`#f7fff1`) | `AccountPhoneScreen`, `AccountDetailsScreen` | ✅ |
+| Wire onboarding screens + shared chrome to `tokens.ts` | screens + `TourNavButtons`, pills, icons, splash | ✅ |
+| Under-age Contact Admin → form CTA size (pv20 / IBM 18) | `UnderAgeScreen`, `UnderAgeLearnWhyScreen` | ✅ |
+| Document dual on-primary + tour mint; mark splash node stale | `brand.md`, `01-onboarding.md`, `manifest.yaml` | ✅ |
+
+### Key Decisions
+
+- Tour Continue keeps cream `textOnPrimarySoft` (matches Figma); form CTAs keep white `textOnPrimary`.
+- Splash Figma `827:111` is missing — native stays on `color/primary`.
+
+---
+
+## [2026-07-13 Session 112] — Setup-complete checkmark pop
+
+**Session goal:** Replace the broken/invisible checkmark animation with a simple scale + opacity pop (no stroke draw).
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Scale + opacity pop via `checkmarkPop` / `popSpring` | `DrawnAccountCreatedCheck.tsx` | ✅ |
+| Docs | `app.md`, `components.md`, `progress.md` | ✅ |
+
+### Key Decisions
+
+- No path draw — reuse the same success pop motif as photo submitted.
+- `CHECKMARK_FADE_MS` stays as `durations.checkmarkPop` for copy/CTA delay.
+
+---
+
+## [2026-07-13 Session 111] — Setup-complete checkmark fade-in
+
+**Session goal:** Replace the weird stroke-dash checkmark draw on “Your account was created!” with a simple fade-in.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Fade-in `AccountCreatedCheck` instead of stroke-dash draw | `DrawnAccountCreatedCheck.tsx` | ✅ |
+| Delay copy/CTA enter after fade (`CHECKMARK_FADE_MS`) | `SetupCompleteScreen.tsx` | ✅ |
+| Docs | `app.md`, `components.md`, `screen-map.md`, `progress.md` | ✅ |
+
+### Key Decisions
+
+- Keep component name `DrawnAccountCreatedCheck` so the screen import stays stable; animation is opacity-only on the original SVG.
+
+---
+
+## [2026-07-13 Session 110] — Account-details spacing + onboarding CTA size
+
+**Session goal:** Match birthday/service-type “few details” layout to phone step; unify Continue/Previous sizes.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Align account-details scroll/form spacing with account-phone | `AccountDetailsScreen.tsx` | ✅ |
+| Standardize Continue/Previous to `paddingVertical: 20` | `AccountDetailsScreen.tsx`, `TourNavButtons.tsx`, `SetupCompleteScreen.tsx`, `SetTourScreen.tsx` | ✅ |
+| Docs | `app.md`, `components.md`, `progress.md` | ✅ |
+
+### Key Decisions
+
+- Canonical onboarding CTA size matches create-account / account-phone / notification-preference (`paddingVertical: 20`, radius 16, IBM Plex 18) — not fixed `height: 56`.
+
+---
+
+## [2026-07-13 Session 109] — Remove onboarding top-left chevron
+
+**Session goal:** Drop the top-left back chevron from onboarding screens.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Remove back chevron from account-details header | `AccountDetailsScreen.tsx` | ✅ |
+| Docs | `app.md`, `progress.md` | ✅ |
+
+### Key Decisions
+
+- Only `/account-details` had a top-left chevron among onboarding steps; other steps already rely on Previous CTAs.
+- Keep footer Previous for back navigation.
+
+---
+
+## [2026-07-13 Session 108] — Birthday picker dismiss lag
+
+**Session goal:** Remove long black-scrim linger after birthday wheel Done / dismiss.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Fade scrim + timed sheet exit (no slow spring settle before unmount) | `AccountDetailsScreen.tsx` | ✅ |
+| Docs | `app.md`, `progress.md` | ✅ |
+
+### Key Decisions
+
+- Root cause: static full-opacity scrim stayed up until `sheetDismissSpring` finished (>1s), then `onClose`.
+- Exit now matches motion tokens: backdrop + sheet use `withTiming` / `durations.sheetDismiss` (360ms).
+
+---
+
+## [2026-07-13 Session 107] — Setup-complete CTA fade + subtitle contrast
+
+**Session goal:** Account-created screen — Continue matches copy fade/slide; subtitle more visible via DS token.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Continue CTA same enter as copy (opacity + translateY after check draw) | `SetupCompleteScreen.tsx` | ✅ |
+| Subtitle `border-outline` → `color/text/on-primary` | `SetupCompleteScreen.tsx` | ✅ |
+| Docs | `app.md`, `screen-map.md`, `progress.md` | ✅ |
+
+### Key Decisions
+
+- Figma subtitle `137:990` rebound from `border-outline` → `color/text/on-primary` (text on primary fills).
+- Continue uses the same `@motion enter=opacity+translateY(8)` / `screenEnter` enter as copy, delayed until after checkmark draw.
+
+---
+
+## [2026-07-13 Session 106] — Learn why as full screen (not modal)
+
+**Session goal:** Tap **Learn why** on `/under-age` should open Figma `833:314` as a page, not a popup.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Native Learn why screen (back, 4 reason cards, Contact Admin) | `UnderAgeLearnWhyScreen.tsx`, `/under-age-learn-why` | ✅ |
+| Replace modal with `router.push` | `UnderAgeScreen.tsx` | ✅ |
+| Docs | `app.md`, `screen-map.md`, `current.md`, `manifest.yaml`, `01-onboarding.md` | ✅ |
+
+### Verified
+
+- `npx tsc --noEmit` clean
+
+---
+
+## [2026-07-13 Session 105] — Splash: remove duplicate logo/title
+
+**Session goal:** Loading splash showed duplicate logo and title; keep fill-up without stacking two copies.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Single logo + title; green cover shrinks top→bottom for fill | `AppSplashScreen.tsx` | ✅ |
+| Docs | `components.md`, `current.md`, `progress.md` | ✅ |
+
+### Key Decisions
+
+- Previous fill used dim + clipped cream layers (two of each), which read as duplicates.
+- One cream mark under a solid green cover that animates height from full → 0.
+
+### Verified
+
+- `npx tsc --noEmit` clean
+
+---
+
+## [2026-07-13 Session 104] — Session tour middle reimport
+
+**Session goal:** Rebuild `session_tour` middle (search + list) from Figma and fix lime star placement on approved rows.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Replace flat `session-list.png` with native search + tilted rows | `SessionTourScreen.tsx` | ✅ |
+| Position stars per Figma (`137:1002`/`1004`/`1006`) on approved left edges | `SessionTourScreen.tsx` | ✅ |
+| Docs | `app.md`, `screen-map.md`, `progress.md` | ✅ |
+
+### Key Decisions
+
+- Stars are row-relative (`left: -9`, `top: -16`, full 28.25×44.75) so they stay anchored when layout scales, matching screen absolute coords on the 390×844 frame.
+- Odd rows −2°, even +2°; stars only on Approved (Lake Park / Fulton Park / Oakbrook Terrace).
+
+### Verified
+
+- `npx tsc --noEmit` clean
+
+---
+
+## [2026-07-13 Session 103] — Fix account-created checkmark draw
+
+**Session goal:** Restore the visible checkmark draw on “Your account was created!” — mask reveal was blank.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Replace Mask + animated dash with stroke-dash draw → filled path | `DrawnAccountCreatedCheck.tsx` | ✅ |
+| Docs | `app.md`, `components.md`, `screen-map.md`, `progress.md` | ✅ |
+
+### Key Decisions
+
+- `react-native-svg` Mask does not reliably update when dashoffset is animated inside it, so the check stayed invisible.
+- Draw along the centerline stroke, then crossfade to the original filled path (SVG asset / `AccountCreatedCheck` still unchanged).
+
+### Verified
+
+- `npx tsc --noEmit` clean
+
+---
+
+## [2026-07-13 Session 102] — Splash logo/title fill-up
+
+**Session goal:** Replace the animated splash gradient with a fill-up animation on the logo and title.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Bottom-up cream fill on logo + title; solid green bg | `AppSplashScreen.tsx` | ✅ |
+| Docs | `components.md`, `current.md`, `progress.md` | ✅ |
+
+### Key Decisions
+
+- Dim cream base + clipped full-cream layer rising from the bottom (`useNativeDriver: false` for height).
+- Title fill starts ~180ms after logo; reduced motion jumps to full fill.
+
+### Verified
+
+- `npx tsc --noEmit` clean
+
+---
+
+## [2026-07-13 Session 101] — Creating account interstitial (Figma 137:73)
+
+**Session goal:** Show the creating-account screen while signup runs, with rotating Did-you-know facts as the progress bar fills.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Native `CreatingAccountScreen` + `/creating-account` route | `CreatingAccountScreen.tsx`, `creating-account.tsx`, `_layout.tsx` | ✅ |
+| Wire Create Account CTAs → creating-account → account-phone | `CreateAccountScreen.tsx` | ✅ |
+| Question badge SVG + onboarding asset | `OnboardingIcons.tsx`, `assets/figma/onboarding/question-icon.svg` | ✅ |
+| Docs / manifest | `app.md`, `components.md`, `assets.md`, `screen-map.md`, `current.md`, `01-onboarding.md`, `manifest.yaml` | ✅ |
+
+### Key Decisions
+
+- Progress is a ~4.2s linear fill (mock account creation); facts rotate with a short fade on the same cadence.
+- `router.replace('/account-phone')` so the interstitial is not on the back stack.
+- Reduced motion: skip fact fades, jump progress, navigate after a short delay.
+
+### Verified
+
+- `npx tsc --noEmit` clean
+
+---
+
+## [2026-07-13 Session 100] — Tour shop/track graphic load delay
+
+**Session goal:** Fix delayed middle graphics on “Get your gear” and “Track your hours” tour screens.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Compress shop/track PNGs → webp | `shop-showcase.webp`, `track-map.webp` | ✅ |
+| Shared tour asset registry + prefetch | `tourAssets.ts` | ✅ |
+| Prefetch from setup-complete + home-tour; expo-image on tour screens | `SetupCompleteScreen`, `HomeTourScreen`, `ShopTourScreen`, `TrackTourScreen` | ✅ |
+| Docs | `assets.md`, `components.md`, `progress.md` | ✅ |
+
+### Key Decisions
+
+- Shop showcase was ~313KB PNG; webp ~42KB. Prefetch into expo-image memory-disk before navigation so paint isn’t decode-bound.
+- Shop tour also prefetches track map for the next step.
+
+### Verified
+
+- `npx tsc --noEmit` clean
+
+---
+
+## [2026-07-13 Session 99] — Stay updated chips static + checkmark draw
+
+**Session goal:** Make Stay updated preference pills non-clickable; draw the account-created checkmark without changing the SVG.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Preference chips → display-only Views (always selected) | `NotificationPreferenceScreen.tsx` | ✅ |
+| Mask-reveal check draw; leave `AccountCreatedCheck` SVG untouched | `DrawnAccountCreatedCheck.tsx`, `SetupCompleteScreen.tsx` | ✅ |
+| Docs | `app.md`, `components.md`, `screen-map.md`, `progress.md` | ✅ |
+
+### Key Decisions
+
+- Chips are illustrative of notification categories, not toggles — Enable / Not now own the action.
+- Draw uses a thick centerline stroke as an SVG mask over the same filled path; original `OnboardingIcons` / asset SVG unchanged.
+
+### Verified
+
+- `npx tsc --noEmit` clean
+
+---
+
+## [2026-07-13 Session 98] — Splash animated gradient (replace shimmer)
+
+**Session goal:** On the loading splash, animate the brand gradient itself instead of a white shimmer band.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Seamless drifting green gradient; remove shimmer overlay | `AppSplashScreen.tsx` | ✅ |
+| Docs | `components.md`, `current.md`, `progress.md` | ✅ |
+
+### Key Decisions
+
+- Tall `#005926` → `#149D4F` → `#005926` strip translated by one screen height so the loop is seamless; skipped under `useReducedMotion()`.
+- Still uses RN `Animated` + native driver (same stack as fade-out).
+
+### Verified
+
+- `npx tsc --noEmit` clean
+
+---
+
+## [2026-07-13 Session 97] — Set-tour speckled stars + staggered fade-in
+
+**Session goal:** Match “You’re all set!” stars to Figma speckled lime asset, clear text overlap, fade stars in one-by-one.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Port full `star-set.svg` path (holes/speckles) into `TourSetStar` | `TourIcons.tsx` | ✅ |
+| Orbit stars in copy-block padding; staggered opacity enter | `SetTourScreen.tsx` | ✅ |
+| Delay first star ~450ms so hero is empty on arrival | `SetTourScreen.tsx` | ✅ |
+| Mount stars only after delay (no first-paint flash) | `SetTourScreen.tsx` | ✅ |
+| Docs | `app.md`, `components.md`, `assets.md`, `current.md` | ✅ |
+
+### Key Decisions
+
+- Source of truth is `frontend/assets/figma/tour/star-set.svg` (same as Figma `112:7219` / `figma_assets` speckled star), not the solid simplified path.
+- Stars sit in padding around the title/subtitle so they never overlap copy; fade uses motion tokens + `useReducedMotion`.
+- Initial delay before stagger so no stars are visible on first paint.
+
+### Verified
+
+- `npx tsc --noEmit` clean
+
+---
+
+## [2026-07-13 Session 96] — Stay updated preference chips tappable
+
+**Session goal:** Make the middle preference pills on Stay updated (`/notification-preference`) clearly toggleable.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Extract `PreferenceChip` with on/off styling + full-width hit target | `NotificationPreferenceScreen.tsx` | ✅ |
+| Keep scale handlers from being overwritten by `...rest` | `AnimatedPressable.tsx` | ✅ |
+| Docs | `app.md` | ✅ |
+
+### Key Decisions
+
+- Selected = soft green fill + primary border; off = muted chip + outline (was border-only, easy to miss).
+- `pointerEvents="none"` on chip contents so SVG icons don’t steal taps on web.
+
+### Verified
+
+- `npx tsc --noEmit` clean
+
+---
+
+## [2026-07-13 Session 95] — Setup-complete checkmark animation
+
+**Session goal:** Animate the checkmark on the “Your account was created!” screen.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Checkmark pop + delayed copy enter | `SetupCompleteScreen.tsx` | ✅ |
+| Motion inventory / route note | `screen-map.md`, `app.md` | ✅ |
+
+### Key Decisions
+
+- Reuse shared `@/motion` tokens (`checkmarkPop`, `popSpring`, `enterFrom`) — same success motif as submission confirmation.
+- Respect `useReducedMotion()` (skip animation, show final state).
+
+### Verified
+
+- `npx tsc --noEmit` clean
+
+---
+
+## [2026-07-13 Session 94] — Splash text clip + shimmer
+
+**Session goal:** Fix cut-off brand title on loading splash; add a slight gradient shimmer before the first page.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Unclip title + logo stroke | `AppSplashScreen.tsx` | ✅ |
+| Soft horizontal shimmer (respects reduced motion) | `AppSplashScreen.tsx` | ✅ |
+| Docs | `components.md`, `progress.md` | ✅ |
+
+### Key Decisions
+
+- Title: full-width + padding + taller lineHeight + `adjustsFontSizeToFit` so “Clean Up - Give Back” never clips on narrow devices.
+- Logo SVG viewBox padded so stroke isn’t cropped at edges.
+- Shimmer: low-opacity white band translating across the green gradient (~1.6s loop); skipped when `useReducedMotion()` is true. Min splash hold raised to 1.8s so the shimmer reads before fade-out.
+
+### Verified
+
+- `npx tsc --noEmit` clean
+
+---
+
+## [2026-07-13 Session 93] — Native onboarding tour screens
+
+**Session goal:** Implement Figma coachmark/tour frames `home_tour`, `shop_tour`, `track_tour`, `session_tour`, `set_tour` as native Expo Router screens.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Tour assets (stats/map/shop PNGs + star/replay SVGs) | `frontend/assets/figma/tour/` | ✅ |
+| Shared tour chrome | `TourNavButtons.tsx`, `TourIcons.tsx` | ✅ |
+| Five tour screens + routes | `HomeTourScreen`…`SetTourScreen`, `/home-tour`…`/set-tour` | ✅ |
+| Wire setup-complete → tour | `SetupCompleteScreen.tsx` | ✅ |
+| Manifest + living docs | `manifest.yaml`, `app.md`, `screen-map.md`, `01-onboarding.md`, `assets.md`, `components.md`, `current.md` | ✅ |
+
+### Key Decisions
+
+- Full-screen illustrated tour (Figma) over PRD overlay coachmarks — Figma is ground truth.
+- Onboarding marked complete when leaving setup-complete into the tour so mid-tour quit still reaches home.
+- Complex middle illustrations exported as PNG; Continue/Previous shared via `TourNavButtons`.
+
+### Verified
+
+- `npx tsc --noEmit` clean
+
+---
+
+## [2026-07-13 Session 92] — Phone country-code flag picker
+
+**Session goal:** Let users scroll and pick a country flag/dial code on the onboarding phone screen.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Country dial-code list + flag emojis | `frontend/src/constants/countries.ts` | ✅ |
+| Scrollable country picker modal on flag tap | `AccountPhoneScreen.tsx` | ✅ |
+| Docs | `docs/frontend/context/app.md` | ✅ |
+
+### Key Decisions
+
+- Unicode flag emojis (no flag asset package) so ~130 countries scroll without bundling SVGs.
+- Bottom sheet modal matches birthday picker pattern; selecting a row updates flag + `+dialCode` and closes.
+
+### Verified
+
+- `npx tsc --noEmit` clean
+
+---
+
+## [2026-07-13 Session 91] — Finish onboarding screens left incomplete by Claude
+
+**Session goal:** Complete the onboarding flow Claude started (hit session limit): splash → welcome → create account → account details → notification preference → setup complete; wire under-18 gate.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Welcome screen (Figma `112:6776`) | `WelcomeScreen.tsx`, `/welcome` | ✅ |
+| Create account (Figma `105:2`) | `CreateAccountScreen.tsx`, `/create-account` | ✅ |
+| Account details wiring | `AccountDetailsScreen.tsx`, `/account-details` | ✅ Continue → notif or `/under-age` |
+| Notification preference (Figma `112:7130`) | `NotificationPreferenceScreen.tsx` | ✅ |
+| Setup complete / account created (Figma `133:93`) | `SetupCompleteScreen.tsx`, `/setup-complete` | ✅ |
+| Splash → welcome gate | `index.tsx`, `onboardingStore.ts` | ✅ |
+| Shared pills + icons | `OnboardingProgressPills.tsx`, `OnboardingIcons.tsx` | ✅ |
+| Assets | `frontend/assets/figma/onboarding/` | ✅ |
+
+### Key Decisions
+
+- In-memory `onboardingStore` so Log In / setup-complete can `replace('/')` without re-showing splash→welcome in the same session.
+- Birthday MM/YYYY under 18 → `/under-age` (parent permission screen Claude already built).
+- Coachmark tutorial still designed-only; setup-complete Continues to home.
+
+### Verified
+
+- `npx tsc --noEmit` clean
+
+---
+
+## [2026-07-12 Session 90] — UI polish: sticky sessions controls, top-bar alignment, calendar Done fix, timer auto-nav, emphasis text
+
+**Session goal:** Batch of UI polish and UX correctness fixes across multiple screens.
+**Workflow used:** Chat
+
+### Skills Invoked
+
+| Skill | Purpose | Outcome |
+|---|---|---|
+| `/wrap` | End-of-session hygiene | This entry |
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Privacy FAB arrow flipped upward + functional scroll-to-top | `PrivacyPolicyDetailScreen.tsx` | ✅ `rotate: '-90deg'`; ScrollView ref scroll via FAB press |
+| Remove section header chevrons from privacy detail pages | `PrivacyPolicyDetailScreen.tsx` | ✅ `AccountChevronIcon` removed from section headers; restored on index page |
+| Sessions page sticky controls | `SessionsScreen.tsx` | ✅ Search bar, filter chips, sort header lifted out of ScrollView into fixed `stickyControls` View |
+| Cart icon uses design-system color | `ShopIcons.tsx`, `ShopAssetIcons.generated.tsx` | ✅ All cart icons default to `colors.textPrimary` instead of hardcoded `'#1c1b1b'` |
+| Featured item button gap reduced | `ShopScreen.tsx` | ✅ `featuredBtnGroup: { gap: 8 }` wraps View Kit + Add to cart buttons |
+| Product detail image corners consistently rounded | `ProductDetailScreen.tsx` | ✅ `carouselSlide` uses `borderRadius: radius.md` on all corners |
+| Featured item card tap navigates to kit page | `ShopScreen.tsx` | ✅ Card wrapped in `AnimatedPressable` with `onPress={onViewKit}` |
+| Top bar icon alignment standardized to 16px | `ProductDetailScreen.tsx`, `CartScreen.tsx`, `CheckoutScreen.tsx`, `SessionDetailScreen.tsx` | ✅ Left buttons: `alignItems: 'flex-start'`; right buttons: `alignItems: 'flex-end'` within 44px containers |
+| Calendar Done returns to calendar view | `ServiceHoursWeekPicker.tsx` | ✅ `confirmPicker` checks `monthYearPickerVisible`; collapses wheel without closing modal |
+| Auto-navigate to photo checkpoint when timer hits 0 | `LiveSessionScreen.tsx` | ✅ `useEffect` on `checkpointSecondsRemaining === 0` pushes `/photo-checkpoint` |
+| "Sessions not automatically approved" emphasis | `SessionSetupStep5Screen.tsx` | ✅ `NotoSans_700Bold` + `textDecorationLine: 'underline'` + `color: C.textPending` |
+
+### Key Decisions
+
+- Top bar alignment technique: `paddingHorizontal: 16` on the row + `alignItems: 'flex-start'`/`flex-end` on 44px button containers — icons land exactly 16px from edge without absolute positioning.
+- `Math.max(0, ...)` clamp in `liveSessionStore` means `checkpointSecondsRemaining === 0` fires exactly once per interval cycle — safe to use as `useEffect` trigger for auto-navigation.
+
+### Learnings
+
+- React Native nested `Pressable` consumes touches naturally — no `stopPropagation` needed for card-wrapping + inner button coexistence.
+- Reverted donate gift text from lime green back to yellow (`colors.statusPendingBorder`) per user request.
+
+---
+
+## [2026-07-12] — Add to cart navigates to cart; donation button layout fix
+
+**Goal:** Tapping "Add to cart" anywhere in ShopScreen should navigate directly to `/cart` and the cart badge should update. Donation preset buttons ($5/$10/$25) and Custom button on CartScreen should expand to match description text width.
+
+**Action:**
+- `ShopScreen`: both `addShopProduct` (product grid) and the featured kit's inline `onAddToCart` now call `router.push('/cart')` after `addCartItem`. Cart badge auto-updates since `CartBadge` reads from `useCartItemCount()`.
+- `CartScreen` `DonationSection`: `donateGrid` changed from `width: 232` fixed to `alignSelf: 'stretch'`; `donateAmountBtn` changed from `width: 64` to `flex: 1` so three preset buttons share full card content width. Custom button was already `width: '100%'` so it inherits the wider grid.
+
+---
+
+## [2026-07-12] — Camera Cancel returns to tracker
+
+**Goal:** Cancel on the camera screen should return to the live tracker, not the photo-required prompt.
+
+**Action:** `PhotoCaptureScreen` Cancel / Go Back now uses `router.dismissTo('/live-session')` so `/photo-checkpoint` is dismissed from the stack.
+
+---
+
+## [2026-07-12] — Checkout missing-field red highlights
+
+**Goal:** Checkout Place Order should highlight incomplete fields in red like session setup.
+
+**Action:** `CheckoutScreen` tracks per-field errors; missing labels use `statusDeclinedText` and inputs use `statusDeclinedBorder`; toast still via `SessionSetupValidationToast`; errors clear live as fields are filled.
+
+---
+
+## [2026-07-12] — Event detail copy toast + open in Maps
+
+**Goal:** Copy should toast that the link was copied; map should open Apple/Google Maps (no placeholder image).
+
+**Action:**
+- Copy icon writes a Maps URL via `expo-clipboard` and shows `LinkCopiedToast`.
+- Replaced static `map.jpg` with `EventLocationMap` (MapLibre pin / Expo Go CTA); tap → Apple Maps (iOS) or Google Maps (Android).
+- Event mocks include lat/lng coordinates.
+
+---
+
+## [2026-07-12] — Session detail Photo Evidence card restored
+
+**Goal:** Bring back the Photo Evidence card on session detail.
+
+**Action:** Repopulated `mocks/sessionDetail.ts` with 4 stub thumbs (`photo-1`…`photo-4`); card + enlarge modal already existed and only hid when `evidencePhotos` was empty.
+
+---
+
+## [2026-07-12] — Navbar tab switches use fade
+
+**Goal:** Bottom nav icon taps should not use the horizontal swipe stack animation.
+
+**Action:** Set `animation: 'fade'` on tab roots (`index`, `shop`, `sessions-list`, `account`) in `_layout.tsx`. Hierarchical pushes keep the default slide.
+
+---
+
+## [2026-07-12] — Contribute hero loads faster
+
+**Goal:** First open of Contribute felt slow because the hero PNG was ~685KB.
+
+**Action:** Replaced with cropped `hero.webp` (~38KB, 780×280); Donate uses `expo-image` (memory-disk); Shop prefetches the hero on mount.
+
+---
+
+## [2026-07-12] — Contribute Continue → donation confirmation
+
+**Goal:** After selecting a gift amount on Contribute, route to the shop confirmation receipt adapted for donation-only.
+
+**Action:** Donate **Continue** → `/purchase-confirmation?mode=donation&amount=`. Confirmation shows gift copy, donation line only, “Total Gift”, “Back to Shop”; order mode unchanged.
+
+---
+
+## [2026-07-12] — Cart → checkout/confirmation sync + empty toast + hearts
+
+**Goal:** Checkout/confirmation should mirror cart contents; empty cart icon should toast; confirmation hearts should animate in.
+
+**Action:**
+- `cartStore` starts empty; donation shared across cart/checkout/confirmation.
+- Confirmation receipt lists all cart lines; clears cart on Continue Shopping / Go Home.
+- `EmptyCartToast` + `useCartIconPress` on Shop / Product Detail / Checkout.
+- Confirmation hearts: opacity + scale spring enter (respects reduced motion).
+
+**Verified:** `npx tsc --noEmit` clean.
+
+---
+
+## [2026-07-12] — Contribute: Figma spacing, cut end scroll empty only
+
+**Goal:** Contribute had phantom empty scroll at bottom; earlier pass had also tightened Figma gaps.
+
+**Action:** Restored Figma `412:4` metrics (section gap 30, hero 140, amount presets h 61, card padding). Kept only the scroll fix: `paddingBottom: 16` (not `footerBottom + 120`); sticky footer remains a sibling.
+
+---
+
+## [2026-07-12] — Kits filter shows Trash Clean Up Kit
+
+**Goal:** Shop home Kits chip showed an empty grid.
+
+**Action:** Added Trash Clean Up Kit to the product catalog (`category: 'Kits'`) and removed the Kits→empty special case. View/Add map to `cleanup-kit`.
+
+---
+
+## [2026-07-12] — Checkout: cut end scroll empty space only
+
+**Goal:** Checkout had excess empty scroll at the bottom; Figma spacing/layout must stay.
+
+**Action:** Restored Figma card gaps, field sizes, and City/State + ZIP rows. Kept only the fix: scroll `paddingBottom` is 16 (was `footerBottom + 120` phantom space under a sticky footer sibling).
+
+---
+
+## [2026-07-12] — Cart badge centered + live item count
+
+**Goal:** Cart badge number was off-center; count was hardcoded and did not follow cart contents.
+
+**Action:** Shared `CartBadge` (optically centered green pill) + in-memory `cartStore` (`useSyncExternalStore`). Shop / product detail Add to cart, cart qty/remove, and checkout/confirmation summaries all read the same store; badge count = sum of line quantities.
+
+**Verified:** `npx tsc --noEmit` clean.
+
+---
+
+## [2026-07-12] — Contribute page less empty scroll
+
+**Goal:** Donate/Contribute had too much scrollable empty space.
+
+**Action:** ~~Removed `paddingBottom: footerBottom + 120` and tightened gaps.~~ Superseded — Figma spacing restored; only end padding reduced (see entry above).
+
+---
+
+## [2026-07-12] — Shop donate card icon crisp vector
+
+**Goal:** Green donate card icon was blurry (`donate-circle-icon.png`).
+
+**Action:** Replaced `ShopDonateIcon` with `react-native-svg` path from Figma assets library `Donate Icon.svg` (`figma_assets/Donate Icon.svg` / `frontend/assets/figma/shop/donate-icon.svg`).
+
+---
+
+## [2026-07-12] — Shop Continue CTAs full-width (Figma `415:160`)
+
+**Goal:** Continue buttons on shop pages were narrow / cut off.
+
+**Action:** Root cause — `AnimatedPressable` put layout styles on an inner view while the outer `Pressable` shrink-wrapped under `alignItems: 'center'`. Moved styles+scale onto the Pressable; Donate/Cart/Checkout/PurchaseConfirmation footers use `alignItems: 'stretch'` + `width: '100%'` (h 52, radius.md).
+
+**Verified:** `npx tsc --noEmit` clean.
+
+---
+
+## [2026-07-12] — Donate page heart watermark matches Figma
+
+**Goal:** Place shop-home donation-card heart SVG behind “Support the mission” like Figma `412:319`.
+
+**Action:** Reused `ShopDonateWave` (same path as shop `627:438`) on DonateScreen; positioned at left ~38.5% / 346×324; removed stacked opacity that made it nearly invisible.
+
+**Verified:** `npx tsc --noEmit` clean.
+
+---
+
+## [2026-07-12] — Shop flow SVGs render on native
+
+**Goal:** Many shop-page SVGs blank (cart, checkout, donate, confirmation).
+
+**Action:** Root cause unchanged — `expo-image` + raw `.svg` requires don’t paint on native. Ported remaining shop SVG set to `react-native-svg`:
+- `ShopAssetIcons.generated.tsx` (cart trash/±/heart/stripe + checkout bag/truck/payments/card/shield)
+- `DonateIcons.generated.tsx` + DonateScreen wiring
+- `PurchaseConfirmationIcons.generated.tsx` + confirmation screen wiring
+- Mocks keep PNGs only
+
+**Verified:** `npx tsc --noEmit` clean.
+
+---
+
+## [2026-07-12] — Shop donate card heart watermark
+
+**Goal:** Hand-drawn heart missing behind donate card content (Figma `627:438`).
+
+**Action:** Same SVG/`expo-image` issue — ported heart path to `react-native-svg` via `ShopDonateHeartPath.ts` + `ShopDonateWave` (`#BDCABA` @ 30% opacity). Dropped opaque Figma PNG export (baked green bg).
+
+**Verified:** `npx tsc --noEmit` clean.
+
+---
+
+## [2026-07-12] — Shop Best Seller flame icon
+
+**Goal:** Fire/streak icon missing next to “Best Seller” on shop featured card.
+
+**Action:** Replaced fragile 14×14 Figma-scaled path in `ShopStreakIcon` with the proven home `StreakIcon` 24×24 glyph (`fillRule: evenodd`); loosened product-detail badge `height: 20` clip.
+
+**Verified:** `npx tsc --noEmit` clean.
+
+---
+
+## [2026-07-12] — Shop cart + donate icons + product images
+
+**Goal:** Fix missing shop TopAppBar cart and donate-card icons; refresh product PNGs from Figma.
+
+**Action:**
+- Root cause: `ShopIcons` loaded `.svg` via `expo-image` (no Metro SVG transformer) → blank glyphs on native.
+- Ported `ShopCartIcon`, `ShopFeaturedCartIcon`, `ShopDonateIcon`, `ShopStreakIcon` to `react-native-svg` paths (Figma `498:665` / `510:1153` / `627:442` / `510:1144`).
+- Re-downloaded shop product PNGs from Figma MCP (`featured-kit`, tote bags, trash grabber, child/adult vests).
+
+**Verified:** `npx tsc --noEmit` clean.
+
+---
+
+## [2026-07-12] — Purchase confirmation (Figma `494:262`)
+
+**Goal:** Checkout **Place Order** opens the thank-you receipt (`shop_confirmation` / PRD §6.24).
+
+**Action:**
+- Added native `/purchase-confirmation` (`PurchaseConfirmationScreen` + mocks) with ticket receipt, hearts, order/donation rows, Total Impact.
+- Continue Shopping → `/shop`, Go Home → `/`; wired from Checkout via `replace`.
+- Manifest `purchase-confirmation` → `implemented`.
+
+**Verified:** `npx tsc --noEmit` clean.
+
+---
+
+## [2026-07-12] — Checkout screen (Figma `657:1809`)
+
+**Goal:** Cart **Continue** opens checkout (`shop_checkout_final` / PRD §6.23).
+
+**Action:**
+- Added native `/checkout` (`CheckoutScreen` + `mocks/checkout.ts`) with order summary, shipping + payment forms, sticky Place Order + Stripe footer.
+- Icons under `frontend/assets/figma/shop/checkout/`; wired from Cart Continue; PreviewApp + manifest `checkout` → `implemented`.
+
+**Verified:** `npx tsc --noEmit` clean.
+
+---
+
+## [2026-07-12] — Cart screen (Figma `657:1585`)
+
+**Goal:** Shop / product-detail cart icon opens the Figma cart (`shop_checkout` / PRD §6.22).
+
+**Action:**
+- Added native `/cart` (`CartScreen` + `mocks/cart.ts`) with line item, qty/remove, donation presets, order summary, Continue CTA (checkout TBD).
+- Assets under `frontend/assets/figma/shop/cart/`; icons via `ShopIcons` (trash, heart, stripe).
+- Wired cart icon from `ShopScreen` + `ProductDetailScreen`; PreviewApp + manifest `cart` → `implemented`.
+
+**Verified:** `npx tsc --noEmit` clean.
+
+---
+
+## [2026-07-12] — Donate / Contribute screen (Figma `412:4`)
+
+**Goal:** Shop $5 / $10 / $15 / Custom open the Contribute donate page.
+
+**Action:**
+- Added native `/donate` (`DonateScreen` + `mocks/donate.ts`) matching `shop_donate`.
+- Wired Shop donate amount chips + Custom → `/donate?amount=5|10|15|custom`.
+- Assets under `frontend/assets/figma/shop/donate/`; manifest `donate` → `implemented`.
+
+**Verified:** `npx tsc --noEmit` clean.
+
+---
+
+## [2026-07-12] — Product detail screens (all shop SKUs)
+
+**Goal:** Wire Shop **View Kit** / **View** to Figma product detail frames (`492:114`, `909:126`, `905:166`, `905:236`, `905:306`).
+
+**Action:**
+- Added parameterized native route `/product-detail?id=` (`ProductDetailScreen` + `mocks/productDetail.ts`).
+- Kit shows Best Seller badge, thumbnail strip, includes list; tote shows Earth/Ocean color swatches; other SKUs share qty + Add to cart chrome.
+- Downloaded product-detail heroes under `frontend/assets/figma/shop/product-detail/`.
+- Manifest product-detail routes → `implemented`; PreviewApp + Shop navigation wired.
+
+**Verified:** `npx tsc --noEmit` clean.
+
+---
+
+## [2026-07-12] — Shop TopAppBar matches Figma `498:661`
+
+**Goal:** Implement shop page top bar per Figma node `498:661`.
+
+**Action:**
+- Centered Sanchez “Shop” title + trailing stroke cart with green count badge.
+- Layout matches Account/Product detail bars (`paddingTop: insets.top`, 44px title row, `shadows.barTop`).
+- Exported Figma stroke cart SVG (`cart-icon.svg`); badge drawn in RN.
+- Product detail top bar reuses `ShopCartIcon`.
+
+**Verified:** `npx tsc --noEmit` clean.
+
+---
+
+## [2026-07-12] — Shop home aligned to Figma `498:606`
+
+**Goal:** Update existing native Shop screen to match `shop_home` (Figma `498:606`).
+
+**Action:**
+- Refined `ShopScreen` spacing/hierarchy to Figma (mission → donate → featured → filters → grid).
+- Replaced misnamed PNG icons with Figma SVGs via `ShopIcons` (`donate-icon`, wave, streak, dark/white carts).
+- Category chips filter the product grid; Kits shows empty (kit is featured-only).
+- Wired Shop tab from Account + Sessions; PreviewApp renders `ShopScreen`; manifest `shop` → `implemented`.
+
+**Verified:** `npx tsc --noEmit` clean.
+
+---
+
+## [2026-07-12] — Export date picker matches home (+ day wheel)
+
+**Goal:** Reuse homepage calendar picker UI on Export Service Record; add day column to the month/year wheel.
+
+**Action:**
+- `ExportDateField` modal now mirrors `ServiceHoursWeekPicker` (header chevron, month grid, Today/Done).
+- `DateWheelPicker` supports `includeDay` → Month | Day | Year for export; home stays Month | Year.
+
+**Verified:** `npx tsc --noEmit` clean.
+
+---
+
+## [2026-07-12] — Fix Export Service Record render crash
+
+**Goal:** Fix `TypeError: date.getMonth is not a function` on `/export-service-record`.
+
+**Action:**
+- Root cause: timeframe fields expected `Date`, but Fast Refresh could leave prior string mock values (`"Jan 1, 2026"`).
+- Added `toExportDate()` coercion; hardened `formatExportDate` / `ExportDateField`; screen normalizes start/end on mount.
+
+**Verified:** `npx tsc --noEmit` clean; string and Date inputs format correctly.
+
+---
+
+## [2026-07-12] — Event detail + registration confirmation (Figma `196:226` / `787:406`)
+
+**Goal:** Open Event Details from Home Recent Events; Register shows success confirmation overlay.
+
+**Action:**
+- Added `EventDetailScreen` + `/event-detail` route (Figma `events_detail`); assets under `frontend/assets/figma/event-detail/`.
+- Home recent events + View All sheet navigate with `?id=`; **Register** opens `EventRegistrationSuccessModal` (Figma `787:406`); **Go Home** → `/`.
+- Manifest `event-detail` → `implemented`.
+
+**Verified:** `npx tsc --noEmit` clean.
+
+---
+
+## [2026-07-12] — Session detail (Figma `515:1848`)
+
+**Goal:** Open session detail from Sessions list rows per Figma `session_detail`.
+
+**Action:**
+- Added `SessionDetailScreen` + `/session-detail?id=` route; icons/map/photos under `frontend/assets/figma/session-detail` and `images/screens/session-detail`.
+- Sessions list row tap navigates with session id; New Session → `/session-setup-guide`.
+- Manifest `session-detail` → `implemented`.
+
+**Verified:** `npx tsc --noEmit` clean.
+
+---
+
+## [2026-07-12] — Sessions list (Figma `515:1791`)
+
+**Goal:** Implement Sessions tab destination from the bottom navbar using Figma `sessions_list___hybrid_redesign`, with icons from `figma_assets`.
+
+**Action:**
+- Added `SessionsScreen` + `/sessions-list` route; icons from `frontend/assets/figma/sessions-list/` (copied from `figma_assets`: GrSearch, HiOutlineChevronUp, Expand Icon / BiExpandAlt, Ellipse 1) via `expo-image`.
+- Sessions tab on Home, Notifications, and Account → `/sessions-list`; Profile from Sessions → `/account`.
+- Manifest `sessions-list` → `implemented`.
+
+**Verified:** `npx tsc --noEmit` clean.
+
+---
+
+## [2026-07-12] — Export timeframe date editing
+
+**Goal:** Let users change Start/End dates on Export Service Record.
+
+**Action:**
+- Added `ExportDateField` — type dates (`Jan 1, 2026`, `1/1/2026`, `2026-01-01`) or open a calendar modal via the calendar icon.
+- Start/end stay ordered (moving one past the other clamps the other).
+
+**Verified:** `npx tsc --noEmit` clean.
+
+---
+
+## [2026-07-12] — Export record success (Figma `840:561`)
+
+**Goal:** Show confirmation after Export Record on Export Service Record.
+
+**Action:**
+- Added `ExportRecordSuccessScreen` + `/export-record-success` (checkmark card, Continue → Account, View PDF/CSV placeholder).
+- Export Record navigates with `?format=pdf|csv`.
+
+**Verified:** `npx tsc --noEmit` clean.
+
+---
+
+## [2026-07-12] — Export Service Record (Figma `854:383`)
+
+**Goal:** Wire Account → Export Service Record to native form matching Figma.
+
+**Action:**
+- Added `ExportServiceRecordScreen` + `/export-service-record` with Timeframe dates, Include Statuses multi-select, PDF/CSV tiles, and Export Record CTA.
+- Account Records → Export Service Record navigates to the new route.
+- Manifest `export-service-record` → `implemented`.
+
+**Verified:** `npx tsc --noEmit` clean.
+
+---
+
+## [2026-07-12] — Approval History (Figma `854:294`)
+
+**Goal:** Wire Account → Approval History to native list matching Figma.
+
+**Action:**
+- Added `ApprovalHistoryScreen` + `/approval-history` with summary stats (14 / 3 / 1) and four session cards (Approved / Under Review / Not Approved + notes).
+- Account Records → Approval History navigates to the new route.
+- Manifest `approval-history` → `implemented`.
+
+**Verified:** `npx tsc --noEmit` clean (pre-existing `SessionsScreen` elevation duplicate only).
+
+---
+
+## [2026-07-12] — Donation History (Figma `854:205`)
+
+**Goal:** Wire Account → Donation History to native list matching Figma.
+
+**Action:**
+- Added `DonationHistoryScreen` + `/donation-history` with two donation cards (date, amount, email confirmation chip).
+- Account Shop → Donation History navigates to the new route.
+- Manifest `donation-history` → `implemented`.
+
+**Verified:** `npx tsc --noEmit` clean.
+
+---
+
+## [2026-07-12] — Order History (Figma `854:116`)
+
+**Goal:** Wire Account → Order History to native list matching Figma.
+
+**Action:**
+- Added `OrderHistoryScreen` + `/order-history` with three Delivered order cards + email receipt chips.
+- Account Shop → Order History navigates to the new route.
+
+**Verified:** `npx tsc --noEmit` clean.
+
+---
+
+## [2026-07-12] — Request data sent (Figma `728:1648`)
+
+**Goal:** Show confirmation after Submit on Request Data.
+
+**Action:**
+- Added `RequestDataSentScreen` + `/request-data-sent` (success check + copy + Continue).
+- Request Data Submit → `/request-data-sent`; Continue → `/account`.
+
+**Verified:** `npx tsc --noEmit` clean.
+
+---
+
+## [2026-07-12] — Request your data (Figma `728:1385`)
+
+**Goal:** Wire Account → Request Data to native form matching Figma.
+
+**Action:**
+- Added `RequestDataScreen` + `/request-data` with Access / Delete / Download radio options (Access selected by default).
+- Submit returns to Account until `request_data_sent` is implemented.
+
+**Verified:** `npx tsc --noEmit` clean.
+
+---
+
+## [2026-07-12] — Delete account confirmation (Figma `725:361`)
+
+**Goal:** Wire Account → Delete Account to native confirm screen; block confirm unless user types DELETE.
+
+**Action:**
+- Added `DeleteAccountScreen` + `/delete-account-confirm`; warning banner + confirm field + destructive CTA.
+- Invalid confirm shows session-setup-style toast with attention shake; valid confirm replaces to home (welcome not yet built).
+
+**Verified:** `npx tsc --noEmit` clean.
+
+---
+
+## [2026-07-12] — Native Account tab (Figma `569:896`)
+
+**Goal:** Implement Account screen from Figma and wire Profile tab navigation.
+
+**Action:**
+- Added `AccountScreen` + `/account` route; icons load from `frontend/assets/figma/account/*.svg` via `expo-image`.
+- Profile tab on Home + Notifications navigates to `/account`; Notifications row opens `/notifications`.
+- Manifest `account` → `implemented` (`569:896`).
+
+**Verified:** `npx tsc --noEmit` clean.
+
 ---
 
 ## [2026-07-11] — Emil motion across full session flow
@@ -923,3 +2009,150 @@ Re-scan of all 6 flow pages after rollout: **0 unlinked `DROP_SHADOW` effects** 
 | Root stubs (`AGENTS.md`, `CLAUDE.md`, `package.json`) | ✅ |
 | Update `.cursor` rules and docs-backpressure hook | ✅ |
 | Verify `npx expo export` bundles prototype routes | ✅ |
+
+---
+
+## [2026-07-12 Session 86] — Shop/Cart/Confirmation UI polish
+
+**Session goal:** Polish shop flow UX — cart donation defaults, tab animations, product card interactions, confirmation page hearts, and order summary layout.
+**Workflow used:** Chat / incremental edits
+
+### Skills Invoked
+
+| Skill | Purpose | Outcome |
+|---|---|---|
+| `/run` | Launch Expo Go dev server | Server started with `npx expo start --go` from `frontend/` |
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Heart SVGs outlined (stroke-only) | `PurchaseConfirmationIcons.generated.tsx` | ✅ Changed fill → stroke on PurchaseHeart1/2/3 |
+| Confirmation date/time dynamic | `mocks/purchaseConfirmation.ts` | ✅ `getNow()` generates real date/time at call time |
+| Cart donation not pre-selected | `cartStore.ts` | ✅ Initial `cartDonation` changed from `DEFAULT_DONATION` to `null` |
+| Tab nav instant (no fade) | `src/app/_layout.tsx` | ✅ `tabRootScreenOptions` animation changed `fade` → `none` |
+| Donation amount toggle (deselect) | `screens/CartScreen.tsx` | ✅ Tapping selected amount passes `null` to deselect |
+| Image dots pill hidden for single-image products | `screens/ProductDetailScreen.tsx` | ✅ `CarouselDots` gated on `images.length > 1` |
+| Entire product card tappable | `screens/ShopScreen.tsx` | ✅ `ProductCard` wrapped in `AnimatedPressable` → `onView` |
+| Cart CTA lifted to fixed footer | `screens/CartScreen.tsx` | ✅ Continue + Stripe row moved out of ScrollView into `footer` style matching CheckoutScreen |
+| Order summary card bottom padding fixed | `screens/CartScreen.tsx` | ✅ Removed `marginBottom: 40` from `totalRow`; card padding balanced at 24 |
+| Shop mission text hidden | `screens/ShopScreen.tsx` | ✅ "Support cleanup work…" text removed from render |
+
+### Key Decisions
+
+- Fixed footer pattern for cart CTA mirrors CheckoutScreen — `footer` style with white bg + top border + `FOOTER_PAD` constant.
+- Donation deselect: `DonationSection.onSelect` prop type widened to `CartDonationAmount | null` to allow clearing.
+- No outlined heart SVG assets existed in repo — converted existing filled paths to `stroke`-only with `fill="none"`.
+
+### Learnings
+
+- `marginBottom` on the last child inside a padded card creates invisible extra space — always check inner margins, not just card padding.
+- React Native nested Pressables do not bubble events — no `stopPropagation` needed for "Add to cart" inside a tappable card.
+- `DEFAULT_DONATION` import can be safely removed from `cartStore.ts` once initial state is set to `null`.
+
+---
+
+## [2026-07-12 Session 87] — Checkout form validation with toast
+
+**Session goal:** Require all shipping + payment fields before Place Order is allowed; show a bulleted validation toast matching the session-setup pattern when any field is missing.
+**Workflow used:** Chat / single-file edit
+
+### Skills Invoked
+
+| Skill | Purpose | Outcome |
+|---|---|---|
+| none | — | — |
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Checkout field validation + toast | `screens/CheckoutScreen.tsx` | ✅ `getMissingFields()` + `handlePlaceOrder()` block nav; `SessionSetupValidationToast` renders missing-field bullets |
+
+### Key Decisions
+
+- Reused `SessionSetupValidationToast` (red-bordered, bulleted) directly from `@/components/session-setup/` — no new component needed.
+- Card Number validated at ≥15 digits (Amex), Expiry at 4 digit chars, CVV at ≥3 digits.
+- Toast placed immediately below the top bar, above `KeyboardAvoidingView`, so it stays visible regardless of scroll position.
+- A linter pass also added `FieldErrors` state to highlight individual field borders in red — field-level highlight + list toast in tandem.
+
+### Learnings
+
+- `SessionSetupValidationToast` is a general-purpose validation pattern reusable across any form screen — not session-setup-specific.
+- Expiry raw strip: `.replace(/\s/g,'').replace('/','')` gives the 4-digit check cleanly without touching the formatted display value.
+
+---
+
+## [2026-07-12 Session 91] — HomeScreen notification bell color and clear recent sessions
+
+**Session goal:** Polish HomeScreen — make notification bell use black brand color and add a Clear button for recent sessions.
+**Workflow used:** Chat
+
+### Skills Invoked
+
+| Skill | Purpose | Outcome |
+|---|---|---|
+| `/wrap` | End-of-session hygiene | PROGRESS.md updated, context preserved |
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Notification bell → black brand color | `frontend/src/features/figma-screens/screens/HomeScreen.tsx` | ✅ Passed `colors.textPrimary` (#1c1b1b) to `NotificationIcon` |
+| Clear recent sessions button | `frontend/src/features/figma-screens/screens/HomeScreen.tsx` | ✅ Added "Clear" `AnimatedPressable` in section header calling `resetRecentSessions()` |
+
+### Key Decisions
+
+- Used `colors.textPrimary` (#1c1b1b) for the notification bell — matches the black brand color from the token system rather than introducing a new value.
+- "Clear" button sits left of "View All" in the section header row, styled with `colors.textTertiary` to be secondary/destructive-neutral (not alarming).
+- `resetRecentSessions()` was already exported from `recentSessionsStore.ts` as a dev/test helper — repurposed it for the UI clear action.
+
+### Learnings
+
+- `NotificationIcon` default color is `colors.primary` (green) — must always pass an explicit color prop when placing it outside a green-primary context.
+- `resetRecentSessions` was already in the store (marked "test/dev helper") — no new store action needed.
+
+---
+
+## [2026-07-12 Session 88] — Privacy pages, widget redesign, live session polish
+
+**Session goal:** Implement Figma privacy screens wired from AccountScreen, redesign the minimized live session tracker widget with a yellow bar, and fix navigation/layout issues.
+**Workflow used:** Chat / multi-file edit
+
+### Skills Invoked
+
+| Skill | Purpose | Outcome |
+|---|---|---|
+| `/wrap` | Session close hygiene | PROGRESS.md + MEMORY.md updated |
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Privacy Policy index screen | `screens/PrivacyPolicyScreen.tsx`, `app/privacy-policy.tsx` | ✅ Figma node 728:995 — 4 policy rows with chevron, copyright footer |
+| Privacy Policy detail template | `screens/PrivacyPolicyDetailScreen.tsx` | ✅ Shared article template for all 4 detail screens; sticky scroll-to-top FAB (green, bottom-right) |
+| 4 privacy detail route files | `app/privacy-what-we-collect.tsx`, `app/privacy-how-we-use-it.tsx`, `app/privacy-who-we-share-it-with.tsx`, `app/privacy-how-we-protect-it.tsx` | ✅ Full Figma copy passed as props to shared template |
+| AccountPrivacyScreen (hub) | `screens/AccountPrivacyScreen.tsx`, `app/account-privacy.tsx` | ✅ PRD wireframe privacy hub with "Your data", "Legal", "Your rights", "Controls" sections |
+| AccountScreen Privacy row wired | `screens/AccountScreen.tsx` | ✅ `onPress` → `router.push('/privacy-policy')` |
+| _layout.tsx routes registered | `src/app/_layout.tsx` | ✅ 6 new Stack.Screen entries added |
+| "Your rights" section removed | `screens/PrivacyPolicyScreen.tsx` | ✅ PolicyRow for "Your rights" removed from index |
+| "Back to tracker" button | `screens/PhotoCheckpointScreen.tsx` | ✅ Ghost button below "Take Photo" using `router.back()` |
+| Instant animation fix | `screens/PhotoCheckpointScreen.tsx` | ✅ Changed from `router.replace('/live-session')` → `router.back()` to get natural slide animation |
+| Widget yellow top bar | `components/LiveSessionMinimizedPill.tsx` | ✅ `liveBar` with `backgroundColor: statusPendingBorder`, "Live" centered text, black expand button (absolute right) |
+| Widget time text white | `components/LiveSessionMinimizedPill.tsx` | ✅ `timeLeftValue` color → `textOnPrimary`; `statUnit` → `textOnPrimary` opacity 0.75 |
+| Widget white background removed | `screens/HomeScreen.tsx` | ✅ Removed `backgroundColor` from `liveBar` and `bottomStack` |
+| Navbar white background restored | `screens/HomeScreen.tsx` | ✅ `navBarBg` wrapper added around BottomNavBar with `backgroundColor: white` + shadow |
+| Gap below navbar fixed | `screens/HomeScreen.tsx` | ✅ `paddingBottom: bottomInset` moved from transparent `bottomStack` to white `navBarBg` |
+
+### Key Decisions
+
+- Privacy detail screens share one `PrivacyPolicyDetailScreen` component — content passed as props arrays, keeping 4 screens DRY.
+- `router.back()` (not `router.replace`) for "Back to tracker" avoids inheriting `animation: 'none'` from the `live-session` Stack.Screen options.
+- Widget's safe area gap fix: scope `paddingBottom: bottomInset` to only the white navbar wrapper, not the transparent outer container.
+- Yellow bar expand button uses `position: 'absolute', right: 14` so "Live" text remains truly centered with `flex: 1, textAlign: 'center'`.
+
+### Learnings
+
+- `animation: 'none'` on a Stack.Screen affects ALL navigation targeting that route — including `router.replace`. Use `router.back()` to bypass the target route's options.
+- Transparent container with `paddingBottom` creates a visible gap — always apply safe-area inset padding on the view that has the background color.
+- Sticky FAB on a ScrollView screen requires a `useRef<ScrollView>` + absolute positioning outside the ScrollView, not inside the content container.

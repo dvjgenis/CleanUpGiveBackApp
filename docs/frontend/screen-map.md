@@ -19,17 +19,25 @@ Full token reference: [`docs/frontend/brand.md`](../brand.md).
 ## Auth / Onboarding
 
 > Figma page: **1·Onboarding** ([node 627:29](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=627-29)) · Token binding: ✅ complete (2026-06-30)
-> Figma `routeKey` values: `splash-loading`, `welcome`, `create-account`, `account-details`, `notification-preference`, `setup-complete`, `coachmark-tutorial` — see [manifest.yaml](../../frontend/design/figma/manifest.yaml)
+> Figma `routeKey` values: `splash-loading`, `welcome`, `create-account`, `creating-account`, `account-details`, `notification-preference`, `setup-complete`, `home-tour`, `shop-tour`, `track-tour`, `session-tour`, `set-tour` — see [manifest.yaml](../../frontend/design/figma/manifest.yaml)
 
 | # | PRD Screen | PRD § | Figma node | Stitch Match *(legacy)* | Stitch ID *(legacy)* | Code File | Status |
 |---|---|---|---|---|---|---|---|
-| 0 | Splash / App Loading | — | [`827:111`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=827-111) | — | — | `expo-splash-screen` (`app.json`) | 🎨 Figma designed |
-| 1 | Welcome / Auth | 6.1 | — | Welcome - Standardized Progress ★ | `e77c3364e32f4b22823b7a0c9cd0cbdd` | `prototype/screens/auth/Welcome.tsx` | ✅ |
-| 2 | Create Account | 6.2 | Create Account - Standardized Progress | `e2433a03392344ac97a58c93420583fc` | `prototype/screens/auth/CreateAccount.tsx` | ✅ |
-| 3 | Account Details | 6.3 | Account Details - Standardized Progress | `91668378750f490ea367ba08af63b86e` | `prototype/screens/auth/AccountDetails.tsx` | ✅ |
-| 4 | Notification Preference | 6.4 | Notification Preference - Standardized Redo | `095341a446e448a2904d0ee93ea78e4b` | `prototype/screens/auth/NotificationPreference.tsx` | ✅ |
-| 5 | Setup Complete | 6.5 | — | — | `prototype/screens/auth/SetupComplete.tsx` | ✅ Generated |
-| 6 | Coachmark Tutorial | 6.6 | — | — | `prototype/screens/auth/Coachmark.tsx` | ✅ Generated |
+| 0 | Splash / App Loading | — | *(Figma `827:111` stale/missing)* | — | — | `AppSplashScreen.tsx` + `index.tsx` | ✅ Native (`color/primary`) |
+| 1 | Welcome / Auth | 6.1 | [`112:6776`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=112-6776) | Welcome - Standardized Progress ★ | `e77c3364e32f4b22823b7a0c9cd0cbdd` | `screens/WelcomeScreen.tsx` → `/welcome` | ✅ Native |
+| 2 | Create Account | 6.2 | [`105:2`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=105-2) | Create Account - Standardized Progress | `e2433a03392344ac97a58c93420583fc` | `screens/CreateAccountScreen.tsx` → `/create-account` | ✅ Native |
+| 2b | Creating Account | 6.2 | [`137:73`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=137-73) | — | — | `screens/CreatingAccountScreen.tsx` → `/creating-account` | ✅ Native |
+| 3 | Account Details | 6.3 | [`112:6882`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=112-6882) | Account Details - Standardized Progress | `91668378750f490ea367ba08af63b86e` | `screens/AccountDetailsScreen.tsx` → `/account-details` | ✅ Native |
+| 4 | Notification Preference | 6.4 | [`112:7130`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=112-7130) | Notification Preference - Standardized Redo | `095341a446e448a2904d0ee93ea78e4b` | `screens/NotificationPreferenceScreen.tsx` → `/notification-preference` | ✅ Native |
+| 5 | Setup Complete | 6.5 | [`133:93`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=133-93) | — | — | `screens/SetupCompleteScreen.tsx` → `/setup-complete` | ✅ Native |
+| 6a | Home Tour | 6.6 | [`137:527`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=137-527) | — | — | `screens/HomeTourScreen.tsx` → `/home-tour` | ✅ Native |
+| 6b | Shop Tour | 6.6 | [`137:115`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=137-115) | — | — | `screens/ShopTourScreen.tsx` → `/shop-tour` | ✅ Native |
+| 6c | Track Tour | 6.6 | [`137:431`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=137-431) | — | — | `screens/TrackTourScreen.tsx` → `/track-tour` | ✅ Native |
+| 6d | Session Tour | 6.6 | [`137:173`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=137-173) | — | — | `screens/SessionTourScreen.tsx` → `/session-tour` (native search + tilted rows; stars on approved) | ✅ Native |
+| 6e | Set Tour | 6.6 | [`112:7170`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=112-7170) | — | — | `screens/SetTourScreen.tsx` → `/set-tour` | ✅ Native |
+| 6 | Coachmark Tutorial | 6.6 | — | — | — | Native tour sequence above (replaces prototype coachmark) | ✅ Native |
+| — | Under-age / parent permission | 6.0d | [`728:901`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=728-901) | — | — | `screens/UnderAgeScreen.tsx` → `/under-age` | ✅ Native |
+| — | Under-age learn why | 6.0d | [`833:314`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=833-314) | — | — | `screens/UnderAgeLearnWhyScreen.tsx` → `/under-age-learn-why` | ✅ Native |
 
 ---
 
@@ -41,7 +49,7 @@ Full token reference: [`docs/frontend/brand.md`](../brand.md).
 | # | PRD Screen | PRD § | Stitch Match *(legacy)* | Stitch ID *(legacy)* | Code File | Status |
 |---|---|---|---|---|---|---|
 | 7 | Home | 6.7 | Home Dashboard - Final Branding | `68fe23e48c51440aa28e15830b3236c6` | `prototype/screens/home/Home.tsx` | ✅ |
-| 8 | Event Detail | 6.8 | — | — | `prototype/screens/event/EventDetail.tsx` | ✅ Generated |
+| 8 | Event Detail | 6.8 | `196:226` | `event-detail` | `features/figma-screens/screens/EventDetailScreen.tsx` | ✅ Implemented (Register → `787:406`) |
 | 9 | Session Setup | 6.9 | Session Setup - PRD Aligned Standardized | `ac088fa0affe4ae8b4c3661cf41cfe95` | `prototype/screens/session/SessionSetup.tsx` | ✅ |
 | 10 | Permission Check — Location | 6.10 | — | — | `prototype/screens/session/Permissions.tsx` (step 0) | ✅ Generated |
 | 11 | Permission Check — Camera | 6.10 | — | — | `prototype/screens/session/Permissions.tsx` (step 1) | ✅ Generated |
@@ -53,12 +61,12 @@ Full token reference: [`docs/frontend/brand.md`](../brand.md).
 | 17 | Sessions List View | 6.16 | Sessions List View - Standardized Refined | `5f1eff26ce264ff184ce9ad1d213d2d1` | `prototype/screens/sessions/SessionsList.tsx` | ✅ |
 | 18 | Sessions Calendar View | 6.17 | Sessions Calendar View - Standardized Refined ★ | `4acdb9adf830431eb3a267328a1324e0` | `prototype/screens/sessions/SessionsCalendar.tsx` | ✅ |
 | 19 | Session Detail | 6.18 | — | — | `prototype/screens/sessions/SessionDetail.tsx` | ✅ Generated |
-| 20 | Shop Home | 6.19 | Shop Home - PRD & Reference Aligned | `851c8e35bde84ed48af36bd305da0311` | `prototype/screens/shop/ShopHome.tsx` | ✅ |
-| 21 | Donate | 6.20 | Donate | `1ebb06ee3aab4f79b373714156a51e6d` | `prototype/screens/shop/Donate.tsx` | ✅ |
-| 22 | Product Detail | 6.21 | Product Detail: Cleanup Kit - High Fidelity | `492:114` (+ SKU frames `909:126`, `905:166`, `905:236`, `905:306` in Figma) | `prototype/screens/shop/ProductDetail.tsx` | ✅ Figma · RN placeholder |
-| 23 | Cart | 6.22 | Shopping Cart (No Tote Bag) | `62818b1ae3d24b928b85c0a6e53cad28` | `prototype/screens/shop/Cart.tsx` | ✅ |
-| 24 | Checkout | 6.23 | — | — | `prototype/screens/shop/Checkout.tsx` | ✅ Generated |
-| 25 | Purchase / Donation Confirmation | 6.24 | Thank You! (No Tote Bag) | `d38314d06d2e4d58ba492326a7e2dceb` | `prototype/screens/shop/PurchaseConfirmation.tsx` | ✅ |
+| 20 | Shop Home | 6.19 | Shop Home - PRD & Reference Aligned | `498:606` | `features/figma-screens/screens/ShopScreen.tsx` (`/shop`) | ✅ Native |
+| 21 | Donate | 6.20 | Contribute (`shop_donate`) | `412:4` | `features/figma-screens/screens/DonateScreen.tsx` (`/donate`) | ✅ Native |
+| 22 | Product Detail | 6.21 | Product Detail: Cleanup Kit - High Fidelity | `492:114` (+ SKU frames `909:126`, `905:166`, `905:236`, `905:306` in Figma) | `features/figma-screens/screens/ProductDetailScreen.tsx` | ✅ Implemented (`/product-detail?id=`) |
+| 23 | Cart | 6.22 | [`657:1585`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=657-1585) | `shopping_cart__no_tote_bag_` | `features/figma-screens/screens/CartScreen.tsx` (`/cart`) | ✅ Native |
+| 24 | Checkout | 6.23 | [`657:1809`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=657-1809) | `checkout_form` | `features/figma-screens/screens/CheckoutScreen.tsx` (`/checkout`) | ✅ Native |
+| 25 | Purchase / Donation Confirmation | 6.24 | [`494:262`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=494-262) | `thank_you___no_tote_bag_` | `features/figma-screens/screens/PurchaseConfirmationScreen.tsx` (`/purchase-confirmation`) | ✅ Native |
 | 26 | Account | 6.25 | Account | `9e1f4cc7670241aa9668da2cbf10ace4` | `prototype/screens/account/Account.tsx` | ✅ |
 
 ---
@@ -152,7 +160,7 @@ Applied across all 31 code files:
 
 | Screen | Motion applied |
 |---|---|
-| SetupComplete | Fade + 8px translateY, 220ms easeOut |
+| SetupComplete | Checkmark opacity fade-in (220ms easeOut); copy + Continue fade/slide in after check; subtitle `color/text/on-primary`; respects reduced motion |
 | Coachmark | Per-step fade + scale 0.95→1, 200ms |
 | EventDetail | Fade + 8px translateY, 220ms easeOut |
 | PhotoCheckpoint | Slide up from bottom, spring damping 20 |

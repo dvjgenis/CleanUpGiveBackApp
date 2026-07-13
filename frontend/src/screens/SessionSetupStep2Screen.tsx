@@ -14,16 +14,8 @@ import { useFonts } from 'expo-font';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
+import { colors as C } from '@/constants/tokens';
 
-const C = {
-  bgApp: '#fcf9f8',
-  primary: '#009540',
-  textPrimary: '#1c1b1b',
-  textTertiary: '#3e4a3d',
-  textOnPrimary: '#ffffff',
-  borderOutline: '#bdcaba',
-  borderTop: '#bdcaba',
-} as const;
 
 function ProgressPills({ total = 6, active = 2 }: { total?: number; active?: number }) {
   return (
@@ -81,7 +73,7 @@ export function SessionSetupStep2Screen() {
 
       <CoachmarkEnter delayMs={staggerDelay(1)} style={s.illustrationZone}>
         <Image
-          source={require('../../assets/images/screens/session-setup-step2-illustration.png')}
+          source={require('../../assets/images/screens/session-setup/step2-illustration.png')}
           style={s.illustration}
           resizeMode="contain"
           accessibilityLabel="Session setup form with activity, date, and permission toggles"
@@ -186,7 +178,7 @@ const s = StyleSheet.create({
   // Footer — top border, gap 30 between button container and skip
   footer: {
     borderTopWidth: 1,
-    borderTopColor: C.borderTop,
+    borderTopColor: C.borderOutline,
     paddingHorizontal: 16,
     paddingTop: 20,
     paddingBottom: 8,

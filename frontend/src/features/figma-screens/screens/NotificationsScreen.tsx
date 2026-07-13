@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BottomNavBar, type BottomNavTab } from '@/components/navigation/BottomNavBar';
@@ -142,8 +142,14 @@ export function NotificationsScreen() {
               router.push('/session-setup-guide');
             }
           }}
-          onSessionsPress={() => setActiveTab('sessions')}
-          onProfilePress={() => setActiveTab('profile')}
+          onSessionsPress={() => {
+            setActiveTab('sessions');
+            router.push('/sessions-list' as Href);
+          }}
+          onProfilePress={() => {
+            setActiveTab('profile');
+            router.push('/account' as Href);
+          }}
         />
       </View>
     </View>
