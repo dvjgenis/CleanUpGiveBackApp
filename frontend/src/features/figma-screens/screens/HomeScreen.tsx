@@ -34,7 +34,7 @@ import { getCurrentWeekMeta } from '../utils/weekCalendar';
 import { colors, fontFamilies, radius as R, shadows } from '../tokens';
 
 const CHART_MAX = 200;
-const CHART_H = 184;
+const CHART_H = 168;
 const CHART_Y_LABELS = [200, 150, 100, 50, 0] as const;
 
 const BOTTOM_NAV_HEIGHT = 64;

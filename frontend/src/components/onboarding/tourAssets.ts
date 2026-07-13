@@ -8,7 +8,9 @@ export const TOUR_GRAPHICS = {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   trackMap: require('@/assets/figma/tour/track-map.webp') as number,
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  homeStats: require('@/assets/figma/tour/home-stats.png') as number,
+  homeStatsChart: require('@/assets/figma/tour/home-stats-chart.png') as number,
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  homeStatsCards: require('@/assets/figma/tour/home-stats-cards.png') as number,
 } as const;
 
 /** Warm memory-disk cache so shop/track tour graphics paint immediately. */

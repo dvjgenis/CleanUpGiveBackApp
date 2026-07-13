@@ -38,15 +38,27 @@ export function HomeTourScreen() {
             <Text style={s.titleGreen}>Quantify your impact.</Text>
           </Text>
 
-          <ExpoImage
-            source={TOUR_GRAPHICS.homeStats}
-            style={s.illustration}
-            contentFit="contain"
-            cachePolicy="memory-disk"
-            priority="high"
-            transition={0}
-            accessibilityLabel="Total service hours chart and impact stats"
-          />
+          <View style={s.illustrationStack}>
+            <ExpoImage
+              source={TOUR_GRAPHICS.homeStatsChart}
+              style={s.chartImage}
+              contentFit="contain"
+              cachePolicy="memory-disk"
+              priority="high"
+              transition={0}
+              accessibilityLabel="Total service hours chart"
+            />
+            <ExpoImage
+              source={TOUR_GRAPHICS.homeStatsCards}
+              style={s.cardsImage}
+              contentFit="contain"
+              contentPosition={{ left: 0, top: 0 }}
+              cachePolicy="memory-disk"
+              priority="high"
+              transition={0}
+              accessibilityLabel="Sessions, miles, and locations stats"
+            />
+          </View>
         </View>
 
         <TourNavButtons
@@ -74,6 +86,7 @@ const s = StyleSheet.create({
     flex: 1,
     gap: 15,
     paddingTop: 12,
+    alignItems: 'stretch',
   },
   title: {
     fontFamily: 'Sanchez_400Regular',
@@ -86,9 +99,17 @@ const s = StyleSheet.create({
   titleGreen: {
     color: C.primary,
   },
-  illustration: {
+  illustrationStack: {
+    gap: 0,
+  },
+  chartImage: {
     width: '100%',
-    flex: 1,
-    maxHeight: 380,
+    aspectRatio: 716 / 470,
+  },
+  cardsImage: {
+    width: '88%',
+    aspectRatio: 668 / 221,
+    marginTop: 6,
+    alignSelf: 'center',
   },
 });
