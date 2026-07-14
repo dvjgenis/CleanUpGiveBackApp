@@ -74,6 +74,23 @@ screens:
     legacyHtmlKey: account_details___standardized_progress
     prdSection: "6.3"
     status: implemented
+    notes: "Progress pills step 2/5 (shared with account-phone). Continue → /location-permission (or /under-age if <18)."
+
+  - routeKey: location-permission
+    figmaPage: "1·Onboarding"
+    figmaNode: "725:553"
+    legacyHtmlKey: ""
+    prdSection: "6.3"
+    status: implemented
+    notes: "Onboarding location permission (step 3/5). Enable/Not now → /camera-permission. Session-guide twin is permission-location (728:639) via /session-setup-step6."
+
+  - routeKey: camera-permission
+    figmaPage: "1·Onboarding"
+    figmaNode: "725:613"
+    legacyHtmlKey: ""
+    prdSection: "6.3"
+    status: implemented
+    notes: "Onboarding camera permission (step 4/5). Enable/Not now → /notification-preference. Session-guide twin is permission-camera (728:658) via /session-setup-step7."
 
   - routeKey: notification-preference
     figmaPage: "1·Onboarding"
@@ -502,16 +519,16 @@ screens:
     figmaNode: "728:639"
     legacyHtmlKey: ""
     prdSection: "6.10"
-    status: designed
-    notes: "Also on Page 1 Onboarding (725:553). Title: Sanchez 30px — matches session_setup_guide headers."
+    status: implemented
+    notes: "Session setup guide step 6 (/session-setup-step6). Onboarding twin: /location-permission (725:553). Title: Sanchez 30px."
 
   - routeKey: permission-camera
     figmaPage: "4·Session Tracking"
     figmaNode: "728:658"
     legacyHtmlKey: ""
     prdSection: "6.10"
-    status: designed
-    notes: "Also on Page 1 Onboarding (725:613). Title: Sanchez 30px — matches session_setup_guide headers."
+    status: implemented
+    notes: "Session setup guide step 7 (/session-setup-step7). Onboarding twin: /camera-permission (725:613). Title: Sanchez 30px."
 
 # ---------------------------------------------------------------------------
 # Legacy / retired HTML keys (not canonical screens — do not implement)

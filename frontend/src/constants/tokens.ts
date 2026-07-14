@@ -64,8 +64,9 @@ export const status = {
 export const colors = {
   bgApp: primitives.cream50,
   /**
-   * Card / elevated white surfaces used across shipped screens.
-   * Figma semantic `color/bg/surface` is `#f6f3f2` — see `bgSurfaceElevated`.
+   * Card background (white). Named `bgSurface` in Figma but visually "below"
+   * `bgSurfaceElevated` (#f6f3f2) — use this for modal sheets and cards that
+   * sit on the cream app background. Do not confuse with `bgSurfaceElevated`.
    */
   bgSurface: primitives.white,
   /** Figma `color/bg/surface` (`#f6f3f2`) */
@@ -123,6 +124,18 @@ export const radius = {
   full: 9999,
 } as const;
 
+// ─── Layout constants ────────────────────────────────────────────────────────
+
+/** Shared structural measurements — import these instead of hardcoding per screen. */
+export const layout = {
+  /** Height of the bottom navigation bar (px). */
+  bottomNavHeight: 64,
+  /** Height of a standard top app bar title row (px). */
+  topBarTitleRow: 44,
+  /** Bottom padding inside a top app bar (px). */
+  topBarPaddingBottom: 8.5,
+} as const;
+
 // ─── Elevation (structural chrome only — brand.md §Elevation) ─────────────
 
 export const shadows = {
@@ -168,6 +181,11 @@ export const textStyles = {
     fontFamily: fontFamilies.sanchezRegular,
     fontSize: 28,
     lineHeight: 36,
+  },
+  headlineSection: {
+    fontFamily: fontFamilies.sanchezRegular,
+    fontSize: 34,
+    lineHeight: 42,
   },
   headlineDetail: {
     fontFamily: fontFamilies.sanchezRegular,

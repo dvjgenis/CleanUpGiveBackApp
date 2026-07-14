@@ -9,7 +9,7 @@ Bundled screen assets for Expo. Metro resolves `@/assets/figma/...`.
 
 | Folder | Screens / use | Notes |
 |--------|---------------|-------|
-| `onboarding/` | Welcome, create account, creating account, phone/details, notif prefs, setup complete, under-age | Hero PNG + auth/notif SVGs |
+| `onboarding/` | Welcome, create account, creating account, phone/details, location/camera permission, notif prefs, setup complete, under-age | Hero PNG + auth/notif/permission SVGs |
 | `tour/` | Home/shop/track/session/set tour | Stats/map/shop graphics + star/replay SVGs |
 | `home-screen/` | Home dashboard (+ bottom nav under `nav/`) | Dashboard glyphs; nav SVGs are sources for `src/components/navigation/icons/` |
 | `event-detail/` | Event detail + registration success | Icons, header/organizer PNGs, map stub |
@@ -21,7 +21,7 @@ Bundled screen assets for Expo. Metro resolves `@/assets/figma/...`.
 | `shop/product-detail/` | Product detail | Per-SKU hero PNGs |
 | `shop/_source/` | — | Ported glyph originals (not required at runtime) |
 | `session-setup/` | Session setup form | Calendar / info / back SVGs |
-| `live-session/` | Live tracker | Map controls + CTA SVGs |
+| `live-session/` | Live tracker | Map controls + CTA SVGs; temporary Map Types thumbnails (`map-type-*.png`) |
 | `photo-checkpoint/` | Photo checkpoint | See `images/screens/photo-checkpoint/` |
 | `photo-submitted/` | Photo submitted | See `images/screens/photo-submitted/` + `animations/` |
 | `missed-checkpoint/` | Missed checkpoint | See `images/screens/missed-checkpoint/` + `animations/` |

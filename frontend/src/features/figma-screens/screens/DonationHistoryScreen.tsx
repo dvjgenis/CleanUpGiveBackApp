@@ -9,9 +9,8 @@ import { useLiveSession } from '@/features/session-tracking/liveSessionStore';
 
 import { DonateCardIcon, EmailReceiptIcon } from '../components/AccountIcons';
 import { defaultDonationHistory, type DonationHistoryItem } from '../mocks/donationHistory';
-import { colors, fontFamilies, radius } from '../tokens';
+import { layout, colors, fontFamilies, radius } from '../tokens';
 
-const BOTTOM_NAV_HEIGHT = 64;
 
 function DonationCard({ donation }: { donation: DonationHistoryItem }) {
   return (
@@ -49,7 +48,7 @@ export function DonationHistoryScreen({
   const { isActive } = useLiveSession();
 
   const bottomInset = Math.max(insets.bottom, 0);
-  const scrollBottomPad = bottomInset + BOTTOM_NAV_HEIGHT + 32;
+  const scrollBottomPad = bottomInset + layout.bottomNavHeight + 32;
 
   return (
     <View style={s.root}>

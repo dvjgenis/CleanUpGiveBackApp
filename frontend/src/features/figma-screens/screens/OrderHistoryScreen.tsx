@@ -9,9 +9,8 @@ import { useLiveSession } from '@/features/session-tracking/liveSessionStore';
 
 import { EmailReceiptIcon } from '../components/AccountIcons';
 import { defaultOrderHistory, type OrderHistoryItem } from '../mocks/orderHistory';
-import { colors, fontFamilies, radius } from '../tokens';
+import { layout, colors, fontFamilies, radius } from '../tokens';
 
-const BOTTOM_NAV_HEIGHT = 64;
 
 function OrderCard({ order }: { order: OrderHistoryItem }) {
   return (
@@ -50,7 +49,7 @@ export function OrderHistoryScreen({ orders = defaultOrderHistory }: { orders?: 
   const { isActive } = useLiveSession();
 
   const bottomInset = Math.max(insets.bottom, 0);
-  const scrollBottomPad = bottomInset + BOTTOM_NAV_HEIGHT + 32;
+  const scrollBottomPad = bottomInset + layout.bottomNavHeight + 32;
 
   return (
     <View style={s.root}>

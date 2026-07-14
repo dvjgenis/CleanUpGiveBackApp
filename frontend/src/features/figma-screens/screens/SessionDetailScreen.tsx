@@ -30,10 +30,8 @@ import {
   type SessionEvidencePhoto,
 } from '../mocks/sessionDetail';
 import type { SessionApprovalStatus } from '../mocks/sessions';
-import { colors, fontFamilies, radius as R, shadows } from '../tokens';
+import { layout, colors, fontFamilies, radius as R, shadows } from '../tokens';
 
-const TOP_BAR_PADDING_BOTTOM = 8.5;
-const TOP_BAR_TITLE_ROW = 44;
 const MAP_HEIGHT = 190;
 const CTA_HEIGHT = 50;
 const FOOTER_PAD_TOP = 16;
@@ -75,7 +73,7 @@ function SessionDetailTopBar({
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={[s.topBar, shadows.barTop, { paddingTop: insets.top, paddingBottom: TOP_BAR_PADDING_BOTTOM }]}>
+    <View style={[s.topBar, shadows.barTop, { paddingTop: insets.top, paddingBottom: layout.topBarPaddingBottom }]}>
       <View style={s.topBarRow}>
         <AnimatedPressable
           scaleTo={0.98}
@@ -311,20 +309,20 @@ const s = StyleSheet.create({
     zIndex: 2,
   },
   topBarRow: {
-    height: TOP_BAR_TITLE_ROW,
+    height: layout.topBarTitleRow,
     paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
   },
   topBarSideLeft: {
     width: 44,
-    height: TOP_BAR_TITLE_ROW,
+    height: layout.topBarTitleRow,
     alignItems: 'flex-start',
     justifyContent: 'center',
   },
   topBarSideRight: {
     width: 44,
-    height: TOP_BAR_TITLE_ROW,
+    height: layout.topBarTitleRow,
     alignItems: 'flex-end',
     justifyContent: 'center',
   },

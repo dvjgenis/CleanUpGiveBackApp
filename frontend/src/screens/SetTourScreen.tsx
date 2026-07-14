@@ -185,7 +185,7 @@ export function SetTourScreen() {
             accessibilityLabel="Replay tour"
           >
             <Text style={s.replayText}>Replay tour</Text>
-            <TourReplayIcon size={24} color={C.primary} />
+            <TourReplayIcon size={24} color={C.textPrimary} />
           </AnimatedPressable>
 
           <AnimatedPressable
@@ -260,7 +260,6 @@ const s = StyleSheet.create({
     width: '100%',
   },
   replayBtn: {
-    borderRadius: radius.md,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -270,7 +269,7 @@ const s = StyleSheet.create({
   replayText: {
     fontFamily: 'IBMPlexSans_600SemiBold',
     fontSize: 18,
-    color: C.primary,
+    color: C.textPrimary,
   },
   primaryBtn: {
     borderRadius: radius.md,
@@ -285,14 +284,13 @@ const s = StyleSheet.create({
     color: C.textOnPrimary,
   },
   homeBtn: {
-    borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 20,
   },
   homeBtnText: {
-    fontFamily: 'NotoSans_600SemiBold',
-    fontSize: 16,
-    color: C.textPrimary,
+    fontFamily: 'IBMPlexSans_600SemiBold',
+    fontSize: 18,
+    color: C.primary,
   },
 });

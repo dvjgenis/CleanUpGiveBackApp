@@ -9,9 +9,8 @@ import { SessionSetupTopAppBar } from '@/components/session-setup/SessionSetupTo
 import { useLiveSession } from '@/features/session-tracking/liveSessionStore';
 
 import { AccountChevronIcon } from '../components/AccountIcons';
-import { colors, fontFamilies, shadows } from '../tokens';
+import { layout, colors, fontFamilies, shadows } from '../tokens';
 
-const BOTTOM_NAV_HEIGHT = 64;
 
 export type PrivacySection = {
   title: string;
@@ -35,7 +34,7 @@ export function PrivacyPolicyDetailScreen({ sectionTitle, sections }: Props) {
   const { isActive } = useLiveSession();
 
   const bottomInset = Math.max(insets.bottom, 0);
-  const scrollBottomPad = bottomInset + BOTTOM_NAV_HEIGHT + 48;
+  const scrollBottomPad = bottomInset + layout.bottomNavHeight + 48;
   const scrollRef = useRef<ScrollView>(null);
 
   return (
@@ -77,7 +76,7 @@ export function PrivacyPolicyDetailScreen({ sectionTitle, sections }: Props) {
         onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })}
         accessibilityRole="button"
         accessibilityLabel="Scroll to top"
-        style={[s.fab, { bottom: bottomInset + BOTTOM_NAV_HEIGHT + 16 }]}
+        style={[s.fab, { bottom: bottomInset + layout.bottomNavHeight + 16 }]}
       >
         <View style={s.fabChevronWrap}>
           <AccountChevronIcon

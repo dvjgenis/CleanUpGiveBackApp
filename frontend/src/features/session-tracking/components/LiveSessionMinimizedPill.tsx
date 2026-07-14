@@ -11,7 +11,6 @@ import {
   formatElapsed,
 } from '@/features/session-tracking/mocks/session';
 import type { PhotoCheckpointSubmission } from '@/features/session-tracking/liveSessionStore';
-import { formatSubmittedCheckpointCount, shouldShowCheckpointSubmissionCount } from '@/features/session-tracking/utils/sessionFormat';
 
 const PILL_MIN_HEIGHT = 112;
 
@@ -47,9 +46,6 @@ export const LiveSessionMinimizedPill = forwardRef<View, Props>(function LiveSes
   },
   ref,
 ) {
-  const submittedCheckpointCount = submittedCheckpoints.length;
-  const showSubmissionCount = shouldShowCheckpointSubmissionCount(submittedCheckpoints);
-  const submittedCheckpointLabel = formatSubmittedCheckpointCount(submittedCheckpointCount);
   const progressFillStyle = useAnimatedProgressFill(checkpointProgress);
 
   return (
@@ -62,11 +58,7 @@ export const LiveSessionMinimizedPill = forwardRef<View, Props>(function LiveSes
             onPress={onExpand}
             hitSlop={8}
             accessibilityRole="button"
-            accessibilityLabel={
-              showSubmissionCount
-                ? `Expand live session tracker. ${submittedCheckpointLabel}.`
-                : 'Expand live session tracker'
-            }
+            accessibilityLabel="Expand live session tracker"
             style={styles.expandBtn}
           >
             <ExpandIcon color={colors.textPrimary} />
@@ -89,16 +81,6 @@ export const LiveSessionMinimizedPill = forwardRef<View, Props>(function LiveSes
         </View>
       </View>
 
-      {showSubmissionCount && (
-        <View style={styles.checkpointRow}>
-          <View style={styles.checkpointDots}>
-            {submittedCheckpoints.map((checkpoint) => (
-              <View key={checkpoint.id} style={styles.checkpointDot} />
-            ))}
-          </View>
-          <Text style={styles.checkpointLabel}>{submittedCheckpointLabel}</Text>
-        </View>
-      )}
 
       <View style={styles.progressTrack}>
         <Animated.View style={[styles.progressFill, progressFillStyle]} />
@@ -179,28 +161,6 @@ const styles = StyleSheet.create({
     height: 6,
     backgroundColor: colors.statusPendingBorder,
     borderRadius: R.full,
-  },
-  checkpointRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 20,
-  },
-  checkpointDots: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  checkpointDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.textOnPrimary,
-  },
-  checkpointLabel: {
-    fontFamily: fontFamilies.notoSansSemiBold,
-    fontSize: 11,
-    color: colors.textOnPrimary,
   },
 });
 

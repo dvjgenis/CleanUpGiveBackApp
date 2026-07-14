@@ -25,7 +25,7 @@ import {
 import { CART_ASSETS } from '../mocks/cart';
 import { DONATE_ASSETS } from '../mocks/donate';
 import { PRODUCT_DETAIL_ASSETS, SHOP_PRODUCT_TO_DETAIL_ID } from '../mocks/productDetail';
-import { colors, fontFamilies, radius as R, shadows } from '../tokens';
+import { layout, colors, fontFamilies, radius as R, shadows } from '../tokens';
 
 // ─── Local asset registry ─────────────────────────────────────────────────────
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -74,9 +74,6 @@ const PRODUCTS: Product[] = [
   { id: '4', name: 'Adult Safety Vest', price: '$12.99', image: assets.productAdultVest, inStock: true, category: 'Safety' },
 ];
 
-const BOTTOM_NAV_HEIGHT = 64;
-const TOP_BAR_TITLE_ROW = 44;
-const TOP_BAR_PADDING_BOTTOM = 8.5;
 
 // ─── Top App Bar (Figma 498:661) ──────────────────────────────────────────────
 function parsePrice(price: string): number {
@@ -97,7 +94,7 @@ function TopAppBar({
       style={[
         s.topBar,
         shadows.barTop,
-        { paddingTop: insets.top, paddingBottom: TOP_BAR_PADDING_BOTTOM },
+        { paddingTop: insets.top, paddingBottom: layout.topBarPaddingBottom },
       ]}
     >
       <View style={s.topBarRow}>
@@ -426,7 +423,7 @@ export function ShopScreen() {
 
       <ScrollView
         style={s.scroll}
-        contentContainerStyle={[s.scrollContent, { paddingBottom: bottomInset + BOTTOM_NAV_HEIGHT + 24 }]}
+        contentContainerStyle={[s.scrollContent, { paddingBottom: bottomInset + layout.bottomNavHeight + 24 }]}
         showsVerticalScrollIndicator={false}
       >
         <View style={s.missionBlock}>
@@ -492,7 +489,7 @@ const s = StyleSheet.create({
     zIndex: 10,
   },
   topBarRow: {
-    height: TOP_BAR_TITLE_ROW,
+    height: layout.topBarTitleRow,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',

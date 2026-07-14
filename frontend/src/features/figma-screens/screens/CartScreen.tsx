@@ -35,10 +35,8 @@ import {
   type CartDonationAmount,
   type CartLineItem,
 } from '../mocks/cart';
-import { colors, fontFamilies, radius, shadows } from '../tokens';
+import { layout, colors, fontFamilies, radius, shadows } from '../tokens';
 
-const TOP_BAR_PADDING_BOTTOM = 8.5;
-const TOP_BAR_TITLE_ROW = 44;
 const FOOTER_PAD = 20;
 
 function CartTopBar({
@@ -51,7 +49,7 @@ function CartTopBar({
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={[s.topBar, shadows.barTop, { paddingTop: insets.top, paddingBottom: TOP_BAR_PADDING_BOTTOM }]}>
+    <View style={[s.topBar, shadows.barTop, { paddingTop: insets.top, paddingBottom: layout.topBarPaddingBottom }]}>
       <View style={s.topBarRow}>
         <AnimatedPressable
           scaleTo={0.98}
@@ -350,7 +348,7 @@ const s = StyleSheet.create({
     zIndex: 2,
   },
   topBarRow: {
-    height: TOP_BAR_TITLE_ROW,
+    height: layout.topBarTitleRow,
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-between',

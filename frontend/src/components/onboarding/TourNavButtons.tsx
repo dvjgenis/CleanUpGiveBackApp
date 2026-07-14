@@ -10,6 +10,8 @@ type TourNavButtonsProps = {
   onPrevious: () => void;
   continueLabel?: string;
   previousLabel?: string;
+  /** Pass true on the first tour slide to hide the Previous button. */
+  hidePrevious?: boolean;
 };
 
 /** Shared Continue / Previous pair for onboarding tour screens. */
@@ -19,6 +21,7 @@ export function TourNavButtons({
   onPrevious,
   continueLabel = 'Continue',
   previousLabel = 'Previous',
+  hidePrevious = false,
 }: TourNavButtonsProps) {
   const isDark = variant === 'dark';
 
@@ -34,18 +37,20 @@ export function TourNavButtons({
           {continueLabel}
         </Text>
       </AnimatedPressable>
-      <AnimatedPressable
-        style={[s.secondaryBtn, isDark ? s.secondaryBtnOnDark : s.secondaryBtnOnLight]}
-        onPress={onPrevious}
-        accessibilityRole="button"
-        accessibilityLabel={previousLabel}
-      >
-        <Text
-          style={[s.secondaryBtnText, isDark ? s.secondaryBtnTextOnDark : s.secondaryBtnTextOnLight]}
+      {!hidePrevious && (
+        <AnimatedPressable
+          style={[s.secondaryBtn, isDark ? s.secondaryBtnOnDark : s.secondaryBtnOnLight]}
+          onPress={onPrevious}
+          accessibilityRole="button"
+          accessibilityLabel={previousLabel}
         >
-          {previousLabel}
-        </Text>
-      </AnimatedPressable>
+          <Text
+            style={[s.secondaryBtnText, isDark ? s.secondaryBtnTextOnDark : s.secondaryBtnTextOnLight]}
+          >
+            {previousLabel}
+          </Text>
+        </AnimatedPressable>
+      )}
     </View>
   );
 }

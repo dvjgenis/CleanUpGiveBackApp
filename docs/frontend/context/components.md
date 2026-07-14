@@ -18,6 +18,7 @@ Shared UI components in `frontend/src/components/`.
 | PlayOnceLottie | `ui/PlayOnceLottie.tsx` | Lottie hero wrapper — `autoPlay`, optional `loop` (default `false`), optional `topInset` headroom for upward overflow, `resizeMode="contain"` for missed-checkpoint / web photo-submitted fallback |
 | PhotoEnlargeModal | `ui/PhotoEnlargeModal.tsx` | Full-screen read-only photo viewer with caption, close control, and optional prev/next — used on Session Detail photo gallery |
 | SessionRouteMapPreview | `features/session-tracking/components/SessionRouteMapPreview.tsx` | Read-only MapLibre route preview for Session Detail — uses completed-session `routeCoordinates`; Expo Go/web fallback shows GPS point count |
+| MapTypesSheet | `features/session-tracking/components/MapTypesSheet.tsx` | Live-tracker Map Types bottom sheet (Standard / Satellite / Hybrid) — UI-only selection with brand-primary highlight; does not change MapLibre basemap yet |
 | BottomNavBar | `navigation/BottomNavBar.tsx` | 5-tab Home dashboard navbar (Figma `566:376`): Home · Shop · Track · Sessions · Profile. `activeTab` drives green highlight; press handlers are wired per screen. |
 | NavHomeIcon / NavShopIcon / NavTrackIcon / NavSessionsIcon / NavProfileIcon | `navigation/icons/*.tsx` | Fill-based `react-native-svg` icons hand-ported from `frontend/assets/figma/home-screen/nav/*.svg` for `BottomNavBar` |
 | PulsingDot | `motion/PulsingDot.tsx` | Live-status indicator dot — gentle ~2.4s opacity pulse; respects reduced motion |
@@ -31,9 +32,9 @@ Shared UI components in `frontend/src/components/`.
 | SessionSetupValidationToast | `session-setup/SessionSetupValidationToast.tsx` | Top alert toast listing missing required fields on session setup form submit (bulleted list, one field per line) |
 | AnimatedPressable | `motion/AnimatedPressable.tsx` | Reanimated spring press on the Pressable itself (`scale 0.97`) so `width: '100%'` / `alignSelf: 'stretch'` resolve correctly (fixes shop Continue CTAs) |
 | CoachmarkEnter | `motion/CoachmarkEnter.tsx` | Wrapper for session-setup guide steps — fade + scale (`0.95→1`, 200ms) per `design.md` §10.2 `coachmark` |
-| OnboardingProgressPills | `onboarding/OnboardingProgressPills.tsx` | 5-step progress indicator for create-account / account-details / notification-preference; uses `figma-screens/tokens` |
-| OnboardingIcons | `onboarding/OnboardingIcons.tsx` | Welcome logo/burst/underline + social + notification + success check (`AccountCreatedCheck` from `success-check.svg`) + creating-account question badge glyphs (`react-native-svg`); colors from tokens |
-| tourAssets | `onboarding/tourAssets.ts` | Tour graphic modules + `prefetchTourGraphics` (webp shop/track; memory-disk via expo-image) |
+| OnboardingProgressPills | `onboarding/OnboardingProgressPills.tsx` | 5-step progress indicator: create (1) → phone/details (2) → location (3) → camera (4) → notif (5); uses `figma-screens/tokens` |
+| OnboardingIcons | `onboarding/OnboardingIcons.tsx` | Welcome logo/burst/underline + social + notification + success check (`AccountCreatedCheck` from `success-check.svg`) + location/camera permission illustrations + creating-account question badge glyphs + `QuestionIcon` (circle question mark, used on under-age screen) (`react-native-svg`); colors from tokens |
+| tourAssets | `onboarding/tourAssets.ts` | Tour graphic modules + `prefetchTourGraphics` (PNG shop-showcase, track-map, session-list; memory-disk via expo-image) |
 | TourNavButtons | `onboarding/TourNavButtons.tsx` | Shared Continue / Previous pair for tour screens (`light` mint bg / `dark` green bg); cream `textOnPrimarySoft` on primary Continue; same CTA size as form onboarding (`paddingVertical: 20`) |
 | TourIcons | `onboarding/TourIcons.tsx` | Tour star accents, search, and replay glyphs (`react-native-svg`); `TourSetStar` is the speckled lime star from `assets/figma/tour/star-set.svg` (Figma `112:7219`); colors from tokens |
 | AppSplashScreen | `AppSplashScreen.tsx` | Solid `color/primary` splash; single logo + title fill bottom-up via a shrinking green cover (no stacked duplicates; instant full fill under reduced motion); fades out then hands off to welcome or home |
@@ -59,6 +60,7 @@ Shared UI components in `frontend/src/components/`.
 | RecentSessionCard | `components/RecentSessionCard.tsx` | Recent Sessions list row (Figma `406:409`): activity title, date/time chips, duration |
 | HomeScreenReturningUser | `screens/HomeScreenReturningUser.tsx` | Populated returning-user snapshot (preserved copy); preview via figma-screens `PreviewApp` |
 | AccountIcons | `components/AccountIcons.tsx` | Account tab icons via `expo-image` + relative `require(.../assets/figma/account/*.svg)` |
+| AccountDetailsScreen | `screens/AccountDetailsScreen.tsx` | Onboarding details step (Figma `112:6882`, step 3/5); birthday typed MM/YYYY + calendar-icon wheel picker (month/year only, `DateWheelPicker includeDay=false`); 2×2 radio service-type grid; age gate (<18 → `/under-age`); inline validation (touched/submitted pattern) for birthday + service type; Reanimated sheet modal for picker; colors from `figma-screens/tokens` |
 | AccountScreen | `screens/AccountScreen.tsx` | Account tab (Figma `569:896`); profile hero, Records/Shop/Preferences/Permissions; Profile nav active |
 | DeleteAccountScreen | `screens/DeleteAccountScreen.tsx` | Delete confirm (Figma `725:361`); type DELETE; toast + shake on invalid confirm |
 | RequestDataScreen | `screens/RequestDataScreen.tsx` | Request your data (Figma `728:1385`); Access / Delete / Download radios + Submit → sent confirm |

@@ -14,9 +14,8 @@ import {
   type ApprovalHistoryStats,
   type ApprovalStatus,
 } from '../mocks/approvalHistory';
-import { colors, fontFamilies, radius } from '../tokens';
+import { layout, colors, fontFamilies, radius } from '../tokens';
 
-const BOTTOM_NAV_HEIGHT = 64;
 
 const STATUS_LABEL: Record<ApprovalStatus, string> = {
   approved: 'Approved',
@@ -107,7 +106,7 @@ export function ApprovalHistoryScreen({
   const { isActive } = useLiveSession();
 
   const bottomInset = Math.max(insets.bottom, 0);
-  const scrollBottomPad = bottomInset + BOTTOM_NAV_HEIGHT + 32;
+  const scrollBottomPad = bottomInset + layout.bottomNavHeight + 32;
 
   return (
     <View style={s.root}>

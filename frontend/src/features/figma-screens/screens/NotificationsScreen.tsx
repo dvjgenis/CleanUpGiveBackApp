@@ -16,9 +16,8 @@ import {
   type NotificationCategory,
   type NotificationPreferenceKey,
 } from '../mocks/notifications';
-import { colors, fontFamilies } from '../tokens';
+import { layout, colors, fontFamilies } from '../tokens';
 
-const BOTTOM_NAV_HEIGHT = 64;
 
 type ToggleRowProps = {
   title: string;
@@ -95,7 +94,7 @@ export function NotificationsScreen() {
   const [preferences, setPreferences] = useState(() => buildInitialValues(defaultNotificationCategories));
 
   const bottomInset = Math.max(insets.bottom, 0);
-  const scrollBottomPad = bottomInset + BOTTOM_NAV_HEIGHT + 24;
+  const scrollBottomPad = bottomInset + layout.bottomNavHeight + 24;
 
   function handleToggle(key: NotificationPreferenceKey, value: boolean) {
     setPreferences((current) => ({ ...current, [key]: value }));

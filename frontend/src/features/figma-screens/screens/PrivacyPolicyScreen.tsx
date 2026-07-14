@@ -9,9 +9,8 @@ import { SessionSetupTopAppBar } from '@/components/session-setup/SessionSetupTo
 import { useLiveSession } from '@/features/session-tracking/liveSessionStore';
 
 import { AccountChevronIcon, CopyrightIcon } from '../components/AccountIcons';
-import { colors, fontFamilies, shadows } from '../tokens';
+import { layout, colors, fontFamilies, shadows } from '../tokens';
 
-const BOTTOM_NAV_HEIGHT = 64;
 
 type PolicyRowProps = {
   title: string;
@@ -49,7 +48,7 @@ export function PrivacyPolicyScreen() {
   const { isActive } = useLiveSession();
 
   const bottomInset = Math.max(insets.bottom, 0);
-  const scrollBottomPad = bottomInset + BOTTOM_NAV_HEIGHT + 48;
+  const scrollBottomPad = bottomInset + layout.bottomNavHeight + 48;
 
   return (
     <View style={s.root}>

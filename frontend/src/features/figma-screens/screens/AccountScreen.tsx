@@ -29,11 +29,8 @@ import {
   ShopBagIcon,
 } from '../components/AccountIcons';
 import { defaultAccountProfile, type AccountProfile } from '../mocks/account';
-import { colors, fontFamilies, radius, shadows } from '../tokens';
+import { layout, colors, fontFamilies, radius, shadows } from '../tokens';
 
-const BOTTOM_NAV_HEIGHT = 64;
-const TOP_BAR_TITLE_ROW = 44;
-const TOP_BAR_PADDING_BOTTOM = 8.5;
 
 type NavRowProps = {
   label: string;
@@ -104,7 +101,7 @@ function AccountTopAppBar() {
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={[s.topBar, shadows.barTop, { paddingTop: insets.top, paddingBottom: TOP_BAR_PADDING_BOTTOM }]}>
+    <View style={[s.topBar, shadows.barTop, { paddingTop: insets.top, paddingBottom: layout.topBarPaddingBottom }]}>
       <View style={s.topBarTitleRow}>
         <Text style={s.topBarTitle}>Account</Text>
       </View>
@@ -159,7 +156,7 @@ export function AccountScreen({ profile = defaultAccountProfile }: { profile?: A
   const [locationAccess, setLocationAccess] = useState(true);
 
   const bottomInset = Math.max(insets.bottom, 0);
-  const scrollBottomPad = bottomInset + BOTTOM_NAV_HEIGHT + 48;
+  const scrollBottomPad = bottomInset + layout.bottomNavHeight + 48;
 
   return (
     <View style={s.root}>
@@ -292,7 +289,7 @@ const s = StyleSheet.create({
     backgroundColor: colors.white,
   },
   topBarTitleRow: {
-    minHeight: TOP_BAR_TITLE_ROW,
+    minHeight: layout.topBarTitleRow,
     alignItems: 'center',
     justifyContent: 'center',
   },
