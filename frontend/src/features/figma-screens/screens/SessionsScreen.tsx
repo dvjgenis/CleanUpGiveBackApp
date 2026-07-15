@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -6,6 +6,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { BottomNavBar } from '@/components/navigation/BottomNavBar';
 import { useLiveSession } from '@/features/session-tracking/liveSessionStore';
+import { isApiConfigured } from '@/lib/api';
+import { listSessions } from '@/lib/sessionsApi';
+import { mapApiSessionToListItem } from '@/lib/mapApiSessions';
 
 import {
   SessionsExpandIcon,
@@ -195,20 +198,49 @@ export function SessionsScreen() {
   const [sort, setSort] = useState<SessionSortOption>('most-recent');
   const [sortOpen, setSortOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const [apiSessions, setApiSessions] = useState<SessionListItem[] | null>(null);
 
-  const bottomInset = Math.max(insets.bottom, 0);
-  const scrollBottomPad = bottomInset + layout.bottomNavHeight + 24;
+  useEffect(() => {
+    if (!isApiConfigured) {
+      return;
+    }
+
+    let cancelled = false;
+
+    listSessions()
+      .then((sessions) => {
+        if (!cancelled) {
+          setApiSessions(
+            sessions
+              .filter((session) => session.status !== 'active')
+              .map(mapApiSessionToListItem),
+          );
+        }
+      })
+      .catch((error) => {
+        console.warn('[sessions] list fetch failed:', error);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const sessionSource = apiSessions ?? mockSessionsList;
 
   const filteredSessions = useMemo(() => {
     const normalized = query.trim().toLowerCase();
-    const filtered = mockSessionsList.filter((session) => {
+    const filtered = sessionSource.filter((session) => {
       const matchesFilter = filterMatchesStatus(filter, session.status);
       const matchesQuery =
         normalized.length === 0 || session.title.toLowerCase().includes(normalized);
       return matchesFilter && matchesQuery;
     });
     return sortSessions(filtered, sort);
-  }, [filter, query, sort]);
+  }, [filter, query, sort, sessionSource]);
+
+  const bottomInset = Math.max(insets.bottom, 0);
+  const scrollBottomPad = bottomInset + BOTTOM_NAV_HEIGHT + 24;
 
   function handleSelectSort(next: SessionSortOption) {
     setSort(next);

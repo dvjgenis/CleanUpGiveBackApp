@@ -1,4 +1,4 @@
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 import { Map, MapMarker, MapRoute } from '@/components/ui/map';
 
@@ -8,7 +8,14 @@ import {
   useLiveSession,
 } from '../liveSessionStore';
 import { colors, radius } from '../tokens';
+import { getNativeMapStyle } from '../utils/mapStyles';
+import { simplifyRouteForDisplay } from '../utils/routeFiltering';
 import { LiveSessionMapCamera } from './LiveSessionMapCamera';
+import { MapInteractionContainer } from './MapInteractionContainer';
+import {
+  SessionCurrentArrowMarker,
+  SessionStartMarker,
+} from './SessionMapMarkers';
 
 type Props = {
   style?: object;
@@ -16,38 +23,52 @@ type Props = {
 
 /** MapLibre map branch — loaded only when not on Expo Go / web. */
 export function LiveSessionMapNative({ style }: Props) {
-  const { routeCoordinates, currentCoordinate, mapRecenterToken } = useLiveSession();
-  const hasFix = currentCoordinate !== null;
+  const {
+    routeCoordinates,
+    displayCoordinate,
+    currentHeading,
+    mapRecenterToken,
+    mapFollowEnabled,
+    mapLayer,
+  } = useLiveSession();
+  const hasFix = displayCoordinate !== null;
   const mapCenter = getLiveSessionMapCenter();
   const routeStart = routeCoordinates[0] ?? null;
+  const mapStyle = getNativeMapStyle(mapLayer);
+  const displayRoute = simplifyRouteForDisplay(routeCoordinates);
 
   return (
-    <View style={[styles.container, style]}>
-      <Map center={mapCenter} zoom={getLiveSessionMapZoom(hasFix)} showLoader>
-        {routeCoordinates.length >= 2 && (
-          <MapRoute coordinates={routeCoordinates} color={colors.primary} width={4} />
+    <MapInteractionContainer style={[styles.container, style]}>
+      <Map
+        key={mapLayer}
+        styles={{ light: mapStyle, dark: mapStyle }}
+        center={mapCenter}
+        zoom={getLiveSessionMapZoom(hasFix)}
+        showLoader
+      >
+        {displayRoute.length >= 2 && (
+          <MapRoute coordinates={displayRoute} color={colors.primary} width={4} />
         )}
 
         {routeStart && (
           <MapMarker longitude={routeStart[0]} latitude={routeStart[1]}>
-            <View style={styles.startMarker} />
+            <SessionStartMarker />
           </MapMarker>
         )}
 
-        {currentCoordinate && (
-          <MapMarker longitude={currentCoordinate[0]} latitude={currentCoordinate[1]}>
-            <View style={styles.currentMarker}>
-              <View style={styles.currentMarkerDot} />
-            </View>
+        {displayCoordinate && (
+          <MapMarker longitude={displayCoordinate[0]} latitude={displayCoordinate[1]}>
+            <SessionCurrentArrowMarker heading={currentHeading} />
           </MapMarker>
         )}
 
         <LiveSessionMapCamera
-          currentCoordinate={currentCoordinate}
+          currentCoordinate={displayCoordinate}
           recenterToken={mapRecenterToken}
+          mapFollowEnabled={mapFollowEnabled}
         />
       </Map>
-    </View>
+    </MapInteractionContainer>
   );
 }
 
@@ -55,29 +76,5 @@ const styles = StyleSheet.create({
   container: {
     borderRadius: radius.md,
     overflow: 'hidden',
-  },
-  startMarker: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: colors.textTertiary,
-    borderWidth: 2,
-    borderColor: colors.textOnPrimary,
-  },
-  currentMarker: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: colors.textOnPrimary,
-  },
-  currentMarkerDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.textOnPrimary,
   },
 });

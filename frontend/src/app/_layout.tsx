@@ -1,5 +1,7 @@
 import { Stack } from 'expo-router';
 
+import { AuthProvider } from '@/components/AuthProvider';
+
 const guideBackwardScreenOptions = {
   animationTypeForReplace: 'pop' as const,
 };
@@ -11,7 +13,8 @@ const tabRootScreenOptions = {
 
 export default function RootLayout() {
   return (
-    <Stack screenOptions={{ headerShown: false }}>
+    <AuthProvider>
+      <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" options={tabRootScreenOptions} />
       <Stack.Screen name="session-setup-guide" options={guideBackwardScreenOptions} />
       <Stack.Screen name="session-setup" />
@@ -71,5 +74,6 @@ export default function RootLayout() {
       <Stack.Screen name="set-tour" />
       <Stack.Screen name="prototype/[screen]" />
     </Stack>
+    </AuthProvider>
   );
 }

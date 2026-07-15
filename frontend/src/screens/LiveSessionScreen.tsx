@@ -7,7 +7,7 @@ import {
   NotoSans_500Medium,
   NotoSans_600SemiBold,
 } from '@expo-google-fonts/noto-sans';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { useEffect, useState } from 'react';
 import {
@@ -31,6 +31,7 @@ import { TrackerActionButton } from '@/features/session-tracking/components/Trac
 import { LocationPinIcon } from '@/features/session-tracking/components/icons/LocationPinIcon';
 import { TrackerEndSessionIcon } from '@/features/session-tracking/components/icons/TrackerEndSessionIcon';
 import { TrackerLayersIcon } from '@/features/session-tracking/components/icons/TrackerLayersIcon';
+import { RouteIcon } from '@/features/session-tracking/components/icons/RouteIcon';
 import { TrackerMyLocationIcon } from '@/features/session-tracking/components/icons/TrackerMyLocationIcon';
 import { TrackerSubmitPhotoIcon } from '@/features/session-tracking/components/icons/TrackerSubmitPhotoIcon';
 import { TrackerWeatherIcon } from '@/features/session-tracking/components/icons/TrackerWeatherIcon';
@@ -46,8 +47,11 @@ import { formatSubmittedCheckpointCount, shouldShowCheckpointSubmissionCount } f
 import {
   finalizeLiveSession,
   ensureLocationWatching,
+  ensureLiveSessionTicking,
   getCheckpointProgress,
   requestLiveSessionMapRecenter,
+  setLiveSessionMapLayer,
+  toggleLiveSessionMapFollow,
   useLiveSession,
 } from '@/features/session-tracking/liveSessionStore';
 import { useLiveWeather } from '@/features/session-tracking/hooks/useLiveWeather';
@@ -125,8 +129,10 @@ function MapToolButton({
 /** PRD §6.11 · Figma `session_setup_guide` live tracker (`251:439`). */
 export function LiveSessionScreen() {
   const router = useRouter();
-  const { elapsedSeconds, checkpointSecondsRemaining, distanceMiles, submittedCheckpoints } =
+  const { from } = useLocalSearchParams<{ from?: string }>();
+  const { elapsedSeconds, checkpointSecondsRemaining, distanceMiles, submittedCheckpoints, mapLayer, mapFollowEnabled } =
     useLiveSession();
+  const [mapLayerPickerVisible, setMapLayerPickerVisible] = useState(false);
   const { mapRevealStyle, chromeStyle } = useLiveSessionMapReveal();
   const submittedCheckpointCount = submittedCheckpoints.length;
   const showSubmissionCount = shouldShowCheckpointSubmissionCount(submittedCheckpoints);
@@ -148,6 +154,7 @@ export function LiveSessionScreen() {
 
   useEffect(() => {
     void ensureLocationWatching();
+    ensureLiveSessionTicking();
   }, []);
 
   useEffect(() => {
@@ -169,7 +176,7 @@ export function LiveSessionScreen() {
       <SafeAreaView style={s.overlay} edges={['top', 'bottom']} pointerEvents="box-none">
         <Animated.View style={[s.main, chromeStyle]} pointerEvents="box-none">
           <View style={s.navbar}>
-            <TrackerBackButton onPress={() => router.back()} />
+            <TrackerBackButton onPress={() => from === 'onboarding' ? router.replace('/') : router.back()} />
 
             <View style={s.locationPill}>
               <View style={s.locationRow}>
@@ -191,7 +198,7 @@ export function LiveSessionScreen() {
           </View>
 
           <View style={s.inProgressSection} pointerEvents="box-none">
-            <View style={s.timerBlock}>
+            <View style={s.timerBlock} pointerEvents="box-none">
               <View style={s.statusBadge}>
                 <PulsingDot color={C.textTertiary} size={8} />
                 <Text style={s.statusText}>IN PROGRESS</Text>
@@ -219,6 +226,12 @@ export function LiveSessionScreen() {
                     onPress={() => setMapTypesVisible(true)}
                   >
                     <TrackerLayersIcon color={C.textTertiary} />
+                  </MapToolButton>
+                  <MapToolButton
+                    accessibilityLabel={mapFollowEnabled ? 'Stop following location' : 'Follow my location'}
+                    onPress={toggleLiveSessionMapFollow}
+                  >
+                    <RouteIcon color={mapFollowEnabled ? C.primary : C.textTertiary} />
                   </MapToolButton>
                   <MapToolButton
                     accessibilityLabel="Center on my location"
@@ -565,6 +578,11 @@ const s = StyleSheet.create({
     width: 44,
     zIndex: 20,
     elevation: 20,
+  },
+
+  mapLayerControl: {
+    position: 'relative',
+    width: 44,
   },
 
   mapToolBtn: {

@@ -30,8 +30,19 @@ export function toRouteCoordinate(longitude: number, latitude: number): RouteCoo
   return [longitude, latitude];
 }
 
+/** Normalizes API route arrays to MapLibre-ready coordinates. */
+export function toRouteCoordinates(route: number[][] | null | undefined): RouteCoordinate[] {
+  if (!route || route.length < 2) {
+    return [];
+  }
+
+  return route
+    .filter((point) => point.length === 2)
+    .map(([longitude, latitude]) => toRouteCoordinate(longitude, latitude));
+}
+
 /** Ignore GPS jitter below this movement threshold when accumulating distance. */
-export const MIN_ROUTE_SAMPLE_METERS = 5;
+export const MIN_ROUTE_SAMPLE_METERS = 6;
 
 export function milesToMeters(miles: number): number {
   return miles * 1609.344;

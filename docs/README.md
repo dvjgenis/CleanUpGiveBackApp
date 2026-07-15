@@ -10,6 +10,7 @@ Living docs for the Clean Up - Give Back monorepo. Templates are copy-only.
 | [progress.md](progress.md) | Session-by-session progress log |
 | [implementation-plan.md](implementation-plan.md) | Planned work and milestones |
 | [accounts-and-access.md](accounts-and-access.md) | Org accounts (no secrets in repo) |
+| [supabase.md](supabase.md) | Supabase + Fly setup for sessions (schema, env vars) |
 
 ## Frontend
 
@@ -20,6 +21,7 @@ Living docs for the Clean Up - Give Back monorepo. Templates are copy-only.
 | [frontend/context/](frontend/context/) | Scoped living context (app, components, assets, …) |
 | [frontend/specs/figma-to-native-handoff.md](frontend/specs/figma-to-native-handoff.md) | Figma-to-RN migration spec and acceptance criteria |
 | [frontend/specs/](frontend/specs/) | All feature specs and PRDs |
+| [frontend/specs/session-tracking-expo-go.md](frontend/specs/session-tracking-expo-go.md) | Sessions + geolocation Expo Go test spec |
 
 ## Figma design workspace
 
@@ -48,6 +50,7 @@ Living docs for the Clean Up - Give Back monorepo. Templates are copy-only.
 |------|---------|
 | [backend/context/](backend/context/) | Domain context (maps, payments, sessions) |
 | [backend/specs/](backend/specs/) | Backend feature specs |
+| [backend/specs/sessions-api.md](backend/specs/sessions-api.md) | Sessions API contract (Fly + Supabase) |
 
 ## Architecture & agents
 

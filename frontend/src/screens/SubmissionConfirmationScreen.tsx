@@ -30,14 +30,15 @@ import { PhotoEnlargeModal } from '@/components/ui/PhotoEnlargeModal';
 import { CheckCircleIcon } from '@/features/session-tracking/components/icons/CheckCircleIcon';
 import { ChevronLeftIcon } from '@/features/session-tracking/components/icons/ChevronLeftIcon';
 import { ChevronRightIcon } from '@/features/session-tracking/components/icons/ChevronRightIcon';
-import { SessionRouteMapPreview } from '@/features/session-tracking/components/SessionRouteMapPreview';
+import { SessionRouteMapPanel } from '@/features/session-tracking/components/SessionRouteMapPanel';
 import { getCompletedSessionSnapshot } from '@/features/session-tracking/liveSessionStore';
 import {
-  formatDurationParts,
   formatPhotoTimeLabel,
   formatSessionDateLabel,
+  formatSessionDurationLabel,
   formatSessionTimeRange,
   getCheckpointLabel,
+  resolveSessionDurationSeconds,
 } from '@/features/session-tracking/utils/sessionFormat';
 
 import { colors as tokens } from '@/constants/tokens';
@@ -166,7 +167,15 @@ export function SubmissionConfirmationScreen() {
     }));
   }, [session]);
 
-  const duration = formatDurationParts(session?.elapsedSeconds ?? 0);
+  const durationLabel = session
+    ? formatSessionDurationLabel(
+        resolveSessionDurationSeconds({
+          startedAt: session.startedAt,
+          endedAt: session.endedAt,
+          elapsedSeconds: session.elapsedSeconds,
+        }),
+      )
+    : '0m';
   const sessionTitle = session?.setup.activity ?? 'Cleanup Session';
   const sessionDateLabel = session
     ? formatSessionDateLabel(session.startedAt)
@@ -242,10 +251,7 @@ export function SubmissionConfirmationScreen() {
             <View style={s.metaField}>
               <Text style={s.metaLabel}>DURATION</Text>
               <View style={s.durationRow}>
-                {duration.hours > 0 ? (
-                  <Text style={s.durationValue}>{duration.hours}h</Text>
-                ) : null}
-                <Text style={s.durationValue}>{duration.minutes}m</Text>
+                <Text style={s.durationValue}>{durationLabel}</Text>
               </View>
             </View>
 
@@ -263,7 +269,7 @@ export function SubmissionConfirmationScreen() {
 
         <Animated.View style={mapStyle}>
         <View style={s.mapCard} accessibilityLabel="Session route map">
-          <SessionRouteMapPreview routeCoordinates={routeCoordinates} style={s.mapPreview} />
+          <SessionRouteMapPanel routeCoordinates={routeCoordinates} style={s.mapPreview} />
         </View>
         </Animated.View>
 

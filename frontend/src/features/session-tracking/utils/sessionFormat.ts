@@ -23,10 +23,49 @@ export function formatSessionTimeRange(startedAt: number, endedAt: number): stri
   return `${formatter.format(new Date(startedAt))} - ${formatter.format(new Date(endedAt))}`;
 }
 
+export function computeSessionDurationSeconds(startedAt: number, endedAt: number): number {
+  return Math.max(0, Math.round((endedAt - startedAt) / 1000));
+}
+
+type SessionDurationInput = {
+  startedAt?: number | null;
+  endedAt?: number | null;
+  elapsedSeconds?: number | null;
+};
+
+/** Wall-clock duration when timestamps exist; otherwise falls back to elapsedSeconds. */
+export function resolveSessionDurationSeconds(input: SessionDurationInput): number {
+  const { startedAt, endedAt, elapsedSeconds } = input;
+
+  if (startedAt != null && endedAt != null) {
+    return computeSessionDurationSeconds(startedAt, endedAt);
+  }
+
+  return Math.max(0, elapsedSeconds ?? 0);
+}
+
 export function formatDurationParts(elapsedSeconds: number): { hours: number; minutes: number } {
   const hours = Math.floor(elapsedSeconds / 3600);
   const minutes = Math.floor((elapsedSeconds % 3600) / 60);
   return { hours, minutes };
+}
+
+/** Submission detail — e.g. `5m`, `1h 24m`. Rounds up to 1m when >= 30s and < 60s. */
+export function formatSessionDurationLabel(totalSeconds: number): string {
+  const { hours, minutes } = formatDurationParts(totalSeconds);
+  const remainderSeconds = totalSeconds % 60;
+  const displayMinutes =
+    hours === 0 && minutes === 0 && remainderSeconds >= 30 ? 1 : minutes;
+
+  if (hours > 0 && displayMinutes > 0) {
+    return `${hours}h ${displayMinutes}m`;
+  }
+
+  if (hours > 0) {
+    return `${hours}h`;
+  }
+
+  return `${displayMinutes}m`;
 }
 
 export function getCheckpointLabel(index: number, total: number): string {

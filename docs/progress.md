@@ -4,6 +4,185 @@ Session-by-session progress tracker. Distinct from `notes/journey.md` (correctio
 
 ---
 
+## [2026-07-14 Session 123] — GPS precision + real-time tracking fix
+
+**Session goal:** Eliminate erratic GPS scribble routes, smooth live tracking, and add optional map follow mode.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Hardened capture filters (stationary, accuracy-adaptive, turn rejection) | `routeFiltering.ts`, `routeFiltering.test.ts` | ✅ |
+| Rewrite `recordLocationSample` + `displayCoordinate` EMA | `liveSessionStore.ts` | ✅ |
+| 1s GPS interval, 6m sample threshold, 8s warm-up | `liveSessionStore.ts`, `geo.ts` | ✅ |
+| Follow toggle (default off) on live tracker | `LiveSessionScreen.tsx`, `LiveSessionMapCamera.tsx` | ✅ |
+| WebView in-place arrow marker + follow pan | `LiveSessionMapWebView.tsx`, `webViewMapHelpers.ts` | ✅ |
+| Douglas-Peucker display simplification on all map components | `routeFiltering.ts`, `SessionRouteMapPreview*`, `LiveSessionMap*` | ✅ |
+| Docs AC-24/26 | `session-tracking-expo-go.md`, `current.md`, `project.md` | ✅ |
+
+### Key Decisions
+
+- Route append distance measured from last **stored** route point (not jittered `currentCoordinate`).
+- `lastAcceptedTimestamp` updated on every accepted fix (fixes speed-calc bug).
+- Stored route stays capture-filtered raw; Douglas-Peucker is display-only per AC-24.
+- Follow mode is opt-in toggle; Recenter remains independent flyTo.
+
+---
+
+## [2026-07-14 Session 122] — GPS tracking refinement
+
+**Session goal:** Improve GPS precision filtering, add start/heading markers, and smooth route display on MapLibre.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Route filtering + smoothing utils + tests | `routeFiltering.ts`, `routeFiltering.test.ts` | ✅ |
+| BestForNavigation watch + accuracy/speed gate | `liveSessionStore.ts`, `geo.ts` | ✅ |
+| Shared map markers (start, arrow, end) | `SessionMapMarkers.tsx` | ✅ |
+| Live + preview map marker/smoothing parity | `LiveSessionMapNative/WebView`, `SessionRouteMapPreview*` | ✅ |
+| Submission confirmation uses `SessionRouteMapPanel` | `SubmissionConfirmationScreen.tsx` | ✅ |
+| Docs AC-24/25 | `session-tracking-expo-go.md`, `maps.md`, `current.md` | ✅ |
+
+### Key Decisions
+
+- Stored route stays filtered-raw for distance/API; smoothing is display-only.
+- Stay on MapLibre/expo-location (no Mapbox SDK).
+
+---
+
+## [2026-07-14 Session 121] — Session detail route map wiring
+
+**Session goal:** Show the user's completed walking path on session detail.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Wire session detail map to cache + API route resolver | `SessionDetailScreen.tsx`, `useSessionRouteCoordinates.ts` | ✅ |
+| `SessionRouteMapPanel` with pan/zoom + layer picker on detail | `SessionDetailScreen.tsx` | ✅ |
+| Build session detail from completed-session cache | `sessionDetail.ts` | ✅ |
+| Recent session cards navigate to session detail | `RecentSessionCard.tsx`, `HomeScreen.tsx` | ✅ |
+
+---
+
+## [2026-07-14 Session 120] — Map layer picker (standard / streets / satellite / hybrid)
+
+**Session goal:** Let users toggle basemap views on the live tracking map.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Map layer style definitions (Carto + Esri, no API key) | `mapStyles.ts` | ✅ |
+| `mapLayer` state + setter in live session store | `liveSessionStore.ts` | ✅ |
+| Layer picker menu on live tracker | `MapLayerPicker.tsx`, `LiveSessionScreen.tsx` | ✅ |
+| WebView `setMapStyle` with route overlay restore | `LiveSessionMapWebView.tsx` | ✅ |
+| Native map style switch | `LiveSessionMapNative.tsx` | ✅ |
+| Docs + AC-23 | `session-tracking-expo-go.md`, `current.md`, `maps.md` | ✅ |
+
+### Key Decisions
+
+- Satellite/hybrid use free Esri World Imagery + label overlay tiles (no Google/Mapbox key).
+- Layer choice resets to Standard when a session ends; picker wired to existing Figma layers button.
+
+---
+
+## [2026-07-14 Session 119] — Map pan & zoom for geo tracking
+
+**Session goal:** Enable drag-to-pan and pinch-to-zoom on live tracking and route preview maps.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Stop WebView auto-recenter on every GPS tick | `LiveSessionMapWebView.tsx` | ✅ |
+| Preview `fitBounds` only on first route load | `SessionRouteMapPreviewWebView.tsx` | ✅ |
+| Touch responder wrapper for map gestures | `MapInteractionContainer.tsx` | ✅ |
+| Wrap all four map components | `LiveSessionMapNative.tsx`, `SessionRouteMapPreviewNative.tsx` | ✅ |
+| Overlay touch passthrough on live screen | `LiveSessionScreen.tsx` | ✅ |
+| Spec AC-22 + docs | `session-tracking-expo-go.md`, `current.md`, `progress.md` | ✅ |
+
+### Key Decisions
+
+- Live map follows user only on first GPS fix and recenter tap (mirrors `LiveSessionMapCamera` on native).
+- `MapInteractionContainer` wins touch responder over parent `ScrollView`s on preview screens.
+
+---
+
+## [2026-07-13 Session 118] — Session duration fix
+
+**Session goal:** Fix 0m duration mismatch on submission confirmation; audit duration logic app-wide.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Wall-clock duration helpers + unit tests | `sessionFormat.ts`, `sessionFormat.test.ts` | ✅ |
+| `liveSessionStore` derives elapsed/checkpoint from timestamps | `liveSessionStore.ts`, `LiveSessionScreen.tsx` | ✅ |
+| Submission confirmation + recent sessions use resolved duration | `SubmissionConfirmationScreen.tsx`, `recentSessionsStore.ts` | ✅ |
+| Backend finalize recomputes `durationSeconds` | `backend/sessions/src/routes/sessions.ts` | ✅ |
+
+### Key Decisions
+
+- Wall-clock `startedAt`/`endedAt` is canonical for completed-session duration; tick loop only refreshes UI.
+- Sub-minute display rounds up to `1m` when duration is ≥ 30s (submission detail only).
+
+---
+
+## [2026-07-13 Session 117] — Sessions + geolocation implementation
+
+**Session goal:** Implement Fastify sessions API, Supabase/frontend wiring, WebView map for Expo Go.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Backend Fastify + Prisma sessions API | `backend/sessions/` | ✅ |
+| Prisma schema pushed to Supabase | `prisma db push` | ✅ |
+| Frontend Supabase auth + API clients | `lib/supabase.ts`, `api.ts`, `sessionsApi.ts`, `uploadCheckpointPhotos.ts` | ✅ |
+| AuthProvider in root layout | `components/AuthProvider.tsx`, `app/_layout.tsx` | ✅ |
+| Wire liveSessionStore to API | `liveSessionStore.ts` | ✅ |
+| WebView map for Expo Go | `LiveSessionMapWebView.tsx`, `SessionRouteMapPreviewWebView.tsx` | ✅ |
+| Sessions list API fetch | `SessionsScreen.tsx` | ✅ |
+| Fix frontend `.env` var names | `frontend/.env`, `.env.example` | ✅ |
+
+### Key Decisions
+
+- Fly deploy blocked by org machine limit — API code ready; user runs `fly deploy` + sets `EXPO_PUBLIC_API_URL`.
+- App degrades gracefully when API URL unset (local-only session flow + mock sessions list).
+
+### Blockers
+
+- Fly.io: `requested machine count exceeds organization limit` — upgrade plan or delete unused apps, then `fly deploy`.
+
+---
+
+## [2026-07-13 Session 116] — Sessions + geolocation documentation
+
+**Session goal:** Document architecture, ADRs, and specs for Expo Go session tracking with Supabase + Fly persistence and WebView map.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Sanitize exposed secrets; setup-only Supabase guide | `docs/supabase.md` | ✅ |
+| ADR-004 Supabase + Fly sessions backend | `docs/adr/ADR-004-sessions-backend-supabase-fly.md` | ✅ |
+| ADR-005 Expo Go WebView map | `docs/adr/ADR-005-expo-go-webview-map.md` | ✅ |
+| Sessions API spec | `docs/backend/specs/sessions-api.md` | ✅ |
+| Frontend Expo Go integration spec | `docs/frontend/specs/session-tracking-expo-go.md` | ✅ |
+| Update backend context (sessions, maps) | `docs/backend/context/sessions.md`, `maps.md` | ✅ |
+| Update accounts, current, implementation-plan, README | `docs/accounts-and-access.md`, `current.md`, `implementation-plan.md`, `README.md` | ✅ |
+
+### Key Decisions
+
+- Expo Go test phase: anonymous Supabase auth, Fly Fastify API, client-direct Storage uploads.
+- Map in Expo Go: WebView + MapLibre GL JS + Carto Positron (no API key); native MapLibre unchanged for EAS builds.
+- Geolocation client-owned (`liveSessionStore`); route persisted on finalize — no separate maps microservice for v1.
+- **Action required:** rotate Supabase service_role key, JWT secret, and DB password if previously exposed in docs/chat.
+
+---
+
 ## [2026-07-14 Session 119] — Map Types bottom sheet (UI-only)
 
 **Session goal:** Open a Map Types sheet from the live tracker layers control (Standard / Satellite / Hybrid) without wiring MapLibre.
@@ -74,7 +253,7 @@ Session-by-session progress tracker. Distinct from `notes/journey.md` (correctio
 ### Learnings
 
 - `animation:'none'` on a Stack.Screen applies to ALL navigations to that route including `router.replace` — not just pushes. Use `router.back()` to get slide animation.
-- When `useState(false)` resets on `router.replace` to the same route, module-level variables are the right escape hatch for "boot has happened" state.
+- When `useState(false)` resets on `router.replace` to the same route, module-level variables are the right escape hatch for “boot has happened” state.
 
 ---
 

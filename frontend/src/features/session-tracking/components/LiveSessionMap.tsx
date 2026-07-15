@@ -13,7 +13,7 @@ import { Icon } from './Icon';
  * for the dev-client build steps.
  */
 const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
-const needsFallback = isExpoGo || Platform.OS === 'web';
+const needsWebFallback = Platform.OS === 'web';
 
 type Props = {
   style?: object;
@@ -25,7 +25,13 @@ type Props = {
  * `/live-session` route without evaluating the native map module at import time.
  */
 export function LiveSessionMap({ style }: Props) {
-  if (needsFallback) {
+  if (isExpoGo) {
+    const { LiveSessionMapWebView } =
+      require('./LiveSessionMapWebView') as typeof import('./LiveSessionMapWebView');
+    return <LiveSessionMapWebView style={style} />;
+  }
+
+  if (needsWebFallback) {
     return <ExpoGoMapFallback style={style} />;
   }
 

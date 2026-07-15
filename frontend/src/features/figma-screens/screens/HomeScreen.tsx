@@ -174,8 +174,10 @@ function ImpactSection({ impactStats }: { impactStats: ImpactStat[] }) {
 
 function RecentSessionsSection({
   recentSessions,
+  onSessionPress,
 }: {
   recentSessions: HomeDashboardData['recentSessions'];
+  onSessionPress?: (sessionId: string) => void;
 }) {
   return (
     <View style={s.paddedSection}>
@@ -193,7 +195,15 @@ function RecentSessionsSection({
       {recentSessions.length > 0 ? (
         <View style={s.listGap}>
           {recentSessions.map((session) => (
-            <RecentSessionCard key={session.id} session={session} />
+            <RecentSessionCard
+              key={session.id}
+              session={session}
+              onPress={
+                onSessionPress
+                  ? () => onSessionPress(session.id)
+                  : undefined
+              }
+            />
           ))}
         </View>
       ) : (
@@ -382,7 +392,12 @@ export function HomeScreenWithData({ data }: { data: HomeDashboardData }) {
           weeklyHoursChart={data.weeklyHoursChart}
         />
         <ImpactSection impactStats={data.impactStats} />
-        <RecentSessionsSection recentSessions={data.recentSessions} />
+        <RecentSessionsSection
+          recentSessions={data.recentSessions}
+          onSessionPress={(sessionId) =>
+            router.push(`/session-detail?id=${encodeURIComponent(sessionId)}` as Href)
+          }
+        />
         <RecentEventsSection recentEvents={data.recentEvents} allEvents={data.allEvents} />
       </ScrollView>
 

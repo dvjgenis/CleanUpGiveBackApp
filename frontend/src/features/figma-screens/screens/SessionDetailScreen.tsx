@@ -14,7 +14,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { PhotoEnlargeModal } from '@/components/ui/PhotoEnlargeModal';
-import { SessionRouteMapPreview } from '@/features/session-tracking/components/SessionRouteMapPreview';
+import { SessionRouteMapPanel } from '@/features/session-tracking/components/SessionRouteMapPanel';
+import { useSessionRouteCoordinates } from '@/features/session-tracking/hooks/useSessionRouteCoordinates';
 
 import {
   SessionDetailBackIcon,
@@ -162,14 +163,16 @@ function SessionPhotoEvidenceCard({
 
 /**
  * Session detail (Figma `session_detail`, node `515:1848`).
- * Map uses `SessionRouteMapPreview` (live tracker walking path) — empty path = placeholder for now.
+ * Map resolves the completed walking path from local cache or the sessions API.
  */
 export function SessionDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
   const params = useLocalSearchParams<{ id?: string }>();
-  const detail = getSessionDetail(typeof params.id === 'string' ? params.id : undefined);
+  const sessionId = typeof params.id === 'string' ? params.id : undefined;
+  const detail = getSessionDetail(sessionId);
+  const routeCoordinates = useSessionRouteCoordinates(sessionId);
 
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
 
@@ -217,10 +220,7 @@ export function SessionDetailScreen() {
           style={[s.mapHero, { width: windowWidth, height: MAP_HEIGHT }]}
           accessibilityLabel="Session walking path map"
         >
-          <SessionRouteMapPreview
-            routeCoordinates={detail.routeCoordinates}
-            style={s.mapPreview}
-          />
+          <SessionRouteMapPanel routeCoordinates={routeCoordinates} style={s.mapPreview} />
         </View>
 
         <View style={[s.mainCard, { width: contentWidth, alignSelf: 'center' }]}>
