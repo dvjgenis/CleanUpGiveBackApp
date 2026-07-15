@@ -32,7 +32,7 @@ What runs in the repo today.
 
 - **Supabase anonymous auth** on app launch via `AuthProvider` in `_layout.tsx` (`frontend/src/lib/supabase.ts`)
 - **Fly sessions API** client (`frontend/src/lib/api.ts`, `sessionsApi.ts`) — persists create/checkpoint/finalize when `EXPO_PUBLIC_API_URL` is set
-- **GPS + camera** live in Expo Go via `liveSessionStore` (`expo-location` BestForNavigation + filtered sampling, heading arrow + start marker on map; display-only route smoothing)
+- **GPS + camera** live in Expo Go via `liveSessionStore` (`expo-location` BestForNavigation at 1s interval; hardened capture filters — stationary detection, accuracy-adaptive 6m threshold, sharp-reversal rejection; EMA-smoothed live arrow; optional Follow toggle; Douglas-Peucker display simplification on maps)
 - **WebView map** in Expo Go (MapLibre GL JS + Carto Positron) per ADR-005; user pan/zoom on live and preview maps; live tracker map layer picker (Standard / Streets / Satellite / Hybrid); native MapLibre unchanged for EAS builds
 - **Sessions list** fetches from API when configured; falls back to mocks otherwise
 - **Backend:** Fastify + Prisma in `backend/sessions/` — schema pushed to Supabase; Fly deploy pending org machine limit

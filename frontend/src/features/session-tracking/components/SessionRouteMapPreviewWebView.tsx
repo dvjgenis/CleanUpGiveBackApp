@@ -68,7 +68,7 @@ function buildHtml() {
     pendingCoords = coords || [];
     if (!map.isStyleLoaded() || pendingCoords.length < 2) return;
 
-    const displayCoords = smoothRouteForDisplay(pendingCoords);
+    const displayCoords = simplifyRouteForDisplay(pendingCoords);
     const data = { type: 'Feature', geometry: { type: 'LineString', coordinates: displayCoords } };
     if (!routeAdded) {
       map.addSource('route', { type: 'geojson', data });

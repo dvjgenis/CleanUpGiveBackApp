@@ -4,6 +4,31 @@ Session-by-session progress tracker. Distinct from `notes/journey.md` (correctio
 
 ---
 
+## [2026-07-14 Session 123] — GPS precision + real-time tracking fix
+
+**Session goal:** Eliminate erratic GPS scribble routes, smooth live tracking, and add optional map follow mode.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Hardened capture filters (stationary, accuracy-adaptive, turn rejection) | `routeFiltering.ts`, `routeFiltering.test.ts` | ✅ |
+| Rewrite `recordLocationSample` + `displayCoordinate` EMA | `liveSessionStore.ts` | ✅ |
+| 1s GPS interval, 6m sample threshold, 8s warm-up | `liveSessionStore.ts`, `geo.ts` | ✅ |
+| Follow toggle (default off) on live tracker | `LiveSessionScreen.tsx`, `LiveSessionMapCamera.tsx` | ✅ |
+| WebView in-place arrow marker + follow pan | `LiveSessionMapWebView.tsx`, `webViewMapHelpers.ts` | ✅ |
+| Douglas-Peucker display simplification on all map components | `routeFiltering.ts`, `SessionRouteMapPreview*`, `LiveSessionMap*` | ✅ |
+| Docs AC-24/26 | `session-tracking-expo-go.md`, `current.md`, `project.md` | ✅ |
+
+### Key Decisions
+
+- Route append distance measured from last **stored** route point (not jittered `currentCoordinate`).
+- `lastAcceptedTimestamp` updated on every accepted fix (fixes speed-calc bug).
+- Stored route stays capture-filtered raw; Douglas-Peucker is display-only per AC-24.
+- Follow mode is opt-in toggle; Recenter remains independent flyTo.
+
+---
+
 ## [2026-07-14 Session 122] — GPS tracking refinement
 
 **Session goal:** Improve GPS precision filtering, add start/heading markers, and smooth route display on MapLibre.

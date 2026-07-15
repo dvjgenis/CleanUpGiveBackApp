@@ -22,8 +22,10 @@ import {
 import {
   deltaMetersBetween,
   isAcceptableAccuracy,
-  isPlausibleMovement,
+  MAX_ACCEPTABLE_ACCURACY_METERS,
   resolveHeading,
+  shouldAppendRoutePoint,
+  smoothCoordinateEma,
 } from './utils/routeFiltering';
 
 export const PHOTO_CHECKPOINT_INTERVAL_SECONDS = 30 * 60;
@@ -66,8 +68,10 @@ type LiveSessionState = {
   setup: LiveSessionSetup | null;
   routeCoordinates: RouteCoordinate[];
   currentCoordinate: RouteCoordinate | null;
+  displayCoordinate: RouteCoordinate | null;
   currentHeading: number | null;
   mapRecenterToken: number;
+  mapFollowEnabled: boolean;
   mapLayer: MapLayerType;
   submittedCheckpoints: PhotoCheckpointSubmission[];
 };
@@ -83,8 +87,10 @@ let state: LiveSessionState = {
   setup: null,
   routeCoordinates: [],
   currentCoordinate: null,
+  displayCoordinate: null,
   currentHeading: null,
   mapRecenterToken: 0,
+  mapFollowEnabled: false,
   mapLayer: DEFAULT_MAP_LAYER,
   submittedCheckpoints: [],
 };
@@ -93,7 +99,7 @@ let completedSessionSnapshot: CompletedSessionSnapshot | null = null;
 
 let tickInterval: ReturnType<typeof setInterval> | null = null;
 let locationSubscription: Location.LocationSubscription | null = null;
-let lastSampleTimestamp: number | null = null;
+let lastAcceptedTimestamp: number | null = null;
 const listeners = new Set<() => void>();
 
 function notify() {
@@ -157,11 +163,11 @@ function stopTicking() {
 }
 
 function recordLocationSample(position: Location.LocationObject) {
-  if (!state.isActive) {
+  if (!state.isActive || state.startedAt == null) {
     return;
   }
 
-  const { latitude, longitude, accuracy, heading } = position.coords;
+  const { latitude, longitude, accuracy, heading, speed } = position.coords;
   if (!isAcceptableAccuracy(accuracy)) {
     return;
   }
@@ -174,35 +180,57 @@ function recordLocationSample(position: Location.LocationObject) {
     previous: previousCoordinate,
     current: nextCoordinate,
   });
+  const nextDisplayCoordinate = smoothCoordinateEma(state.displayCoordinate, nextCoordinate);
+  const speedMps = speed != null && Number.isFinite(speed) && speed >= 0 ? speed : null;
+  const deltaMs =
+    lastAcceptedTimestamp != null ? sampleTimestamp - lastAcceptedTimestamp : 0;
+  const deltaMetersFromLastFix = previousCoordinate
+    ? deltaMetersBetween(previousCoordinate, nextCoordinate)
+    : 0;
 
   if (!previousCoordinate) {
-    lastSampleTimestamp = sampleTimestamp;
+    lastAcceptedTimestamp = sampleTimestamp;
     setState({
       currentCoordinate: nextCoordinate,
+      displayCoordinate: nextDisplayCoordinate,
       currentHeading: nextHeading,
       routeCoordinates: [nextCoordinate],
     });
     return;
   }
 
-  const deltaMeters = deltaMetersBetween(previousCoordinate, nextCoordinate);
-  const deltaMs = lastSampleTimestamp != null ? sampleTimestamp - lastSampleTimestamp : 0;
+  const lastRoutePoint = state.routeCoordinates[state.routeCoordinates.length - 1];
+  const prevRoutePoint =
+    state.routeCoordinates.length >= 2
+      ? state.routeCoordinates[state.routeCoordinates.length - 2]
+      : null;
+  const deltaMetersFromRoute = deltaMetersBetween(lastRoutePoint, nextCoordinate);
 
-  if (deltaMeters >= MIN_ROUTE_SAMPLE_METERS) {
-    if (!isPlausibleMovement(deltaMeters, deltaMs)) {
-      return;
-    }
-
+  if (
+    shouldAppendRoutePoint({
+      lastRoutePoint,
+      prevRoutePoint,
+      candidate: nextCoordinate,
+      accuracyMeters: accuracy ?? MAX_ACCEPTABLE_ACCURACY_METERS,
+      speedMps,
+      deltaMetersFromRoute,
+      deltaMetersFromLastFix,
+      deltaMs,
+      sessionStartedAt: state.startedAt,
+      sampleTimestamp,
+    })
+  ) {
     const deltaMiles = haversineMiles(
-      previousCoordinate[1],
-      previousCoordinate[0],
+      lastRoutePoint[1],
+      lastRoutePoint[0],
       latitude,
       longitude,
     );
 
-    lastSampleTimestamp = sampleTimestamp;
+    lastAcceptedTimestamp = sampleTimestamp;
     setState({
       currentCoordinate: nextCoordinate,
+      displayCoordinate: nextDisplayCoordinate,
       currentHeading: nextHeading,
       routeCoordinates: [...state.routeCoordinates, nextCoordinate],
       distanceMiles: state.distanceMiles + deltaMiles,
@@ -210,8 +238,10 @@ function recordLocationSample(position: Location.LocationObject) {
     return;
   }
 
+  lastAcceptedTimestamp = sampleTimestamp;
   setState({
     currentCoordinate: nextCoordinate,
+    displayCoordinate: nextDisplayCoordinate,
     currentHeading: nextHeading,
   });
 }
@@ -219,12 +249,12 @@ function recordLocationSample(position: Location.LocationObject) {
 function stopLocationWatching() {
   locationSubscription?.remove();
   locationSubscription = null;
-  lastSampleTimestamp = null;
+  lastAcceptedTimestamp = null;
 }
 
 const LOCATION_WATCH_OPTIONS: Location.LocationOptions = {
   accuracy: Location.Accuracy.BestForNavigation,
-  timeInterval: 2000,
+  timeInterval: 1000,
   distanceInterval: MIN_ROUTE_SAMPLE_METERS,
   mayShowUserSettingsDialog: true,
   ...(Location.ActivityType && {
@@ -350,8 +380,10 @@ export async function startNewLiveSession(setup: LiveSessionSetup) {
     setup,
     routeCoordinates: [],
     currentCoordinate: null,
+    displayCoordinate: null,
     currentHeading: null,
     mapRecenterToken: 0,
+    mapFollowEnabled: false,
     mapLayer: DEFAULT_MAP_LAYER,
     submittedCheckpoints: [],
   };
@@ -448,12 +480,26 @@ export function endLiveSession() {
     setup: null,
     routeCoordinates: [],
     currentCoordinate: null,
+    displayCoordinate: null,
     currentHeading: null,
     mapRecenterToken: 0,
+    mapFollowEnabled: false,
     mapLayer: DEFAULT_MAP_LAYER,
     submittedCheckpoints: [],
   };
   notify();
+}
+
+export function setLiveSessionMapFollow(enabled: boolean) {
+  if (state.mapFollowEnabled === enabled) {
+    return;
+  }
+
+  setState({ mapFollowEnabled: enabled });
+}
+
+export function toggleLiveSessionMapFollow() {
+  setLiveSessionMapFollow(!state.mapFollowEnabled);
 }
 
 export function setLiveSessionMapLayer(layer: MapLayerType) {
@@ -465,7 +511,7 @@ export function setLiveSessionMapLayer(layer: MapLayerType) {
 }
 
 export function requestLiveSessionMapRecenter() {
-  if (!state.currentCoordinate) {
+  if (!state.displayCoordinate && !state.currentCoordinate) {
     void ensureLocationWatching();
     return;
   }
@@ -493,7 +539,12 @@ export function getCheckpointProgress(checkpointSecondsRemaining: number): numbe
 }
 
 export function getLiveSessionMapCenter(): RouteCoordinate {
-  return state.currentCoordinate ?? state.routeCoordinates[0] ?? DEFAULT_MAP_CENTER;
+  return (
+    state.displayCoordinate ??
+    state.currentCoordinate ??
+    state.routeCoordinates[0] ??
+    DEFAULT_MAP_CENTER
+  );
 }
 
 export function getLiveSessionMapZoom(hasFix: boolean): number {

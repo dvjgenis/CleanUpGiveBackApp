@@ -1,20 +1,27 @@
 import {
   computeBearingDegrees,
+  getMinMovementMeters,
   isAcceptableAccuracy,
   isPlausibleMovement,
+  isSharpReversal,
+  isStationary,
   resolveHeading,
+  shouldAppendRoutePoint,
+  simplifyRouteForDisplay,
+  smoothCoordinateEma,
   smoothRouteForDisplay,
+  DISPLAY_COORDINATE_EMA_ALPHA,
 } from './routeFiltering';
 import type { RouteCoordinate } from './geo';
 
 describe('isAcceptableAccuracy', () => {
-  it('accepts fixes within 20m', () => {
+  it('accepts fixes within 15m', () => {
     expect(isAcceptableAccuracy(10)).toBe(true);
-    expect(isAcceptableAccuracy(20)).toBe(true);
+    expect(isAcceptableAccuracy(15)).toBe(true);
   });
 
   it('rejects poor or missing accuracy', () => {
-    expect(isAcceptableAccuracy(25)).toBe(false);
+    expect(isAcceptableAccuracy(16)).toBe(false);
     expect(isAcceptableAccuracy(null)).toBe(false);
     expect(isAcceptableAccuracy(undefined)).toBe(false);
   });
@@ -27,6 +34,113 @@ describe('isPlausibleMovement', () => {
 
   it('accepts walking pace', () => {
     expect(isPlausibleMovement(2, 1000)).toBe(true);
+  });
+});
+
+describe('getMinMovementMeters', () => {
+  it('uses at least MIN_ROUTE_SAMPLE_METERS', () => {
+    expect(getMinMovementMeters(5)).toBe(6);
+  });
+
+  it('scales with reported accuracy', () => {
+    expect(getMinMovementMeters(20)).toBe(12);
+  });
+});
+
+describe('isStationary', () => {
+  it('rejects append when device speed is near zero and movement is small', () => {
+    expect(
+      isStationary({
+        speedMps: 0,
+        deltaMeters: 4,
+        deltaMs: 2000,
+        minMovementMeters: 6,
+      }),
+    ).toBe(true);
+  });
+
+  it('allows movement when speed indicates walking', () => {
+    expect(
+      isStationary({
+        speedMps: 1.2,
+        deltaMeters: 8,
+        deltaMs: 2000,
+        minMovementMeters: 6,
+      }),
+    ).toBe(false);
+  });
+});
+
+describe('isSharpReversal', () => {
+  it('rejects a short backtrack segment', () => {
+    const a: RouteCoordinate = [-87.63, 41.88];
+    const b: RouteCoordinate = [-87.62999, 41.88];
+    const c: RouteCoordinate = [-87.63, 41.88];
+    expect(isSharpReversal(a, b, c)).toBe(true);
+  });
+
+  it('allows gradual turns over longer segments', () => {
+    const a: RouteCoordinate = [-87.63, 41.88];
+    const b: RouteCoordinate = [-87.62, 41.88];
+    const c: RouteCoordinate = [-87.61, 41.89];
+    expect(isSharpReversal(a, b, c)).toBe(false);
+  });
+});
+
+describe('shouldAppendRoutePoint', () => {
+  const lastRoute: RouteCoordinate = [-87.63, 41.88];
+  const prevRoute: RouteCoordinate = [-87.631, 41.88];
+  const sessionStartedAt = 1_000_000;
+
+  it('rejects during GPS warm-up', () => {
+    expect(
+      shouldAppendRoutePoint({
+        lastRoutePoint: lastRoute,
+        prevRoutePoint: prevRoute,
+        candidate: [-87.62, 41.88],
+        accuracyMeters: 8,
+        speedMps: 1.5,
+        deltaMetersFromRoute: 10,
+        deltaMetersFromLastFix: 10,
+        deltaMs: 2000,
+        sessionStartedAt,
+        sampleTimestamp: sessionStartedAt + 3000,
+      }),
+    ).toBe(false);
+  });
+
+  it('rejects when movement from last route point is too small', () => {
+    expect(
+      shouldAppendRoutePoint({
+        lastRoutePoint: lastRoute,
+        prevRoutePoint: prevRoute,
+        candidate: [-87.6299, 41.88],
+        accuracyMeters: 8,
+        speedMps: 1.5,
+        deltaMetersFromRoute: 4,
+        deltaMetersFromLastFix: 4,
+        deltaMs: 2000,
+        sessionStartedAt,
+        sampleTimestamp: sessionStartedAt + 10_000,
+      }),
+    ).toBe(false);
+  });
+
+  it('accepts valid walking movement after warm-up', () => {
+    expect(
+      shouldAppendRoutePoint({
+        lastRoutePoint: lastRoute,
+        prevRoutePoint: prevRoute,
+        candidate: [-87.62, 41.88],
+        accuracyMeters: 8,
+        speedMps: 1.5,
+        deltaMetersFromRoute: 10,
+        deltaMetersFromLastFix: 10,
+        deltaMs: 2000,
+        sessionStartedAt,
+        sampleTimestamp: sessionStartedAt + 10_000,
+      }),
+    ).toBe(true);
   });
 });
 
@@ -63,6 +177,23 @@ describe('resolveHeading', () => {
   });
 });
 
+describe('smoothCoordinateEma', () => {
+  it('returns the next coordinate when no previous value exists', () => {
+    const next: RouteCoordinate = [-87.63, 41.88];
+    expect(smoothCoordinateEma(null, next)).toEqual(next);
+  });
+
+  it('moves toward the next coordinate', () => {
+    const prev: RouteCoordinate = [-87.63, 41.88];
+    const next: RouteCoordinate = [-87.62, 41.89];
+    const smoothed = smoothCoordinateEma(prev, next, DISPLAY_COORDINATE_EMA_ALPHA);
+    expect(smoothed[0]).toBeGreaterThan(prev[0]);
+    expect(smoothed[0]).toBeLessThan(next[0]);
+    expect(smoothed[1]).toBeGreaterThan(prev[1]);
+    expect(smoothed[1]).toBeLessThan(next[1]);
+  });
+});
+
 describe('smoothRouteForDisplay', () => {
   it('preserves endpoints', () => {
     const route: RouteCoordinate[] = [
@@ -80,5 +211,21 @@ describe('smoothRouteForDisplay', () => {
   it('returns short routes unchanged', () => {
     const route: RouteCoordinate[] = [[-87.63, 41.88], [-87.62, 41.89]];
     expect(smoothRouteForDisplay(route)).toEqual(route);
+  });
+});
+
+describe('simplifyRouteForDisplay', () => {
+  it('preserves endpoints and reduces noisy zigzag points', () => {
+    const route: RouteCoordinate[] = [
+      [-87.63, 41.88],
+      [-87.629, 41.8801],
+      [-87.63, 41.8799],
+      [-87.629, 41.88],
+      [-87.62, 41.88],
+    ];
+    const simplified = simplifyRouteForDisplay(route);
+    expect(simplified[0]).toEqual(route[0]);
+    expect(simplified[simplified.length - 1]).toEqual(route[route.length - 1]);
+    expect(simplified.length).toBeLessThan(route.length);
   });
 });

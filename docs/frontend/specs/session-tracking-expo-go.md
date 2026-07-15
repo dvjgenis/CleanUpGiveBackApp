@@ -39,10 +39,11 @@ Wire the existing native session tracking flow (`frontend/src/app/` routes + `li
 - [x] **AC-9:** Recenter control triggers `requestLiveSessionMapRecenter()` → map re-centers on current position
 - [x] **AC-10:** Submission confirmation and session detail use read-only WebView route preview with `fitBounds`
 - [x] **AC-11:** Native MapLibre path unchanged for future EAS builds; web keeps placeholder
-- [x] **AC-22:** Live and preview maps support user pan and pinch zoom; live map recenters only on first GPS fix or recenter tap (not every GPS tick); preview `fitBounds` runs once on initial load
+- [x] **AC-22:** Live and preview maps support user pan and pinch zoom; live map recenters only on first GPS fix, when follow mode is enabled, or when recenter is tapped; preview `fitBounds` runs once on initial load
 - [x] **AC-23:** Live tracker map layers control toggles Standard, Streets, Satellite, and Hybrid basemaps (Carto + Esri, no API key)
-- [x] **AC-24:** GPS uses `BestForNavigation` accuracy with accuracy/speed filtering; stored route unchanged by display smoothing
-- [x] **AC-25:** Live map shows gray start marker and green heading arrow; preview maps show start + end markers on smoothed route polyline
+- [x] **AC-24:** GPS uses `BestForNavigation` at 1s interval with hardened capture filters (≤15m accuracy, ≥6m movement from last route point, accuracy-adaptive threshold, stationary detection via device speed, sharp-reversal rejection, 8s warm-up); stored route unchanged by display simplification
+- [x] **AC-25:** Live map shows gray start marker and green heading arrow on EMA-smoothed `displayCoordinate`; preview maps show start + end markers on simplified route polyline
+- [x] **AC-26:** Live tracker includes optional **Follow** toggle (default off); when on, map eases to smoothed position on each GPS update; Recenter still flies to current position independently
 
 ### Camera (client — already wired, verify in Expo Go)
 
@@ -94,7 +95,7 @@ Wire the existing native session tracking flow (`frontend/src/app/` routes + `li
 | `frontend/src/features/session-tracking/components/LiveSessionMapWebView.tsx` | New — WebView map for Expo Go |
 | `frontend/src/features/session-tracking/components/MapInteractionContainer.tsx` | Touch responder wrapper for map pan/zoom inside ScrollViews |
 | `frontend/src/features/session-tracking/utils/mapStyles.ts` | Basemap layer definitions (standard, streets, satellite, hybrid) |
-| `frontend/src/features/session-tracking/utils/routeFiltering.ts` | GPS accuracy/speed filtering, bearing, display smoothing |
+| `frontend/src/features/session-tracking/utils/routeFiltering.ts` | GPS capture filters, EMA display coordinate, Douglas-Peucker display simplification |
 | `frontend/src/features/session-tracking/components/SessionMapMarkers.tsx` | Start, heading arrow, and end map markers |
 | `frontend/src/features/session-tracking/components/LiveSessionMap.tsx` | Route Expo Go → WebView |
 | `frontend/src/features/session-tracking/components/SessionRouteMapPreview.tsx` | Route Expo Go → WebView read-only |
@@ -106,7 +107,7 @@ Wire the existing native session tracking flow (`frontend/src/app/` routes + `li
 2. Open in **Expo Go** on a physical iPhone or Android device
 3. Complete onboarding (or Log In shortcut) → Home
 4. **Start Tracking** → session setup → permissions → **Start Session**
-5. Walk outdoors ≥ 2 minutes; confirm WebView map shows route polyline and distance increments; drag to pan and pinch to zoom without map snapping back until recenter is tapped
+5. Walk outdoors ≥ 2 minutes; confirm WebView map shows route polyline and distance increments; toggle **Follow** to pan with you; drag to pan and pinch to zoom without map snapping back until follow is on or recenter is tapped
 6. Submit a photo checkpoint; confirm camera capture works
 7. **End Session** → submission confirmation shows photos + route preview; pan/zoom route preview inside scrollable screen
 8. **Go Home** → session appears in Recent Sessions / Sessions list as Under Review

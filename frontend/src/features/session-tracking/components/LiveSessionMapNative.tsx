@@ -1,4 +1,4 @@
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 import { Map, MapMarker, MapRoute } from '@/components/ui/map';
 
@@ -9,7 +9,7 @@ import {
 } from '../liveSessionStore';
 import { colors, radius } from '../tokens';
 import { getNativeMapStyle } from '../utils/mapStyles';
-import { smoothRouteForDisplay } from '../utils/routeFiltering';
+import { simplifyRouteForDisplay } from '../utils/routeFiltering';
 import { LiveSessionMapCamera } from './LiveSessionMapCamera';
 import { MapInteractionContainer } from './MapInteractionContainer';
 import {
@@ -23,13 +23,19 @@ type Props = {
 
 /** MapLibre map branch — loaded only when not on Expo Go / web. */
 export function LiveSessionMapNative({ style }: Props) {
-  const { routeCoordinates, currentCoordinate, currentHeading, mapRecenterToken, mapLayer } =
-    useLiveSession();
-  const hasFix = currentCoordinate !== null;
+  const {
+    routeCoordinates,
+    displayCoordinate,
+    currentHeading,
+    mapRecenterToken,
+    mapFollowEnabled,
+    mapLayer,
+  } = useLiveSession();
+  const hasFix = displayCoordinate !== null;
   const mapCenter = getLiveSessionMapCenter();
   const routeStart = routeCoordinates[0] ?? null;
   const mapStyle = getNativeMapStyle(mapLayer);
-  const displayRoute = smoothRouteForDisplay(routeCoordinates);
+  const displayRoute = simplifyRouteForDisplay(routeCoordinates);
 
   return (
     <MapInteractionContainer style={[styles.container, style]}>
@@ -50,15 +56,16 @@ export function LiveSessionMapNative({ style }: Props) {
           </MapMarker>
         )}
 
-        {currentCoordinate && (
-          <MapMarker longitude={currentCoordinate[0]} latitude={currentCoordinate[1]}>
+        {displayCoordinate && (
+          <MapMarker longitude={displayCoordinate[0]} latitude={displayCoordinate[1]}>
             <SessionCurrentArrowMarker heading={currentHeading} />
           </MapMarker>
         )}
 
         <LiveSessionMapCamera
-          currentCoordinate={currentCoordinate}
+          currentCoordinate={displayCoordinate}
           recenterToken={mapRecenterToken}
+          mapFollowEnabled={mapFollowEnabled}
         />
       </Map>
     </MapInteractionContainer>

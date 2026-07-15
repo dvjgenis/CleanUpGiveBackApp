@@ -13,9 +13,9 @@ Powers route display, GPS sampling, and distance stats during cleanup sessions. 
 
 ### Client (implemented)
 
-- GPS sampling during active sessions via `liveSessionStore` (`expo-location` `watchPositionAsync` at `BestForNavigation`, accuracy/speed filtering, 3m sample threshold)
-- Route display smoothing via `smoothRouteForDisplay()` (map only; stored distance uses filtered raw points)
-- Live map markers: gray start point, green heading arrow; preview maps: start + end markers
+- GPS sampling during active sessions via `liveSessionStore` (`expo-location` `watchPositionAsync` at `BestForNavigation`, 1s interval, hardened capture filters: ≤15m accuracy, ≥6m from last route point, stationary detection, sharp-reversal rejection, 8s warm-up)
+- Route display simplification via `simplifyRouteForDisplay()` (outlier removal + Douglas-Peucker + light smooth; map only; stored distance uses capture-filtered raw points)
+- Live map markers: gray start point, green heading arrow on EMA-smoothed `displayCoordinate`; optional Follow toggle pans map on GPS updates
 - Location watching stops when session ends (`endLiveSession`)
 - Live weather + reverse geocoding via [Open-Meteo](https://open-meteo.com/) (no API key) — `useLiveWeather.ts`
 - Foreground location permission via `expo-location` plugin in `app.json`
@@ -57,6 +57,6 @@ Read-only route previews: `SessionRouteMapPreview` (+ planned WebView variant fo
 
 ## Related
 
-- Code: `frontend/src/features/session-tracking/liveSessionStore.ts`, `components/LiveSessionMap.tsx`, `utils/geo.ts`
+- Code: `frontend/src/features/session-tracking/liveSessionStore.ts`, `components/LiveSessionMap.tsx`, `utils/geo.ts`, `utils/routeFiltering.ts`
 - `backend/maps/` — scaffold only; folded into sessions domain for v1
 - Frontend spec: [session-tracking-expo-go.md](../../frontend/specs/session-tracking-expo-go.md)

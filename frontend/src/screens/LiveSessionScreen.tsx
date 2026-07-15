@@ -25,6 +25,7 @@ import { TrackerActionButton } from '@/features/session-tracking/components/Trac
 import { LocationPinIcon } from '@/features/session-tracking/components/icons/LocationPinIcon';
 import { TrackerEndSessionIcon } from '@/features/session-tracking/components/icons/TrackerEndSessionIcon';
 import { TrackerLayersIcon } from '@/features/session-tracking/components/icons/TrackerLayersIcon';
+import { RouteIcon } from '@/features/session-tracking/components/icons/RouteIcon';
 import { TrackerMyLocationIcon } from '@/features/session-tracking/components/icons/TrackerMyLocationIcon';
 import { TrackerSubmitPhotoIcon } from '@/features/session-tracking/components/icons/TrackerSubmitPhotoIcon';
 import { TrackerWeatherIcon } from '@/features/session-tracking/components/icons/TrackerWeatherIcon';
@@ -40,6 +41,7 @@ import {
   getCheckpointProgress,
   requestLiveSessionMapRecenter,
   setLiveSessionMapLayer,
+  toggleLiveSessionMapFollow,
   useLiveSession,
 } from '@/features/session-tracking/liveSessionStore';
 import { useLiveWeather } from '@/features/session-tracking/hooks/useLiveWeather';
@@ -116,7 +118,7 @@ function MapToolButton({
 /** PRD §6.11 · Figma `session_setup_guide` live tracker (`251:439`). */
 export function LiveSessionScreen() {
   const router = useRouter();
-  const { elapsedSeconds, checkpointSecondsRemaining, distanceMiles, submittedCheckpoints, mapLayer } =
+  const { elapsedSeconds, checkpointSecondsRemaining, distanceMiles, submittedCheckpoints, mapLayer, mapFollowEnabled } =
     useLiveSession();
   const [mapLayerPickerVisible, setMapLayerPickerVisible] = useState(false);
   const { mapRevealStyle, chromeStyle } = useLiveSessionMapReveal();
@@ -219,6 +221,12 @@ export function LiveSessionScreen() {
                       <TrackerLayersIcon color={C.textTertiary} />
                     </MapToolButton>
                   </View>
+                  <MapToolButton
+                    accessibilityLabel={mapFollowEnabled ? 'Stop following location' : 'Follow my location'}
+                    onPress={toggleLiveSessionMapFollow}
+                  >
+                    <RouteIcon color={mapFollowEnabled ? C.primary : C.textTertiary} />
+                  </MapToolButton>
                   <MapToolButton
                     accessibilityLabel="Center on my location"
                     onPress={requestLiveSessionMapRecenter}

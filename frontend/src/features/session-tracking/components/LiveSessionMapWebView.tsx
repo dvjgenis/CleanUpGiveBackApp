@@ -37,12 +37,14 @@ function buildHtml() {
   let routeAdded = false;
   let startMarker = null;
   let currentMarker = null;
+  let currentMarkerElement = null;
   let hasInitialCentered = false;
   let lastRecenterToken = 0;
   let pendingCoords = [];
   let pendingCurrent = null;
   let pendingHeading = null;
   let pendingRecenterToken = 0;
+  let pendingFollowEnabled = false;
 
   ${MAP_HELPERS}
 
@@ -58,27 +60,35 @@ function buildHtml() {
       }
     }
 
-    if (currentMarker) {
+    if (current && current.length === 2) {
+      if (!currentMarker) {
+        currentMarkerElement = createArrowMarkerElement(heading);
+        currentMarker = new maplibregl.Marker({
+          element: currentMarkerElement,
+          anchor: 'center',
+        }).setLngLat(current).addTo(map);
+      } else {
+        currentMarker.setLngLat(current);
+        if (currentMarkerElement) {
+          updateArrowMarkerElement(currentMarkerElement, heading);
+        }
+      }
+    } else if (currentMarker) {
       currentMarker.remove();
       currentMarker = null;
-    }
-
-    if (current && current.length === 2) {
-      currentMarker = new maplibregl.Marker({
-        element: createArrowMarkerElement(heading),
-        anchor: 'center',
-      }).setLngLat(current).addTo(map);
+      currentMarkerElement = null;
     }
   }
 
-  function applyRouteOverlay(coords, current, heading, recenterToken) {
+  function applyRouteOverlay(coords, current, heading, recenterToken, followEnabled) {
     pendingCoords = coords || [];
     pendingCurrent = current;
     pendingHeading = heading;
     pendingRecenterToken = recenterToken;
+    pendingFollowEnabled = followEnabled;
     if (!map.isStyleLoaded()) return;
 
-    const displayCoords = smoothRouteForDisplay(pendingCoords);
+    const displayCoords = simplifyRouteForDisplay(pendingCoords);
     const data = { type: 'Feature', geometry: { type: 'LineString', coordinates: displayCoords } };
     if (!routeAdded && displayCoords.length >= 2) {
       map.addSource('route', { type: 'geojson', data });
@@ -102,6 +112,10 @@ function buildHtml() {
         map.flyTo({ center: pendingCurrent, zoom: 15, duration: 900 });
         return;
       }
+      if (pendingFollowEnabled) {
+        map.easeTo({ center: pendingCurrent, duration: 300 });
+        return;
+      }
       if (!hasInitialCentered) {
         hasInitialCentered = true;
         map.easeTo({ center: pendingCurrent, zoom: 15, duration: 0 });
@@ -115,18 +129,25 @@ function buildHtml() {
     }
   });
 
-  window.updateRoute = function(coords, current, heading, recenterToken) {
-    applyRouteOverlay(coords, current, heading, recenterToken);
+  window.updateRoute = function(coords, current, heading, recenterToken, followEnabled) {
+    applyRouteOverlay(coords, current, heading, recenterToken, !!followEnabled);
   };
 
   window.setMapStyle = function(stylePayload) {
     routeAdded = false;
     startMarker = null;
     currentMarker = null;
+    currentMarkerElement = null;
     const style = stylePayload.type === 'url' ? stylePayload.value : stylePayload.value;
     map.setStyle(style);
     map.once('style.load', () => {
-      applyRouteOverlay(pendingCoords, pendingCurrent, pendingHeading, pendingRecenterToken);
+      applyRouteOverlay(
+        pendingCoords,
+        pendingCurrent,
+        pendingHeading,
+        pendingRecenterToken,
+        pendingFollowEnabled,
+      );
     });
   };
 </script>
@@ -140,8 +161,14 @@ type Props = {
 
 /** MapLibre GL JS map for Expo Go — live GPS route updates via injectJavaScript. */
 export function LiveSessionMapWebView({ style }: Props) {
-  const { routeCoordinates, currentCoordinate, currentHeading, mapRecenterToken, mapLayer } =
-    useLiveSession();
+  const {
+    routeCoordinates,
+    displayCoordinate,
+    currentHeading,
+    mapRecenterToken,
+    mapFollowEnabled,
+    mapLayer,
+  } = useLiveSession();
   const webRef = useRef<WebView>(null);
   const readyRef = useRef(false);
 
@@ -150,8 +177,8 @@ export function LiveSessionMapWebView({ style }: Props) {
       return;
     }
 
-    const center = currentCoordinate ?? getLiveSessionMapCenter();
-    const script = `window.updateRoute(${JSON.stringify(routeCoordinates)}, ${JSON.stringify(center)}, ${currentHeading ?? 'null'}, ${mapRecenterToken}); true;`;
+    const center = displayCoordinate ?? getLiveSessionMapCenter();
+    const script = `window.updateRoute(${JSON.stringify(routeCoordinates)}, ${JSON.stringify(center)}, ${currentHeading ?? 'null'}, ${mapRecenterToken}, ${mapFollowEnabled}); true;`;
     webRef.current.injectJavaScript(script);
   };
 
@@ -167,7 +194,7 @@ export function LiveSessionMapWebView({ style }: Props) {
 
   useEffect(() => {
     pushRouteUpdate();
-  }, [routeCoordinates, currentCoordinate, currentHeading, mapRecenterToken]);
+  }, [routeCoordinates, displayCoordinate, currentHeading, mapRecenterToken, mapFollowEnabled]);
 
   useEffect(() => {
     pushStyleUpdate();

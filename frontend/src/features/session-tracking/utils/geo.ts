@@ -42,7 +42,7 @@ export function toRouteCoordinates(route: number[][] | null | undefined): RouteC
 }
 
 /** Ignore GPS jitter below this movement threshold when accumulating distance. */
-export const MIN_ROUTE_SAMPLE_METERS = 3;
+export const MIN_ROUTE_SAMPLE_METERS = 6;
 
 export function milesToMeters(miles: number): number {
   return miles * 1609.344;

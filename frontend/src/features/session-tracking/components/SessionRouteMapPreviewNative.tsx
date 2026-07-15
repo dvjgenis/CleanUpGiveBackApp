@@ -9,7 +9,7 @@ import {
   getRouteMapZoom,
   type RouteCoordinate,
 } from '../utils/geo';
-import { smoothRouteForDisplay } from '../utils/routeFiltering';
+import { simplifyRouteForDisplay } from '../utils/routeFiltering';
 import { MapInteractionContainer } from './MapInteractionContainer';
 import { SessionEndMarker, SessionStartMarker } from './SessionMapMarkers';
 
@@ -30,7 +30,7 @@ export function SessionRouteMapPreviewNative({
   const routeStart = routeCoordinates[0] ?? null;
   const routeEnd = routeCoordinates[routeCoordinates.length - 1] ?? null;
   const mapStyle = getNativeMapStyle(mapLayer);
-  const displayRoute = smoothRouteForDisplay(routeCoordinates);
+  const displayRoute = simplifyRouteForDisplay(routeCoordinates);
 
   return (
     <MapInteractionContainer style={[styles.container, style]}>
