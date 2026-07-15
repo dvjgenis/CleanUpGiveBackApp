@@ -31,6 +31,7 @@ Product-wide ontology and cross-cutting decisions.
 - Nationwide minor data protection uses strictest-baseline strategy — see [ADR-003](../adr/ADR-003-minor-data-protection-baseline.md)
 - Privacy UI split: `account-privacy` hub, `privacy-permissions`, policy viewers — see [privacy-screen-split-decision.md](../../compliance/privacy-screen-split-decision.md)
 - Session Tracking flow (PRD §6.9–6.15) built as an isolated feature slice at `frontend/src/features/session-tracking/` — not wired into `frontend/src/app/` Expo Router or `manifest.yaml`'s `implemented` status; a parallel exploratory build reviewed via its own `dev/PreviewApp.tsx` harness, separate from the Phase 1 migration path in [figma-to-native-handoff.md](../specs/figma-to-native-handoff.md)
+- **Session duration:** wall-clock timestamps (`startedAt` → `endedAt`) are the canonical source for completed-session duration; `liveSessionStore` derives live elapsed time and checkpoint countdown from timestamps (not a fragile `+1s` counter). Backend finalize recomputes `durationSeconds` server-side.
 
 ## Related
 

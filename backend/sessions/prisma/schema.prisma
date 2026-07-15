@@ -1,0 +1,46 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SessionStatus {
+  active
+  under_review
+  approved
+  not_approved
+  invalid
+}
+
+model Session {
+  id               String        @id @default(uuid()) @db.Uuid
+  userId           String        @map("user_id") @db.Uuid
+  activity         String?
+  courtOrdered     Boolean       @default(false) @map("court_ordered")
+  description      String?
+  startedAt        DateTime?     @map("started_at") @db.Timestamptz(6)
+  endedAt          DateTime?     @map("ended_at") @db.Timestamptz(6)
+  durationSeconds  Int?          @map("duration_seconds")
+  distanceMiles    Decimal?      @map("distance_miles") @db.Decimal
+  route            Json?
+  status           SessionStatus @default(active)
+  createdAt        DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  checkpoints      Checkpoint[]
+
+  @@map("sessions")
+}
+
+model Checkpoint {
+  id             String    @id @default(uuid()) @db.Uuid
+  sessionId      String    @map("session_id") @db.Uuid
+  selfiePath     String?   @map("selfie_path")
+  progressPath   String?   @map("progress_path")
+  capturedAt     DateTime? @map("captured_at") @db.Timestamptz(6)
+  submittedEarly Boolean   @default(false) @map("submitted_early")
+  session        Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("checkpoints")
+}

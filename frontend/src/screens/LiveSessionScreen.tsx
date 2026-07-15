@@ -9,7 +9,7 @@ import {
 } from '@expo-google-fonts/noto-sans';
 import { useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -20,6 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Compass } from '@/components/ui/Compass';
 import { SessionSetupBackChevronIcon } from '@/components/session-setup/icons/SessionSetupBackChevronIcon';
 import { LiveSessionMap } from '@/features/session-tracking/components/LiveSessionMap';
+import { MapLayerPicker } from '@/features/session-tracking/components/MapLayerPicker';
 import { TrackerActionButton } from '@/features/session-tracking/components/TrackerActionButton';
 import { LocationPinIcon } from '@/features/session-tracking/components/icons/LocationPinIcon';
 import { TrackerEndSessionIcon } from '@/features/session-tracking/components/icons/TrackerEndSessionIcon';
@@ -35,8 +36,10 @@ import { formatSubmittedCheckpointCount, shouldShowCheckpointSubmissionCount } f
 import {
   finalizeLiveSession,
   ensureLocationWatching,
+  ensureLiveSessionTicking,
   getCheckpointProgress,
   requestLiveSessionMapRecenter,
+  setLiveSessionMapLayer,
   useLiveSession,
 } from '@/features/session-tracking/liveSessionStore';
 import { useLiveWeather } from '@/features/session-tracking/hooks/useLiveWeather';
@@ -113,8 +116,9 @@ function MapToolButton({
 /** PRD §6.11 · Figma `session_setup_guide` live tracker (`251:439`). */
 export function LiveSessionScreen() {
   const router = useRouter();
-  const { elapsedSeconds, checkpointSecondsRemaining, distanceMiles, submittedCheckpoints } =
+  const { elapsedSeconds, checkpointSecondsRemaining, distanceMiles, submittedCheckpoints, mapLayer } =
     useLiveSession();
+  const [mapLayerPickerVisible, setMapLayerPickerVisible] = useState(false);
   const { mapRevealStyle, chromeStyle } = useLiveSessionMapReveal();
   const submittedCheckpointCount = submittedCheckpoints.length;
   const showSubmissionCount = shouldShowCheckpointSubmissionCount(submittedCheckpoints);
@@ -133,6 +137,7 @@ export function LiveSessionScreen() {
 
   useEffect(() => {
     void ensureLocationWatching();
+    ensureLiveSessionTicking();
   }, []);
 
   useEffect(() => {
@@ -152,7 +157,7 @@ export function LiveSessionScreen() {
       </Animated.View>
 
       <SafeAreaView style={s.overlay} edges={['top', 'bottom']} pointerEvents="box-none">
-        <Animated.View style={[s.main, chromeStyle]}>
+        <Animated.View style={[s.main, chromeStyle]} pointerEvents="box-none">
           <View style={s.navbar}>
             <TrackerBackButton onPress={() => router.replace('/')} />
 
@@ -175,8 +180,8 @@ export function LiveSessionScreen() {
             <TrackerCompassControl />
           </View>
 
-          <View style={s.inProgressSection}>
-            <View style={s.timerBlock}>
+          <View style={s.inProgressSection} pointerEvents="box-none">
+            <View style={s.timerBlock} pointerEvents="box-none">
               <View style={s.statusBadge}>
                 <PulsingDot color={C.textTertiary} size={8} />
                 <Text style={s.statusText}>IN PROGRESS</Text>
@@ -196,12 +201,24 @@ export function LiveSessionScreen() {
               </View>
             </View>
 
-            <View style={s.bottomSection}>
-              <View style={s.checkpointSection}>
+            <View style={s.bottomSection} pointerEvents="box-none">
+              <View style={s.checkpointSection} pointerEvents="box-none">
                 <View style={s.mapTools}>
-                  <MapToolButton accessibilityLabel="Map layers">
-                    <TrackerLayersIcon color={C.textTertiary} />
-                  </MapToolButton>
+                  <View style={s.mapLayerControl}>
+                    {mapLayerPickerVisible && (
+                      <MapLayerPicker
+                        currentLayer={mapLayer}
+                        onSelect={setLiveSessionMapLayer}
+                        onClose={() => setMapLayerPickerVisible(false)}
+                      />
+                    )}
+                    <MapToolButton
+                      accessibilityLabel="Map layers"
+                      onPress={() => setMapLayerPickerVisible((visible) => !visible)}
+                    >
+                      <TrackerLayersIcon color={C.textTertiary} />
+                    </MapToolButton>
+                  </View>
                   <MapToolButton
                     accessibilityLabel="Center on my location"
                     onPress={requestLiveSessionMapRecenter}
@@ -436,6 +453,11 @@ const s = StyleSheet.create({
   mapTools: {
     alignSelf: 'flex-end',
     gap: 10,
+    width: 44,
+  },
+
+  mapLayerControl: {
+    position: 'relative',
     width: 44,
   },
 

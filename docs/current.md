@@ -18,7 +18,7 @@ What runs in the repo today.
 - **Purchase confirmation (`/purchase-confirmation`)** — order mode lists cart lines; donation mode (`?mode=donation`) shows gift-only receipt + “Total Gift”; hearts animate on enter.
 - **Sessions list (`/sessions-list`)** — native `SessionsScreen` (Figma `sessions_list___hybrid_redesign`, `515:1791`): search bar, All / Approved / Under Review / Declined chips, sort dropdown (Most Recent / Oldest First / A–Z / Z–A) with chevron pointing down when closed, status-bordered session rows with badges, **View more**; row tap opens `/session-detail?id=`.
 - **Shop home (`/shop`)** — native `ShopScreen` (Figma `shop_home`, `498:606` / PRD §6.19): mission copy, donate card ($5/$10/$15/Custom), featured Trash Clean Up Kit ($29.99), category chips, 2-column product grid (Kit $29.99 under Kits/All; Tote $3 / Grabber $23.99 / Child Vest $9.99 / Adult Vest $12.99); Shop tab active; Home/Account/Sessions nav wired to `/shop`.
-- **Session detail (`/session-detail`)** — native `SessionDetailScreen` (Figma `session_detail`, `515:1848`): walking-path map via `SessionRouteMapPreview` (empty path = placeholder until tracker GPS is wired), status badge, title/date/address, hours/miles/photos stats, Photo Evidence card (4 mock thumbs; tap to enlarge), **New Session** → `/session-setup-guide`.
+- **Session detail (`/session-detail`)** — native `SessionDetailScreen` (Figma `session_detail`, `515:1848`): walking-path map via `SessionRouteMapPanel` + `useSessionRouteCoordinates` (local completed-session cache or Fly API route); pan/zoom and basemap layer picker when route exists; status badge, title/date/address, hours/miles/photos stats, Photo Evidence from checkpoint photos when cached
 ## Design ground truth
 
 - **Figma** is now the authoritative design source — [CleanUpGiveBack file](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=1-3) holds 7 flow pages (6 designed + 1 compliance spec), 46 manifest screens, and a Design System page (104 variables, 14 text styles).
@@ -28,12 +28,22 @@ What runs in the repo today.
 - The Stitch/HTML pipeline is **frozen**. No new screens will be added to `HTML_MAP` or to Stitch.
 - Migration is tracked per-screen in [`frontend/design/figma/manifest.yaml`](../frontend/design/figma/manifest.yaml): `designed` → `bound` → `implemented`.
 
+## Sessions + geolocation (implemented — Expo Go test phase)
+
+- **Supabase anonymous auth** on app launch via `AuthProvider` in `_layout.tsx` (`frontend/src/lib/supabase.ts`)
+- **Fly sessions API** client (`frontend/src/lib/api.ts`, `sessionsApi.ts`) — persists create/checkpoint/finalize when `EXPO_PUBLIC_API_URL` is set
+- **GPS + camera** live in Expo Go via `liveSessionStore` (`expo-location` BestForNavigation + filtered sampling, heading arrow + start marker on map; display-only route smoothing)
+- **WebView map** in Expo Go (MapLibre GL JS + Carto Positron) per ADR-005; user pan/zoom on live and preview maps; live tracker map layer picker (Standard / Streets / Satellite / Hybrid); native MapLibre unchanged for EAS builds
+- **Sessions list** fetches from API when configured; falls back to mocks otherwise
+- **Backend:** Fastify + Prisma in `backend/sessions/` — schema pushed to Supabase; Fly deploy pending org machine limit
+
+**Deploy API:** see [backend/sessions/README.md](../backend/sessions/README.md). After deploy, set `EXPO_PUBLIC_API_URL` in `frontend/.env`.
+
 ## Not implemented yet
 
-- Native RN screens replacing the HTML prototype in the main `frontend/src/app/` tree (migration in progress — see [`docs/frontend/specs/figma-to-native-handoff.md`](frontend/specs/figma-to-native-handoff.md)); the isolated Session Tracking slice above is a parallel exploration, not that migration
-- Backend services under `backend/` (maps, payments, session tracking APIs)
-- Real `expo-camera` wiring and a Session Detail screen (PRD §6.18); live tracker weather, GPS route, and distance are wired; backend persistence for routes still pending
-- Production auth, payments, or persistence
+- Fly.io production deploy (org machine limit hit — run `fly deploy` manually)
+- Supabase dashboard: enable Anonymous auth + run `sql/supabase-init.sql` storage policies if bucket missing
+- Production auth (email OTP), Stripe, admin approval UI
 
 ## How to run
 

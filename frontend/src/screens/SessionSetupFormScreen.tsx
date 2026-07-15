@@ -194,7 +194,7 @@ export function SessionSetupFormScreen() {
 
     setFieldErrors(EMPTY_FIELD_ERRORS);
     setShowValidationToast(false);
-    startNewLiveSession({
+    void startNewLiveSession({
       activity: activity.trim(),
       date: sessionDate,
       courtOrdered,

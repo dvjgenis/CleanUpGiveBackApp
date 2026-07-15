@@ -16,14 +16,28 @@ High-level milestones for Clean Up - Give Back.
 
 ## Next
 
+### Sessions + geolocation (Expo Go test phase)
+
+Docs complete — see [ADR-004](adr/ADR-004-sessions-backend-supabase-fly.md), [ADR-005](adr/ADR-005-expo-go-webview-map.md), [sessions-api.md](backend/specs/sessions-api.md), [session-tracking-expo-go.md](frontend/specs/session-tracking-expo-go.md), [supabase.md](supabase.md).
+
+- [x] Architecture ADRs (Supabase + Fly, Expo Go WebView map)
+- [x] Backend API spec + Supabase schema documentation
+- [x] Frontend Expo Go integration spec
+- [x] Supabase project: Prisma schema pushed; run `sql/supabase-init.sql` for storage RLS if needed
+- [x] `backend/sessions/` — Fastify + Prisma sessions API implemented
+- [ ] Deploy API to Fly.io (`fly deploy` — org machine limit may require plan upgrade)
+- [x] Frontend: `lib/supabase.ts`, `lib/api.ts`, wire `liveSessionStore` to API
+- [x] Frontend: `LiveSessionMapWebView` for Expo Go (ADR-005)
+- [ ] End-to-end test in Expo Go on physical device (after Fly deploy + `EXPO_PUBLIC_API_URL`)
+
+### Other
+
 - [ ] Bind design tokens to remaining Figma screens (compliance frames use DS components; variable binding pending)
 - [ ] **Approve and modify existing screens** — see [figma-compliance-screen-gap-audit.md](compliance/figma-compliance-screen-gap-audit.md#existing-screens-pending-approval)
-- [ ] Native session flow: location permissions, map tracker, photo checkpoints — UI built as an isolated slice (`frontend/src/features/session-tracking/`, mocked data, real map via `mapcn-react-native`); real `expo-location`/`expo-camera` wiring and integration into `frontend/src/app/` still pending
-- [ ] `backend/sessions/` — session lifecycle, evidence upload, activity log API
-- [ ] `backend/maps/` — route tracking, geofencing, map tile/provider integration
+- [x] Native session flow in `frontend/src/app/` — `expo-location`/`expo-camera` wired; GPS route + distance live in Expo Go
 - [ ] `backend/payments/` — shop checkout and donation processing
-- [ ] Replace HTML prototype screens with React Native implementations per [manifest.yaml](../frontend/design/figma/manifest.yaml) and [figma-to-native-handoff.md](frontend/specs/figma-to-native-handoff.md)
-- [ ] EAS builds with location/camera `app.json` plugins
+- [ ] Replace remaining HTML prototype screens per [manifest.yaml](../frontend/design/figma/manifest.yaml) and [figma-to-native-handoff.md](frontend/specs/figma-to-native-handoff.md)
+- [ ] EAS dev-client builds (deferred — Expo Go sufficient for session test phase; `app.json` plugins already configured)
 
 ## Privacy & compliance
 

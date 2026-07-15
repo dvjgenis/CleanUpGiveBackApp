@@ -4,20 +4,59 @@ Map and location services for live session tracking.
 
 ## Purpose
 
-Powers route display, GPS sampling, and geofencing during cleanup sessions. UI prototype exists in `live_session___refined_map_tracker.html`; native implementation is not yet wired.
+Powers route display, GPS sampling, and distance stats during cleanup sessions. Geolocation is **client-owned** for v1; the sessions API persists the finalized route polyline on session end.
 
-## Planned responsibilities
+**Map rendering:** [ADR-005](../../adr/ADR-005-expo-go-webview-map.md)  
+**Persistence:** [sessions.md](sessions.md) / [sessions-api.md](../specs/sessions-api.md)
 
-- Stream or batch GPS coordinates during an active session — **wired in app** via `liveSessionStore` (`watchPositionAsync`, route polyline, haversine distance)
-- Render route polyline and session stats
+## Responsibilities
+
+### Client (implemented)
+
+- GPS sampling during active sessions via `liveSessionStore` (`expo-location` `watchPositionAsync` at `BestForNavigation`, accuracy/speed filtering, 3m sample threshold)
+- Route display smoothing via `smoothRouteForDisplay()` (map only; stored distance uses filtered raw points)
+- Live map markers: gray start point, green heading arrow; preview maps: start + end markers
+- Location watching stops when session ends (`endLiveSession`)
+- Live weather + reverse geocoding via [Open-Meteo](https://open-meteo.com/) (no API key) — `useLiveWeather.ts`
+- Foreground location permission via `expo-location` plugin in `app.json`
+
+### Map rendering (three tiers)
+
+| Runtime | Component | Tiles |
+|---------|-----------|-------|
+| Expo Go | `LiveSessionMapWebView` (planned) | MapLibre GL JS + Carto Positron (CDN); layer picker: Standard, Streets, Satellite (Esri), Hybrid (Esri + labels) |
+| EAS dev-client / native | `LiveSessionMapNative` | MapLibre RN + same layer options |
+| Web | Placeholder fallback | N/A |
+
+Read-only route previews: `SessionRouteMapPreview` (+ planned WebView variant for Expo Go).
+
+### Server (planned)
+
+- Store finalized route as jsonb `[[lng, lat], …]` on `PATCH /sessions/:id/finalize`
+- No real-time GPS streaming to server in v1
+- No separate `backend/maps/` microservice for test phase
+
+### Deferred
+
 - Geofence validation for checkpoint zones
-- Map provider abstraction (tiles, geocoding)
+- Google Maps / Mapbox provider abstraction
+- Background location tasks (explicitly out of scope — session-only foreground tracking per privacy baseline)
 
 ## Integrations
 
-- Map provider TBD — see [accounts-and-access.md](../../accounts-and-access.md)
-- Frontend: `expo-location` + map component; live tracker weather via [Open-Meteo](https://open-meteo.com/) (current temperature + reverse geocoding, no API key)
+- **Map tiles:** Carto Positron via MapLibre — no API key ([accounts-and-access.md](../../accounts-and-access.md))
+- **Weather:** Open-Meteo — no API key
+- **Frontend:** `expo-location`, `react-native-webview` (Expo Go map), `@maplibre/maplibre-react-native` (native builds)
+- **Backend:** route persistence via sessions API only
 
-## Code
+## Policies
 
-- `backend/maps/` — service scaffold (empty)
+- No Google Cloud Maps API key required for session tracking v1
+- GPS collected only during active sessions (foreground, when-in-use permission)
+- Route data subject to retention policy in [privacy-and-data-rights.md](../specs/privacy-and-data-rights.md)
+
+## Related
+
+- Code: `frontend/src/features/session-tracking/liveSessionStore.ts`, `components/LiveSessionMap.tsx`, `utils/geo.ts`
+- `backend/maps/` — scaffold only; folded into sessions domain for v1
+- Frontend spec: [session-tracking-expo-go.md](../../frontend/specs/session-tracking-expo-go.md)

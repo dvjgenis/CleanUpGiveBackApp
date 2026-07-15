@@ -1,5 +1,12 @@
 import type { ImageSource } from 'expo-image';
 
+import { getCachedCompletedSession } from '@/features/session-tracking/completedSessionCache';
+import type { CompletedSessionSnapshot } from '@/features/session-tracking/liveSessionStore';
+import {
+  formatSessionDateLabel,
+  formatSessionTimeRange,
+  resolveSessionDurationSeconds,
+} from '@/features/session-tracking/utils/sessionFormat';
 import type { RouteCoordinate } from '@/features/session-tracking/utils/geo';
 
 import { mockSessionsList, type SessionApprovalStatus } from './sessions';
@@ -152,8 +159,47 @@ export function sessionStatusBadgeLabel(status: SessionApprovalStatus): string {
   return statusLabel(status);
 }
 
+function detailFromCompletedSnapshot(
+  snapshot: CompletedSessionSnapshot,
+  id: string,
+): SessionDetailData {
+  const durationSeconds = resolveSessionDurationSeconds({
+    startedAt: snapshot.startedAt,
+    endedAt: snapshot.endedAt,
+    elapsedSeconds: snapshot.elapsedSeconds,
+  });
+
+  const evidencePhotos: SessionEvidencePhoto[] = snapshot.submittedCheckpoints.map(
+    (checkpoint, index) => ({
+      id: checkpoint.id,
+      source: { uri: checkpoint.selfieUri },
+      caption: `Checkpoint photo ${index + 1} of ${snapshot.submittedCheckpoints.length}`,
+    }),
+  );
+
+  return {
+    id,
+    title: snapshot.setup.activity,
+    status: 'pending',
+    dateTimeLabel: `${formatSessionDateLabel(snapshot.startedAt)} · ${formatSessionTimeRange(snapshot.startedAt, snapshot.endedAt)}`,
+    locationAddress: DEFAULT_DETAIL.locationAddress,
+    hoursLabel: (durationSeconds / 3600).toFixed(1),
+    milesLabel: snapshot.distanceMiles.toFixed(1),
+    photosCountLabel: String(snapshot.submittedCheckpoints.length),
+    routeCoordinates: snapshot.routeCoordinates,
+    evidencePhotos,
+  };
+}
+
 /** Resolves session detail for a list row id, falling back to the Figma default mock. */
 export function getSessionDetail(id?: string): SessionDetailData {
+  if (id) {
+    const cached = getCachedCompletedSession(id);
+    if (cached) {
+      return detailFromCompletedSnapshot(cached, id);
+    }
+  }
+
   if (!id) {
     return DEFAULT_DETAIL;
   }
