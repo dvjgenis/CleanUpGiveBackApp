@@ -1,8 +1,11 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
-import { createSecretKey } from 'node:crypto';
-import { jwtVerify } from 'jose';
+import { createRemoteJWKSet, jwtVerify } from 'jose';
 
-const JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
+const SUPABASE_URL = (process.env.SUPABASE_URL ?? '').replace(/\/$/, '');
+
+const JWKS = SUPABASE_URL
+  ? createRemoteJWKSet(new URL(`${SUPABASE_URL}/auth/v1/.well-known/jwks.json`))
+  : null;
 
 export type AuthenticatedRequest = FastifyRequest & {
   userId: string;
@@ -12,8 +15,8 @@ export async function verifyAuth(
   request: FastifyRequest,
   reply: FastifyReply,
 ): Promise<void> {
-  if (!JWT_SECRET) {
-    reply.code(500).send({ error: 'Server misconfigured: missing JWT secret' });
+  if (!JWKS || !SUPABASE_URL) {
+    reply.code(500).send({ error: 'Server misconfigured: missing SUPABASE_URL' });
     return;
   }
 
@@ -26,9 +29,8 @@ export async function verifyAuth(
   const token = header.slice('Bearer '.length);
 
   try {
-    const key = createSecretKey(Buffer.from(JWT_SECRET, 'utf8'));
-    const { payload } = await jwtVerify(token, key, {
-      algorithms: ['HS256'],
+    const { payload } = await jwtVerify(token, JWKS, {
+      issuer: `${SUPABASE_URL}/auth/v1`,
     });
 
     const sub = payload.sub;

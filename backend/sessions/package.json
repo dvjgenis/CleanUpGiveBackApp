@@ -17,6 +17,7 @@
     "jose": "^6.0.11"
   },
   "devDependencies": {
+    "@flydotio/dockerfile": "^0.7.10",
     "@types/node": "^22.15.0",
     "prisma": "^6.9.0",
     "tsx": "^4.19.4",

@@ -1,8 +1,12 @@
+# fly.toml app configuration file generated for cleanup-sessions on 2026-07-15T14:31:20-05:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
 app = 'cleanup-sessions'
 primary_region = 'ord'
 
 [build]
-
 [http_service]
   internal_port = 8080
   force_https = true
@@ -21,3 +25,4 @@ primary_region = 'ord'
   memory = '256mb'
   cpu_kind = 'shared'
   cpus = 1
+  memory_mb = 256

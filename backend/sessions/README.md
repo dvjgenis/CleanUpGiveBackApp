@@ -9,13 +9,15 @@ Fastify + Prisma sessions service for Clean Up - Give Back.
 
 ```bash
 cd backend/sessions
-cp .env.example .env   # fill DATABASE_URL + SUPABASE_JWT_SECRET
+cp .env.example .env   # fill DATABASE_URL + SUPABASE_URL
 npm install
 npx prisma db push
 npm run dev
 ```
 
 ## Deploy to Fly.io
+
+Production: `https://cleanup-sessions.fly.dev`
 
 ```bash
 export PATH="$HOME/.fly/bin:$PATH"
@@ -26,11 +28,12 @@ fly launch --name cleanup-sessions --region ord --copy-config --yes   # first ti
 
 fly secrets set \
   SUPABASE_URL="https://YOUR_PROJECT.supabase.co" \
-  SUPABASE_JWT_SECRET="..." \
   DATABASE_URL="postgresql://postgres:...@db....supabase.co:5432/postgres"
 
 fly deploy
 ```
+
+Auth verifies Supabase JWTs via JWKS (`/auth/v1/.well-known/jwks.json`) — ES256 signing keys. Use **Supabase Postgres** for `DATABASE_URL`, not Fly Managed Postgres.
 
 After deploy, set `EXPO_PUBLIC_API_URL=https://cleanup-sessions.fly.dev` in `frontend/.env`.
 
