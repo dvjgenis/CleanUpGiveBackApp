@@ -81,17 +81,13 @@ Set after `fly auth login` and first deploy:
 ```bash
 fly secrets set \
   SUPABASE_URL="https://YOUR_PROJECT_REF.supabase.co" \
-  SUPABASE_SERVICE_ROLE_KEY="YOUR_SERVICE_ROLE_KEY" \
-  SUPABASE_JWT_SECRET="YOUR_JWT_SECRET" \
   DATABASE_URL="postgresql://postgres:YOUR_PASSWORD@db.YOUR_PROJECT_REF.supabase.co:5432/postgres"
 ```
 
 | Secret | Source |
 |--------|--------|
-| `SUPABASE_URL` | Same as frontend Project URL |
-| `SUPABASE_SERVICE_ROLE_KEY` | Settings → API → service_role (server only) |
-| `SUPABASE_JWT_SECRET` | Settings → API → JWT Settings → JWT Secret |
-| `DATABASE_URL` | Settings → Database → Connection string → URI |
+| `SUPABASE_URL` | Same as frontend Project URL — used for JWKS JWT verification |
+| `DATABASE_URL` | Settings → Database → Connection string → URI (Supabase Postgres) |
 
 Store real values in `credentials.local.md` (gitignored) or a password manager — **not** in `docs/`.
 

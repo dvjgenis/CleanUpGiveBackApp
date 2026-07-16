@@ -1,13 +1,12 @@
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import {
-  EyeOffIcon,
-  EyeOpenIcon,
   WelcomeBurstIcon,
   WelcomeLogoMark,
   WelcomeUnderline,
 } from '@/components/onboarding/OnboardingIcons';
 import { markOnboardingComplete } from '@/features/onboarding/onboardingStore';
 import { colors as C, radius } from '@/features/figma-screens/tokens';
+import { Ionicons } from '@expo/vector-icons';
 import {
   IBMPlexSans_400Regular,
 } from '@expo-google-fonts/ibm-plex-sans';
@@ -121,10 +120,11 @@ export function WelcomeScreen() {
                 accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
                 hitSlop={8}
               >
-                {showPassword
-                  ? <EyeOpenIcon size={20} color="rgba(252,249,248,0.8)" />
-                  : <EyeOffIcon size={20} color="rgba(252,249,248,0.8)" />
-                }
+                <Ionicons
+                  name={showPassword ? 'eye' : 'eye-off'}
+                  size={20}
+                  color="rgba(252,249,248,0.8)"
+                />
               </Pressable>
             </View>
           </View>

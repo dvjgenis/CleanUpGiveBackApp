@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -18,7 +18,6 @@ import {
 } from '../components/SessionsIcons';
 import {
   filterMatchesStatus,
-  mockSessionsList,
   SESSION_FILTER_CHIPS,
   SESSION_SORT_OPTIONS,
   sortSessions,
@@ -200,34 +199,40 @@ export function SessionsScreen() {
   const [sortOpen, setSortOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [apiSessions, setApiSessions] = useState<SessionListItem[] | null>(null);
+  const [loadState, setLoadState] = useState<'idle' | 'loading' | 'error' | 'ready'>(
+    isApiConfigured ? 'loading' : 'ready',
+  );
 
-  useEffect(() => {
+  const loadSessions = useCallback(() => {
     if (!isApiConfigured) {
+      setApiSessions([]);
+      setLoadState('ready');
       return;
     }
 
-    let cancelled = false;
+    setLoadState('loading');
 
     listSessions()
       .then((sessions) => {
-        if (!cancelled) {
-          setApiSessions(
-            sessions
-              .filter((session) => session.status !== 'active')
-              .map(mapApiSessionToListItem),
-          );
-        }
+        setApiSessions(
+          sessions
+            .filter((session) => session.status !== 'active')
+            .map(mapApiSessionToListItem),
+        );
+        setLoadState('ready');
       })
       .catch((error) => {
         console.warn('[sessions] list fetch failed:', error);
+        setApiSessions([]);
+        setLoadState('error');
       });
-
-    return () => {
-      cancelled = true;
-    };
   }, []);
 
-  const sessionSource = apiSessions ?? mockSessionsList;
+  useEffect(() => {
+    loadSessions();
+  }, [loadSessions]);
+
+  const sessionSource = isApiConfigured ? (apiSessions ?? []) : [];
 
   const filteredSessions = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -297,8 +302,30 @@ export function SessionsScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {filteredSessions.length === 0 ? (
-          <Text style={s.emptyText}>No sessions match your filter.</Text>
+        {loadState === 'loading' ? (
+          <View style={s.loadingWrap}>
+            <ActivityIndicator color={colors.primary} />
+            <Text style={s.emptyText}>Loading sessions…</Text>
+          </View>
+        ) : loadState === 'error' ? (
+          <View style={s.loadingWrap}>
+            <Text style={s.emptyText}>Unable to load sessions.</Text>
+            <AnimatedPressable
+              scaleTo={0.98}
+              onPress={loadSessions}
+              accessibilityRole="button"
+              accessibilityLabel="Retry loading sessions"
+              style={s.retryButton}
+            >
+              <Text style={s.retryLabel}>Try again</Text>
+            </AnimatedPressable>
+          </View>
+        ) : filteredSessions.length === 0 ? (
+          <Text style={s.emptyText}>
+            {sessionSource.length === 0
+              ? 'No sessions yet.'
+              : 'No sessions match your filter.'}
+          </Text>
         ) : (
           <View style={s.rows}>
             {filteredSessions.map((session) => (
@@ -533,6 +560,20 @@ const s = StyleSheet.create({
     color: colors.textNavInactive,
     textAlign: 'center',
     paddingVertical: 24,
+  },
+  loadingWrap: {
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 24,
+  },
+  retryButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  retryLabel: {
+    fontFamily: fontFamilies.notoSansSemiBold,
+    fontSize: 14,
+    color: colors.primary,
   },
   viewMore: {
     alignItems: 'center',

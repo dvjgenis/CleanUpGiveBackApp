@@ -25,10 +25,12 @@ Docs complete — see [ADR-004](adr/ADR-004-sessions-backend-supabase-fly.md), [
 - [x] Frontend Expo Go integration spec
 - [x] Supabase project: Prisma schema pushed; run `sql/supabase-init.sql` for storage RLS if needed
 - [x] `backend/sessions/` — Fastify + Prisma sessions API implemented
-- [ ] Deploy API to Fly.io (`fly deploy` — org machine limit may require plan upgrade)
+- [x] Deploy API to Fly.io (`fly deploy` — live at `https://cleanup-sessions.fly.dev`)
 - [x] Frontend: `lib/supabase.ts`, `lib/api.ts`, wire `liveSessionStore` to API
 - [x] Frontend: `LiveSessionMapWebView` for Expo Go (ADR-005)
-- [ ] End-to-end test in Expo Go on physical device (after Fly deploy + `EXPO_PUBLIC_API_URL`)
+- [x] API smoke test: create/finalize/list against production (Supabase Postgres)
+- [x] Remove placeholder session mocks from production UI (`SessionsScreen`, `SessionDetailScreen`)
+- [ ] End-to-end test in Expo Go on physical device (force-quit persistence — AC-18; API verified via smoke test)
 
 ### Other
 

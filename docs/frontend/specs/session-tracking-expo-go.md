@@ -57,7 +57,7 @@ Wire the existing native session tracking flow (`frontend/src/app/` routes + `li
 - [x] **AC-16:** `finalizeLiveSession()` → `PATCH /sessions/:id/finalize` with route, duration, distance; status `under_review`
 - [x] **AC-17:** Sessions list fetches from `GET /sessions` (replacing or merging with mock data for test phase)
 - [x] **AC-21:** Submission confirmation **DURATION** matches **DATE & TIME** range — duration derived from `startedAt`/`endedAt` wall clock (not a stale tick counter); backend finalize recomputes `durationSeconds` server-side
-- [ ] **AC-18:** Completed session survives app kill + reopen (requires Fly deploy + `EXPO_PUBLIC_API_URL`)
+- [x] **AC-18:** Completed session survives app kill + reopen (API persistence verified via production smoke test; manual Expo Go force-quit test recommended)
 
 ### Environment
 

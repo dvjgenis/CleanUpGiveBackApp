@@ -16,6 +16,10 @@ function mapApiStatus(status: ApiSession['status']): SessionApprovalStatus {
   }
 }
 
+export function mapApiStatusToApproval(status: ApiSession['status']): SessionApprovalStatus {
+  return mapApiStatus(status);
+}
+
 function formatDateLabel(iso: string | null): string {
   if (!iso) {
     return '—';
