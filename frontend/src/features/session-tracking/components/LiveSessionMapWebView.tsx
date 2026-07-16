@@ -2,20 +2,25 @@ import { useEffect, useRef } from 'react';
 import { StyleSheet } from 'react-native';
 import { WebView } from 'react-native-webview';
 
-import {
-  getLiveSessionMapCenter,
-  useLiveSession,
-} from '../liveSessionStore';
+import { useLiveSession } from '../liveSessionStore';
 import { colors, radius } from '../tokens';
-import { getMapStylePayload } from '../utils/mapStyles';
+import { getMapStylePayload, type MapLayerType } from '../utils/mapStyles';
 import { buildWebViewMapHelpers } from '../utils/webViewMapHelpers';
 import { MapInteractionContainer } from './MapInteractionContainer';
 
 const PRIMARY = colors.primary;
 const START_COLOR = colors.textTertiary;
 const MAP_HELPERS = buildWebViewMapHelpers(PRIMARY, START_COLOR);
+/** Raster layers worth prefetching in the background — 'standard' is a
+ * vector style URL (not raster tiles), so it's not a prefetch candidate. */
+const OTHER_PREFETCHABLE_LAYERS: MapLayerType[] = ['satellite', 'hybrid'];
+/** Gives the initial route/marker push priority for bandwidth before
+ * kicking off background tile prefetching for other layers. */
+const PREFETCH_DELAY_MS = 2500;
 
-function buildHtml() {
+function buildHtml(initialCenter: [number, number] | null) {
+  const center = initialCenter ? JSON.stringify(initialCenter) : '[-98,39]';
+  const zoom = initialCenter ? 15 : 3;
   return `<!doctype html>
 <html>
 <head>
@@ -29,16 +34,28 @@ function buildHtml() {
 <script>
   const map = new maplibregl.Map({
     container: 'map',
-    style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
-    center: [-98, 39],
-    zoom: 3,
+    style: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
+    center: ${center},
+    zoom: ${zoom},
     attributionControl: false,
   });
+  // MapLibre caches the canvas size at creation time and does not recompute
+  // it on its own. The WebView's container settles to its final layout size
+  // a beat after this script first runs, and moving/rotating the phone can
+  // resize it again later — without an explicit resize(), map.project()
+  // keeps using the stale size, so every marker drifts away from where it's
+  // actually rendered. Keep MapLibre's internal size in sync with the real
+  // container box at all times.
+  const mapResizeObserver = new ResizeObserver(() => { map.resize(); });
+  mapResizeObserver.observe(document.getElementById('map'));
+  window.addEventListener('orientationchange', () => { setTimeout(() => map.resize(), 100); });
   let routeAdded = false;
   let startMarker = null;
   let currentMarker = null;
   let currentMarkerElement = null;
-  let hasInitialCentered = false;
+  // Pre-seeded to true when the HTML itself already starts at the user's location,
+  // so the first updateRoute call doesn't double-snap the viewport.
+  let hasInitialCentered = ${initialCenter ? 'true' : 'false'};
   let lastRecenterToken = 0;
   let pendingCoords = [];
   let pendingCurrent = null;
@@ -49,7 +66,7 @@ function buildHtml() {
   ${MAP_HELPERS}
 
   function syncMarkers(coords, current, heading) {
-    const start = coords && coords.length > 0 ? coords[0] : null;
+    const start = coords && coords.length >= 2 ? coords[0] : null;
     if (start) {
       if (!startMarker) {
         startMarker = new maplibregl.Marker({ element: createStartMarkerElement(), anchor: 'center' })
@@ -58,6 +75,9 @@ function buildHtml() {
       } else {
         startMarker.setLngLat(start);
       }
+    } else if (startMarker) {
+      startMarker.remove();
+      startMarker = null;
     }
 
     if (current && current.length === 2) {
@@ -135,9 +155,8 @@ function buildHtml() {
 
   window.setMapStyle = function(stylePayload) {
     routeAdded = false;
-    startMarker = null;
-    currentMarker = null;
-    currentMarkerElement = null;
+    if (startMarker) { startMarker.remove(); startMarker = null; }
+    if (currentMarker) { currentMarker.remove(); currentMarker = null; currentMarkerElement = null; }
     const style = stylePayload.type === 'url' ? stylePayload.value : stylePayload.value;
     map.setStyle(style);
     map.once('style.load', () => {
@@ -148,7 +167,20 @@ function buildHtml() {
         pendingRecenterToken,
         pendingFollowEnabled,
       );
+      // A style swap with no accompanying camera move (the common case once
+      // the map is already centered) leaves nothing to trigger a WebGL
+      // repaint, and RN's WebView on iOS can leave the newly-added marker
+      // DOM committed-but-unpainted until the next user touch forces a
+      // compositing pass. map.resize() forces that repaint immediately,
+      // the same way the ResizeObserver above already does for real
+      // container-size changes, so the marker shows up without a tap.
+      map.resize();
+      map.triggerRepaint();
     });
+  };
+
+  window.prefetchLayerTiles = function(stylePayloads) {
+    (stylePayloads || []).forEach(prefetchRasterStyleTiles);
   };
 </script>
 </body>
@@ -164,6 +196,7 @@ export function LiveSessionMapWebView({ style }: Props) {
   const {
     routeCoordinates,
     displayCoordinate,
+    currentCoordinate,
     currentHeading,
     mapRecenterToken,
     mapFollowEnabled,
@@ -172,13 +205,20 @@ export function LiveSessionMapWebView({ style }: Props) {
   const webRef = useRef<WebView>(null);
   const readyRef = useRef(false);
 
+  // Capture the best available position at mount time so the HTML itself starts
+  // centered on the user — prevents the USA-map flash on first open.
+  const htmlRef = useRef<string | null>(null);
+  if (htmlRef.current === null) {
+    const center = displayCoordinate ?? currentCoordinate ?? routeCoordinates[0] ?? null;
+    htmlRef.current = buildHtml(center as [number, number] | null);
+  }
+
   const pushRouteUpdate = () => {
     if (!readyRef.current || !webRef.current) {
       return;
     }
 
-    const center = displayCoordinate ?? getLiveSessionMapCenter();
-    const script = `window.updateRoute(${JSON.stringify(routeCoordinates)}, ${JSON.stringify(center)}, ${currentHeading ?? 'null'}, ${mapRecenterToken}, ${mapFollowEnabled}); true;`;
+    const script = `window.updateRoute(${JSON.stringify(routeCoordinates)}, ${JSON.stringify(displayCoordinate)}, ${currentHeading ?? 'null'}, ${mapRecenterToken}, ${mapFollowEnabled}); true;`;
     webRef.current.injectJavaScript(script);
   };
 
@@ -189,6 +229,28 @@ export function LiveSessionMapWebView({ style }: Props) {
 
     const stylePayload = getMapStylePayload(mapLayer);
     const script = `window.setMapStyle(${JSON.stringify(stylePayload)}); true;`;
+    webRef.current.injectJavaScript(script);
+  };
+
+  // Warm the tile cache for the layers the user hasn't picked yet — Hybrid
+  // in particular layers three separate Esri raster sources at once, so
+  // switching to it "cold" is noticeably slower than the CDN-backed
+  // standard basemap. Fetching them quietly in the background shortly
+  // after load means the actual layer switch later just repaints from
+  // cache instead of waiting on the network. Delayed so it doesn't compete
+  // with the initial map/route load for bandwidth.
+  const prefetchOtherLayers = () => {
+    if (!webRef.current) {
+      return;
+    }
+
+    const otherLayers = OTHER_PREFETCHABLE_LAYERS.filter((layer) => layer !== mapLayer);
+    if (otherLayers.length === 0) {
+      return;
+    }
+
+    const payloads = otherLayers.map((layer) => getMapStylePayload(layer));
+    const script = `window.prefetchLayerTiles(${JSON.stringify(payloads)}); true;`;
     webRef.current.injectJavaScript(script);
   };
 
@@ -210,7 +272,7 @@ export function LiveSessionMapWebView({ style }: Props) {
         domStorageEnabled
         scrollEnabled={false}
         nestedScrollEnabled
-        source={{ html: buildHtml() }}
+        source={{ html: htmlRef.current! }}
         onMessage={(event) => {
           if (event.nativeEvent.data === 'ready') {
             readyRef.current = true;
@@ -218,6 +280,7 @@ export function LiveSessionMapWebView({ style }: Props) {
               pushStyleUpdate();
             }
             pushRouteUpdate();
+            setTimeout(prefetchOtherLayers, PREFETCH_DELAY_MS);
           }
         }}
       />

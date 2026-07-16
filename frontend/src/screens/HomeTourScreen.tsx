@@ -65,6 +65,7 @@ export function HomeTourScreen() {
           variant="light"
           onContinue={() => router.push('/shop-tour')}
           onPrevious={() => router.back()}
+          hidePrevious
         />
       </SafeAreaView>
     </View>

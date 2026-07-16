@@ -54,7 +54,8 @@
         {
           "cameraPermission": "Allow Clean Up Give Back to use your camera for photo checkpoints during cleanup sessions."
         }
-      ]
+      ],
+      "expo-notifications"
     ],
     "experiments": {
       "typedRoutes": true,

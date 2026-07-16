@@ -16,9 +16,8 @@ import {
   PrivacyRowIcon,
   RequestDataIcon,
 } from '../components/AccountIcons';
-import { colors, fontFamilies, radius } from '../tokens';
+import { layout, colors, fontFamilies, radius } from '../tokens';
 
-const BOTTOM_NAV_HEIGHT = 64;
 
 type NavRowProps = {
   label: string;
@@ -69,7 +68,7 @@ export function AccountPrivacyScreen() {
   const { isActive } = useLiveSession();
 
   const bottomInset = Math.max(insets.bottom, 0);
-  const scrollBottomPad = bottomInset + BOTTOM_NAV_HEIGHT + 48;
+  const scrollBottomPad = bottomInset + layout.bottomNavHeight + 48;
 
   return (
     <View style={s.root}>

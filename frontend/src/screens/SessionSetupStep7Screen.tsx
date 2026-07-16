@@ -11,12 +11,15 @@ import {
 import { Sanchez_400Regular } from '@expo-google-fonts/sanchez';
 import { useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
-import { requestSessionCameraPermission } from '@/utils/sessionPermissions';
+import {
+  isSessionCameraPermissionGranted,
+  requestSessionCameraPermission,
+} from '@/utils/sessionPermissions';
 import { colors as C } from '@/constants/tokens';
 
 
@@ -37,6 +40,7 @@ function ProgressPills({ total = 6, active = 5 }: { total?: number; active?: num
 export function SessionSetupStep7Screen() {
   const router = useRouter();
   const [isRequesting, setIsRequesting] = useState(false);
+  const [isCheckingPermission, setIsCheckingPermission] = useState(true);
 
   const [fontsLoaded] = useFonts({
     Sanchez_400Regular,
@@ -47,6 +51,33 @@ export function SessionSetupStep7Screen() {
 
   const goToComplete = useCallback(() => {
     router.push('/session-setup-complete');
+  }, [router]);
+
+  // Camera was already granted (e.g. during onboarding) — nothing to ask,
+  // skip straight to the session-setup-complete step.
+  useEffect(() => {
+    let isMounted = true;
+
+    void isSessionCameraPermissionGranted()
+      .then((granted) => {
+        if (!isMounted) {
+          return;
+        }
+        if (granted) {
+          router.replace('/session-setup-complete');
+          return;
+        }
+        setIsCheckingPermission(false);
+      })
+      .catch(() => {
+        if (isMounted) {
+          setIsCheckingPermission(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, [router]);
 
   const handleEnableCamera = useCallback(async () => {
@@ -63,7 +94,7 @@ export function SessionSetupStep7Screen() {
     }
   }, [goToComplete, isRequesting]);
 
-  if (!fontsLoaded) {
+  if (!fontsLoaded || isCheckingPermission) {
     return <View style={s.root} />;
   }
 

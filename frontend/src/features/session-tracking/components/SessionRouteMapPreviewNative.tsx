@@ -3,7 +3,12 @@ import { StyleSheet } from 'react-native';
 import { Map, MapMarker, MapRoute } from '@/components/ui/map';
 
 import { colors, radius } from '../tokens';
-import { DEFAULT_MAP_LAYER, getNativeMapStyle, type MapLayerType } from '../utils/mapStyles';
+import {
+  DEFAULT_MAP_LAYER,
+  getNativeMapStyle,
+  getReplayStartMarkerColors,
+  type MapLayerType,
+} from '../utils/mapStyles';
 import {
   getRouteMapCenter,
   getRouteMapZoom,
@@ -31,6 +36,7 @@ export function SessionRouteMapPreviewNative({
   const routeEnd = routeCoordinates[routeCoordinates.length - 1] ?? null;
   const mapStyle = getNativeMapStyle(mapLayer);
   const displayRoute = simplifyRouteForDisplay(routeCoordinates);
+  const startColors = getReplayStartMarkerColors(mapLayer);
 
   return (
     <MapInteractionContainer style={[styles.container, style]}>
@@ -47,7 +53,7 @@ export function SessionRouteMapPreviewNative({
 
         {routeStart && (
           <MapMarker longitude={routeStart[0]} latitude={routeStart[1]}>
-            <SessionStartMarker />
+            <SessionStartMarker color={startColors.fill} borderColor={startColors.border} />
           </MapMarker>
         )}
 

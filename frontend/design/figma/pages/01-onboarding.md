@@ -4,7 +4,7 @@
 **Figma node:** [`627:29`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=627-29)  
 **Token binding status:** ✅ All text nodes bound — color variables + typography primitives (verified 2026-06-30 text-token sweep; 139 text layers).
 
-## Screens (9)
+## Screens (11+)
 
 | Route key | PRD § | Figma node | Legacy HTML key | Status |
 |-----------|-------|------------|----------------|--------|
@@ -15,6 +15,8 @@
 | `create-account` | 6.2 | [`105:2`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=105-2) | `create_account___standardized_progress` | implemented |
 | `creating-account` | 6.2 | [`137:73`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=137-73) | — | implemented |
 | `account-details` | 6.3 | [`112:6882`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=112-6882) | `account_details___standardized_progress` | implemented |
+| `location-permission` | 6.3 | [`725:553`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=725-553) | — | implemented |
+| `camera-permission` | 6.3 | [`725:613`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=725-613) | — | implemented |
 | `notification-preference` | 6.4 | [`112:7130`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=112-7130) | `notification_preference___standardized_redo` | implemented |
 | `setup-complete` | 6.5 | [`133:93`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=133-93) | `setup_complete` | implemented |
 | `home-tour` | 6.6 | [`137:527`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=137-527) | `coachmark_tutorial` | implemented |
@@ -48,16 +50,17 @@ welcome
       → account-phone → account-details
         → under-age if birthday < 18
           → under-age-learn-why (Learn why)
-        → notification-preference (Continue)
-          → setup-complete (Enable / Not now)
-            → home-tour → shop-tour → track-tour → session-tour → set-tour
-              → Go Home → `/`  |  Start Tracking → `/session-setup-guide`  |  Replay → home-tour
+        → location-permission → camera-permission
+          → notification-preference
+            → setup-complete (Enable / Not now)
+              → home-tour → shop-tour → track-tour → session-tour → set-tour
+                → Go Home → `/`  |  Start Tracking → `/session-setup-guide`  |  Replay → home-tour
 ```
 
 ## Notes
 
 - `creating_account` (137:73) plays after Create Account CTAs: linear progress bar (~4.2s) with rotating Did-you-know facts, then replaces to account-phone.
-- Progress pills appear across Create Account → Account Details → Notification Preference (5-step bar; steps 3–4 unused until intermediate frames ship).
+- Progress pills (5-step): create-account (1) → account-phone / account-details (2) → location-permission (3) → camera-permission (4) → notification-preference (5). Enable/Not now on permissions advance; Previous uses `router.back()`.
 - Coachmark tutorial is the native 5-screen tour (`home_tour` → `set_tour`); setup-complete Continue starts the tour and marks onboarding complete.
 - Token binding was performed in the 2026-06-30 session; see `PROGRESS.md` for details.
 - `welcome.html` (no suffix) is the retired Stitch original — do not implement.

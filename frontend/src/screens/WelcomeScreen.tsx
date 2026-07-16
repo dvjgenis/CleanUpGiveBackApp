@@ -76,14 +76,14 @@ export function WelcomeScreen() {
               <WelcomeBurstIcon size={16} />
             </View>
             <View style={s.titleTextWrap}>
-              <View style={s.titleLine}>
+              <Text style={s.titleRow} numberOfLines={1}>
                 <Text style={[s.title, s.titleWhite]}>Track your service. </Text>
-                <Text style={[s.title, s.titleLime]}>Prove your </Text>
-                <View style={s.impactWord}>
-                  <Text style={[s.title, s.titleLime]}>impact.</Text>
-                  <View style={s.underlineWrap} pointerEvents="none">
-                    <WelcomeUnderline width={83} height={7} />
-                  </View>
+                <Text style={[s.title, s.titleLime]}>Prove your</Text>
+              </Text>
+              <View style={s.impactWord}>
+                <Text style={[s.title, s.titleLime]}>impact.</Text>
+                <View style={s.underlineWrap} pointerEvents="none">
+                  <WelcomeUnderline width={83} height={7} />
                 </View>
               </View>
             </View>
@@ -223,15 +223,15 @@ const s = StyleSheet.create({
     marginLeft: 10.5,
     marginTop: 5,
   },
-  titleLine: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'flex-start',
+  titleRow: {
+    fontFamily: 'Sanchez_400Regular',
+    fontSize: 22,
+    lineHeight: 28,
   },
   title: {
     fontFamily: 'Sanchez_400Regular',
-    fontSize: 24,
-    lineHeight: 30,
+    fontSize: 22,
+    lineHeight: 28,
   },
   titleWhite: {
     color: C.bgApp,

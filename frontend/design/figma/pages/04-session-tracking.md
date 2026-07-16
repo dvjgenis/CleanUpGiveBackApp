@@ -30,7 +30,7 @@ home → session-setup (Track FAB)
 
 ## Notes
 
-- **Permission screens** (`location_permission` `728:639`, `camera_permission` `728:658`) — title uses Sanchez Regular **30px** (matches `session_setup_guide` header `Description` text; not Display/Hero 34px).
-- Permission screens also exist on Page 1 Onboarding (`725:553`, `725:613`) for flow prototyping.
+- **Permission screens** (`location_permission` `728:639`, `camera_permission` `728:658`) — title uses Sanchez Regular **30px** (matches `session_setup_guide` header `Description` text; not Display/Hero 34px). Implemented as `/session-setup-step6` / `/session-setup-step7`.
+- Onboarding copies of the same frames live at `/location-permission` (`725:553`) and `/camera-permission` (`725:613`) in the create-account flow.
 - `submission_confirmation___refined_design` is the retired duplicate of `submission_confirmation___prd_aligned`.
 - Session Review (PRD §6.14) is a generated screen in `prototype/screens/session/SessionReview.tsx` — no Figma frame yet.

@@ -12,7 +12,7 @@ import {
   getCheckpointProgress,
   useLiveSession,
 } from '@/features/session-tracking/liveSessionStore';
-import { resetRecentSessions, useRecentSessions } from '@/features/session-tracking/recentSessionsStore';
+import { useRecentSessions } from '@/features/session-tracking/recentSessionsStore';
 
 import { EventsViewAllModal } from '../components/EventsViewAllModal';
 import { RecentSessionCard } from '../components/RecentSessionCard';
@@ -31,36 +31,40 @@ import type { HomeDashboardData, ImpactStat } from '../mocks/home.types';
 import { getTimeOfDayGreeting } from '../utils/getTimeOfDayGreeting';
 import { formatEventMonthLabel } from '../utils/eventFormat';
 import { getCurrentWeekMeta } from '../utils/weekCalendar';
-import { colors, fontFamilies, radius as R, shadows } from '../tokens';
+import { layout, colors, fontFamilies, radius as R, shadows } from '../tokens';
 
-const CHART_MAX = 200;
 const CHART_H = 168;
-const CHART_Y_LABELS = [200, 150, 100, 50, 0] as const;
-
-const BOTTOM_NAV_HEIGHT = 64;
 const LIVE_BAR_HEIGHT = LIVE_SESSION_PILL_MIN_HEIGHT + 16;
 
+/** Round up to the nearest "nice" ceiling for Y-axis labeling. */
+function niceMax(max: number): number {
+  if (max <= 0) return 10;
+  const step = Math.pow(10, Math.floor(Math.log10(max)));
+  return Math.ceil(max / step) * step;
+}
+
+function buildYLabels(chartMax: number): number[] {
+  const step = chartMax / 4;
+  return [chartMax, step * 3, step * 2, step, 0];
+}
+
 function yLabelTop(index: number, labelCount: number): number {
-  if (index === 0) {
-    return -6;
-  }
-
+  if (index === 0) return -6;
   const anchor = (index / (labelCount - 1)) * CHART_H;
-
-  if (index === labelCount - 1) {
-    return anchor - 10;
-  }
-
+  if (index === labelCount - 1) return anchor - 10;
   return anchor - 5;
 }
 
 function BarChart({ weeklyHoursChart }: { weeklyHoursChart: HomeDashboardData['weeklyHoursChart'] }) {
-  const labelCount = CHART_Y_LABELS.length;
+  const dataMax = Math.max(...weeklyHoursChart.map((d) => d.value), 0);
+  const chartMax = niceMax(dataMax);
+  const yLabels = buildYLabels(chartMax);
+  const labelCount = yLabels.length;
 
   return (
     <View style={chart.container}>
       <View style={chart.yAxis}>
-        {CHART_Y_LABELS.map((value, index) => (
+        {yLabels.map((value, index) => (
           <Text key={value} style={[chart.yLabel, { top: yLabelTop(index, labelCount) }]}>
             {value}
           </Text>
@@ -68,22 +72,23 @@ function BarChart({ weeklyHoursChart }: { weeklyHoursChart: HomeDashboardData['w
       </View>
       <View style={chart.plotArea}>
         <View style={chart.barsRow}>
-          {CHART_Y_LABELS.map((value, index) => {
-            if (value <= 0 || value >= CHART_MAX) {
-              return null;
-            }
-
+          {yLabels.map((value, index) => {
+            if (value <= 0 || value >= chartMax) return null;
             const top = (index / (labelCount - 1)) * CHART_H;
-
             return <View key={`grid-${value}`} style={[chart.gridLine, { top }]} />;
           })}
           {weeklyHoursChart.map(({ day, value }) => {
-            const barH = Math.round((value / CHART_MAX) * CHART_H);
+            const barH = Math.round((value / chartMax) * CHART_H);
+            const labelAbove = value > 0 && barH <= 20;
+            const labelInside = value > 0 && barH > 20;
             return (
               <View key={day} style={chart.barColumn}>
+                {labelAbove && (
+                  <Text style={chart.barValueAbove}>{value}</Text>
+                )}
                 {value > 0 && (
-                  <View style={[chart.bar, { height: barH }]}>
-                    {barH > 20 && <Text style={chart.barValue}>{value}</Text>}
+                  <View style={[chart.bar, { height: Math.max(barH, 4) }]}>
+                    {labelInside && <Text style={chart.barValue}>{value}</Text>}
                   </View>
                 )}
               </View>
@@ -180,9 +185,6 @@ function RecentSessionsSection({
         <Text style={s.sectionTitle}>Recent Sessions</Text>
         {recentSessions.length > 0 && (
           <View style={s.sectionHeaderActions}>
-            <AnimatedPressable onPress={resetRecentSessions} hitSlop={8} accessibilityRole="button" accessibilityLabel="Clear recent sessions">
-              <Text style={s.clearLink}>Clear</Text>
-            </AnimatedPressable>
             <Text style={s.viewAllLink}>View All</Text>
           </View>
         )}
@@ -338,7 +340,7 @@ export function HomeScreenWithData({ data }: { data: HomeDashboardData }) {
   const [activeTab, setActiveTab] = useState<BottomNavTab>('home');
   const greeting = useMemo(() => getTimeOfDayGreeting(), []);
   const bottomInset = Math.max(insets.bottom, 0);
-  const scrollBottomPad = bottomInset + BOTTOM_NAV_HEIGHT + (isActive ? LIVE_BAR_HEIGHT + 24 : 24);
+  const scrollBottomPad = bottomInset + layout.bottomNavHeight + (isActive ? LIVE_BAR_HEIGHT + 24 : 24);
 
   return (
     <View style={s.root}>
@@ -509,6 +511,12 @@ const chart = StyleSheet.create({
     fontSize: 11,
     color: colors.textOnPrimary,
   },
+  barValueAbove: {
+    fontFamily: fontFamilies.ibmPlexSansMedium,
+    fontSize: 11,
+    color: colors.primary,
+    marginBottom: 2,
+  },
   xLabelsRow: {
     flexDirection: 'row',
     marginTop: 6,
@@ -634,11 +642,6 @@ const s = StyleSheet.create({
     fontFamily: fontFamilies.notoSansMedium,
     fontSize: 14,
     color: colors.primary,
-  },
-  clearLink: {
-    fontFamily: fontFamilies.notoSansMedium,
-    fontSize: 14,
-    color: colors.textTertiary,
   },
   emptySectionMessage: {
     fontFamily: fontFamilies.notoSansRegular,

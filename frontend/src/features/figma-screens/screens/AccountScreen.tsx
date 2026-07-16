@@ -1,12 +1,22 @@
-import React, { useState, type ReactNode } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useRouter, type Href } from 'expo-router';
+import React, { useCallback, useState, type ReactNode } from 'react';
+import { Alert, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { BottomNavBar } from '@/components/navigation/BottomNavBar';
 import { SessionSetupToggle } from '@/components/session-setup/SessionSetupToggle';
 import { useLiveSession } from '@/features/session-tracking/liveSessionStore';
+import {
+  isSessionNotificationPermissionGranted,
+  requestSessionNotificationPermission,
+} from '@/utils/notificationPermissions';
+import {
+  isSessionCameraPermissionGranted,
+  isSessionLocationPermissionGranted,
+  requestSessionCameraPermission,
+  requestSessionLocationPermission,
+} from '@/utils/sessionPermissions';
 
 import {
   AccountChevronIcon,
@@ -23,17 +33,15 @@ import {
   PermissionsLockIcon,
   PreferencesIcon,
   PrivacyRowIcon,
-  ProfileLeavesIcon,
+  ProfileLeafLargeIcon,
+  ProfileLeafSmallIcon,
   RecordsFolderIcon,
   RequestDataIcon,
   ShopBagIcon,
 } from '../components/AccountIcons';
 import { defaultAccountProfile, type AccountProfile } from '../mocks/account';
-import { colors, fontFamilies, radius, shadows } from '../tokens';
+import { layout, colors, fontFamilies, radius, shadows } from '../tokens';
 
-const BOTTOM_NAV_HEIGHT = 64;
-const TOP_BAR_TITLE_ROW = 44;
-const TOP_BAR_PADDING_BOTTOM = 8.5;
 
 type NavRowProps = {
   label: string;
@@ -104,7 +112,7 @@ function AccountTopAppBar() {
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={[s.topBar, shadows.barTop, { paddingTop: insets.top, paddingBottom: TOP_BAR_PADDING_BOTTOM }]}>
+    <View style={[s.topBar, shadows.barTop, { paddingTop: insets.top, paddingBottom: layout.topBarPaddingBottom }]}>
       <View style={s.topBarTitleRow}>
         <Text style={s.topBarTitle}>Account</Text>
       </View>
@@ -115,8 +123,16 @@ function AccountTopAppBar() {
 function ProfileHero({ profile }: { profile: AccountProfile }) {
   return (
     <View style={s.profileHero}>
-      <View style={s.profileLeaves} pointerEvents="none">
-        <ProfileLeavesIcon width={71} height={88} />
+      {/* Figma ProfileHero leaves (569:917 / 569:918) — absolute, rotated, clipped by overflow */}
+      <View style={s.profileLeafLarge} pointerEvents="none">
+        <View style={s.profileLeafLargeRotate}>
+          <ProfileLeafLargeIcon width={58} height={58} />
+        </View>
+      </View>
+      <View style={s.profileLeafSmall} pointerEvents="none">
+        <View style={s.profileLeafSmallRotate}>
+          <ProfileLeafSmallIcon width={40} height={40} />
+        </View>
       </View>
 
       <View style={s.profileTopRow}>
@@ -155,11 +171,98 @@ export function AccountScreen({ profile = defaultAccountProfile }: { profile?: A
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { isActive } = useLiveSession();
-  const [cameraAccess, setCameraAccess] = useState(true);
-  const [locationAccess, setLocationAccess] = useState(true);
+  const [cameraAccess, setCameraAccess] = useState(false);
+  const [locationAccess, setLocationAccess] = useState(false);
+  const [notificationsAccess, setNotificationsAccess] = useState(false);
 
   const bottomInset = Math.max(insets.bottom, 0);
-  const scrollBottomPad = bottomInset + BOTTOM_NAV_HEIGHT + 48;
+  const scrollBottomPad = bottomInset + layout.bottomNavHeight + 48;
+
+  // Mirror the real OS permission status every time this screen is focused —
+  // e.g. after the user grants/revokes access in the iOS Settings app and
+  // comes back.
+  useFocusEffect(
+    useCallback(() => {
+      let isMounted = true;
+
+      void isSessionCameraPermissionGranted().then((granted) => {
+        if (isMounted) setCameraAccess(granted);
+      });
+      void isSessionLocationPermissionGranted().then((granted) => {
+        if (isMounted) setLocationAccess(granted);
+      });
+      void isSessionNotificationPermissionGranted().then((granted) => {
+        if (isMounted) setNotificationsAccess(granted);
+      });
+
+      return () => {
+        isMounted = false;
+      };
+    }, []),
+  );
+
+  const promptOpenSettings = useCallback((label: string) => {
+    Alert.alert(
+      `${label} access is off`,
+      `To turn ${label.toLowerCase()} on, enable it for Expo Go in iOS Settings. The system permission dialog only appears the first time — after that, Settings is the only way to change it.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Open Settings', onPress: () => void Linking.openSettings() },
+      ],
+    );
+  }, []);
+
+  const handleCameraAccessChange = useCallback(
+    async (value: boolean) => {
+      if (!value) {
+        // App cannot revoke OS permission — flip UI off and send user to Settings.
+        setCameraAccess(false);
+        promptOpenSettings('Camera');
+        return;
+      }
+
+      const result = await requestSessionCameraPermission();
+      setCameraAccess(result.granted);
+      if (!result.granted) {
+        promptOpenSettings('Camera');
+      }
+    },
+    [promptOpenSettings],
+  );
+
+  const handleLocationAccessChange = useCallback(
+    async (value: boolean) => {
+      if (!value) {
+        setLocationAccess(false);
+        promptOpenSettings('Location');
+        return;
+      }
+
+      const result = await requestSessionLocationPermission();
+      setLocationAccess(result.granted);
+      if (!result.granted) {
+        promptOpenSettings('Location');
+      }
+    },
+    [promptOpenSettings],
+  );
+
+  const handleNotificationsAccessChange = useCallback(
+    async (value: boolean) => {
+      if (!value) {
+        setNotificationsAccess(false);
+        promptOpenSettings('Notifications');
+        return;
+      }
+
+      const result = await requestSessionNotificationPermission();
+      setNotificationsAccess(result.granted);
+      if (!result.granted) {
+        promptOpenSettings('Notifications');
+      }
+    },
+    [promptOpenSettings],
+  );
 
   return (
     <View style={s.root}>
@@ -222,13 +325,19 @@ export function AccountScreen({ profile = defaultAccountProfile }: { profile?: A
               label="Camera Access"
               icon={<CameraAccessIcon />}
               value={cameraAccess}
-              onValueChange={setCameraAccess}
+              onValueChange={handleCameraAccessChange}
             />
             <AccountToggleRow
               label="Location Access"
               icon={<LocationAccessIcon />}
               value={locationAccess}
-              onValueChange={setLocationAccess}
+              onValueChange={handleLocationAccessChange}
+            />
+            <AccountToggleRow
+              label="Notifications"
+              icon={<NotificationsRowIcon />}
+              value={notificationsAccess}
+              onValueChange={handleNotificationsAccessChange}
             />
           </SectionCard>
         </View>
@@ -292,7 +401,7 @@ const s = StyleSheet.create({
     backgroundColor: colors.white,
   },
   topBarTitleRow: {
-    minHeight: TOP_BAR_TITLE_ROW,
+    minHeight: layout.topBarTitleRow,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -320,10 +429,31 @@ const s = StyleSheet.create({
     overflow: 'hidden',
     minHeight: 171,
   },
-  profileLeaves: {
+  // Figma 569:917 — wrapper 70.5×70.5 at top≈-16 / right≈-7, icon 57.6 rotated −75°
+  profileLeafLarge: {
     position: 'absolute',
-    top: -18,
-    right: 4,
+    top: -16,
+    right: -7,
+    width: 71,
+    height: 71,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  profileLeafLargeRotate: {
+    transform: [{ rotate: '-75deg' }],
+  },
+  // Figma 569:918 — wrapper 56.8×56.8 at top≈23 / right≈-9, icon 40.3 rotated −50°
+  profileLeafSmall: {
+    position: 'absolute',
+    top: 23,
+    right: -9,
+    width: 57,
+    height: 57,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  profileLeafSmallRotate: {
+    transform: [{ rotate: '-50deg' }],
   },
   profileTopRow: {
     flexDirection: 'row',

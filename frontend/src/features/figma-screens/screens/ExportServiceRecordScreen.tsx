@@ -10,11 +10,10 @@ import { useLiveSession } from '@/features/session-tracking/liveSessionStore';
 
 import { RadioCheckedIcon, RadioEmptyIcon } from '../components/AccountIcons';
 import { ExportDateField } from '../components/ExportDateField';
-import { colors, fontFamilies, radius } from '../tokens';
+import { layout, colors, fontFamilies, radius } from '../tokens';
 import { toExportDate } from '../utils/exportDate';
 import { startOfDay } from '../utils/weekCalendar';
 
-const BOTTOM_NAV_HEIGHT = 64;
 
 type ExportStatus = 'approved' | 'underReview' | 'notApproved';
 type ExportFormat = 'pdf' | 'csv';
@@ -56,7 +55,7 @@ export function ExportServiceRecordScreen() {
   const endDay = toExportDate(endDate);
 
   const bottomInset = Math.max(insets.bottom, 0);
-  const scrollBottomPad = bottomInset + BOTTOM_NAV_HEIGHT + 32;
+  const scrollBottomPad = bottomInset + layout.bottomNavHeight + 32;
 
   function toggleStatus(id: ExportStatus) {
     setStatuses((prev) => ({ ...prev, [id]: !prev[id] }));

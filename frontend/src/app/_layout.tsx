@@ -25,7 +25,7 @@ export default function RootLayout() {
       <Stack.Screen name="session-setup-step6" />
       <Stack.Screen name="session-setup-step7" options={guideBackwardScreenOptions} />
       <Stack.Screen name="session-setup-complete" options={guideBackwardScreenOptions} />
-      <Stack.Screen name="live-session" options={{ animation: 'none' }} />
+      <Stack.Screen name="live-session" options={{ animation: 'slide_from_bottom', animationTypeForReplace: 'pop' }} />
       <Stack.Screen name="photo-checkpoint" />
       <Stack.Screen name="photo-capture" />
       <Stack.Screen name="photo-submitted" />
@@ -63,6 +63,8 @@ export default function RootLayout() {
       <Stack.Screen name="creating-account" />
       <Stack.Screen name="account-phone" />
       <Stack.Screen name="account-details" />
+      <Stack.Screen name="location-permission" />
+      <Stack.Screen name="camera-permission" />
       <Stack.Screen name="notification-preference" />
       <Stack.Screen name="setup-complete" />
       <Stack.Screen name="home-tour" />

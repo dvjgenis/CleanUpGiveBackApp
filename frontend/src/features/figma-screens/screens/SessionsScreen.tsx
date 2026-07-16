@@ -26,9 +26,8 @@ import {
   type SessionListItem,
   type SessionSortOption,
 } from '../mocks/sessions';
-import { colors, fontFamilies, radius as R, shadows } from '../tokens';
+import { layout, colors, fontFamilies, radius as R, shadows } from '../tokens';
 
-const BOTTOM_NAV_HEIGHT = 64;
 const TOP_BAR_BOTTOM_PAD = 8.5;
 
 const STATUS_LABEL: Record<SessionApprovalStatus, string> = {
@@ -246,7 +245,7 @@ export function SessionsScreen() {
   }, [filter, query, sort, sessionSource]);
 
   const bottomInset = Math.max(insets.bottom, 0);
-  const scrollBottomPad = bottomInset + BOTTOM_NAV_HEIGHT + 24;
+  const scrollBottomPad = bottomInset + layout.bottomNavHeight + 24;
 
   function handleSelectSort(next: SessionSortOption) {
     setSort(next);

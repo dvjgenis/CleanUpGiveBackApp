@@ -5,10 +5,12 @@ import {
   isPlausibleMovement,
   isSharpReversal,
   isStationary,
+  resolveCompassHeading,
   resolveHeading,
   shouldAppendRoutePoint,
   simplifyRouteForDisplay,
   smoothCoordinateEma,
+  smoothHeadingEma,
   smoothRouteForDisplay,
   DISPLAY_COORDINATE_EMA_ALPHA,
 } from './routeFiltering';
@@ -174,6 +176,36 @@ describe('resolveHeading', () => {
     expect(heading).not.toBeNull();
     expect(heading!).toBeGreaterThan(85);
     expect(heading!).toBeLessThan(95);
+  });
+});
+
+describe('resolveCompassHeading', () => {
+  it('prefers true-north heading when valid', () => {
+    expect(resolveCompassHeading({ trueHeading: 120, magHeading: 118 })).toBe(120);
+  });
+
+  it('falls back to magnetic heading when true heading is unavailable', () => {
+    expect(resolveCompassHeading({ trueHeading: -1, magHeading: 200 })).toBe(200);
+  });
+
+  it('returns null when neither reading is valid', () => {
+    expect(resolveCompassHeading({ trueHeading: -1, magHeading: -1 })).toBeNull();
+  });
+});
+
+describe('smoothHeadingEma', () => {
+  it('returns the next heading when no previous value exists', () => {
+    expect(smoothHeadingEma(null, 90)).toBe(90);
+  });
+
+  it('eases toward the next heading', () => {
+    const smoothed = smoothHeadingEma(0, 90, 0.5);
+    expect(smoothed).toBeCloseTo(45);
+  });
+
+  it('takes the shortest path across the 0°/360° wrap-around', () => {
+    const smoothed = smoothHeadingEma(359, 2, 0.5);
+    expect(smoothed).toBeCloseTo(0.5, 1);
   });
 });
 

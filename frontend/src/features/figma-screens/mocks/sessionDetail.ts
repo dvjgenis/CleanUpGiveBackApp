@@ -8,6 +8,7 @@ import {
   resolveSessionDurationSeconds,
 } from '@/features/session-tracking/utils/sessionFormat';
 import type { RouteCoordinate } from '@/features/session-tracking/utils/geo';
+import { DEFAULT_MAP_LAYER, type MapLayerType } from '@/features/session-tracking/utils/mapStyles';
 
 import type { SessionApprovalStatus } from './sessions';
 
@@ -31,8 +32,24 @@ export type SessionDetailData = {
   photosCountLabel: string;
   routeCoordinates: RouteCoordinate[];
   evidencePhotos: SessionEvidencePhoto[];
+  /** Basemap layer the user had selected when the session ended. */
+  mapLayer: MapLayerType;
 };
 
+/** Figma `session_detail` (node `515:1848`) — default Downtown Riverfront mock. */
+const DEFAULT_DETAIL: SessionDetailData = {
+  id: 'downtown-riverfront',
+  title: 'Downtown Riverfront Clean-up',
+  status: 'approved',
+  dateTimeLabel: 'July 15 at 5PM',
+  locationAddress: '600 E Algonquin Rd, Des Plaines, IL, 60018',
+  hoursLabel: '2.5',
+  milesLabel: '3.4',
+  photosCountLabel: '4',
+  routeCoordinates: [],
+  evidencePhotos: MOCK_EVIDENCE_PHOTOS,
+  mapLayer: DEFAULT_MAP_LAYER,
+};
 const EMPTY_LOCATION = '—';
 
 export function emptySessionDetail(id = ''): SessionDetailData {
@@ -98,6 +115,7 @@ export function detailFromCompletedSnapshot(
     photosCountLabel: String(snapshot.submittedCheckpoints.length),
     routeCoordinates: snapshot.routeCoordinates,
     evidencePhotos,
+    mapLayer: snapshot.mapLayer ?? DEFAULT_MAP_LAYER,
   };
 }
 
@@ -110,5 +128,28 @@ export function getSessionDetail(id?: string): SessionDetailData {
     }
   }
 
+  if (!id) {
+    return DEFAULT_DETAIL;
+  }
+
+  const listItem = mockSessionsList.find((session) => session.id === id);
+  if (!listItem) {
+    return DEFAULT_DETAIL;
+  }
+
+  const override = DETAIL_OVERRIDES[id] ?? {};
+  return {
+    id: listItem.id,
+    title: listItem.title,
+    status: listItem.status,
+    dateTimeLabel: `${listItem.dateLabel} · ${listItem.timeLabel}`,
+    locationAddress: override.locationAddress ?? DEFAULT_DETAIL.locationAddress,
+    hoursLabel: override.hoursLabel ?? DEFAULT_DETAIL.hoursLabel,
+    milesLabel: override.milesLabel ?? DEFAULT_DETAIL.milesLabel,
+    photosCountLabel: override.photosCountLabel ?? DEFAULT_DETAIL.photosCountLabel,
+    routeCoordinates: [],
+    evidencePhotos: MOCK_EVIDENCE_PHOTOS,
+    mapLayer: DEFAULT_MAP_LAYER,
+  };
   return emptySessionDetail(id);
 }

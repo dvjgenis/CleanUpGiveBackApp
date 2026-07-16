@@ -1,24 +1,26 @@
-import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useRouter, type Href } from 'expo-router';
+import React, { useCallback, useState } from 'react';
+import { Alert, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BottomNavBar, type BottomNavTab } from '@/components/navigation/BottomNavBar';
 import { SessionSetupToggle } from '@/components/session-setup/SessionSetupToggle';
 import { SessionSetupTopAppBar } from '@/components/session-setup/SessionSetupTopAppBar';
 import {
-  getCheckpointProgress,
   useLiveSession,
 } from '@/features/session-tracking/liveSessionStore';
+import {
+  isSessionNotificationPermissionGranted,
+  requestSessionNotificationPermission,
+} from '@/utils/notificationPermissions';
 
 import {
   defaultNotificationCategories,
   type NotificationCategory,
   type NotificationPreferenceKey,
 } from '../mocks/notifications';
-import { colors, fontFamilies } from '../tokens';
+import { layout, colors, fontFamilies } from '../tokens';
 
-const BOTTOM_NAV_HEIGHT = 64;
 
 type ToggleRowProps = {
   title: string;
@@ -93,11 +95,40 @@ export function NotificationsScreen() {
   const { isActive } = useLiveSession();
   const [activeTab, setActiveTab] = useState<BottomNavTab>('home');
   const [preferences, setPreferences] = useState(() => buildInitialValues(defaultNotificationCategories));
+  const [osNotificationsGranted, setOsNotificationsGranted] = useState(false);
 
   const bottomInset = Math.max(insets.bottom, 0);
-  const scrollBottomPad = bottomInset + BOTTOM_NAV_HEIGHT + 24;
+  const scrollBottomPad = bottomInset + layout.bottomNavHeight + 24;
 
-  function handleToggle(key: NotificationPreferenceKey, value: boolean) {
+  useFocusEffect(
+    useCallback(() => {
+      let isMounted = true;
+      void isSessionNotificationPermissionGranted().then((granted) => {
+        if (isMounted) setOsNotificationsGranted(granted);
+      });
+      return () => {
+        isMounted = false;
+      };
+    }, []),
+  );
+
+  async function handleToggle(key: NotificationPreferenceKey, value: boolean) {
+    if (value && !osNotificationsGranted) {
+      const result = await requestSessionNotificationPermission();
+      setOsNotificationsGranted(result.granted);
+      if (!result.granted) {
+        Alert.alert(
+          'Notifications are off',
+          'Enable Notifications for Expo Go in Settings to receive these alerts.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => void Linking.openSettings() },
+          ],
+        );
+        return;
+      }
+    }
+
     setPreferences((current) => ({ ...current, [key]: value }));
   }
 

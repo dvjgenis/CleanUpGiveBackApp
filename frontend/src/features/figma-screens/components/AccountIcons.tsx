@@ -316,13 +316,25 @@ export function EmailReceiptIcon({ width = 16, height = 16, style }: Partial<Ass
   );
 }
 
-/** Profile hero leaves — `leaves.svg` */
-export function ProfileLeavesIcon({ width = 64, height = 80, style }: Partial<AssetIconProps>) {
+/** Profile hero — large leaf (Figma `569:917`, 57.6×57.6, rotated −75°) */
+export function ProfileLeafLargeIcon({ width = 58, height = 58, style }: Partial<AssetIconProps>) {
   return (
     <AssetIcon
-      source={require('../../../../assets/figma/account/leaves.svg')}
-      width={width ?? 64}
-      height={height ?? 80}
+      source={require('../../../../assets/figma/account/leaf-large.svg')}
+      width={width ?? 58}
+      height={height ?? 58}
+      style={style}
+    />
+  );
+}
+
+/** Profile hero — small leaf (Figma `569:918`, 40.32×40.32, rotated −50°) */
+export function ProfileLeafSmallIcon({ width = 40, height = 40, style }: Partial<AssetIconProps>) {
+  return (
+    <AssetIcon
+      source={require('../../../../assets/figma/account/leaf-small.svg')}
+      width={width ?? 40}
+      height={height ?? 40}
       style={style}
     />
   );

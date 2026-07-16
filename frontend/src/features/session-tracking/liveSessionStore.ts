@@ -23,9 +23,11 @@ import {
   deltaMetersBetween,
   isAcceptableAccuracy,
   MAX_ACCEPTABLE_ACCURACY_METERS,
+  resolveCompassHeading,
   resolveHeading,
   shouldAppendRoutePoint,
   smoothCoordinateEma,
+  smoothHeadingEma,
 } from './utils/routeFiltering';
 
 export const PHOTO_CHECKPOINT_INTERVAL_SECONDS = 30 * 60;
@@ -55,6 +57,10 @@ export type CompletedSessionSnapshot = {
   distanceMiles: number;
   routeCoordinates: RouteCoordinate[];
   submittedCheckpoints: PhotoCheckpointSubmission[];
+  /** Basemap layer the user had selected when the session ended, so the
+   * route replay (session detail, submission confirmation) opens on the
+   * same layer instead of always resetting to the default. */
+  mapLayer: MapLayerType;
 };
 
 type LiveSessionState = {
@@ -99,6 +105,10 @@ let completedSessionSnapshot: CompletedSessionSnapshot | null = null;
 
 let tickInterval: ReturnType<typeof setInterval> | null = null;
 let locationSubscription: Location.LocationSubscription | null = null;
+let headingSubscription: Location.LocationSubscription | null = null;
+/** True once the device compass has delivered at least one reading for the
+ * active session — GPS-derived heading is only used as a fallback until then. */
+let compassAvailable = false;
 let lastAcceptedTimestamp: number | null = null;
 const listeners = new Set<() => void>();
 
@@ -168,19 +178,31 @@ function recordLocationSample(position: Location.LocationObject) {
   }
 
   const { latitude, longitude, accuracy, heading, speed } = position.coords;
+  const sampleTimestamp = position.timestamp ?? Date.now();
+  const nextCoordinate = toRouteCoordinate(longitude, latitude);
+  const previousCoordinate = state.currentCoordinate;
+  // The device compass (see `startHeadingWatching`) is the primary heading
+  // source once available — it updates independently of GPS movement, like
+  // a real compass. GPS-derived heading is only a fallback until then.
+  const nextHeading = compassAvailable
+    ? state.currentHeading
+    : resolveHeading({ heading, previous: previousCoordinate, current: nextCoordinate });
+  const nextDisplayCoordinate = smoothCoordinateEma(state.displayCoordinate, nextCoordinate);
+
+  // Pin the map to the latest fix immediately, even before GPS accuracy
+  // settles — otherwise the tracker never centers on the user while the
+  // first fix(es) are still above `MAX_ACCEPTABLE_ACCURACY_METERS`. Route
+  // accumulation (distance, polyline) below still requires the accuracy gate.
+  setState({
+    currentCoordinate: nextCoordinate,
+    displayCoordinate: nextDisplayCoordinate,
+    currentHeading: nextHeading,
+  });
+
   if (!isAcceptableAccuracy(accuracy)) {
     return;
   }
 
-  const sampleTimestamp = position.timestamp ?? Date.now();
-  const nextCoordinate = toRouteCoordinate(longitude, latitude);
-  const previousCoordinate = state.currentCoordinate;
-  const nextHeading = resolveHeading({
-    heading,
-    previous: previousCoordinate,
-    current: nextCoordinate,
-  });
-  const nextDisplayCoordinate = smoothCoordinateEma(state.displayCoordinate, nextCoordinate);
   const speedMps = speed != null && Number.isFinite(speed) && speed >= 0 ? speed : null;
   const deltaMs =
     lastAcceptedTimestamp != null ? sampleTimestamp - lastAcceptedTimestamp : 0;
@@ -188,18 +210,13 @@ function recordLocationSample(position: Location.LocationObject) {
     ? deltaMetersBetween(previousCoordinate, nextCoordinate)
     : 0;
 
-  if (!previousCoordinate) {
+  const lastRoutePoint = state.routeCoordinates[state.routeCoordinates.length - 1];
+  if (!lastRoutePoint) {
     lastAcceptedTimestamp = sampleTimestamp;
-    setState({
-      currentCoordinate: nextCoordinate,
-      displayCoordinate: nextDisplayCoordinate,
-      currentHeading: nextHeading,
-      routeCoordinates: [nextCoordinate],
-    });
+    setState({ routeCoordinates: [nextCoordinate] });
     return;
   }
 
-  const lastRoutePoint = state.routeCoordinates[state.routeCoordinates.length - 1];
   const prevRoutePoint =
     state.routeCoordinates.length >= 2
       ? state.routeCoordinates[state.routeCoordinates.length - 2]
@@ -229,9 +246,6 @@ function recordLocationSample(position: Location.LocationObject) {
 
     lastAcceptedTimestamp = sampleTimestamp;
     setState({
-      currentCoordinate: nextCoordinate,
-      displayCoordinate: nextDisplayCoordinate,
-      currentHeading: nextHeading,
       routeCoordinates: [...state.routeCoordinates, nextCoordinate],
       distanceMiles: state.distanceMiles + deltaMiles,
     });
@@ -239,17 +253,42 @@ function recordLocationSample(position: Location.LocationObject) {
   }
 
   lastAcceptedTimestamp = sampleTimestamp;
-  setState({
-    currentCoordinate: nextCoordinate,
-    displayCoordinate: nextDisplayCoordinate,
-    currentHeading: nextHeading,
-  });
 }
 
 function stopLocationWatching() {
   locationSubscription?.remove();
   locationSubscription = null;
   lastAcceptedTimestamp = null;
+  stopHeadingWatching();
+}
+
+function handleCompassUpdate(reading: Location.LocationHeadingObject) {
+  const rawHeading = resolveCompassHeading(reading);
+  if (rawHeading == null) {
+    return;
+  }
+
+  compassAvailable = true;
+  setState({ currentHeading: smoothHeadingEma(state.currentHeading, rawHeading) });
+}
+
+function stopHeadingWatching() {
+  headingSubscription?.remove();
+  headingSubscription = null;
+  compassAvailable = false;
+}
+
+/** Subscribe to the device compass so the live marker's heading beam tracks
+ * which way the phone is facing in real time, not just direction of travel. */
+async function startHeadingWatching() {
+  stopHeadingWatching();
+
+  try {
+    headingSubscription = await Location.watchHeadingAsync(handleCompassUpdate);
+  } catch {
+    // Compass unavailable (e.g. simulator with no magnetometer) — GPS-derived
+    // heading in `recordLocationSample` remains the fallback.
+  }
 }
 
 const LOCATION_WATCH_OPTIONS: Location.LocationOptions = {
@@ -270,6 +309,12 @@ async function startLocationWatching() {
   if (status !== 'granted') {
     return;
   }
+
+  // Start the compass in parallel with the (slower) GPS fix below, rather
+  // than after it — compass readings arrive almost instantly, so this is
+  // what makes the heading beam appear right away instead of lagging a few
+  // seconds behind the first GPS fix.
+  void startHeadingWatching();
 
   try {
     const position = await Location.getCurrentPositionAsync({
@@ -354,19 +399,34 @@ export async function startNewLiveSession(setup: LiveSessionSetup) {
   stopLocationWatching();
   completedSessionSnapshot = null;
 
-  let remoteSessionId: string | null = null;
-
-  try {
-    const created = await createSession({
+  // Fetch last-known position and remote session ID in parallel so the map
+  // can center immediately when the WebView is ready, without waiting for a
+  // fresh GPS fix (which can take several seconds on cold start).
+  const [lastKnown, created] = await Promise.all([
+    Location.getLastKnownPositionAsync({ maxAge: 5 * 60 * 1000 }).catch(() => null),
+    createSession({
       activity: setup.activity,
       courtOrdered: setup.courtOrdered,
       description: setup.description,
       date: setup.date.toISOString().slice(0, 10),
-    });
-    remoteSessionId = created?.id ?? null;
-  } catch (error) {
-    console.warn('[sessions] create session failed:', error);
-  }
+    }).catch((error) => {
+      console.warn('[sessions] create session failed:', error);
+      return null;
+    }),
+  ]);
+
+  const remoteSessionId = created?.id ?? null;
+  const prewarmCoord = lastKnown
+    ? toRouteCoordinate(lastKnown.coords.longitude, lastKnown.coords.latitude)
+    : null;
+  // Seed the heading beam from the cached fix's GPS course, if any, so it
+  // renders immediately instead of waiting for the compass's or a fresh GPS
+  // fix's first reading. It's replaced by a live reading within moments.
+  const prewarmHeading = resolveHeading({
+    heading: lastKnown?.coords.heading,
+    previous: null,
+    current: prewarmCoord ?? DEFAULT_MAP_CENTER,
+  });
 
   const startedAt = Date.now();
   state = {
@@ -380,8 +440,8 @@ export async function startNewLiveSession(setup: LiveSessionSetup) {
     setup,
     routeCoordinates: [],
     currentCoordinate: null,
-    displayCoordinate: null,
-    currentHeading: null,
+    displayCoordinate: prewarmCoord,
+    currentHeading: prewarmHeading,
     mapRecenterToken: 0,
     mapFollowEnabled: false,
     mapLayer: DEFAULT_MAP_LAYER,
@@ -454,6 +514,7 @@ export function finalizeLiveSession(options?: { status?: 'under_review' | 'inval
     distanceMiles: state.distanceMiles,
     routeCoordinates: [...state.routeCoordinates],
     submittedCheckpoints: [...state.submittedCheckpoints],
+    mapLayer: state.mapLayer,
   };
 
   void persistFinalizeToRemote(completedSessionSnapshot, status);

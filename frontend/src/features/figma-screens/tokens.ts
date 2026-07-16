@@ -5,6 +5,7 @@
 export {
   colors,
   fontFamilies,
+  layout,
   radius,
   shadows,
   textStyles,

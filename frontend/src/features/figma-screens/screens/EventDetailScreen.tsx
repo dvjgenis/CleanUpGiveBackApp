@@ -35,11 +35,9 @@ import {
 } from '../components/EventIcons';
 import { RegisterButton } from '../components/RegisterButton';
 import { getEventDetail, type WhatToBringIcon } from '../mocks/eventDetail';
-import { colors, fontFamilies, radius, shadows } from '../tokens';
+import { layout, colors, fontFamilies, radius, shadows } from '../tokens';
 import { mapsLinkForLocation, openLocationInMaps } from '../utils/openLocationInMaps';
 
-const TOP_BAR_PADDING_BOTTOM = 8.5;
-const TOP_BAR_TITLE_ROW = 44;
 const HERO_HEIGHT = 195;
 const FOOTER_PAD_TOP = 18;
 const FOOTER_PAD_BOTTOM = 30;
@@ -77,7 +75,7 @@ function EventDetailTopBar({
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={[s.topBar, shadows.barTop, { paddingTop: insets.top, paddingBottom: TOP_BAR_PADDING_BOTTOM }]}>
+    <View style={[s.topBar, shadows.barTop, { paddingTop: insets.top, paddingBottom: layout.topBarPaddingBottom }]}>
       <View style={s.topBarRow}>
         <AnimatedPressable
           scaleTo={0.98}
@@ -243,13 +241,11 @@ export function EventDetailScreen() {
               <Text style={s.eventTitle} accessibilityRole="header">
                 {event.title}
               </Text>
-              <View style={s.metaRow}>
+              <Text style={s.metaRow}>
                 <Text style={s.metaText}>{event.dateTimeLabel}</Text>
-                <View style={s.metaDot} />
-                <Text style={s.metaText} numberOfLines={1}>
-                  {event.addressShort}
-                </Text>
-              </View>
+                <Text style={s.metaDotText}>{'  \u2022  '}</Text>
+                <Text style={s.metaText}>{event.addressShort}</Text>
+              </Text>
             </View>
           </View>
 
@@ -376,7 +372,7 @@ const s = StyleSheet.create({
     backgroundColor: colors.bgApp,
   },
   topBarRow: {
-    minHeight: TOP_BAR_TITLE_ROW,
+    minHeight: layout.topBarTitleRow,
     paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
@@ -479,22 +475,19 @@ const s = StyleSheet.create({
     color: colors.textPrimary,
   },
   metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-    flexWrap: 'wrap',
+    fontFamily: fontFamilies.notoSansRegular,
+    fontSize: 12,
+    color: colors.textNavInactive,
   },
   metaText: {
     fontFamily: fontFamilies.notoSansRegular,
     fontSize: 12,
     color: colors.textNavInactive,
-    flexShrink: 1,
   },
-  metaDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.textNavInactive,
+  metaDotText: {
+    fontFamily: fontFamilies.notoSansRegular,
+    fontSize: 10,
+    color: colors.textNavInactive,
   },
   section: {
     gap: 30,
