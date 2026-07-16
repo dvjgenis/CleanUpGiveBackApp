@@ -16,9 +16,10 @@ What runs in the repo today.
 - **Cart (`/cart`)** — native `CartScreen`: line items + donation from shared `cartStore` (default **$5**); **Continue** → `/checkout`.
 - **Checkout (`/checkout`)** — native `CheckoutScreen`: order summary from `cartStore`; Place Order validates required fields with red highlights + missing-fields toast; empty-cart toast on cart icon; **Place Order** → `/purchase-confirmation`.
 - **Purchase confirmation (`/purchase-confirmation`)** — order mode lists cart lines; donation mode (`?mode=donation`) shows gift-only receipt + “Total Gift”; hearts animate on enter.
-- **Sessions list (`/sessions-list`)** — native `SessionsScreen` (Figma `sessions_list___hybrid_redesign`, `515:1791`): search bar, All / Approved / Under Review / Declined chips, sort dropdown (Most Recent / Oldest First / A–Z / Z–A) with chevron pointing down when closed, status-bordered session rows with badges, **View more**; row tap opens `/session-detail?id=`.
+- **Sessions list (`/sessions-list`)** — native `SessionsScreen` (Figma `sessions_list___hybrid_redesign`, `515:1791`): search bar, All / Approved / Under Review / Declined chips, sort dropdown; fetches from Fly API (loading/empty/error states, no placeholder rows); row tap opens `/session-detail?id=`.
 - **Shop home (`/shop`)** — native `ShopScreen` (Figma `shop_home`, `498:606` / PRD §6.19): mission copy, donate card ($5/$10/$15/Custom), featured Trash Clean Up Kit ($29.99), category chips, 2-column product grid (Kit $29.99 under Kits/All; Tote $3 / Grabber $23.99 / Child Vest $9.99 / Adult Vest $12.99); Shop tab active; Home/Account/Sessions nav wired to `/shop`.
 - **Session detail (`/session-detail`)** — native `SessionDetailScreen` (Figma `session_detail`, `515:1848`): walking-path map via `SessionRouteMapPanel` + `useSessionRouteCoordinates` (local completed-session cache or Fly API route); auto-replays the walking path once per visit (growing polyline + moving tip marker, settling into the static view; skipped when reduced motion is enabled) on the same basemap layer the user had selected when the session ended (`CompletedSessionSnapshot.mapLayer`); pan/zoom when route exists (layer picker hidden on detail); status badge, title/date/address, hours/miles/photos stats, Photo Evidence from checkpoint photos when cached
+- **Session detail (`/session-detail`)** — native `SessionDetailScreen` (Figma `session_detail`, `515:1848`): `useSessionDetail` fetches from Fly API + signed Supabase Storage photo URLs; walking-path map via `SessionRouteMapPanel` + `useSessionRouteCoordinates`; pan/zoom and basemap layer picker when route exists; status badge, title/date/address, hours/miles/photos stats, Photo Evidence from checkpoint photos
 ## Design ground truth
 
 - **Figma** is now the authoritative design source — [CleanUpGiveBack file](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=1-3) holds 7 flow pages (6 designed + 1 compliance spec), 46 manifest screens, and a Design System page (104 variables, 14 text styles).
@@ -36,14 +37,18 @@ What runs in the repo today.
 - **WebView map** in Expo Go (MapLibre GL JS + Carto Voyager) per ADR-005; user pan/zoom on live and preview maps; live tracker map layer picker (Standard / Satellite / Hybrid) — wired to `liveSessionStore.mapLayer`, so the basemap updates live on tap; native MapLibre unchanged for EAS builds
 - **Sessions list** fetches from API when configured; falls back to mocks otherwise
 - **Backend:** Fastify + Prisma in `backend/sessions/` — schema pushed to Supabase; Fly deploy pending org machine limit
+- **WebView map** in Expo Go (MapLibre GL JS + Carto Positron) per ADR-005; user pan/zoom on live and preview maps; live tracker map layer picker (Standard / Streets / Satellite / Hybrid); native MapLibre unchanged for EAS builds
+- **Sessions list** fetches from Fly API when `EXPO_PUBLIC_API_URL` is set — loading/empty/error states; no placeholder rows
+- **Session detail** fetches from Fly API + Supabase Storage signed URLs via `useSessionDetail`
+- **Backend:** Fastify + Prisma in `backend/sessions/` — deployed to `https://cleanup-sessions.fly.dev`; uses Supabase Postgres + JWKS (ES256) auth verification
 
-**Deploy API:** see [backend/sessions/README.md](../backend/sessions/README.md). After deploy, set `EXPO_PUBLIC_API_URL` in `frontend/.env`.
+**API:** `EXPO_PUBLIC_API_URL=https://cleanup-sessions.fly.dev` in `frontend/.env`. Backend needs `DATABASE_URL` + `SUPABASE_URL` on Fly.
 
 ## Not implemented yet
 
-- Fly.io production deploy (org machine limit hit — run `fly deploy` manually)
-- Supabase dashboard: enable Anonymous auth + run `sql/supabase-init.sql` storage policies if bucket missing
+- Supabase dashboard: enable Anonymous auth + run `sql/supabase-init.sql` storage policies if bucket missing (verify if not done)
 - Production auth (email OTP), Stripe, admin approval UI
+- Detach unused Fly Managed Postgres cluster (`cleanup-sessions-db`) if provisioned during `fly launch` — app uses Supabase Postgres
 
 ## How to run
 

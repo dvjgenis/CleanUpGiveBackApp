@@ -76,7 +76,7 @@ Shared UI components in `frontend/src/components/`.
 | ExportRecordSuccessScreen | `screens/ExportRecordSuccessScreen.tsx` | Export success (Figma `840:561`); Continue → Account; View PDF/CSV placeholder |
 | NotificationsScreen | `screens/NotificationsScreen.tsx` | Notification preferences (Figma `649:774`); category cards with toggles; opened from home bell |
 | SessionsScreen | `screens/SessionsScreen.tsx` | Sessions list (Figma `515:1791`); search + filter chips + sort dropdown (Most Recent / Oldest First / A–Z / Z–A); row opens `/session-detail` |
-| SessionDetailScreen | `screens/SessionDetailScreen.tsx` | Session detail (Figma `515:1848`); `SessionRouteMapPreview` walking path (placeholder when empty); Photo Evidence card (`555:2380`) with mock thumbs; tap opens `PhotoEnlargeModal` |
+| SessionDetailScreen | `screens/SessionDetailScreen.tsx` | Session detail (Figma `515:1848`); `useSessionDetail` fetches from Fly API + signed Storage URLs; `SessionRouteMapPanel` walking path from cache or API; Photo Evidence card when checkpoints exist |
 | SessionDetailIcons | `components/SessionDetailIcons.tsx` | Back/share/hours/miles/photos via `expo-image` + `require('@/assets/figma/session-detail/*.svg')` |
 | SessionsIcons | `components/SessionsIcons.tsx` | Sessions list icons via `expo-image` + `require('@/assets/figma/sessions-list/*.svg')` |
 | ShopIcons | `components/ShopIcons.tsx` + `ShopAssetIcons.generated.tsx` | Shop/cart/checkout glyphs via `react-native-svg` (home cart/donate/streak + generated cart/checkout set) |
@@ -97,8 +97,8 @@ Shared UI components in `frontend/src/components/`.
 | checkout mocks | `mocks/checkout.ts` | `getCheckoutSummary(items, donation)` from live cart for `CheckoutScreen` |
 | purchase confirmation mocks | `mocks/purchaseConfirmation.ts` | Receipt copy + assets for `PurchaseConfirmationScreen` |
 | donate mocks | `mocks/donate.ts` | Preset amounts, impact copy, asset requires for `DonateScreen` |
-| sessions mocks | `mocks/sessions.ts` | Mock session rows + filter/sort helpers for `SessionsScreen` |
-| session detail mock | `mocks/sessionDetail.ts` | `getSessionDetail(id)`; 4 stub `evidencePhotos` + empty `routeCoordinates` until live tracker wires in |
+| sessions mocks | `mocks/sessions.ts` | Empty production list + filter/sort helpers; preview rows in `mocks/sessions.preview.ts` |
+| session detail | `mocks/sessionDetail.ts` | `SessionDetailData` types + cache resolver; API fetch via `useSessionDetail` hook |
 | account mock | `mocks/account.ts` | Default Jane Doe profile + hour stats for AccountScreen |
 
 ### Session tracking (live session UI)

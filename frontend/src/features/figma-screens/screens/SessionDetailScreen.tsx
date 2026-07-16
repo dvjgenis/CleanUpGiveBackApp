@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { PhotoEnlargeModal } from '@/components/ui/PhotoEnlargeModal';
 import { SessionRouteMapPanel } from '@/features/session-tracking/components/SessionRouteMapPanel';
+import { useSessionDetail } from '@/features/session-tracking/hooks/useSessionDetail';
 import { useSessionRouteCoordinates } from '@/features/session-tracking/hooks/useSessionRouteCoordinates';
 
 import {
@@ -26,7 +27,6 @@ import {
 } from '../components/SessionDetailIcons';
 import { SessionsMetaDot } from '../components/SessionsIcons';
 import {
-  getSessionDetail,
   sessionStatusBadgeLabel,
   type SessionEvidencePhoto,
 } from '../mocks/sessionDetail';
@@ -171,7 +171,7 @@ export function SessionDetailScreen() {
   const { width: windowWidth } = useWindowDimensions();
   const params = useLocalSearchParams<{ id?: string }>();
   const sessionId = typeof params.id === 'string' ? params.id : undefined;
-  const detail = getSessionDetail(sessionId);
+  const { detail, loading, error } = useSessionDetail(sessionId);
   const routeCoordinates = useSessionRouteCoordinates(sessionId);
 
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
@@ -230,39 +230,47 @@ export function SessionDetailScreen() {
         </View>
 
         <View style={[s.mainCard, { width: contentWidth, alignSelf: 'center' }]}>
-          <View style={s.eventDetails}>
-            <View style={s.statusAndInfo}>
-              <View style={[s.statusBadge, { backgroundColor: badge.backgroundColor }]}>
-                <Text style={[s.statusBadgeLabel, { color: badge.color }]}>{statusLabel}</Text>
-              </View>
+          {loading ? (
+            <Text style={s.loadingText}>Loading session…</Text>
+          ) : error ? (
+            <Text style={s.loadingText}>{error}</Text>
+          ) : (
+            <>
+              <View style={s.eventDetails}>
+                <View style={s.statusAndInfo}>
+                  <View style={[s.statusBadge, { backgroundColor: badge.backgroundColor }]}>
+                    <Text style={[s.statusBadgeLabel, { color: badge.color }]}>{statusLabel}</Text>
+                  </View>
 
-              <View style={s.eventInfo}>
-                <Text style={s.title}>{detail.title}</Text>
-                <View style={s.metaRow}>
-                  <Text style={s.metaText}>{detail.dateTimeLabel}</Text>
-                  <SessionsMetaDot width={6} height={6} />
-                  <Text style={[s.metaText, s.metaAddress]} numberOfLines={2}>
-                    {detail.locationAddress}
-                  </Text>
+                  <View style={s.eventInfo}>
+                    <Text style={s.title}>{detail.title}</Text>
+                    <View style={s.metaRow}>
+                      <Text style={s.metaText}>{detail.dateTimeLabel}</Text>
+                      <SessionsMetaDot width={6} height={6} />
+                      <Text style={[s.metaText, s.metaAddress]} numberOfLines={2}>
+                        {detail.locationAddress}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+
+                <View style={s.statsRow}>
+                  <StatCard value={detail.hoursLabel} label="HOURS" icon={<SessionDetailHoursIcon />} />
+                  <StatCard value={detail.milesLabel} label="MILES" icon={<SessionDetailMilesIcon />} />
+                  <StatCard
+                    value={photosStatLabel}
+                    label="PHOTOS"
+                    icon={<SessionDetailPhotosIcon />}
+                  />
                 </View>
               </View>
-            </View>
 
-            <View style={s.statsRow}>
-              <StatCard value={detail.hoursLabel} label="HOURS" icon={<SessionDetailHoursIcon />} />
-              <StatCard value={detail.milesLabel} label="MILES" icon={<SessionDetailMilesIcon />} />
-              <StatCard
-                value={photosStatLabel}
-                label="PHOTOS"
-                icon={<SessionDetailPhotosIcon />}
+              <SessionPhotoEvidenceCard
+                photos={detail.evidencePhotos}
+                onPressPhoto={setSelectedPhotoIndex}
               />
-            </View>
-          </View>
-
-          <SessionPhotoEvidenceCard
-            photos={detail.evidencePhotos}
-            onPressPhoto={setSelectedPhotoIndex}
-          />
+            </>
+          )}
         </View>
       </ScrollView>
 
@@ -355,6 +363,13 @@ const s = StyleSheet.create({
     marginTop: 16,
     gap: 30,
     paddingHorizontal: 0,
+  },
+  loadingText: {
+    fontFamily: fontFamilies.notoSansRegular,
+    fontSize: 14,
+    color: colors.textNavInactive,
+    textAlign: 'center',
+    paddingVertical: 24,
   },
   eventDetails: {
     gap: 16,

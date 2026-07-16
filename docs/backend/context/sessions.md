@@ -10,9 +10,9 @@ Core domain for cleanup sessions: setup, live tracking, photo evidence, submissi
 **API spec:** [sessions-api.md](../specs/sessions-api.md)  
 **Setup:** [supabase.md](../../supabase.md)
 
-## API surface (planned)
+## API surface (live)
 
-Fastify service in `backend/sessions/` on Fly.io:
+Fastify service in `backend/sessions/` on Fly.io (`https://cleanup-sessions.fly.dev`):
 
 | Method | Route | Purpose |
 |--------|-------|---------|
@@ -24,7 +24,7 @@ Fastify service in `backend/sessions/` on Fly.io:
 | GET | `/sessions/:id` | Session detail + checkpoints |
 | PATCH | `/sessions/:id/approval` | Admin status change |
 
-Auth: Supabase JWT (`Authorization: Bearer`). Anonymous users OK for test phase.
+Auth: Supabase JWT verified via JWKS (ES256). Requires `SUPABASE_URL` + `DATABASE_URL` (Supabase Postgres) on Fly.
 
 ## Data model (planned)
 
@@ -50,6 +50,6 @@ Full schema: [supabase.md](../../supabase.md) §2.
 
 ## Related
 
-- Code: `backend/sessions/` — Fastify + Prisma API (Fly deploy pending org machine limit)
+- Code: `backend/sessions/` — Fastify + Prisma API deployed to Fly.io
 - Frontend store: `frontend/src/features/session-tracking/liveSessionStore.ts`
 - Frontend spec: [session-tracking-expo-go.md](../../frontend/specs/session-tracking-expo-go.md)

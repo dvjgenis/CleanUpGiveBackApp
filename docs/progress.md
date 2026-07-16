@@ -7,6 +7,9 @@ Session-by-session progress tracker. Distinct from `notes/journey.md` (correctio
 ## [2026-07-15 Session 128] — Feature: one-shot walking-path replay on session detail maps
 
 **Session goal:** Add a one-time animated replay of the walking path on the post-session map (submission confirmation + historical session detail), per plan `route_replay_animation_b539bd60`.
+## [2026-07-15 Session 124] — Sessions persistence verified + placeholder mocks removed
+
+**Session goal:** Verify Fly sessions API persists to Supabase Postgres end-to-end; remove Figma placeholder session rows from production UI.
 
 ### Tasks Completed
 
@@ -107,6 +110,21 @@ Session-by-session progress tracker. Distinct from `notes/journey.md` (correctio
 ---
 
 ## [2026-07-14 Session 123] — GPS precision + real-time tracking fix
+| Re-point Fly `DATABASE_URL` to Supabase Postgres | Fly secrets | ✅ |
+| Fix JWT auth: JWKS (ES256) instead of legacy HS256 secret | `backend/sessions/src/auth.ts` | ✅ |
+| Production smoke test: create → finalize → list | Fly API | ✅ |
+| Sessions list: loading/empty/error; no mock fallback | `SessionsScreen.tsx` | ✅ |
+| Session detail: API fetch + signed Storage photo URLs | `useSessionDetail.ts`, `signedStorageUrl.ts`, `SessionDetailScreen.tsx` | ✅ |
+| Clear `mockSessionsList`; preview rows → `sessions.preview.ts` | `mocks/sessions.ts`, `mocks/sessions.preview.ts` | ✅ |
+| Docs sync | `current.md`, `implementation-plan.md`, `session-tracking-expo-go.md`, `app.md`, `components.md` | ✅ |
+
+### Key Decisions
+
+- Supabase project uses ES256 JWT signing keys (JWKS); legacy `SUPABASE_JWT_SECRET` HS256 verify no longer works.
+- Production UI shows only API-backed sessions when `EXPO_PUBLIC_API_URL` is set.
+- Figma preview rows preserved in `sessions.preview.ts` for design harness only.
+
+---
 
 **Session goal:** Eliminate erratic GPS scribble routes, smooth live tracking, and add optional map follow mode.
 
