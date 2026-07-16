@@ -50,6 +50,7 @@ else → native MapLibre (lazy require)
 - **Negative:** Requires network for CDN (MapLibre GL JS) and Carto tiles — not offline-capable.
 - **Negative:** Slight latency on `injectJavaScript` route updates; mitigated by existing `MIN_ROUTE_SAMPLE_METERS` throttling in `liveSessionStore`.
 - **Follow-up:** Bundle MapLibre GL JS as a local asset if CDN reliability is a concern; native MapLibre remains the production path after EAS builds.
+- **Follow-up (2026-07-15):** Once EAS dev-client builds are the norm for testing, evaluate retiring this WebView map tier (`LiveSessionMapWebView.tsx`, `SessionRouteMapPreviewWebView.tsx`, `webViewMapHelpers.ts`) entirely in favor of the native `mapcn-react-native` path already used by `LiveSessionMapNative.tsx` (`frontend/src/components/ui/map.tsx`). Not pursuing a rewrite to web `mapcn` ([mapcn.dev](https://www.mapcn.dev/)) for the WebView tier now — that library targets bundled React DOM apps, not this WebView's hand-rolled HTML string, and doesn't address basemap tile/style choices.
 
 ## Alternatives considered
 

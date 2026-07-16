@@ -23,10 +23,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Compass } from '@/components/ui/Compass';
 import { SessionSetupBackChevronIcon } from '@/components/session-setup/icons/SessionSetupBackChevronIcon';
 import { LiveSessionMap } from '@/features/session-tracking/components/LiveSessionMap';
-import {
-  MapTypesSheet,
-  type MapTypeOption,
-} from '@/features/session-tracking/components/MapTypesSheet';
+import { MapTypesSheet } from '@/features/session-tracking/components/MapTypesSheet';
 import { TrackerActionButton } from '@/features/session-tracking/components/TrackerActionButton';
 import { LocationPinIcon } from '@/features/session-tracking/components/icons/LocationPinIcon';
 import { TrackerEndSessionIcon } from '@/features/session-tracking/components/icons/TrackerEndSessionIcon';
@@ -132,14 +129,12 @@ export function LiveSessionScreen() {
   const { from } = useLocalSearchParams<{ from?: string }>();
   const { elapsedSeconds, checkpointSecondsRemaining, distanceMiles, submittedCheckpoints, mapLayer, mapFollowEnabled } =
     useLiveSession();
-  const [mapLayerPickerVisible, setMapLayerPickerVisible] = useState(false);
   const { mapRevealStyle, chromeStyle } = useLiveSessionMapReveal();
   const submittedCheckpointCount = submittedCheckpoints.length;
   const showSubmissionCount = shouldShowCheckpointSubmissionCount(submittedCheckpoints);
   const submittedCheckpointLabel = formatSubmittedCheckpointCount(submittedCheckpointCount);
   const { placeLabel, temperatureLabel, isLoading: isWeatherLoading } = useLiveWeather();
   const [mapTypesVisible, setMapTypesVisible] = useState(false);
-  const [mapType, setMapType] = useState<MapTypeOption>('standard');
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
 
   const [fontsLoaded] = useFonts({
@@ -313,8 +308,8 @@ export function LiveSessionScreen() {
 
       <MapTypesSheet
         visible={mapTypesVisible}
-        selectedType={mapType}
-        onSelect={setMapType}
+        selectedType={mapLayer}
+        onSelect={setLiveSessionMapLayer}
         onClose={() => setMapTypesVisible(false)}
       />
 

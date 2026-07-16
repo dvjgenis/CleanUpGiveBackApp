@@ -220,7 +220,13 @@ export function SessionDetailScreen() {
           style={[s.mapHero, { width: windowWidth, height: MAP_HEIGHT }]}
           accessibilityLabel="Session walking path map"
         >
-          <SessionRouteMapPanel routeCoordinates={routeCoordinates} style={s.mapPreview} />
+          <SessionRouteMapPanel
+            routeCoordinates={routeCoordinates}
+            replayOnce
+            showLayerControl={false}
+            initialMapLayer={detail.mapLayer}
+            style={s.mapPreview}
+          />
         </View>
 
         <View style={[s.mainCard, { width: contentWidth, alignSelf: 'center' }]}>

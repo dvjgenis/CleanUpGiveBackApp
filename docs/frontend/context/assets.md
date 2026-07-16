@@ -17,7 +17,7 @@ Static media and bundled prototype HTML.
 | `frontend/assets/figma/sessions-list/` | Sessions list SVGs (search, sort chevron, expand, meta-dot) |
 | `frontend/assets/figma/sessions-calendar/` | Sessions calendar glyphs (designed) |
 | `frontend/assets/figma/session-detail/` | Session detail SVGs (back, share, hours, miles, photos) |
-| `frontend/assets/figma/account/` | Account tab + settings SVG icons |
+| `frontend/assets/figma/account/` | Account tab + settings SVG icons; profile hero leaves from Figma `569:917`/`569:918` as `leaf-large.svg` / `leaf-small.svg` (rotated −75° / −50° in `AccountScreen`) |
 | `frontend/assets/figma/shared/` | Cross-screen brand mark / leftover vectors |
 | `frontend/assets/figma/{photo-checkpoint,photo-submitted,missed-checkpoint,submission-confirmation,permissions}/` | Pointers to raster/animation companions |
 | `frontend/assets/images/` | App icons, logos, product/scene images |

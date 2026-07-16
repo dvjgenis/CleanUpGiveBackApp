@@ -240,7 +240,7 @@ export function SessionsScreen() {
   }, [filter, query, sort, sessionSource]);
 
   const bottomInset = Math.max(insets.bottom, 0);
-  const scrollBottomPad = bottomInset + BOTTOM_NAV_HEIGHT + 24;
+  const scrollBottomPad = bottomInset + layout.bottomNavHeight + 24;
 
   function handleSelectSort(next: SessionSortOption) {
     setSort(next);

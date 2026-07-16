@@ -18,9 +18,11 @@ import {
 import { Sanchez_400Regular } from '@expo-google-fonts/sanchez';
 import { useFonts } from 'expo-font';
 import { useRouter } from 'expo-router';
-import { type ComponentType } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { type ComponentType, useState } from 'react';
+import { Alert, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { requestSessionNotificationPermission } from '@/utils/notificationPermissions';
 
 const PREFS: { key: string; label: string; Icon: ComponentType<{ color?: string }> }[] = [
   { key: 'approval', label: 'Approval Updates', Icon: NotifApprovalIcon },
@@ -53,6 +55,7 @@ function PreferenceChip({
 /** Figma `notif_account` (112:7130) — onboarding step 5 of 5. */
 export function NotificationPreferenceScreen() {
   const router = useRouter();
+  const [isRequesting, setIsRequesting] = useState(false);
 
   const [fontsLoaded] = useFonts({
     Sanchez_400Regular,
@@ -65,6 +68,30 @@ export function NotificationPreferenceScreen() {
   if (!fontsLoaded) return <View style={s.root} />;
 
   const finish = () => router.push('/setup-complete');
+
+  const handleEnable = async () => {
+    if (isRequesting) {
+      return;
+    }
+    setIsRequesting(true);
+    try {
+      const result = await requestSessionNotificationPermission();
+      if (!result.granted && !result.canAskAgain) {
+        Alert.alert(
+          'Notifications are off',
+          'Enable Notifications for Expo Go in Settings to get alerts.',
+          [
+            { text: 'Not now', style: 'cancel', onPress: finish },
+            { text: 'Open Settings', onPress: () => void Linking.openSettings() },
+          ],
+        );
+        return;
+      }
+    } finally {
+      setIsRequesting(false);
+    }
+    finish();
+  };
 
   return (
     <SafeAreaView style={s.root} edges={['top', 'bottom']}>
@@ -94,12 +121,15 @@ export function NotificationPreferenceScreen() {
 
           <View style={s.footer}>
             <AnimatedPressable
-              style={s.enableBtn}
-              onPress={finish}
+              style={[s.enableBtn, isRequesting && s.enableBtnDisabled]}
+              onPress={handleEnable}
+              disabled={isRequesting}
               accessibilityRole="button"
               accessibilityLabel="Enable notifications"
             >
-              <Text style={s.enableBtnText}>Enable notifications</Text>
+              <Text style={s.enableBtnText}>
+                {isRequesting ? 'Requesting…' : 'Enable notifications'}
+              </Text>
             </AnimatedPressable>
             <AnimatedPressable
               style={s.previousBtn}
@@ -112,6 +142,7 @@ export function NotificationPreferenceScreen() {
             <AnimatedPressable
               style={s.notNowBtn}
               onPress={finish}
+              disabled={isRequesting}
               accessibilityRole="button"
               accessibilityLabel="Not now"
             >
@@ -198,6 +229,9 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 20,
+  },
+  enableBtnDisabled: {
+    opacity: 0.7,
   },
   enableBtnText: {
     fontFamily: 'IBMPlexSans_600SemiBold',

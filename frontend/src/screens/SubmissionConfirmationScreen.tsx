@@ -269,7 +269,12 @@ export function SubmissionConfirmationScreen() {
 
         <Animated.View style={mapStyle}>
         <View style={s.mapCard} accessibilityLabel="Session route map">
-          <SessionRouteMapPanel routeCoordinates={routeCoordinates} style={s.mapPreview} />
+          <SessionRouteMapPanel
+            routeCoordinates={routeCoordinates}
+            replayOnce
+            initialMapLayer={session?.mapLayer}
+            style={s.mapPreview}
+          />
         </View>
         </Animated.View>
 

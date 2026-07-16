@@ -8,12 +8,14 @@ import { NotoSans_400Regular, NotoSans_600SemiBold } from '@expo-google-fonts/no
 import { Sanchez_400Regular } from '@expo-google-fonts/sanchez';
 import { useFonts } from 'expo-font';
 import { useRouter } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Alert, Linking, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 /** Figma `location_permission` (725:553) — onboarding step 3 of 5. */
 export function LocationPermissionScreen() {
   const router = useRouter();
+  const [isRequesting, setIsRequesting] = useState(false);
 
   const [fontsLoaded] = useFonts({
     Sanchez_400Regular,
@@ -23,7 +25,24 @@ export function LocationPermissionScreen() {
   });
 
   async function handleContinue() {
-    await requestSessionLocationPermission();
+    if (isRequesting) return;
+    setIsRequesting(true);
+    try {
+      const result = await requestSessionLocationPermission();
+      if (!result.granted && !result.canAskAgain) {
+        Alert.alert(
+          'Location access is off',
+          'Enable Location for Expo Go in Settings to continue using location features.',
+          [
+            { text: 'Not now', style: 'cancel', onPress: () => router.push('/camera-permission') },
+            { text: 'Open Settings', onPress: () => void Linking.openSettings() },
+          ],
+        );
+        return;
+      }
+    } finally {
+      setIsRequesting(false);
+    }
     router.push('/camera-permission');
   }
 
@@ -54,12 +73,15 @@ export function LocationPermissionScreen() {
 
         <View style={s.footer}>
           <AnimatedPressable
-            style={s.continueBtn}
+            style={[s.continueBtn, isRequesting && { opacity: 0.7 }]}
             onPress={handleContinue}
+            disabled={isRequesting}
             accessibilityRole="button"
             accessibilityLabel="Enable location"
           >
-            <Text style={s.continueBtnText}>Enable location</Text>
+            <Text style={s.continueBtnText}>
+              {isRequesting ? 'Requesting…' : 'Enable location'}
+            </Text>
           </AnimatedPressable>
           <AnimatedPressable
             style={s.previousBtn}
@@ -96,7 +118,7 @@ const s = StyleSheet.create({
   illustration: {
     position: 'absolute',
     left: '52.05%',
-    top: '9.07%',
+    top: '15.6%',
     width: 240,
     height: 290,
   },

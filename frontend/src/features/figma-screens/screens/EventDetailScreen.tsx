@@ -241,13 +241,11 @@ export function EventDetailScreen() {
               <Text style={s.eventTitle} accessibilityRole="header">
                 {event.title}
               </Text>
-              <View style={s.metaRow}>
+              <Text style={s.metaRow}>
                 <Text style={s.metaText}>{event.dateTimeLabel}</Text>
-                <View style={s.metaDot} />
-                <Text style={s.metaText} numberOfLines={1}>
-                  {event.addressShort}
-                </Text>
-              </View>
+                <Text style={s.metaDotText}>{'  \u2022  '}</Text>
+                <Text style={s.metaText}>{event.addressShort}</Text>
+              </Text>
             </View>
           </View>
 
@@ -477,22 +475,19 @@ const s = StyleSheet.create({
     color: colors.textPrimary,
   },
   metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-    flexWrap: 'wrap',
+    fontFamily: fontFamilies.notoSansRegular,
+    fontSize: 12,
+    color: colors.textNavInactive,
   },
   metaText: {
     fontFamily: fontFamilies.notoSansRegular,
     fontSize: 12,
     color: colors.textNavInactive,
-    flexShrink: 1,
   },
-  metaDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.textNavInactive,
+  metaDotText: {
+    fontFamily: fontFamilies.notoSansRegular,
+    fontSize: 10,
+    color: colors.textNavInactive,
   },
   section: {
     gap: 30,

@@ -180,7 +180,9 @@ type HeadingInput = {
   current: RouteCoordinate;
 };
 
-/** Prefer GPS heading when valid; otherwise derive from last movement. */
+/** Prefer GPS heading when valid; otherwise derive from last movement. Used
+ * only as a fallback while the device compass is unavailable — see
+ * `resolveCompassHeading` for the primary heading source. */
 export function resolveHeading({ heading, previous, current }: HeadingInput): number | null {
   if (heading != null && Number.isFinite(heading) && heading >= 0) {
     return heading;
@@ -191,6 +193,53 @@ export function resolveHeading({ heading, previous, current }: HeadingInput): nu
   }
 
   return computeBearingDegrees(previous, current);
+}
+
+type CompassHeadingInput = {
+  trueHeading?: number | null;
+  magHeading?: number | null;
+};
+
+/**
+ * Resolves a compass reading (from `Location.watchHeadingAsync`) to a single
+ * heading in degrees. True-north heading is preferred (requires a location
+ * fix); falls back to magnetic-north heading when true heading is
+ * unavailable (`-1` on both iOS and Android when uncalibrated/no fix yet).
+ */
+export function resolveCompassHeading({
+  trueHeading,
+  magHeading,
+}: CompassHeadingInput): number | null {
+  if (trueHeading != null && Number.isFinite(trueHeading) && trueHeading >= 0) {
+    return trueHeading;
+  }
+
+  if (magHeading != null && Number.isFinite(magHeading) && magHeading >= 0) {
+    return magHeading;
+  }
+
+  return null;
+}
+
+/** EMA weight for compass heading smoothing (display only). */
+export const HEADING_EMA_ALPHA = 0.35;
+
+/**
+ * EMA-smooths a compass heading to reduce magnetometer jitter, correctly
+ * handling the 0°/360° wrap-around (e.g. 359° → 2° is a +3° turn, not -357°).
+ */
+export function smoothHeadingEma(
+  previous: number | null,
+  next: number,
+  alpha = HEADING_EMA_ALPHA,
+): number {
+  if (previous == null) {
+    return next;
+  }
+
+  const rawDelta = next - previous;
+  const shortestDelta = ((rawDelta + 180) % 360 + 360) % 360 - 180;
+  return (previous + shortestDelta * alpha + 360) % 360;
 }
 
 /** EMA smooth a coordinate for live map display only. */

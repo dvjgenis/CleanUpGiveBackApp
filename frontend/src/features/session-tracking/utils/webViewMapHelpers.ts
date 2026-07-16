@@ -1,5 +1,9 @@
 /** Inline MapLibre GL JS helpers shared by Expo Go WebView map components. */
-export function buildWebViewMapHelpers(primaryColor: string, startColor: string) {
+export function buildWebViewMapHelpers(
+  primaryColor: string,
+  startColor: string,
+  startBorderColor = '#ffffff',
+) {
   return `
   const EARTH_RADIUS_MILES = 3958.8;
   const DISPLAY_SIMPLIFY_TOLERANCE_METERS = 4;
@@ -145,32 +149,113 @@ export function buildWebViewMapHelpers(primaryColor: string, startColor: string)
     el.style.width = '14px';
     el.style.height = '14px';
     el.style.borderRadius = '7px';
-    el.style.backgroundColor = '${startColor}';
-    el.style.border = '2px solid #ffffff';
+    el.style.backgroundColor = window.__startMarkerFill || '${startColor}';
+    el.style.border = '2px solid ' + (window.__startMarkerBorder || '${startBorderColor}');
     el.style.boxSizing = 'border-box';
     return el;
   }
 
-  function createArrowMarkerElement(heading) {
-    const el = document.createElement('div');
-    el.style.width = '28px';
-    el.style.height = '28px';
-    el.style.display = 'flex';
-    el.style.flexDirection = 'column';
-    el.style.alignItems = 'center';
-    el.style.justifyContent = 'center';
-    el.dataset.heading = heading != null && Number.isFinite(heading) ? String(heading) : '';
-    if (heading != null && Number.isFinite(heading)) {
-      el.style.transform = 'rotate(' + heading + 'deg)';
+  function applyStartMarkerColors(fill, border) {
+    if (typeof fill === 'string') {
+      window.__startMarkerFill = fill;
     }
-    el.innerHTML = '<div style="width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:12px solid ${primaryColor};margin-bottom:-2px;"></div><div style="width:6px;height:8px;border-radius:3px;background:${primaryColor};border:1px solid #ffffff;"></div>';
+    if (typeof border === 'string') {
+      window.__startMarkerBorder = border;
+    }
+  }
+
+  function paintStartMarkerElement(el) {
+    if (!el) return;
+    var fill = window.__startMarkerFill || '${startColor}';
+    var border = window.__startMarkerBorder || '${startBorderColor}';
+    el.style.backgroundColor = fill;
+    el.style.border = '2px solid ' + border;
+  }
+
+  var HEADING_MARKER_SIZE = 100;
+  var HEADING_MARKER_CENTER = HEADING_MARKER_SIZE / 2;
+  var HEADING_DOT_OUTER_RADIUS = 11;
+  var HEADING_DOT_INNER_RADIUS = 7;
+  // Google Maps-style "location beam": a soft circular sector (pie slice)
+  // fanning out from the dot toward the heading direction (matching the
+  // native marker in SessionMapMarkers.tsx), built from a flat-opacity
+  // sector rather than a gradient/blur fill for visual parity with the
+  // native path.
+  var HEADING_BEAM_OUTER_RADIUS = 48;
+  var HEADING_BEAM_OUTER_HALF_ANGLE_DEG = 34;
+  var HEADING_BEAM_OUTER_OPACITY = 0.16;
+
+  // Builds an SVG path "d" string for a circular sector ("pie slice")
+  // pointing straight up from (cx, cy), spanning halfAngleDeg on either
+  // side of due north, out to radius.
+  function buildBeamSectorPath(cx, cy, radius, halfAngleDeg) {
+    var halfAngleRad = (halfAngleDeg * Math.PI) / 180;
+    var leftX = cx - radius * Math.sin(halfAngleRad);
+    var leftY = cy - radius * Math.cos(halfAngleRad);
+    var rightX = cx + radius * Math.sin(halfAngleRad);
+    var rightY = cy - radius * Math.cos(halfAngleRad);
+    return (
+      'M ' + cx + ' ' + cy +
+      ' L ' + leftX + ' ' + leftY +
+      ' A ' + radius + ' ' + radius + ' 0 0 1 ' + rightX + ' ' + rightY +
+      ' Z'
+    );
+  }
+
+  function buildHeadingMarkerSvg(hasHeading) {
+    var beam = hasHeading
+      ? '<path d="' + buildBeamSectorPath(
+          HEADING_MARKER_CENTER,
+          HEADING_MARKER_CENTER,
+          HEADING_BEAM_OUTER_RADIUS,
+          HEADING_BEAM_OUTER_HALF_ANGLE_DEG
+        ) + '" fill="${primaryColor}" fill-opacity="' + HEADING_BEAM_OUTER_OPACITY + '"></path>'
+      : '';
+    return (
+      '<svg width="' + HEADING_MARKER_SIZE + '" height="' + HEADING_MARKER_SIZE + '" viewBox="0 0 ' + HEADING_MARKER_SIZE + ' ' + HEADING_MARKER_SIZE + '">' +
+      beam +
+      '<circle cx="' + HEADING_MARKER_CENTER + '" cy="' + HEADING_MARKER_CENTER + '" r="' + HEADING_DOT_OUTER_RADIUS + '" fill="#ffffff"></circle>' +
+      '<circle cx="' + HEADING_MARKER_CENTER + '" cy="' + HEADING_MARKER_CENTER + '" r="' + HEADING_DOT_INNER_RADIUS + '" fill="${primaryColor}"></circle>' +
+      '</svg>'
+    );
+  }
+
+  // NOTE: the outer element passed to new maplibregl.Marker() has its
+  // transform style overwritten by MapLibre on every setLngLat/move, since
+  // MapLibre uses that same style property to translate the marker to its
+  // screen position. Rotation must therefore be applied to an inner wrapper
+  // div instead, or it will clobber MapLibre's positioning transform and the
+  // marker will jump to the container's top-left corner.
+  function createArrowMarkerElement(heading) {
+    var el = document.createElement('div');
+    el.style.width = HEADING_MARKER_SIZE + 'px';
+    el.style.height = HEADING_MARKER_SIZE + 'px';
+    var rotator = document.createElement('div');
+    rotator.style.width = HEADING_MARKER_SIZE + 'px';
+    rotator.style.height = HEADING_MARKER_SIZE + 'px';
+    var hasHeading = heading != null && Number.isFinite(heading);
+    el.dataset.heading = hasHeading ? String(heading) : '';
+    if (hasHeading) {
+      rotator.style.transform = 'rotate(' + heading + 'deg)';
+    }
+    rotator.innerHTML = buildHeadingMarkerSvg(hasHeading);
+    el.appendChild(rotator);
     return el;
   }
 
   function updateArrowMarkerElement(el, heading) {
-    if (heading != null && Number.isFinite(heading)) {
-      el.style.transform = 'rotate(' + heading + 'deg)';
+    var rotator = el.firstElementChild;
+    if (!rotator) return;
+    var hasHeading = heading != null && Number.isFinite(heading);
+    var hadHeading = el.dataset.heading === '' ? false : el.dataset.heading != null && el.dataset.heading !== '';
+    if (hasHeading) {
+      rotator.style.transform = 'rotate(' + heading + 'deg)';
       el.dataset.heading = String(heading);
+    } else {
+      rotator.style.transform = '';
+    }
+    if (hasHeading !== hadHeading) {
+      rotator.innerHTML = buildHeadingMarkerSvg(hasHeading);
     }
   }
 
@@ -187,6 +272,51 @@ export function buildWebViewMapHelpers(primaryColor: string, startColor: string)
     el.style.boxSizing = 'border-box';
     el.innerHTML = '<div style="width:8px;height:8px;border-radius:4px;background:#ffffff;"></div>';
     return el;
+  }
+
+  function lonLatToTileXY(lon, lat, zoom) {
+    var latRad = (lat * Math.PI) / 180;
+    var n = Math.pow(2, zoom);
+    return {
+      x: Math.floor(((lon + 180) / 360) * n),
+      y: Math.floor(
+        ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * n,
+      ),
+    };
+  }
+
+  /**
+   * Warms the HTTP cache for a raster style's tile sources around the
+   * current viewport, without adding it to the map. Esri's free tile
+   * servers are noticeably slower than the standard basemap's CDN, and
+   * Hybrid alone layers three separate raster sources (imagery,
+   * transportation, labels) on top of each other — switching to it "cold"
+   * means waiting on all three fetches at once. Called ahead of time (see
+   * \`window.prefetchLayerTiles\`) so that by the time the user actually
+   * picks the layer, most tiles are already cached and \`setStyle\` just
+   * has to repaint from cache instead of hitting the network.
+   */
+  function prefetchRasterStyleTiles(stylePayload) {
+    if (!stylePayload || stylePayload.type !== 'json' || !stylePayload.value.sources) return;
+    var center = map.getCenter();
+    var zoom = Math.max(0, Math.round(map.getZoom()));
+    var tile = lonLatToTileXY(center.lng, center.lat, zoom);
+    var sources = stylePayload.value.sources;
+    Object.keys(sources).forEach(function (key) {
+      var source = sources[key];
+      if (source.type !== 'raster' || !source.tiles || !source.tiles[0]) return;
+      var z = source.maxzoom != null ? Math.min(zoom, source.maxzoom) : zoom;
+      var template = source.tiles[0];
+      for (var dx = -1; dx <= 1; dx += 1) {
+        for (var dy = -1; dy <= 1; dy += 1) {
+          var url = template
+            .replace('{z}', String(z))
+            .replace('{x}', String(tile.x + dx))
+            .replace('{y}', String(tile.y + dy));
+          fetch(url).catch(function () {});
+        }
+      }
+    });
   }
   `;
 }

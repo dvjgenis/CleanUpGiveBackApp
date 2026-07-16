@@ -156,7 +156,7 @@ export function SetTourScreen() {
   };
 
   const startTracking = () => {
-    router.replace('/session-setup-guide');
+    router.replace({ pathname: '/session-setup-guide', params: { entry: 'onboarding' } });
   };
 
   const replayTour = () => {

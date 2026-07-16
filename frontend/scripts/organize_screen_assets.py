@@ -96,6 +96,8 @@ DUMP_MAP: dict[str, str] = {
     "export.svg": "account/export.svg",
     "folder.svg": "account/folder.svg",
     "leaves.svg": "account/leaves.svg",
+    "leaf-large.svg": "account/leaf-large.svg",
+    "leaf-small.svg": "account/leaf-small.svg",
     "notification.svg": "account/notification.svg",
     "permissions.svg": "account/permissions.svg",
     "preferences.svg": "account/preferences.svg",

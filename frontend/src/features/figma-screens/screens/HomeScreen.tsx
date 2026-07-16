@@ -12,7 +12,7 @@ import {
   getCheckpointProgress,
   useLiveSession,
 } from '@/features/session-tracking/liveSessionStore';
-import { resetRecentSessions, useRecentSessions } from '@/features/session-tracking/recentSessionsStore';
+import { useRecentSessions } from '@/features/session-tracking/recentSessionsStore';
 
 import { EventsViewAllModal } from '../components/EventsViewAllModal';
 import { RecentSessionCard } from '../components/RecentSessionCard';
@@ -185,9 +185,6 @@ function RecentSessionsSection({
         <Text style={s.sectionTitle}>Recent Sessions</Text>
         {recentSessions.length > 0 && (
           <View style={s.sectionHeaderActions}>
-            <AnimatedPressable onPress={resetRecentSessions} hitSlop={8} accessibilityRole="button" accessibilityLabel="Clear recent sessions">
-              <Text style={s.clearLink}>Clear</Text>
-            </AnimatedPressable>
             <Text style={s.viewAllLink}>View All</Text>
           </View>
         )}
@@ -645,11 +642,6 @@ const s = StyleSheet.create({
     fontFamily: fontFamilies.notoSansMedium,
     fontSize: 14,
     color: colors.primary,
-  },
-  clearLink: {
-    fontFamily: fontFamilies.notoSansMedium,
-    fontSize: 14,
-    color: colors.textTertiary,
   },
   emptySectionMessage: {
     fontFamily: fontFamilies.notoSansRegular,

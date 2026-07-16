@@ -28,6 +28,10 @@ Wire the existing native session tracking flow (`frontend/src/app/` routes + `li
 ### Geolocation (client — already wired, verify in Expo Go)
 
 - [x] **AC-3:** `expo-location` foreground permission prompt on session start
+- [x] **AC-28:** Session Setup's **Required Permissions** Location/Camera toggles default to **on** when the OS has already granted those permissions (via onboarding or the session-setup-guide prompts), read via `isSessionLocationPermissionGranted`/`isSessionCameraPermissionGranted` (`getForegroundPermissionsAsync`/`Camera.getCameraPermissionsAsync`, no prompt) on mount; toggles still default to off and remain user-editable when permission was declined
+- [x] **AC-29:** Session-setup-guide's `/session-setup-step6` (location) and `/session-setup-step7` (camera) "Allow …?" screens check current grant status on mount and auto-`replace` forward to the next step when already granted (e.g. granted earlier during onboarding), instead of re-showing a redundant ask screen
+- [x] **AC-30:** Account → Permissions Camera/Location toggles (`AccountScreen.tsx`) mirror the real OS grant status (re-checked on focus); turning a toggle on calls the real permission request (shows the native iOS prompt only if that permission has never been decided — expected iOS behavior); turning one off (or on when already denied) cannot revoke/grant an OS permission from inside the app, so the switch snaps back to the actual status and an alert offers **Open Settings** (`Linking.openSettings()`)
+- [x] **AC-31:** Onboarding's `/notification-preference` **Enable notifications** button fires the real `expo-notifications` `requestPermissionsAsync()` (native iOS prompt) before continuing to `/setup-complete`; Account → Permissions gets a third **Notifications** toggle following the exact same mirror-OS-status / request-on-enable / Open-Settings-on-disable pattern as Camera/Location
 - [x] **AC-4:** `liveSessionStore` accumulates route polyline and distance via `watchPositionAsync` during active session
 - [x] **AC-5:** Location watching stops when session ends (`endLiveSession`)
 - [x] **AC-6:** 30-minute checkpoint countdown runs; missed checkpoint navigates to `/missed-checkpoint`
@@ -40,10 +44,11 @@ Wire the existing native session tracking flow (`frontend/src/app/` routes + `li
 - [x] **AC-10:** Submission confirmation and session detail use read-only WebView route preview with `fitBounds`
 - [x] **AC-11:** Native MapLibre path unchanged for future EAS builds; web keeps placeholder
 - [x] **AC-22:** Live and preview maps support user pan and pinch zoom; live map recenters only on first GPS fix, when follow mode is enabled, or when recenter is tapped; preview `fitBounds` runs once on initial load
-- [x] **AC-23:** Live tracker map layers control toggles Standard, Streets, Satellite, and Hybrid basemaps (Carto + Esri, no API key)
+- [x] **AC-23:** Live tracker map layers control toggles Standard, Satellite, and Hybrid basemaps (Carto Voyager + Esri, no API key); `MapTypesSheet` selection is wired to `liveSessionStore.mapLayer` so the basemap actually updates on tap
 - [x] **AC-24:** GPS uses `BestForNavigation` at 1s interval with hardened capture filters (≤15m accuracy, ≥6m movement from last route point, accuracy-adaptive threshold, stationary detection via device speed, sharp-reversal rejection, 8s warm-up); stored route unchanged by display simplification
-- [x] **AC-25:** Live map shows gray start marker and green heading arrow on EMA-smoothed `displayCoordinate`; preview maps show start + end markers on simplified route polyline
+- [x] **AC-25:** Live map shows gray start marker and a primary-green heading-beam dot (white halo, fading directional beam) on EMA-smoothed `displayCoordinate`; beam heading is driven by the device compass (`watchHeadingAsync`, EMA-smoothed) so it tracks which way the phone is facing in real time, falling back to GPS course-over-ground while the compass is unavailable; preview maps show start + end markers on simplified route polyline
 - [x] **AC-26:** Live tracker includes optional **Follow** toggle (default off); when on, map eases to smoothed position on each GPS update; Recenter still flies to current position independently
+- [x] **AC-27:** Submission confirmation and session detail route previews auto-play a one-shot "replay" animation on load — the polyline grows from start to end with a moving tip marker over a distance-scaled duration (~1.8–3.5s), then settles into the static start/end marker view identical to today; replay does not repeat on re-render, respects `useReducedMotion` (skips straight to the static view), and re-running it (e.g. switching basemap layer) shows the static route rather than replaying again; the basemap opens on the layer the user had selected when the session ended (`CompletedSessionSnapshot.mapLayer` → `SessionRouteMapPanel.initialMapLayer`), not always Standard
 
 ### Camera (client — already wired, verify in Expo Go)
 
@@ -94,12 +99,21 @@ Wire the existing native session tracking flow (`frontend/src/app/` routes + `li
 | `frontend/src/features/session-tracking/liveSessionStore.ts` | Wire create/checkpoint/finalize to API |
 | `frontend/src/features/session-tracking/components/LiveSessionMapWebView.tsx` | New — WebView map for Expo Go |
 | `frontend/src/features/session-tracking/components/MapInteractionContainer.tsx` | Touch responder wrapper for map pan/zoom inside ScrollViews |
-| `frontend/src/features/session-tracking/utils/mapStyles.ts` | Basemap layer definitions (standard, streets, satellite, hybrid) |
+| `frontend/src/features/session-tracking/utils/mapStyles.ts` | Basemap layer definitions (standard, satellite, hybrid) |
 | `frontend/src/features/session-tracking/utils/routeFiltering.ts` | GPS capture filters, EMA display coordinate, Douglas-Peucker display simplification |
-| `frontend/src/features/session-tracking/components/SessionMapMarkers.tsx` | Start, heading arrow, and end map markers |
+| `frontend/src/features/session-tracking/components/SessionMapMarkers.tsx` | Start, heading-beam dot, and end map markers |
 | `frontend/src/features/session-tracking/components/LiveSessionMap.tsx` | Route Expo Go → WebView |
 | `frontend/src/features/session-tracking/components/SessionRouteMapPreview.tsx` | Route Expo Go → WebView read-only |
+| `frontend/src/features/session-tracking/components/SessionRouteMapPreviewWebView.tsx` | `replayOnce` prop — one-shot growing-polyline + tip-marker replay via `window.replayRoute`; initial HTML style is baked from `mapLayer` so Hybrid/Satellite open without a post-load `setStyle` race |
+| `frontend/src/features/session-tracking/components/SessionRouteMapPanel.tsx` | Threads `replayOnce` to preview; `showLayerControl` (default `true`) toggles the basemap layer-picker button — session detail hides it; `initialMapLayer` opens the replay on the layer the session ended with |
 | `frontend/src/app/_layout.tsx` | Ensure anon auth on app mount |
+| `frontend/src/utils/sessionPermissions.ts` | Added `isSessionLocationPermissionGranted`/`isSessionCameraPermissionGranted` status checks (no OS prompt); camera request/check now goes through the `Camera` legacy object per `expo-camera` 17 |
+| `frontend/src/screens/SessionSetupFormScreen.tsx` | Location/Camera permission toggles default from actual OS-granted status on mount |
+| `frontend/src/screens/SessionSetupStep6Screen.tsx`, `SessionSetupStep7Screen.tsx` | Check grant status on mount; auto-`replace` to the next step when already granted instead of re-prompting |
+| `frontend/src/features/figma-screens/screens/AccountScreen.tsx` | Permissions toggles (Camera, Location, **Notifications**) mirror real OS status (`useFocusEffect`); on-toggle calls real request/status check; off-toggle (or already-denied on-toggle) reverts the switch and alerts with an Open Settings action |
+| `frontend/src/utils/notificationPermissions.ts` | New — `requestSessionNotificationPermission`/`isSessionNotificationPermissionGranted` via `expo-notifications` (creates an Android notification channel first, required for the OS prompt to appear on Android 13+) |
+| `frontend/src/screens/NotificationPreferenceScreen.tsx` | **Enable notifications** now calls `requestSessionNotificationPermission()` (real OS prompt) before continuing, matching the location/camera onboarding screens |
+| `frontend/app.json` | Added `expo-notifications` plugin |
 
 ## Test plan
 
@@ -109,7 +123,7 @@ Wire the existing native session tracking flow (`frontend/src/app/` routes + `li
 4. **Start Tracking** → session setup → permissions → **Start Session**
 5. Walk outdoors ≥ 2 minutes; confirm WebView map shows route polyline and distance increments; toggle **Follow** to pan with you; drag to pan and pinch to zoom without map snapping back until follow is on or recenter is tapped
 6. Submit a photo checkpoint; confirm camera capture works
-7. **End Session** → submission confirmation shows photos + route preview; pan/zoom route preview inside scrollable screen
-8. **Go Home** → session appears in Recent Sessions / Sessions list as Under Review
+7. **End Session** → submission confirmation shows photos + route preview; route preview auto-replays the walking path once (growing line + moving tip marker) before settling into the static view; pan/zoom route preview inside scrollable screen
+8. **Go Home** → session appears in Recent Sessions / Sessions list as Under Review; opening that session's detail screen replays the same walking-path animation once per visit
 9. Force-quit app → reopen → session still visible (fetched from API)
 10. Verify rows in Supabase `sessions` + `checkpoints` tables and objects in `session-photos` bucket

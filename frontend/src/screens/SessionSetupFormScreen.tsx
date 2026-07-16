@@ -11,7 +11,7 @@ import {
 import { Sanchez_400Regular } from '@expo-google-fonts/sanchez';
 import { useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Keyboard,
   ScrollView,
@@ -32,6 +32,10 @@ import { SessionSetupTopAppBar } from '@/components/session-setup/SessionSetupTo
 import { CameraIcon } from '@/features/session-tracking/components/icons/CameraIcon';
 import { LocationPinIcon } from '@/features/session-tracking/components/icons/LocationPinIcon';
 import { startNewLiveSession } from '@/features/session-tracking/liveSessionStore';
+import {
+  isSessionCameraPermissionGranted,
+  isSessionLocationPermissionGranted,
+} from '@/utils/sessionPermissions';
 
 import { colors as tokens } from '@/constants/tokens';
 
@@ -106,6 +110,28 @@ export function SessionSetupFormScreen() {
     NotoSans_600SemiBold,
     IBMPlexSans_400Regular,
   });
+  // Default the permission toggles to "on" when the OS has already granted
+  // them (e.g. via the onboarding or session-setup-guide permission prompts),
+  // so the user doesn't have to re-enable something iOS already allows.
+  useEffect(() => {
+    let isMounted = true;
+
+    void isSessionLocationPermissionGranted().then((granted) => {
+      if (isMounted && granted) {
+        setLocationEnabled(true);
+      }
+    });
+    void isSessionCameraPermissionGranted().then((granted) => {
+      if (isMounted && granted) {
+        setCameraEnabled(true);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const introStyle = useFadeUpEnter(0);
   const fieldsStyle = useFadeUpEnter(staggerDelay(1));
   const permissionsStyle = useFadeUpEnter(staggerDelay(2));

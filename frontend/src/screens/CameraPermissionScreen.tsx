@@ -8,12 +8,14 @@ import { NotoSans_400Regular, NotoSans_600SemiBold } from '@expo-google-fonts/no
 import { Sanchez_400Regular } from '@expo-google-fonts/sanchez';
 import { useFonts } from 'expo-font';
 import { useRouter } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Alert, Linking, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 /** Figma `camera_permission` (725:613) — onboarding step 4 of 5. */
 export function CameraPermissionScreen() {
   const router = useRouter();
+  const [isRequesting, setIsRequesting] = useState(false);
 
   const [fontsLoaded] = useFonts({
     Sanchez_400Regular,
@@ -23,7 +25,28 @@ export function CameraPermissionScreen() {
   });
 
   async function handleEnable() {
-    await requestSessionCameraPermission();
+    if (isRequesting) return;
+    setIsRequesting(true);
+    try {
+      const result = await requestSessionCameraPermission();
+      if (!result.granted && !result.canAskAgain) {
+        Alert.alert(
+          'Camera access is off',
+          'Enable Camera for Expo Go in Settings to continue using photo checkpoints.',
+          [
+            {
+              text: 'Not now',
+              style: 'cancel',
+              onPress: () => router.push('/notification-preference'),
+            },
+            { text: 'Open Settings', onPress: () => void Linking.openSettings() },
+          ],
+        );
+        return;
+      }
+    } finally {
+      setIsRequesting(false);
+    }
     router.push('/notification-preference');
   }
 
@@ -54,12 +77,15 @@ export function CameraPermissionScreen() {
 
         <View style={s.footer}>
           <AnimatedPressable
-            style={s.enableBtn}
+            style={[s.enableBtn, isRequesting && { opacity: 0.7 }]}
             onPress={handleEnable}
+            disabled={isRequesting}
             accessibilityRole="button"
             accessibilityLabel="Enable camera"
           >
-            <Text style={s.enableBtnText}>Enable camera</Text>
+            <Text style={s.enableBtnText}>
+              {isRequesting ? 'Requesting…' : 'Enable camera'}
+            </Text>
           </AnimatedPressable>
           <AnimatedPressable
             style={s.previousBtn}
@@ -96,7 +122,7 @@ const s = StyleSheet.create({
   illustration: {
     position: 'absolute',
     left: '40.77%',
-    top: '9.48%',
+    top: '16%',
     width: 240,
     height: 210,
   },

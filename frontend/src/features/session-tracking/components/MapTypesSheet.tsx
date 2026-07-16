@@ -22,11 +22,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { durations, easing, modalSpring, sheetDismissSpring } from '@/motion';
 import { colors, fontFamilies, radius as R } from '../tokens';
+import type { MapLayerType } from '../utils/mapStyles';
 
 /** Travel distance for slide — sheet height plus bleed so the panel starts fully off-screen. */
 const SHEET_BOTTOM_BLEED = 48;
 
-export type MapTypeOption = 'standard' | 'satellite' | 'hybrid';
+export type MapTypeOption = MapLayerType;
 
 type Props = {
   visible: boolean;

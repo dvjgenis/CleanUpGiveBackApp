@@ -8,6 +8,7 @@ import {
   resolveSessionDurationSeconds,
 } from '@/features/session-tracking/utils/sessionFormat';
 import type { RouteCoordinate } from '@/features/session-tracking/utils/geo';
+import { DEFAULT_MAP_LAYER, type MapLayerType } from '@/features/session-tracking/utils/mapStyles';
 
 import { mockSessionsList, type SessionApprovalStatus } from './sessions';
 
@@ -68,6 +69,8 @@ export type SessionDetailData = {
    * when non-empty — 72×72 thumbs, 12px gap.
    */
   evidencePhotos: SessionEvidencePhoto[];
+  /** Basemap layer the user had selected when the session ended. */
+  mapLayer: MapLayerType;
 };
 
 /** Figma `session_detail` (node `515:1848`) — default Downtown Riverfront mock. */
@@ -82,6 +85,7 @@ const DEFAULT_DETAIL: SessionDetailData = {
   photosCountLabel: '4',
   routeCoordinates: [],
   evidencePhotos: MOCK_EVIDENCE_PHOTOS,
+  mapLayer: DEFAULT_MAP_LAYER,
 };
 
 const DETAIL_OVERRIDES: Partial<
@@ -188,6 +192,7 @@ function detailFromCompletedSnapshot(
     photosCountLabel: String(snapshot.submittedCheckpoints.length),
     routeCoordinates: snapshot.routeCoordinates,
     evidencePhotos,
+    mapLayer: snapshot.mapLayer ?? DEFAULT_MAP_LAYER,
   };
 }
 
@@ -221,5 +226,6 @@ export function getSessionDetail(id?: string): SessionDetailData {
     photosCountLabel: override.photosCountLabel ?? DEFAULT_DETAIL.photosCountLabel,
     routeCoordinates: [],
     evidencePhotos: MOCK_EVIDENCE_PHOTOS,
+    mapLayer: DEFAULT_MAP_LAYER,
   };
 }

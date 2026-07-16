@@ -13,29 +13,34 @@ import { SessionRouteMapPreview } from './SessionRouteMapPreview';
 
 type Props = {
   routeCoordinates: RouteCoordinate[];
+  /** Animate the route drawing once (grow line + tip marker) instead of showing it fully drawn. Expo Go / WebView only. */
+  replayOnce?: boolean;
+  /** Show the basemap layer picker toggle button. Defaults to true. */
+  showLayerControl?: boolean;
+  /** Basemap layer to open on — e.g. the layer the user had selected when
+   * the session ended. Defaults to `DEFAULT_MAP_LAYER`. */
+  initialMapLayer?: MapLayerType;
   style?: object;
 };
 
-function SessionRouteMapEmptyState({ pointCount }: { pointCount: number }) {
-  const trackingLabel =
-    pointCount === 1
-      ? 'Walking path started · waiting for more GPS points'
-      : 'No GPS path recorded for this session';
-
+function SessionRouteMapEmptyState() {
   return (
     <View style={styles.emptyState}>
       <Icon name="locationPin" size={28} color={colors.textTertiary} />
-      <Text style={[textStyles.bodySmall, styles.emptyTitle]}>{trackingLabel}</Text>
-      <Text style={[textStyles.bodySmall, styles.emptyHint]}>
-        Complete a tracked session to see your route here.
-      </Text>
+      <Text style={[textStyles.bodySmall, styles.emptyTitle]}>No route recorded</Text>
     </View>
   );
 }
 
 /** Interactive route preview with pan/zoom and basemap layer picker. */
-export function SessionRouteMapPanel({ routeCoordinates, style }: Props) {
-  const [mapLayer, setMapLayer] = useState<MapLayerType>(DEFAULT_MAP_LAYER);
+export function SessionRouteMapPanel({
+  routeCoordinates,
+  replayOnce = false,
+  showLayerControl = true,
+  initialMapLayer = DEFAULT_MAP_LAYER,
+  style,
+}: Props) {
+  const [mapLayer, setMapLayer] = useState<MapLayerType>(initialMapLayer);
   const [pickerVisible, setPickerVisible] = useState(false);
   const hasRoute = routeCoordinates.length >= 2;
 
@@ -45,13 +50,14 @@ export function SessionRouteMapPanel({ routeCoordinates, style }: Props) {
         <SessionRouteMapPreview
           routeCoordinates={routeCoordinates}
           mapLayer={mapLayer}
+          replayOnce={replayOnce}
           style={styles.map}
         />
       ) : (
-        <SessionRouteMapEmptyState pointCount={routeCoordinates.length} />
+        <SessionRouteMapEmptyState />
       )}
 
-      {hasRoute && (
+      {hasRoute && showLayerControl && (
         <View style={styles.controls} pointerEvents="box-none">
           <View style={styles.layerControl}>
             {pickerVisible && (
@@ -98,11 +104,7 @@ const styles = StyleSheet.create({
     color: colors.textTertiary,
     textAlign: 'center',
   },
-  emptyHint: {
-    color: colors.primary,
-    textAlign: 'center',
-    fontFamily: 'NotoSans_500Medium',
-  },
+
   controls: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'flex-end',
