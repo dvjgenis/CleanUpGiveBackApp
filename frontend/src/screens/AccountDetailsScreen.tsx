@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
+import { OnboardingInfoFooterActions } from '@/components/onboarding/OnboardingInfoFooterActions';
 import { OnboardingProgressPills } from '@/components/onboarding/OnboardingProgressPills';
 import { SessionSetupCalendarIcon } from '@/components/session-setup/icons/SessionSetupCalendarIcon';
 import { DateWheelPicker } from '@/features/figma-screens/components/DateWheelPicker';
@@ -262,7 +263,7 @@ export function AccountDetailsScreen() {
         >
           <Pressable style={s.content} onPress={Keyboard.dismiss}>
             <View style={s.form}>
-              <OnboardingProgressPills active={2} />
+              <OnboardingProgressPills active={2} total={7} />
 
               <View style={s.titleSection}>
                 <Text style={s.title}>A few details</Text>
@@ -346,42 +347,29 @@ export function AccountDetailsScreen() {
                 {showError('serviceType') ? <Text style={s.errorText}>{showError('serviceType')}</Text> : null}
               </View>
             </View>
-
-            <View style={s.footer}>
-              <AnimatedPressable
-                style={s.continueBtn}
-                onPress={() => {
-                  Keyboard.dismiss();
-                  commitTypedBirthday();
-                  setSubmitted(true);
-                  const resolved = parseBirthdayDraft(birthdayText) ?? birthday;
-                  const currentErrors = validate(resolved, birthdayText, serviceType);
-                  if (Object.keys(currentErrors).length > 0) return;
-                  if (resolved && ageFromMonthYear(resolved) < 18) {
-                    router.push('/under-age');
-                    return;
-                  }
-                  router.push('/location-permission');
-                }}
-                accessibilityRole="button"
-                accessibilityLabel="Continue"
-              >
-                <Text style={s.continueBtnText}>Continue</Text>
-              </AnimatedPressable>
-              <AnimatedPressable
-                style={s.previousBtn}
-                onPress={() => {
-                  Keyboard.dismiss();
-                  router.back();
-                }}
-                accessibilityRole="button"
-                accessibilityLabel="Previous"
-              >
-                <Text style={s.previousBtnText}>Previous</Text>
-              </AnimatedPressable>
-            </View>
           </Pressable>
         </ScrollView>
+
+        <OnboardingInfoFooterActions
+          onContinue={() => {
+            Keyboard.dismiss();
+            commitTypedBirthday();
+            setSubmitted(true);
+            const resolved = parseBirthdayDraft(birthdayText) ?? birthday;
+            const currentErrors = validate(resolved, birthdayText, serviceType);
+            if (Object.keys(currentErrors).length > 0) return;
+            if (resolved && ageFromMonthYear(resolved) < 18) {
+              router.push('/under-age');
+              return;
+            }
+            router.push('/location-permission');
+          }}
+          onPrevious={() => {
+            Keyboard.dismiss();
+            router.back();
+          }}
+          hideSkip
+        />
       </KeyboardAvoidingView>
 
       <BirthdayPickerModal
@@ -432,11 +420,10 @@ const s = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: 16,
     paddingTop: 16,
-    paddingBottom: 16,
+    paddingBottom: 180,
   },
   content: {
     flexGrow: 1,
-    justifyContent: 'space-between',
   },
   form: {
     gap: 30,
@@ -526,34 +513,6 @@ const s = StyleSheet.create({
   },
   serviceBtnTextActive: {
     color: C.primary,
-  },
-  footer: {
-    gap: 20,
-  },
-  continueBtn: {
-    backgroundColor: C.primary,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 20,
-  },
-  continueBtnText: {
-    fontFamily: 'IBMPlexSans_600SemiBold',
-    fontSize: 18,
-    color: C.textOnPrimary,
-  },
-  previousBtn: {
-    borderWidth: 1,
-    borderColor: C.textPrimary,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 20,
-  },
-  previousBtnText: {
-    fontFamily: 'IBMPlexSans_600SemiBold',
-    fontSize: 18,
-    color: C.textPrimary,
   },
   modalRoot: {
     flex: 1,

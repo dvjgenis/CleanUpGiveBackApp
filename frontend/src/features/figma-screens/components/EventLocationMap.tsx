@@ -7,7 +7,7 @@ import { colors, fontFamilies } from '../tokens';
 import type { MapCoordinate } from '../utils/openLocationInMaps';
 
 const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
-const needsFallback = isExpoGo || Platform.OS === 'web';
+const isWeb = Platform.OS === 'web';
 
 type Props = {
   address: string;
@@ -34,12 +34,21 @@ function EventLocationMapFallback({ address, onPress }: { address: string; onPre
 }
 
 /**
- * Event location map — MapLibre pin when available; otherwise a Maps CTA card.
- * Tap opens Apple Maps (iOS) or Google Maps (Android). No static placeholder image.
+ * Event location map — live MapLibre pin (WebView in Expo Go, native in
+ * dev-client/production). Web keeps a Maps CTA card. Tap opens Apple Maps
+ * (iOS) or Google Maps (Android/web).
  */
 export function EventLocationMap({ address, coordinate, onPress }: Props) {
-  if (needsFallback) {
+  if (isWeb) {
     return <EventLocationMapFallback address={address} onPress={onPress} />;
+  }
+
+  if (isExpoGo) {
+    const { EventLocationMapWebView } =
+      require('./EventLocationMapWebView') as typeof import('./EventLocationMapWebView');
+    return (
+      <EventLocationMapWebView address={address} coordinate={coordinate} onPress={onPress} />
+    );
   }
 
   const { EventLocationMapNative } =

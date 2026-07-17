@@ -2,6 +2,7 @@ import { StyleSheet } from 'react-native';
 
 import { Map, MapMarker, MapRoute } from '@/components/ui/map';
 
+import { useEffectiveMapTheme } from '../mapThemeStore';
 import { colors, radius } from '../tokens';
 import {
   DEFAULT_MAP_LAYER,
@@ -30,18 +31,19 @@ export function SessionRouteMapPreviewNative({
   mapLayer = DEFAULT_MAP_LAYER,
   style,
 }: Props) {
+  const mapTheme = useEffectiveMapTheme();
   const mapCenter = getRouteMapCenter(routeCoordinates);
   const mapZoom = getRouteMapZoom(routeCoordinates);
   const routeStart = routeCoordinates[0] ?? null;
   const routeEnd = routeCoordinates[routeCoordinates.length - 1] ?? null;
-  const mapStyle = getNativeMapStyle(mapLayer);
+  const mapStyle = getNativeMapStyle(mapLayer, mapTheme);
   const displayRoute = simplifyRouteForDisplay(routeCoordinates);
-  const startColors = getReplayStartMarkerColors(mapLayer);
+  const startColors = getReplayStartMarkerColors(mapLayer, mapTheme);
 
   return (
     <MapInteractionContainer style={[styles.container, style]}>
       <Map
-        key={mapLayer}
+        key={`${mapLayer}-${mapTheme}`}
         styles={{ light: mapStyle, dark: mapStyle }}
         center={mapCenter}
         zoom={mapZoom}

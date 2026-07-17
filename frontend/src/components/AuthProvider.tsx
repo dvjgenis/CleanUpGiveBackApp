@@ -1,5 +1,6 @@
 import { createContext, use, useEffect, useState, type ReactNode } from 'react';
 
+import { hydrateMapThemeSettings } from '@/features/session-tracking/mapThemeStore';
 import { hydrateRecentSessionsFromApi } from '@/features/session-tracking/recentSessionsStore';
 import { ensureAnonymousAuth, isSupabaseConfigured } from '@/lib/supabase';
 
@@ -19,6 +20,10 @@ export function useAuthReady() {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(!isSupabaseConfigured);
+
+  useEffect(() => {
+    void hydrateMapThemeSettings();
+  }, []);
 
   useEffect(() => {
     if (!isSupabaseConfigured) {

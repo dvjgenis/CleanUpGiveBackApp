@@ -92,7 +92,7 @@ export function CreateAccountScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <OnboardingProgressPills active={1} />
+          <OnboardingProgressPills active={1} total={7} />
 
           <Text style={s.title}>Create your account</Text>
 

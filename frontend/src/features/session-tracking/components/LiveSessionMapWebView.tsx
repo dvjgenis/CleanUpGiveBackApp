@@ -3,6 +3,7 @@ import { StyleSheet } from 'react-native';
 import { WebView } from 'react-native-webview';
 
 import { useLiveSession } from '../liveSessionStore';
+import { useEffectiveMapTheme, type MapBasemapTheme } from '../mapThemeStore';
 import { colors, radius } from '../tokens';
 import { getMapStylePayload, type MapLayerType } from '../utils/mapStyles';
 import { buildWebViewMapHelpers } from '../utils/webViewMapHelpers';
@@ -18,9 +19,14 @@ const OTHER_PREFETCHABLE_LAYERS: MapLayerType[] = ['satellite', 'hybrid'];
  * kicking off background tile prefetching for other layers. */
 const PREFETCH_DELAY_MS = 2500;
 
-function buildHtml(initialCenter: [number, number] | null) {
+function buildHtml(initialCenter: [number, number] | null, theme: MapBasemapTheme) {
   const center = initialCenter ? JSON.stringify(initialCenter) : '[-98,39]';
   const zoom = initialCenter ? 15 : 3;
+  const initialStyle = getMapStylePayload('standard', theme);
+  const initialStyleJs =
+    initialStyle.type === 'url'
+      ? JSON.stringify(initialStyle.value)
+      : JSON.stringify(initialStyle.value);
   return `<!doctype html>
 <html>
 <head>
@@ -34,7 +40,7 @@ function buildHtml(initialCenter: [number, number] | null) {
 <script>
   const map = new maplibregl.Map({
     container: 'map',
-    style: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
+    style: ${initialStyleJs},
     center: ${center},
     zoom: ${zoom},
     attributionControl: false,
@@ -100,13 +106,21 @@ function buildHtml(initialCenter: [number, number] | null) {
     }
   }
 
-  function applyRouteOverlay(coords, current, heading, recenterToken, followEnabled) {
+  function applyRouteOverlay(coords, current, heading, recenterToken, followEnabled, forceApply) {
     pendingCoords = coords || [];
     pendingCurrent = current;
     pendingHeading = heading;
     pendingRecenterToken = recenterToken;
     pendingFollowEnabled = followEnabled;
-    if (!map.isStyleLoaded()) return;
+    // 'style.load' firing (see window.setMapStyle below) only means the new
+    // style document has been parsed and applied — isStyleLoaded() can still
+    // read false for a beat afterward while sources/tiles catch up. Gating
+    // on it there would skip syncMarkers() and leave the just-removed
+    // start/current markers permanently gone until the next GPS fix. The
+    // caller passes forceApply=true once it already knows from the event
+    // that re-syncing is safe; the regular GPS-driven update path still uses
+    // this guard to avoid touching the map before it's ready at all.
+    if (!forceApply && !map.isStyleLoaded()) return;
 
     const displayCoords = simplifyRouteForDisplay(pendingCoords);
     const data = { type: 'Feature', geometry: { type: 'LineString', coordinates: displayCoords } };
@@ -166,6 +180,7 @@ function buildHtml(initialCenter: [number, number] | null) {
         pendingHeading,
         pendingRecenterToken,
         pendingFollowEnabled,
+        true,
       );
       // A style swap with no accompanying camera move (the common case once
       // the map is already centered) leaves nothing to trigger a WebGL
@@ -202,6 +217,7 @@ export function LiveSessionMapWebView({ style }: Props) {
     mapFollowEnabled,
     mapLayer,
   } = useLiveSession();
+  const mapTheme = useEffectiveMapTheme();
   const webRef = useRef<WebView>(null);
   const readyRef = useRef(false);
 
@@ -210,7 +226,7 @@ export function LiveSessionMapWebView({ style }: Props) {
   const htmlRef = useRef<string | null>(null);
   if (htmlRef.current === null) {
     const center = displayCoordinate ?? currentCoordinate ?? routeCoordinates[0] ?? null;
-    htmlRef.current = buildHtml(center as [number, number] | null);
+    htmlRef.current = buildHtml(center as [number, number] | null, mapTheme);
   }
 
   const pushRouteUpdate = () => {
@@ -227,7 +243,7 @@ export function LiveSessionMapWebView({ style }: Props) {
       return;
     }
 
-    const stylePayload = getMapStylePayload(mapLayer);
+    const stylePayload = getMapStylePayload(mapLayer, mapTheme);
     const script = `window.setMapStyle(${JSON.stringify(stylePayload)}); true;`;
     webRef.current.injectJavaScript(script);
   };
@@ -249,7 +265,7 @@ export function LiveSessionMapWebView({ style }: Props) {
       return;
     }
 
-    const payloads = otherLayers.map((layer) => getMapStylePayload(layer));
+    const payloads = otherLayers.map((layer) => getMapStylePayload(layer, mapTheme));
     const script = `window.prefetchLayerTiles(${JSON.stringify(payloads)}); true;`;
     webRef.current.injectJavaScript(script);
   };
@@ -260,7 +276,7 @@ export function LiveSessionMapWebView({ style }: Props) {
 
   useEffect(() => {
     pushStyleUpdate();
-  }, [mapLayer]);
+  }, [mapLayer, mapTheme]);
 
   return (
     <MapInteractionContainer style={[styles.container, style]}>
@@ -276,7 +292,9 @@ export function LiveSessionMapWebView({ style }: Props) {
         onMessage={(event) => {
           if (event.nativeEvent.data === 'ready') {
             readyRef.current = true;
-            if (mapLayer !== 'standard') {
+            // Re-push style when HTML was baked before a theme/layer change, or
+            // when not on the default Standard light basemap.
+            if (mapLayer !== 'standard' || mapTheme !== 'light') {
               pushStyleUpdate();
             }
             pushRouteUpdate();

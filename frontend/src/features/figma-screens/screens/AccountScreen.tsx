@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { BottomNavBar } from '@/components/navigation/BottomNavBar';
 import { SessionSetupToggle } from '@/components/session-setup/SessionSetupToggle';
+import { TrackerMapDarkIcon } from '@/features/session-tracking/components/icons/TrackerMapThemeIcons';
 import { useLiveSession } from '@/features/session-tracking/liveSessionStore';
 import {
   isSessionNotificationPermissionGranted,
@@ -317,6 +318,11 @@ export function AccountScreen({ profile = defaultAccountProfile }: { profile?: A
               label="Privacy"
               icon={<PrivacyRowIcon />}
               onPress={() => router.push('/privacy-policy' as Href)}
+            />
+            <AccountNavRow
+              label="Map Theme"
+              icon={<TrackerMapDarkIcon color={colors.textTertiary} size={18} />}
+              onPress={() => router.push('/map-theme' as Href)}
             />
           </SectionCard>
 

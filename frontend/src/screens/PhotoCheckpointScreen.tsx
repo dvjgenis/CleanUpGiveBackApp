@@ -5,6 +5,7 @@ import {
 import { Sanchez_400Regular } from '@expo-google-fonts/sanchez';
 import { useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
+import { useEffect, useRef, useState } from 'react';
 import {
   ImageBackground,
   StyleSheet,
@@ -41,12 +42,38 @@ function PhotoCheckpointCameraIcon({ size = 79 }: { size?: number }) {
   );
 }
 
+const AUTO_DISMISS_SECONDS = 5 * 60;
+
+function formatDismissCountdown(secs: number): string {
+  const m = Math.floor(secs / 60);
+  const s = secs % 60;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
 /** PRD §6.12 · Figma `photo_checkpoint` (364:115). */
 export function PhotoCheckpointScreen() {
   const router = useRouter();
   const { cardStyle, scrimStyle } = useModalCardEnter();
   const heroStyle = useFadeUpEnter(0);
   const footerStyle = useFadeUpEnter(staggerDelay(1));
+  const [secondsLeft, setSecondsLeft] = useState(AUTO_DISMISS_SECONDS);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    intervalRef.current = setInterval(() => {
+      setSecondsLeft((prev) => {
+        if (prev <= 1) {
+          if (intervalRef.current) clearInterval(intervalRef.current);
+          router.back();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [router]);
 
   const [fontsLoaded] = useFonts({
     Sanchez_400Regular,
@@ -103,6 +130,10 @@ export function PhotoCheckpointScreen() {
               >
                 <Text style={s.backToTrackerText}>Back to tracker</Text>
               </AnimatedPressable>
+
+              <Text style={s.autoDismissText}>
+                Auto-dismissing in {formatDismissCountdown(secondsLeft)}
+              </Text>
             </Animated.View>
           </View>
         </Animated.View>
@@ -213,5 +244,13 @@ const s = StyleSheet.create({
     fontFamily: 'NotoSans_400Regular',
     fontSize: 14,
     color: C.textTertiary,
+  },
+
+  autoDismissText: {
+    fontFamily: 'NotoSans_400Regular',
+    fontSize: 11,
+    color: C.textTertiary,
+    textAlign: 'center',
+    opacity: 0.6,
   },
 });

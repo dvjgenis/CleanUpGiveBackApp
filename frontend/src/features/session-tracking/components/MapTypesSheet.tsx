@@ -100,7 +100,12 @@ function MapTypeOptionButton({
   );
 }
 
-export function MapTypesSheet({ visible, selectedType, onSelect, onClose }: Props) {
+export function MapTypesSheet({
+  visible,
+  selectedType,
+  onSelect,
+  onClose,
+}: Props) {
   const insets = useSafeAreaInsets();
   const reducedMotion = useReducedMotion();
   const dismissTravel = 280 + insets.bottom + SHEET_BOTTOM_BLEED;

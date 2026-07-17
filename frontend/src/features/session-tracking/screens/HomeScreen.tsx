@@ -9,7 +9,7 @@ import {
   homeUser,
   impactStats,
   notificationCount,
-  recentEvents,
+  upcomingEvents,
   recentSessions,
   serviceHoursTotalLabel,
   weekNumberLabel,
@@ -59,7 +59,7 @@ export function HomeScreen({
           <ServiceHoursCard />
           <ImpactCard />
           <RecentSessionsCard />
-          <RecentEventsCard />
+          <UpcomingEventsCard />
         </ScrollView>
       </SafeAreaView>
 
@@ -201,12 +201,12 @@ function RecentSessionsCard() {
   );
 }
 
-function RecentEventsCard() {
+function UpcomingEventsCard() {
   return (
     <Card>
-      <SectionHeader title="Recent Events" />
+      <SectionHeader title="Upcoming Events" />
       <View style={styles.eventsList}>
-        {recentEvents.map((event) => (
+        {upcomingEvents.map((event) => (
           <View key={event.id} style={styles.eventCard}>
             <View style={styles.eventDateBlock}>
               <View style={styles.eventDayBadge}>

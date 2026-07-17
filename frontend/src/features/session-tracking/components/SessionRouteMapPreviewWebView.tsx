@@ -3,6 +3,7 @@ import { StyleSheet } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 import { WebView } from 'react-native-webview';
 
+import { useEffectiveMapTheme, type MapBasemapTheme } from '../mapThemeStore';
 import { colors, radius } from '../tokens';
 import {
   DEFAULT_MAP_LAYER,
@@ -19,11 +20,11 @@ const PRIMARY = colors.primary;
 /** Builds the WebView HTML with the chosen basemap already set as the MapLibre
  * `style` option — avoids a post-load `setStyle` that races the route replay
  * and would flash Standard before Hybrid/Satellite. */
-function buildHtml(mapLayer: MapLayerType) {
-  const stylePayload = getMapStylePayload(mapLayer);
+function buildHtml(mapLayer: MapLayerType, theme: MapBasemapTheme) {
+  const stylePayload = getMapStylePayload(mapLayer, theme);
   // URL string or inline StyleSpecification JSON — both are valid MapLibre styles.
   const styleLiteral = JSON.stringify(stylePayload.value);
-  const startColors = getReplayStartMarkerColors(mapLayer);
+  const startColors = getReplayStartMarkerColors(mapLayer, theme);
   const mapHelpers = buildWebViewMapHelpers(PRIMARY, startColors.fill, startColors.border);
   return `<!doctype html>
 <html>
@@ -298,10 +299,12 @@ export function SessionRouteMapPreviewWebView({
   replayOnce = false,
   style,
 }: Props) {
+  const mapTheme = useEffectiveMapTheme();
   const webRef = useRef<WebView>(null);
   const readyRef = useRef(false);
   const initialMapLayerRef = useRef(mapLayer);
   const appliedMapLayerRef = useRef(mapLayer);
+  const appliedMapThemeRef = useRef(mapTheme);
   const reducedMotion = useReducedMotion();
   const shouldReplay = replayOnce && !reducedMotion;
 
@@ -309,7 +312,8 @@ export function SessionRouteMapPreviewWebView({
   // without a post-load style swap (which races and cancels route replay).
   const htmlRef = useRef<string | null>(null);
   if (htmlRef.current === null) {
-    htmlRef.current = buildHtml(initialMapLayerRef.current);
+    htmlRef.current = buildHtml(initialMapLayerRef.current, mapTheme);
+    appliedMapThemeRef.current = mapTheme;
   }
 
   const pushRouteUpdate = () => {
@@ -327,13 +331,14 @@ export function SessionRouteMapPreviewWebView({
       return;
     }
 
-    if (appliedMapLayerRef.current === mapLayer) {
+    if (appliedMapLayerRef.current === mapLayer && appliedMapThemeRef.current === mapTheme) {
       return;
     }
 
     appliedMapLayerRef.current = mapLayer;
-    const stylePayload = getMapStylePayload(mapLayer);
-    const startColors = getReplayStartMarkerColors(mapLayer);
+    appliedMapThemeRef.current = mapTheme;
+    const stylePayload = getMapStylePayload(mapLayer, mapTheme);
+    const startColors = getReplayStartMarkerColors(mapLayer, mapTheme);
     const script = `window.setMapStyle(${JSON.stringify(stylePayload)}, ${JSON.stringify(startColors.fill)}, ${JSON.stringify(startColors.border)}); true;`;
     webRef.current.injectJavaScript(script);
   };
@@ -344,7 +349,7 @@ export function SessionRouteMapPreviewWebView({
 
   useEffect(() => {
     pushStyleUpdate();
-  }, [mapLayer]);
+  }, [mapLayer, mapTheme]);
 
   return (
     <MapInteractionContainer style={[styles.container, style]}>

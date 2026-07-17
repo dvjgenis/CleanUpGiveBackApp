@@ -7,6 +7,7 @@ import {
   getLiveSessionMapZoom,
   useLiveSession,
 } from '../liveSessionStore';
+import { useEffectiveMapTheme } from '../mapThemeStore';
 import { colors, radius } from '../tokens';
 import { getNativeMapStyle } from '../utils/mapStyles';
 import { simplifyRouteForDisplay } from '../utils/routeFiltering';
@@ -31,16 +32,17 @@ export function LiveSessionMapNative({ style }: Props) {
     mapFollowEnabled,
     mapLayer,
   } = useLiveSession();
+  const mapTheme = useEffectiveMapTheme();
   const hasFix = displayCoordinate !== null;
   const mapCenter = getLiveSessionMapCenter();
   const routeStart = routeCoordinates[0] ?? null;
-  const mapStyle = getNativeMapStyle(mapLayer);
+  const mapStyle = getNativeMapStyle(mapLayer, mapTheme);
   const displayRoute = simplifyRouteForDisplay(routeCoordinates);
 
   return (
     <MapInteractionContainer style={[styles.container, style]}>
       <Map
-        key={mapLayer}
+        key={`${mapLayer}-${mapTheme}`}
         styles={{ light: mapStyle, dark: mapStyle }}
         center={mapCenter}
         zoom={getLiveSessionMapZoom(hasFix)}

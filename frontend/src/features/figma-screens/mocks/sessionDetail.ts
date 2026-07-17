@@ -47,7 +47,7 @@ const DEFAULT_DETAIL: SessionDetailData = {
   milesLabel: '3.4',
   photosCountLabel: '4',
   routeCoordinates: [],
-  evidencePhotos: MOCK_EVIDENCE_PHOTOS,
+  evidencePhotos: [],
   mapLayer: DEFAULT_MAP_LAYER,
 };
 const EMPTY_LOCATION = '—';
@@ -64,6 +64,7 @@ export function emptySessionDetail(id = ''): SessionDetailData {
     photosCountLabel: '0',
     routeCoordinates: [],
     evidencePhotos: [],
+    mapLayer: DEFAULT_MAP_LAYER,
   };
 }
 
@@ -119,7 +120,14 @@ export function detailFromCompletedSnapshot(
   };
 }
 
-/** Resolves session detail from the local completed-session cache only. */
+/**
+ * Resolves session detail from the local completed-session cache only.
+ *
+ * `mockSessionsList` (figma-screens/mocks/sessions.ts) was emptied when
+ * placeholder session rows were removed from production (docs/progress.md
+ * Session 124) — there is no longer a mock-list fallback here, just the
+ * completed-session cache and the static default/empty shapes below.
+ */
 export function getSessionDetail(id?: string): SessionDetailData {
   if (id) {
     const cached = getCachedCompletedSession(id);
@@ -132,24 +140,5 @@ export function getSessionDetail(id?: string): SessionDetailData {
     return DEFAULT_DETAIL;
   }
 
-  const listItem = mockSessionsList.find((session) => session.id === id);
-  if (!listItem) {
-    return DEFAULT_DETAIL;
-  }
-
-  const override = DETAIL_OVERRIDES[id] ?? {};
-  return {
-    id: listItem.id,
-    title: listItem.title,
-    status: listItem.status,
-    dateTimeLabel: `${listItem.dateLabel} · ${listItem.timeLabel}`,
-    locationAddress: override.locationAddress ?? DEFAULT_DETAIL.locationAddress,
-    hoursLabel: override.hoursLabel ?? DEFAULT_DETAIL.hoursLabel,
-    milesLabel: override.milesLabel ?? DEFAULT_DETAIL.milesLabel,
-    photosCountLabel: override.photosCountLabel ?? DEFAULT_DETAIL.photosCountLabel,
-    routeCoordinates: [],
-    evidencePhotos: MOCK_EVIDENCE_PHOTOS,
-    mapLayer: DEFAULT_MAP_LAYER,
-  };
   return emptySessionDetail(id);
 }

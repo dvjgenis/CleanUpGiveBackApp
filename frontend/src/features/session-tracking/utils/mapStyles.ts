@@ -1,5 +1,8 @@
 import type { StyleSpecification } from '@maplibre/maplibre-react-native';
 
+import type { MapBasemapTheme } from '../mapThemeStore';
+import cartoDarkMatterBaseStyle from './cartoDarkMatterStyle.json';
+
 export type MapLayerType = 'standard' | 'satellite' | 'hybrid';
 
 export const DEFAULT_MAP_LAYER: MapLayerType = 'standard';
@@ -11,6 +14,66 @@ export const MAP_LAYER_OPTIONS: ReadonlyArray<{ id: MapLayerType; label: string 
 ] as const;
 
 const CARTO_VOYAGER = 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json';
+
+/**
+ * Upstream Carto Dark Matter renders parks, nature reserves, and green
+ * landcover (wood/grass/recreation ground) in the same near-black
+ * (`#0e0e0e`) as the base map background, making them effectively
+ * invisible. `cartoDarkMatterStyle.json` is a local snapshot of that style
+ * (sources/sprite/glyphs still point at Carto's CDN — only the `layers`
+ * styling is vendored) so these specific layers can be repainted a legible
+ * dark green without depending on a runtime style-patch step that MapLibre's
+ * React Native wrapper doesn't expose a hook for.
+ *
+ * Separately, Carto's vector `park` source-layer only ships a *fill* layer
+ * for `class == national_park` and `class == nature_reserve` — this is true
+ * in Voyager (light) too, not just Dark Matter. Named local parks (e.g.
+ * Devonshire Park) come through with `class == "park"` (or similar) and get
+ * no polygon fill at all in the stock style, only a `poi_park` point label —
+ * so they're invisible/hard to spot regardless of theme. `park_local` below
+ * adds the missing catch-all fill for dark mode so those parks actually show
+ * up as shaded areas, not just a label.
+ */
+const DARK_GREENSPACE_FILL = '#1f3d2a';
+const DARK_GREENSPACE_POI_TEXT = '#7fae8f';
+
+function buildCartoDarkMatterStyle(): StyleSpecification {
+  const style = structuredClone(cartoDarkMatterBaseStyle) as StyleSpecification;
+  const greenspaceFillLayerIds = new Set([
+    'landcover', // wood / grass / recreation_ground
+    'park_national_park',
+    'park_nature_reserve',
+  ]);
+
+  const layers: StyleSpecification['layers'] = [];
+  for (const layer of style.layers) {
+    if (greenspaceFillLayerIds.has(layer.id) && layer.type === 'fill') {
+      layer.paint = { ...layer.paint, 'fill-color': DARK_GREENSPACE_FILL };
+    } else if (layer.id === 'poi_park' && layer.type === 'symbol') {
+      layer.paint = { ...layer.paint, 'text-color': DARK_GREENSPACE_POI_TEXT };
+    }
+
+    layers.push(layer);
+
+    // Insert right after park_nature_reserve so it sits in the same visual
+    // slot as the other park fills (below roads/water/labels, above landcover).
+    if (layer.id === 'park_nature_reserve') {
+      layers.push({
+        id: 'park_local',
+        type: 'fill',
+        source: 'carto',
+        'source-layer': 'park',
+        filter: ['all', ['!=', 'class', 'national_park'], ['!=', 'class', 'nature_reserve']],
+        paint: { 'fill-color': DARK_GREENSPACE_FILL, 'fill-opacity': 0.9 },
+      });
+    }
+  }
+
+  style.layers = layers;
+  return style;
+}
+
+const CARTO_DARK_MATTER: StyleSpecification = buildCartoDarkMatterStyle();
 
 const ESRI_WORLD_IMAGERY =
   'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
@@ -101,20 +164,31 @@ export type MapStylePayload =
   | { type: 'url'; value: string }
   | { type: 'json'; value: StyleSpecification };
 
-export function getMapStylePayload(layer: MapLayerType): MapStylePayload {
+export function getMapStylePayload(
+  layer: MapLayerType,
+  theme: MapBasemapTheme = 'light',
+): MapStylePayload {
   switch (layer) {
     case 'satellite':
       return { type: 'json', value: SATELLITE_MAP_STYLE };
     case 'hybrid':
       return { type: 'json', value: HYBRID_MAP_STYLE };
     case 'standard':
-    default:
-      return { type: 'url', value: CARTO_VOYAGER };
+      return theme === 'dark'
+        ? { type: 'json', value: CARTO_DARK_MATTER }
+        : { type: 'url', value: CARTO_VOYAGER };
+    default: {
+      const _exhaustive: never = layer;
+      return _exhaustive;
+    }
   }
 }
 
-export function getNativeMapStyle(layer: MapLayerType): string | StyleSpecification {
-  const payload = getMapStylePayload(layer);
+export function getNativeMapStyle(
+  layer: MapLayerType,
+  theme: MapBasemapTheme = 'light',
+): string | StyleSpecification {
+  const payload = getMapStylePayload(layer, theme);
   return payload.type === 'url' ? payload.value : payload.value;
 }
 
@@ -127,7 +201,10 @@ export function getMapLayerLabel(layer: MapLayerType): string {
  * previews. Contrasts against the basemap: black on the light Standard
  * style, white on dark Satellite/Hybrid imagery.
  */
-export function getReplayStartMarkerColors(layer: MapLayerType): {
+export function getReplayStartMarkerColors(
+  layer: MapLayerType,
+  theme: MapBasemapTheme = 'light',
+): {
   fill: string;
   border: string;
 } {
@@ -136,7 +213,9 @@ export function getReplayStartMarkerColors(layer: MapLayerType): {
     case 'hybrid':
       return { fill: '#ffffff', border: '#000000' };
     case 'standard':
-      return { fill: '#000000', border: '#ffffff' };
+      return theme === 'dark'
+        ? { fill: '#ffffff', border: '#000000' }
+        : { fill: '#000000', border: '#ffffff' };
     default: {
       const _exhaustive: never = layer;
       return _exhaustive;

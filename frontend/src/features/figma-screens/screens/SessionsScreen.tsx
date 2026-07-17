@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -253,6 +253,13 @@ export function SessionsScreen() {
   }
   return (
     <View style={s.root}>
+      {sortOpen && (
+        <Pressable
+          style={s.sortBackdrop}
+          onPress={() => setSortOpen(false)}
+          accessibilityLabel="Close sort menu"
+        />
+      )}
       <SessionsTopAppBar title="Sessions" />
 
       {/* Stays visible while list scrolls */}
@@ -379,7 +386,7 @@ const s = StyleSheet.create({
   topBar: {
     backgroundColor: colors.white,
     ...shadows.barTop,
-    zIndex: 2,
+    zIndex: 11,
   },
   topBarRow: {
     minHeight: 44,
@@ -453,6 +460,10 @@ const s = StyleSheet.create({
   },
   chipLabelIdle: {
     fontFamily: fontFamilies.notoSansRegular,
+  },
+  sortBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 9,
   },
   sortHeader: {
     gap: 5,

@@ -6,7 +6,7 @@ import { Sanchez_400Regular } from '@expo-google-fonts/sanchez';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Image,
   Platform,
@@ -37,32 +37,10 @@ const C = {
   overlay: 'rgba(0, 0, 0, 0.45)',
 } as const;
 
-type CaptureStep = 'selfie' | 'progress' | 'preview';
+const SELFIE_COUNTDOWN_SECONDS = 3;
 
-type StepConfig = {
-  step: CaptureStep;
-  facing: 'front' | 'back';
-  title: string;
-  subtitle: string;
-  stepLabel: string;
-};
-
-const STEPS: Record<'selfie' | 'progress', StepConfig> = {
-  selfie: {
-    step: 'selfie',
-    facing: 'front',
-    title: 'Take a selfie',
-    subtitle: 'Show yourself in your safety vest to verify you are on site.',
-    stepLabel: 'Step 1 of 2',
-  },
-  progress: {
-    step: 'progress',
-    facing: 'back',
-    title: 'Capture your progress',
-    subtitle: 'Take a photo of the cleanup area or collected trash.',
-    stepLabel: 'Step 2 of 2',
-  },
-};
+/** back → front → preview */
+type CaptureStep = 'back' | 'front' | 'preview';
 
 function ShutterButton({ onPress, disabled }: { onPress: () => void; disabled?: boolean }) {
   return (
@@ -152,23 +130,58 @@ function BeRealStylePreview({
   );
 }
 
-/** Two-step camera flow: selfie → progress photo → BeReal-style preview → submit. */
+/**
+ * Sequential dual-shot flow using a single CameraView:
+ *   1. Back camera — user frames cleanup area and taps shutter.
+ *   2. Front camera — auto-captures after a countdown so the user can prepare their selfie.
+ *   3. BeReal-style preview — progress photo full-screen, selfie PIP top-left.
+ *
+ * Running two simultaneous CameraView instances is unsupported on mobile hardware
+ * (only one physical camera can stream at a time), so shots are taken sequentially
+ * and the facing prop is swapped between steps.
+ */
 export function PhotoCaptureScreen() {
   const router = useRouter();
   const cameraRef = useRef<CameraView>(null);
   const [permission, requestPermission] = useCameraPermissions();
-  const [activeStep, setActiveStep] = useState<CaptureStep>('selfie');
+  const [captureStep, setCaptureStep] = useState<CaptureStep>('back');
   const [selfieUri, setSelfieUri] = useState<string | null>(null);
   const [progressUri, setProgressUri] = useState<string | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [countdown, setCountdown] = useState(SELFIE_COUNTDOWN_SECONDS);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [fontsLoaded] = useFonts({
     Sanchez_400Regular,
     NotoSans_400Regular,
     NotoSans_600SemiBold,
   });
+
+  // Auto-capture selfie after countdown when front camera step begins.
+  useEffect(() => {
+    if (captureStep !== 'front') return;
+
+    setCountdown(SELFIE_COUNTDOWN_SECONDS);
+
+    countdownRef.current = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          if (countdownRef.current) clearInterval(countdownRef.current);
+          void captureSelfie();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => {
+      if (countdownRef.current) clearInterval(countdownRef.current);
+    };
+    // captureSelfie is stable (uses ref + setState only); exhaustive-deps would force a re-render loop
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [captureStep]);
 
   if (!fontsLoaded) {
     return <View style={s.root} />;
@@ -207,39 +220,41 @@ export function PhotoCaptureScreen() {
     );
   }
 
-  const capturePhoto = async () => {
-    if (isCapturing || activeStep === 'preview' || Platform.OS === 'web') {
-      return;
-    }
-
+  const captureProgress = async () => {
+    if (isCapturing || captureStep !== 'back' || Platform.OS === 'web') return;
     setIsCapturing(true);
     try {
       const photo = await cameraRef.current?.takePictureAsync({
         quality: 0.85,
         skipProcessing: Platform.OS === 'android',
       });
-
-      if (!photo?.uri) {
-        return;
-      }
-
-      if (activeStep === 'selfie') {
-        setSelfieUri(photo.uri);
-        setActiveStep('progress');
-        return;
-      }
-
+      if (!photo?.uri) return;
       setProgressUri(photo.uri);
-      setActiveStep('preview');
+      setCaptureStep('front');
+    } finally {
+      setIsCapturing(false);
+    }
+  };
+
+  const captureSelfie = async () => {
+    if (isCapturing) return;
+    setIsCapturing(true);
+    try {
+      const photo = await cameraRef.current?.takePictureAsync({
+        quality: 0.85,
+        skipProcessing: Platform.OS === 'android',
+        mirror: true,
+      });
+      if (!photo?.uri) return;
+      setSelfieUri(photo.uri);
+      setCaptureStep('preview');
     } finally {
       setIsCapturing(false);
     }
   };
 
   const handleSubmit = async () => {
-    if (isSubmitting || !selfieUri || !progressUri) {
-      return;
-    }
+    if (isSubmitting || !selfieUri || !progressUri) return;
 
     setIsSubmitting(true);
     setSubmitError(null);
@@ -265,29 +280,21 @@ export function PhotoCaptureScreen() {
     setSelfieUri(null);
     setProgressUri(null);
     setSubmitError(null);
-    setActiveStep('selfie');
+    setCaptureStep('back');
   };
 
-  if (activeStep === 'preview' && selfieUri && progressUri) {
+  if (captureStep === 'preview' && selfieUri && progressUri) {
     return (
       <BeRealStylePreview
         selfieUri={selfieUri}
         progressUri={progressUri}
-        onSubmit={() => {
-          void handleSubmit();
-        }}
+        onSubmit={() => { void handleSubmit(); }}
         onRetake={handleRetake}
         isSubmitting={isSubmitting}
         submitError={submitError}
       />
     );
   }
-
-  if (activeStep !== 'selfie' && activeStep !== 'progress') {
-    return null;
-  }
-
-  const stepConfig = STEPS[activeStep];
 
   if (Platform.OS === 'web') {
     return (
@@ -310,13 +317,15 @@ export function PhotoCaptureScreen() {
     );
   }
 
+  const isFrontStep = captureStep === 'front';
+
   return (
     <View style={s.root}>
       <CameraView
         ref={cameraRef}
         style={s.camera}
-        facing={stepConfig.facing}
-        mirror={stepConfig.facing === 'front'}
+        facing={isFrontStep ? 'front' : 'back'}
+        mirror={isFrontStep}
       />
 
       <SafeAreaView style={s.cameraOverlay} edges={['top', 'bottom']} pointerEvents="box-none">
@@ -329,18 +338,34 @@ export function PhotoCaptureScreen() {
           >
             <Text style={s.backBtnText}>Cancel</Text>
           </AnimatedPressable>
-          <Text style={s.stepChip}>{stepConfig.stepLabel}</Text>
         </View>
 
-        <CoachmarkEnter key={activeStep}>
+        <CoachmarkEnter>
           <View style={s.captureCopy}>
-            <Text style={s.captureTitle}>{stepConfig.title}</Text>
-            <Text style={s.captureSubtitle}>{stepConfig.subtitle}</Text>
+            {isFrontStep ? (
+              <>
+                <Text style={s.captureTitle}>Now your selfie</Text>
+                <Text style={s.captureSubtitle}>
+                  Auto-capturing in {countdown}…
+                </Text>
+              </>
+            ) : (
+              <>
+                <Text style={s.captureTitle}>Capture your progress</Text>
+                <Text style={s.captureSubtitle}>
+                  Point at the cleanup area. Your selfie is captured next.
+                </Text>
+              </>
+            )}
           </View>
         </CoachmarkEnter>
 
         <View style={s.captureControls}>
-          <ShutterButton onPress={capturePhoto} disabled={isCapturing} />
+          {isFrontStep ? (
+            <ShutterButton onPress={() => { void captureSelfie(); }} disabled={isCapturing} />
+          ) : (
+            <ShutterButton onPress={() => { void captureProgress(); }} disabled={isCapturing} />
+          )}
         </View>
       </SafeAreaView>
     </View>
@@ -412,17 +437,6 @@ const s = StyleSheet.create({
     fontFamily: 'NotoSans_600SemiBold',
     fontSize: 14,
     color: C.textOnPrimary,
-  },
-
-  stepChip: {
-    fontFamily: 'NotoSans_600SemiBold',
-    fontSize: 13,
-    color: C.textOnPrimary,
-    backgroundColor: C.overlay,
-    borderRadius: 9999,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    overflow: 'hidden',
   },
 
   captureCopy: {

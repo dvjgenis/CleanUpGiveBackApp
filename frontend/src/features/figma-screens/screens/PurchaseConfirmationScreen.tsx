@@ -2,6 +2,7 @@ import React, { useEffect, useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import Animated, {
+  runOnJS,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
@@ -13,6 +14,7 @@ import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
+import { LocationPinIcon } from '@/features/session-tracking/components/icons/LocationPinIcon';
 import { durations, easing, popSpring } from '@/motion';
 
 import {
@@ -22,12 +24,15 @@ import {
   PurchaseHeart3,
   PurchaseReceiptBg,
 } from '../components/PurchaseConfirmationIcons.generated';
+import { markTrackerPaid } from '@/features/session-tracking/trackerPaymentStore';
 import { clearCart } from '../cartStore';
 import {
   formatUsd,
   getDonationConfirmation,
   getPurchaseConfirmationFromCart,
+  getTrackerPurchaseConfirmation,
   parseDonationAmountParam,
+  type PurchaseConfirmationData,
 } from '../mocks/purchaseConfirmation';
 import { colors, fontFamilies, radius } from '../tokens';
 
@@ -36,7 +41,42 @@ const RECEIPT_HEIGHT = 619;
 /** Center of side notch arcs in receipt SVG (`245.369` in viewBox). */
 const PERFORATION_TOP = 245;
 /** Shorter receipt used in donation-only mode (no product line items). */
-const DONATION_RECEIPT_HEIGHT = 490;
+const DONATION_RECEIPT_HEIGHT = 504;
+
+// Order receipt reuses the donation screen's clipped/rounded-bottom card
+// design (see `receiptWrapCompact`), sized to the order's own content
+// (product line items + optional donation row + details + total) instead of
+// the donation screen's fixed height, since order carts can hold >1 item.
+const ORDER_HEADER_HEIGHT = 192; // hearts(84) + gap16 + title lineHeight36 + gap16 + subtitle 2-line(40)
+const ORDER_PRODUCT_ROW_HEIGHT = 82; // padding17*2 + thumbWrap(48)
+const ORDER_DONATION_ROW_HEIGHT = 58; // padding17*2 + icon(24)
+const ORDER_DETAIL_ROW_HEIGHT = 20;
+const ORDER_TOTAL_BLOCK_HEIGHT = 36; // marginTop2 + gap13 + divider1 + totalRow20
+const ORDER_INNER_VERTICAL_PADDING = 45; // receiptInner paddingTop17 + paddingBottom28
+const ORDER_INNER_HEADER_GAP = 25; // receiptInner gap between header and body
+const ORDER_BODY_SECTION_GAP = 10; // body gap between lineItems / details / totalBlock
+/** Extra breathing room added on top of the exact-fit calculation below. */
+const ORDER_RECEIPT_EXTRA_HEIGHT = 34;
+
+function computeOrderReceiptHeight(data: PurchaseConfirmationData): number {
+  const rowCount = data.lines.length + (data.donationAmount > 0 ? 1 : 0);
+  const lineItemsHeight =
+    data.lines.length * ORDER_PRODUCT_ROW_HEIGHT +
+    (data.donationAmount > 0 ? ORDER_DONATION_ROW_HEIGHT : 0) +
+    Math.max(rowCount - 1, 0) * ORDER_BODY_SECTION_GAP;
+  const detailsHeight =
+    data.details.length * ORDER_DETAIL_ROW_HEIGHT +
+    Math.max(data.details.length - 1, 0) * ORDER_BODY_SECTION_GAP +
+    2; // details marginTop
+  const bodyHeight = lineItemsHeight + detailsHeight + ORDER_TOTAL_BLOCK_HEIGHT + ORDER_BODY_SECTION_GAP * 2;
+  return (
+    ORDER_INNER_VERTICAL_PADDING +
+    ORDER_HEADER_HEIGHT +
+    ORDER_INNER_HEADER_GAP +
+    bodyHeight +
+    ORDER_RECEIPT_EXTRA_HEIGHT
+  );
+}
 
 /** Each heart bounces in independently with a staggered popSpring. */
 function AnimatedConfirmationHearts() {
@@ -112,32 +152,75 @@ function AnimatedConfirmationHearts() {
 export function PurchaseConfirmationScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ mode?: string; amount?: string }>();
+  const reducedMotion = useReducedMotion();
+  const params = useLocalSearchParams<{ mode?: string; amount?: string; returnTo?: string }>();
   const isDonation = params.mode === 'donation';
+  const isTracker = params.mode === 'tracker';
+  const screenOpacity = useSharedValue(1);
+  const screenStyle = useAnimatedStyle(() => ({ opacity: screenOpacity.value }));
 
   const data = useMemo(() => {
+    if (isTracker) {
+      return getTrackerPurchaseConfirmation();
+    }
     if (isDonation) {
       return getDonationConfirmation(parseDonationAmountParam(params.amount));
     }
     return getPurchaseConfirmationFromCart();
-  }, [isDonation, params.amount]);
+  }, [isDonation, isTracker, params.amount]);
+
+  const orderReceiptHeight = useMemo(
+    () => (!isDonation ? computeOrderReceiptHeight(data) : RECEIPT_HEIGHT),
+    [data, isDonation],
+  );
+
+  useEffect(() => {
+    if (isTracker) {
+      markTrackerPaid();
+    }
+  }, [isTracker]);
 
   const leave = (href: Href) => {
-    if (!isDonation) {
+    if (!isDonation && !isTracker) {
       clearCart();
     }
-    router.replace(href);
+    if (reducedMotion) {
+      router.replace(href);
+      return;
+    }
+    const navigate = () => router.replace(href);
+    screenOpacity.value = withTiming(0, { duration: durations.modalExit, easing: easing.easeInOut }, (finished) => {
+      if (finished) runOnJS(navigate)();
+    });
   };
 
+  const trackerReturnHref = (params.returnTo === 'live-session' ? '/live-session' : '/') as Href;
+
   return (
-    <View style={[s.root, { paddingTop: Math.max(insets.top, 12), paddingBottom: Math.max(insets.bottom, 16) }]}>
+    <Animated.View
+      style={[
+        s.root,
+        {
+          paddingTop: Math.max(insets.top, 12),
+          // Same bottom inset as donation thank-you (`mode=donation`).
+          paddingBottom: Math.max(insets.bottom, 16),
+        },
+        screenStyle,
+      ]}
+    >
       <ScrollView
         style={s.scroll}
         contentContainerStyle={s.scrollContent}
         showsVerticalScrollIndicator={false}
         bounces={false}
       >
-        <View style={[s.receiptWrap, isDonation && s.receiptWrapDonation]}>
+        <View
+          style={[
+            s.receiptWrap,
+            isDonation && s.receiptWrapDonation,
+            !isDonation && [s.receiptWrapCompact, { height: orderReceiptHeight }],
+          ]}
+        >
           <PurchaseReceiptBg width={RECEIPT_WIDTH} height={RECEIPT_HEIGHT} style={s.receiptBg} />
 
           {/* Dashed perforation across ticket notches */}
@@ -148,24 +231,32 @@ export function PurchaseConfirmationScreen() {
               <AnimatedConfirmationHearts />
               <Text style={s.title}>Thank you!</Text>
               <Text style={s.subtitle}>
-                {isDonation
-                  ? 'Your donation was complete.\nA confirmation email has been sent to you.'
-                  : 'Your order and donation\nwas complete. A confirmation email has been sent to you.'}
+                {isTracker
+                  ? 'Your order is on its way!\nWe will notify you once your cleanup kit ships.'
+                  : isDonation
+                    ? 'Your donation was complete.\nA confirmation email has been sent to you.'
+                    : 'Your order and donation\nwas complete. A confirmation email has been sent to you.'}
               </Text>
             </View>
 
-            <View style={[s.body, isDonation && s.bodyDonation]}>
+            <View style={[s.body, isDonation && s.bodyDonation, isTracker && s.bodyTracker]}>
               <View style={s.lineItems}>
                 {data.lines.map((line) => (
                   <View key={line.id} style={s.productRow}>
                     <View style={s.productLeft}>
-                      <View style={s.productThumbWrap}>
-                        <Image
-                          source={line.image}
-                          style={s.productThumb}
-                          contentFit="cover"
-                          accessibilityIgnoresInvertColors
-                        />
+                      <View
+                        style={[s.productThumbWrap, isTracker && s.productThumbWrapIcon]}
+                      >
+                        {isTracker ? (
+                          <LocationPinIcon color={colors.primary} size={24} />
+                        ) : (
+                          <Image
+                            source={line.image}
+                            style={s.productThumb}
+                            contentFit="cover"
+                            accessibilityIgnoresInvertColors
+                          />
+                        )}
                       </View>
                       <View style={s.productCopy}>
                         <Text style={s.productName}>{line.name}</Text>
@@ -199,7 +290,9 @@ export function PurchaseConfirmationScreen() {
               <View style={s.totalBlock}>
                 <View style={s.totalDivider} />
                 <View style={s.totalRow}>
-                  <Text style={s.totalLabel}>{isDonation ? 'Total Gift' : 'Total Impact'}</Text>
+                  <Text style={s.totalLabel}>
+                    {isTracker ? 'Total Paid' : isDonation ? 'Total Gift' : 'Total Impact'}
+                  </Text>
                   <Text style={s.totalValue}>{formatUsd(data.totalImpact)}</Text>
                 </View>
               </View>
@@ -208,27 +301,41 @@ export function PurchaseConfirmationScreen() {
         </View>
 
         <View style={s.actions}>
-          <AnimatedPressable
-            scaleTo={0.98}
-            style={s.continueBtn}
-            onPress={() => leave('/shop' as Href)}
-            accessibilityRole="button"
-            accessibilityLabel={isDonation ? 'Back to shop' : 'Continue shopping'}
-          >
-            <Text style={s.continueText}>{isDonation ? 'Back to Shop' : 'Continue Shopping'}</Text>
-          </AnimatedPressable>
-          <AnimatedPressable
-            scaleTo={0.98}
-            style={s.homeHit}
-            onPress={() => leave('/' as Href)}
-            accessibilityRole="button"
-            accessibilityLabel="Go home"
-          >
-            <Text style={s.homeText}>Go Home</Text>
-          </AnimatedPressable>
+          {isTracker ? (
+            <AnimatedPressable
+              scaleTo={0.98}
+              style={s.continueBtn}
+              onPress={() => router.replace(trackerReturnHref)}
+              accessibilityRole="button"
+              accessibilityLabel="Continue tracking"
+            >
+              <Text style={s.continueText}>Continue</Text>
+            </AnimatedPressable>
+          ) : (
+            <>
+              <AnimatedPressable
+                scaleTo={0.98}
+                style={s.continueBtn}
+                onPress={() => leave('/shop' as Href)}
+                accessibilityRole="button"
+                accessibilityLabel={isDonation ? 'Back to shop' : 'Continue shopping'}
+              >
+                <Text style={s.continueText}>{isDonation ? 'Back to Shop' : 'Continue Shopping'}</Text>
+              </AnimatedPressable>
+              <AnimatedPressable
+                scaleTo={0.98}
+                style={s.homeHit}
+                onPress={() => leave('/' as Href)}
+                accessibilityRole="button"
+                accessibilityLabel="Go home"
+              >
+                <Text style={s.homeText}>Go Home</Text>
+              </AnimatedPressable>
+            </>
+          )}
         </View>
       </ScrollView>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -254,6 +361,13 @@ const s = StyleSheet.create({
   },
   receiptWrapDonation: {
     height: DONATION_RECEIPT_HEIGHT,
+    overflow: 'hidden',
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+  },
+  // Same clipped/rounded-bottom card treatment as `receiptWrapDonation`,
+  // but height is computed per order (see `computeOrderReceiptHeight`).
+  receiptWrapCompact: {
     overflow: 'hidden',
     borderBottomLeftRadius: 20,
     borderBottomRightRadius: 20,
@@ -332,6 +446,9 @@ const s = StyleSheet.create({
   bodyDonation: {
     marginTop: 24,
   },
+  bodyTracker: {
+    marginTop: 14,
+  },
   lineItems: {
     gap: 10,
   },
@@ -359,6 +476,9 @@ const s = StyleSheet.create({
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  productThumbWrapIcon: {
+    backgroundColor: colors.chipBg,
   },
   productThumb: {
     width: 42,

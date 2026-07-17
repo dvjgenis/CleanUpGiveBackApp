@@ -1,5 +1,5 @@
-import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { CameraPermissionIllustration } from '@/components/onboarding/OnboardingIcons';
+import { OnboardingInfoFooterActions } from '@/components/onboarding/OnboardingInfoFooterActions';
 import { OnboardingProgressPills } from '@/components/onboarding/OnboardingProgressPills';
 import { colors as C } from '@/features/figma-screens/tokens';
 import { requestSessionCameraPermission } from '@/utils/sessionPermissions';
@@ -12,7 +12,7 @@ import { useState } from 'react';
 import { Alert, Linking, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-/** Figma `camera_permission` (725:613) — onboarding step 4 of 5. */
+/** Figma `camera_permission` (725:613) — onboarding step 4 of 6. */
 export function CameraPermissionScreen() {
   const router = useRouter();
   const [isRequesting, setIsRequesting] = useState(false);
@@ -37,7 +37,7 @@ export function CameraPermissionScreen() {
             {
               text: 'Not now',
               style: 'cancel',
-              onPress: () => router.push('/notification-preference'),
+              onPress: () => router.push('/free-hour'),
             },
             { text: 'Open Settings', onPress: () => void Linking.openSettings() },
           ],
@@ -47,11 +47,11 @@ export function CameraPermissionScreen() {
     } finally {
       setIsRequesting(false);
     }
-    router.push('/notification-preference');
+    router.push('/free-hour');
   }
 
   function handleNotNow() {
-    router.push('/notification-preference');
+    router.push('/free-hour');
   }
 
   if (!fontsLoaded) return <View style={s.root} />;
@@ -64,7 +64,7 @@ export function CameraPermissionScreen() {
 
       <View style={s.flex}>
         <View style={s.main}>
-          <OnboardingProgressPills active={4} />
+          <OnboardingProgressPills active={4} total={7} />
           <View style={s.titleSection}>
             <Text style={s.title} accessibilityRole="header">
               Allow camera?
@@ -74,37 +74,16 @@ export function CameraPermissionScreen() {
             </Text>
           </View>
         </View>
-
-        <View style={s.footer}>
-          <AnimatedPressable
-            style={[s.enableBtn, isRequesting && { opacity: 0.7 }]}
-            onPress={handleEnable}
-            disabled={isRequesting}
-            accessibilityRole="button"
-            accessibilityLabel="Enable camera"
-          >
-            <Text style={s.enableBtnText}>
-              {isRequesting ? 'Requesting…' : 'Enable camera'}
-            </Text>
-          </AnimatedPressable>
-          <AnimatedPressable
-            style={s.previousBtn}
-            onPress={() => router.back()}
-            accessibilityRole="button"
-            accessibilityLabel="Previous"
-          >
-            <Text style={s.previousBtnText}>Previous</Text>
-          </AnimatedPressable>
-          <AnimatedPressable
-            style={s.notNowBtn}
-            onPress={handleNotNow}
-            accessibilityRole="button"
-            accessibilityLabel="Not now"
-          >
-            <Text style={s.notNowText}>Not now</Text>
-          </AnimatedPressable>
-        </View>
       </View>
+
+      <OnboardingInfoFooterActions
+        onContinue={handleEnable}
+        onPrevious={() => router.back()}
+        onSkip={handleNotNow}
+        continueLabel={isRequesting ? 'Requesting…' : 'Enable camera'}
+        skipLabel="Not now"
+        disabled={isRequesting}
+      />
     </SafeAreaView>
   );
 }
@@ -117,7 +96,6 @@ const s = StyleSheet.create({
   },
   flex: {
     flex: 1,
-    justifyContent: 'space-between',
   },
   illustration: {
     position: 'absolute',
@@ -144,45 +122,5 @@ const s = StyleSheet.create({
     fontSize: 16,
     color: C.textNavInactive,
     lineHeight: 24,
-  },
-  footer: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    gap: 20,
-  },
-  enableBtn: {
-    backgroundColor: C.primary,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 20,
-  },
-  enableBtnText: {
-    fontFamily: 'IBMPlexSans_600SemiBold',
-    fontSize: 18,
-    color: C.textOnPrimary,
-  },
-  previousBtn: {
-    borderWidth: 1,
-    borderColor: C.textPrimary,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 20,
-  },
-  previousBtnText: {
-    fontFamily: 'IBMPlexSans_600SemiBold',
-    fontSize: 18,
-    color: C.textPrimary,
-  },
-  notNowBtn: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-  },
-  notNowText: {
-    fontFamily: 'NotoSans_600SemiBold',
-    fontSize: 16,
-    color: C.textPrimary,
   },
 });

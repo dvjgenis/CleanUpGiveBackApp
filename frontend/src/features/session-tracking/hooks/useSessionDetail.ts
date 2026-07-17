@@ -9,6 +9,7 @@ import { createSignedStorageUrls } from '@/lib/signedStorageUrl';
 
 import { getCachedCompletedSession } from '../completedSessionCache';
 import { toRouteCoordinates } from '../utils/geo';
+import { DEFAULT_MAP_LAYER } from '../utils/mapStyles';
 import {
   formatSessionDateLabel,
   formatSessionTimeRange,
@@ -164,6 +165,9 @@ export function useSessionDetail(sessionId?: string): SessionDetailState {
             photosCountLabel: String(evidencePhotos.length),
             routeCoordinates,
             evidencePhotos,
+            // Fly API doesn't return a stored basemap layer; only the local
+            // completed-session cache path (detailFromCompletedSnapshot) has one.
+            mapLayer: DEFAULT_MAP_LAYER,
           },
           loading: false,
           error: null,

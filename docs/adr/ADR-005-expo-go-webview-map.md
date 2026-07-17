@@ -31,6 +31,7 @@ Add a **third map tier** for Expo Go:
 - **Coordinates:** `[longitude, latitude]` — matches `RouteCoordinate` in `liveSessionStore` / `utils/geo.ts`; no axis flip.
 - **Updates:** React Native pushes route + current position via `WebView.injectJavaScript` on `routeCoordinates`, `currentCoordinate`, and `mapRecenterToken` changes from `useLiveSession()`.
 - **Read-only variant:** `SessionRouteMapPreviewWebView` for submission confirmation / session detail — `fitBounds` to recorded polyline, no live marker.
+- **Event detail variant (2026-07-17):** `EventLocationMapWebView` — non-interactive Carto Voyager pin preview on `/event-detail`; tap overlay opens Apple Maps (iOS) or Google Maps (Android) via `openLocationInMaps`.
 
 ### Integration point
 

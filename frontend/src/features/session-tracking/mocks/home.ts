@@ -72,7 +72,7 @@ export type UpcomingEventSummary = {
   organization: string;
 };
 
-export const recentEvents: UpcomingEventSummary[] = [
+export const upcomingEvents: UpcomingEventSummary[] = [
   {
     id: 'ev-1',
     day: '15',

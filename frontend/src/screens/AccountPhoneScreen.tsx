@@ -1,4 +1,5 @@
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
+import { OnboardingInfoFooterActions } from '@/components/onboarding/OnboardingInfoFooterActions';
 import { OnboardingProgressPills } from '@/components/onboarding/OnboardingProgressPills';
 import { COUNTRIES, DEFAULT_COUNTRY, type Country } from '@/constants/countries';
 import { colors as C } from '@/features/figma-screens/tokens';
@@ -263,7 +264,7 @@ export function AccountPhoneScreen() {
         >
           <Pressable style={s.content} onPress={dismissKeyboard}>
             <View style={s.form}>
-              <OnboardingProgressPills active={2} />
+              <OnboardingProgressPills active={2} total={7} />
 
               <View style={s.titleSection}>
                 <Text style={s.title}>A few details</Text>
@@ -313,35 +314,22 @@ export function AccountPhoneScreen() {
                 </View>
               </View>
             </View>
-
-            <View style={s.footer}>
-              <AnimatedPressable
-                style={s.continueBtn}
-                onPress={() => {
-                  dismissKeyboard();
-                  setSubmitted(true);
-                  if (phoneError) return;
-                  router.push('/account-details');
-                }}
-                accessibilityRole="button"
-                accessibilityLabel="Continue"
-              >
-                <Text style={s.continueBtnText}>Continue</Text>
-              </AnimatedPressable>
-              <AnimatedPressable
-                style={s.previousBtn}
-                onPress={() => {
-                  dismissKeyboard();
-                  router.back();
-                }}
-                accessibilityRole="button"
-                accessibilityLabel="Previous"
-              >
-                <Text style={s.previousBtnText}>Previous</Text>
-              </AnimatedPressable>
-            </View>
           </Pressable>
         </ScrollView>
+
+        <OnboardingInfoFooterActions
+          onContinue={() => {
+            dismissKeyboard();
+            setSubmitted(true);
+            if (phoneError) return;
+            router.push('/account-details');
+          }}
+          onPrevious={() => {
+            dismissKeyboard();
+            router.back();
+          }}
+          hideSkip
+        />
       </KeyboardAvoidingView>
 
       <CountryPickerModal
@@ -369,11 +357,10 @@ const s = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: 16,
     paddingTop: 16,
-    paddingBottom: 16,
+    paddingBottom: 180,
   },
   content: {
     flexGrow: 1,
-    justifyContent: 'space-between',
   },
   form: {
     gap: 30,
@@ -452,34 +439,6 @@ const s = StyleSheet.create({
     fontSize: 14,
     color: C.textPrimary,
     paddingVertical: 0,
-  },
-  footer: {
-    gap: 20,
-  },
-  continueBtn: {
-    backgroundColor: C.primary,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 20,
-  },
-  continueBtnText: {
-    fontFamily: 'IBMPlexSans_600SemiBold',
-    fontSize: 18,
-    color: C.textOnPrimary,
-  },
-  previousBtn: {
-    borderWidth: 1,
-    borderColor: C.textPrimary,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 20,
-  },
-  previousBtnText: {
-    fontFamily: 'IBMPlexSans_600SemiBold',
-    fontSize: 18,
-    color: C.textPrimary,
   },
   modalRoot: {
     flex: 1,

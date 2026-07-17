@@ -64,4 +64,28 @@ export function getDefaultCheckoutSummary(): CheckoutSummary {
   return getCheckoutSummary(DEFAULT_CART_ITEMS);
 }
 
+const TRACKER_ACCESS_PRICE = 49.99;
+
+/** Fixed one-time tracker payment shown after the free hour expires. */
+export function getTrackerCheckoutSummary(): CheckoutSummary {
+  return {
+    lines: [
+      {
+        id: 'tracker-access',
+        name: 'Tracking access (one-time)',
+        quantity: 1,
+        unitPrice: TRACKER_ACCESS_PRICE,
+        lineTotal: TRACKER_ACCESS_PRICE,
+        image: 0,
+      },
+    ],
+    itemCount: 1,
+    subtotal: TRACKER_ACCESS_PRICE,
+    donation: 0,
+    shippingLabel: 'Included',
+    tax: 0,
+    total: TRACKER_ACCESS_PRICE,
+  };
+}
+
 export { formatUsd };

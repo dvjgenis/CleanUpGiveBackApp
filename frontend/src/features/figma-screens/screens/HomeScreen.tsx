@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -244,7 +244,7 @@ function RecentEventsSection({
   return (
     <View style={s.paddedSection}>
       <View style={s.sectionHeader}>
-        <Text style={s.sectionTitle}>Recent Events</Text>
+        <Text style={s.sectionTitle}>Upcoming Events</Text>
         <AnimatedPressable
           accessibilityRole="button"
           accessibilityLabel="View all events"
@@ -381,6 +381,17 @@ export function HomeScreenWithData({ data }: { data: HomeDashboardData }) {
           )}
         </View>
 
+        {__DEV__ && (
+          <AnimatedPressable
+            style={s.devToggle}
+            onPress={() => router.push('/free-trial-done' as Href)}
+            accessibilityRole="button"
+            accessibilityLabel="Dev: preview free trial paywall"
+          >
+            <Text style={s.devToggleText}>DEV · Free Trial Paywall</Text>
+          </AnimatedPressable>
+        )}
+
         <ServiceHoursCard
           serviceHoursTotalLabel={data.serviceHoursTotalLabel}
           weekStartIso={data.weekStartIso}
@@ -397,6 +408,7 @@ export function HomeScreenWithData({ data }: { data: HomeDashboardData }) {
         />
         <RecentEventsSection recentEvents={data.recentEvents} allEvents={data.allEvents} />
       </ScrollView>
+
 
       <View style={s.bottomStack}>
         {isActive && (
@@ -607,6 +619,20 @@ const s = StyleSheet.create({
     fontFamily: fontFamilies.notoSansSemiBold,
     fontSize: 12,
     color: colors.primary,
+  },
+  devToggle: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#fff4de',
+    borderWidth: 1,
+    borderColor: colors.status.pending.border,
+    borderRadius: R.full,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  devToggleText: {
+    fontFamily: fontFamilies.ibmPlexSansMedium,
+    fontSize: 11,
+    color: colors.status.pending.text,
   },
   serviceHoursCard: {
     backgroundColor: colors.white,

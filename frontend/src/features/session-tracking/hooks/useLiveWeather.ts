@@ -3,22 +3,26 @@ import { useCallback, useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 
 import {
-  fetchCurrentTemperatureF,
+  fetchCurrentWeather,
   fetchPlaceName,
   formatTemperatureFahrenheit,
 } from '../services/weather';
+import { weatherCodeToIconKey } from '../utils/weatherCondition';
+import type { WeatherIconKey } from '../utils/weatherIconPaths';
 
 const REFRESH_INTERVAL_MS = 10 * 60 * 1000;
 
 export type LiveWeatherState = {
   placeLabel: string | null;
   temperatureLabel: string;
+  weatherIcon: WeatherIconKey;
   isLoading: boolean;
 };
 
 const INITIAL_STATE: LiveWeatherState = {
   placeLabel: null,
   temperatureLabel: '—',
+  weatherIcon: 'sunny',
   isLoading: true,
 };
 
@@ -38,10 +42,12 @@ async function resolvePlaceLabel(latitude: number, longitude: number): Promise<s
   return fetchPlaceName(latitude, longitude);
 }
 
-async function loadLiveWeather(): Promise<Pick<LiveWeatherState, 'placeLabel' | 'temperatureLabel'>> {
+async function loadLiveWeather(): Promise<
+  Pick<LiveWeatherState, 'placeLabel' | 'temperatureLabel' | 'weatherIcon'>
+> {
   const { status } = await Location.requestForegroundPermissionsAsync();
   if (status !== 'granted') {
-    return { placeLabel: null, temperatureLabel: '—' };
+    return { placeLabel: null, temperatureLabel: '—', weatherIcon: 'sunny' };
   }
 
   const position = await Location.getCurrentPositionAsync({
@@ -49,14 +55,15 @@ async function loadLiveWeather(): Promise<Pick<LiveWeatherState, 'placeLabel' | 
   });
 
   const { latitude, longitude } = position.coords;
-  const [placeLabel, temperatureF] = await Promise.all([
+  const [placeLabel, weather] = await Promise.all([
     resolvePlaceLabel(latitude, longitude),
-    fetchCurrentTemperatureF(latitude, longitude),
+    fetchCurrentWeather(latitude, longitude),
   ]);
 
   return {
     placeLabel,
-    temperatureLabel: formatTemperatureFahrenheit(temperatureF),
+    temperatureLabel: formatTemperatureFahrenheit(weather.temperatureF),
+    weatherIcon: weatherCodeToIconKey(weather.weatherCode, weather.isDay),
   };
 }
 
@@ -71,12 +78,14 @@ export function useLiveWeather(): LiveWeatherState {
       setState({
         placeLabel: next.placeLabel,
         temperatureLabel: next.temperatureLabel,
+        weatherIcon: next.weatherIcon,
         isLoading: false,
       });
     } catch {
       setState((current) => ({
         placeLabel: current.placeLabel,
         temperatureLabel: '—',
+        weatherIcon: current.weatherIcon,
         isLoading: false,
       }));
     }

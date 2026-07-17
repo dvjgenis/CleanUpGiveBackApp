@@ -1,10 +1,10 @@
-import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import {
   NotifApprovalIcon,
   NotifBellIcon,
   NotifEventsIcon,
   NotifPhotoIcon,
 } from '@/components/onboarding/OnboardingIcons';
+import { OnboardingInfoFooterActions } from '@/components/onboarding/OnboardingInfoFooterActions';
 import { OnboardingProgressPills } from '@/components/onboarding/OnboardingProgressPills';
 import { colors as C } from '@/features/figma-screens/tokens';
 import {
@@ -52,7 +52,7 @@ function PreferenceChip({
   );
 }
 
-/** Figma `notif_account` (112:7130) — onboarding step 5 of 5. */
+/** Figma `notif_account` (112:7130) — onboarding step 6 of 6. */
 export function NotificationPreferenceScreen() {
   const router = useRouter();
   const [isRequesting, setIsRequesting] = useState(false);
@@ -100,57 +100,30 @@ export function NotificationPreferenceScreen() {
         contentContainerStyle={s.scroll}
         showsVerticalScrollIndicator={false}
       >
-        <View style={s.content}>
-          <View style={s.main}>
-            <OnboardingProgressPills active={5} />
-            <View style={s.titleSection}>
-              <View style={s.titleRow}>
-                <Text style={s.title}>Stay updated</Text>
-                <NotifBellIcon size={24} />
-              </View>
-              <Text style={s.subtitle}>
-                Get alerts about approvals, events, and photo checkpoints.
-              </Text>
-            </View>
-            <View style={s.prefList}>
-              {PREFS.map(({ key, label, Icon }) => (
-                <PreferenceChip key={key} label={label} Icon={Icon} />
-              ))}
-            </View>
+        <View style={s.main}>
+          <OnboardingProgressPills active={7} total={7} />
+          <View style={s.titleSection}>
+            <Text style={s.title}>Stay updated</Text>
+            <Text style={s.subtitle}>
+              Get alerts about approvals, events, and photo checkpoints.
+            </Text>
           </View>
-
-          <View style={s.footer}>
-            <AnimatedPressable
-              style={[s.enableBtn, isRequesting && s.enableBtnDisabled]}
-              onPress={handleEnable}
-              disabled={isRequesting}
-              accessibilityRole="button"
-              accessibilityLabel="Enable notifications"
-            >
-              <Text style={s.enableBtnText}>
-                {isRequesting ? 'Requesting…' : 'Enable notifications'}
-              </Text>
-            </AnimatedPressable>
-            <AnimatedPressable
-              style={s.previousBtn}
-              onPress={() => router.back()}
-              accessibilityRole="button"
-              accessibilityLabel="Previous"
-            >
-              <Text style={s.previousBtnText}>Previous</Text>
-            </AnimatedPressable>
-            <AnimatedPressable
-              style={s.notNowBtn}
-              onPress={finish}
-              disabled={isRequesting}
-              accessibilityRole="button"
-              accessibilityLabel="Not now"
-            >
-              <Text style={s.notNowText}>Not now</Text>
-            </AnimatedPressable>
+          <View style={s.prefList}>
+            {PREFS.map(({ key, label, Icon }) => (
+              <PreferenceChip key={key} label={label} Icon={Icon} />
+            ))}
           </View>
         </View>
       </ScrollView>
+
+      <OnboardingInfoFooterActions
+        onContinue={handleEnable}
+        onPrevious={() => router.back()}
+        onSkip={finish}
+        continueLabel={isRequesting ? 'Requesting…' : 'Enable notifications'}
+        skipLabel="Not now"
+        disabled={isRequesting}
+      />
     </SafeAreaView>
   );
 }
@@ -167,11 +140,7 @@ const s = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: 16,
     paddingTop: 16,
-    paddingBottom: 16,
-  },
-  content: {
-    flexGrow: 1,
-    justifyContent: 'space-between',
+    paddingBottom: 240,
   },
   main: {
     gap: 30,
@@ -179,14 +148,9 @@ const s = StyleSheet.create({
   titleSection: {
     gap: 15,
   },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
   title: {
     fontFamily: 'Sanchez_400Regular',
-    fontSize: 34,
+    fontSize: 30,
     color: C.textPrimary,
   },
   subtitle: {
@@ -217,47 +181,6 @@ const s = StyleSheet.create({
   },
   prefLabel: {
     fontFamily: 'NotoSans_500Medium',
-    fontSize: 16,
-    color: C.textPrimary,
-  },
-  footer: {
-    gap: 20,
-  },
-  enableBtn: {
-    backgroundColor: C.primary,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 20,
-  },
-  enableBtnDisabled: {
-    opacity: 0.7,
-  },
-  enableBtnText: {
-    fontFamily: 'IBMPlexSans_600SemiBold',
-    fontSize: 18,
-    color: C.textOnPrimary,
-  },
-  previousBtn: {
-    borderWidth: 1,
-    borderColor: C.textPrimary,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 20,
-  },
-  previousBtnText: {
-    fontFamily: 'IBMPlexSans_600SemiBold',
-    fontSize: 18,
-    color: C.textPrimary,
-  },
-  notNowBtn: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-  },
-  notNowText: {
-    fontFamily: 'NotoSans_600SemiBold',
     fontSize: 16,
     color: C.textPrimary,
   },

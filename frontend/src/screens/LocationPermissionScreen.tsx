@@ -1,5 +1,5 @@
-import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { LocationPermissionIllustration } from '@/components/onboarding/OnboardingIcons';
+import { OnboardingInfoFooterActions } from '@/components/onboarding/OnboardingInfoFooterActions';
 import { OnboardingProgressPills } from '@/components/onboarding/OnboardingProgressPills';
 import { colors as C } from '@/features/figma-screens/tokens';
 import { requestSessionLocationPermission } from '@/utils/sessionPermissions';
@@ -60,7 +60,7 @@ export function LocationPermissionScreen() {
 
       <View style={s.flex}>
         <View style={s.main}>
-          <OnboardingProgressPills active={3} />
+          <OnboardingProgressPills active={3} total={7} />
           <View style={s.titleSection}>
             <Text style={s.title} accessibilityRole="header">
               Allow location?
@@ -70,37 +70,16 @@ export function LocationPermissionScreen() {
             </Text>
           </View>
         </View>
-
-        <View style={s.footer}>
-          <AnimatedPressable
-            style={[s.continueBtn, isRequesting && { opacity: 0.7 }]}
-            onPress={handleContinue}
-            disabled={isRequesting}
-            accessibilityRole="button"
-            accessibilityLabel="Enable location"
-          >
-            <Text style={s.continueBtnText}>
-              {isRequesting ? 'Requesting…' : 'Enable location'}
-            </Text>
-          </AnimatedPressable>
-          <AnimatedPressable
-            style={s.previousBtn}
-            onPress={() => router.back()}
-            accessibilityRole="button"
-            accessibilityLabel="Previous"
-          >
-            <Text style={s.previousBtnText}>Previous</Text>
-          </AnimatedPressable>
-          <AnimatedPressable
-            style={s.notNowBtn}
-            onPress={handleNotNow}
-            accessibilityRole="button"
-            accessibilityLabel="Not now"
-          >
-            <Text style={s.notNowText}>Not now</Text>
-          </AnimatedPressable>
-        </View>
       </View>
+
+      <OnboardingInfoFooterActions
+        onContinue={handleContinue}
+        onPrevious={() => router.back()}
+        onSkip={handleNotNow}
+        continueLabel={isRequesting ? 'Requesting…' : 'Enable location'}
+        skipLabel="Not now"
+        disabled={isRequesting}
+      />
     </SafeAreaView>
   );
 }
@@ -113,7 +92,6 @@ const s = StyleSheet.create({
   },
   flex: {
     flex: 1,
-    justifyContent: 'space-between',
   },
   illustration: {
     position: 'absolute',
@@ -140,45 +118,5 @@ const s = StyleSheet.create({
     fontSize: 16,
     color: C.textNavInactive,
     lineHeight: 24,
-  },
-  footer: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    gap: 20,
-  },
-  continueBtn: {
-    backgroundColor: C.primary,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 20,
-  },
-  continueBtnText: {
-    fontFamily: 'IBMPlexSans_600SemiBold',
-    fontSize: 18,
-    color: C.textOnPrimary,
-  },
-  previousBtn: {
-    borderWidth: 1,
-    borderColor: C.textPrimary,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 20,
-  },
-  previousBtnText: {
-    fontFamily: 'IBMPlexSans_600SemiBold',
-    fontSize: 18,
-    color: C.textPrimary,
-  },
-  notNowBtn: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-  },
-  notNowText: {
-    fontFamily: 'NotoSans_600SemiBold',
-    fontSize: 16,
-    color: C.textPrimary,
   },
 });

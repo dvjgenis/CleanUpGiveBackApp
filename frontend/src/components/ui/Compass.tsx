@@ -45,7 +45,9 @@ function useHeadingAngle() {
       if (status !== 'granted') return;
 
       sub = await Location.watchHeadingAsync((data) => {
-        const raw = data.trueHeading >= 0 ? data.trueHeading : data.magHeading;
+        const raw = (data.trueHeading > 0 || (data.trueHeading === 0 && data.accuracy != null && data.accuracy < 30))
+          ? data.trueHeading
+          : data.magHeading;
 
         if (!initialized.current) {
           initialized.current = true;
@@ -59,9 +61,10 @@ function useHeadingAngle() {
         let delta = raw - prevRaw.current;
         if (delta > 180) delta -= 360;
         if (delta < -180) delta += 360;
+        if (Math.abs(delta) < 2) return;
         cumulative.current += delta;
         prevRaw.current = raw;
-        angle.value = withTiming(cumulative.current, { duration: 150 });
+        angle.value = withTiming(cumulative.current, { duration: 100 });
         setLabel(bearingToLabel(raw));
       });
     })();

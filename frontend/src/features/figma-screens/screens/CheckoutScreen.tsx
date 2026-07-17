@@ -1,17 +1,19 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  KeyboardAvoidingView,
+  Keyboard,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
-import { useRouter, type Href } from 'expo-router';
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
+import { EyeOffIcon, EyeOpenIcon } from '@/components/onboarding/OnboardingIcons';
 import { SessionSetupBackChevronIcon } from '@/components/session-setup/icons/SessionSetupBackChevronIcon';
 import { SessionSetupValidationToast } from '@/components/session-setup/SessionSetupValidationToast';
 
@@ -28,7 +30,8 @@ import {
 import { CartBadge } from '../components/CartBadge';
 import { EmptyCartToast, useCartIconPress } from '../components/EmptyCartToast';
 import { useCartDonation, useCartItems } from '../cartStore';
-import { formatUsd, getCheckoutSummary } from '../mocks/checkout';
+import { markTrackerPaid } from '@/features/session-tracking/trackerPaymentStore';
+import { formatUsd, getCheckoutSummary, getTrackerCheckoutSummary } from '../mocks/checkout';
 import { layout, colors, fontFamilies, radius, shadows } from '../tokens';
 
 const FOOTER_PAD = 20;
@@ -77,10 +80,12 @@ function CheckoutTopBar({
   cartCount,
   onBack,
   onCartPress,
+  isTrackerMode,
 }: {
   cartCount: number;
   onBack: () => void;
   onCartPress: () => void;
+  isTrackerMode: boolean;
 }) {
   const insets = useSafeAreaInsets();
 
@@ -99,22 +104,26 @@ function CheckoutTopBar({
         </AnimatedPressable>
 
         <View style={s.topBarTitleOverlay} pointerEvents="none">
-          <Text style={s.topBarTitle}>Checkout</Text>
+          <Text style={s.topBarTitle}>{isTrackerMode ? 'Payment' : 'Checkout'}</Text>
         </View>
 
-        <AnimatedPressable
-          scaleTo={0.98}
-          style={s.topBarIconBtnRight}
-          onPress={onCartPress}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-          accessibilityRole="button"
-          accessibilityLabel={`Shopping cart, ${cartCount} item${cartCount === 1 ? '' : 's'}`}
-        >
-          <View style={s.cartIconWrap}>
-            <ShopCartIcon width={24} height={24} />
-            <CartBadge count={cartCount} />
-          </View>
-        </AnimatedPressable>
+        {isTrackerMode ? (
+          <View style={s.topBarIconBtnRight} />
+        ) : (
+          <AnimatedPressable
+            scaleTo={0.98}
+            style={s.topBarIconBtnRight}
+            onPress={onCartPress}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            accessibilityRole="button"
+            accessibilityLabel={`Shopping cart, ${cartCount} item${cartCount === 1 ? '' : 's'}`}
+          >
+            <View style={s.cartIconWrap}>
+              <ShopCartIcon width={24} height={24} />
+              <CartBadge count={cartCount} />
+            </View>
+          </AnimatedPressable>
+        )}
       </View>
     </View>
   );
@@ -142,20 +151,7 @@ function FieldLabel({
   );
 }
 
-function FormField({
-  value,
-  onChangeText,
-  placeholder,
-  accessibilityLabel,
-  keyboardType = 'default',
-  maxLength,
-  secureTextEntry,
-  autoCapitalize = 'none',
-  textAlign = 'left',
-  style,
-  trailing,
-  hasError,
-}: {
+const FormField = React.forwardRef<TextInput, {
   value: string;
   onChangeText: (text: string) => void;
   placeholder?: string;
@@ -168,10 +164,33 @@ function FormField({
   style?: object;
   trailing?: React.ReactNode;
   hasError?: boolean;
-}) {
+  returnKeyType?: 'next' | 'done';
+  onSubmitEditing?: () => void;
+  blurOnSubmit?: boolean;
+}>(function FormField(
+  {
+    value,
+    onChangeText,
+    placeholder,
+    accessibilityLabel,
+    keyboardType = 'default',
+    maxLength,
+    secureTextEntry,
+    autoCapitalize = 'none',
+    textAlign = 'left',
+    style,
+    trailing,
+    hasError,
+    returnKeyType = 'next',
+    onSubmitEditing,
+    blurOnSubmit = false,
+  },
+  ref,
+) {
   return (
     <View style={[s.fieldWrap, hasError ? s.fieldWrapError : null, style]}>
       <TextInput
+        ref={ref}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
@@ -183,12 +202,15 @@ function FormField({
         autoCorrect={false}
         autoCapitalize={autoCapitalize}
         textAlign={textAlign}
+        returnKeyType={returnKeyType}
+        onSubmitEditing={onSubmitEditing}
+        blurOnSubmit={blurOnSubmit}
         style={[s.fieldInput, trailing ? s.fieldInputWithIcon : null]}
       />
       {trailing ? <View style={s.fieldTrailing}>{trailing}</View> : null}
     </View>
   );
-}
+});
 
 function formatCardNumber(raw: string): string {
   const digits = raw.replace(/\D/g, '').slice(0, 16);
@@ -208,11 +230,36 @@ function formatExpiry(raw: string): string {
 export function CheckoutScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { mode, returnTo } = useLocalSearchParams<{ mode?: string; returnTo?: string }>();
+  const isTrackerMode = mode === 'tracker';
   const items = useCartItems();
   const donation = useCartDonation();
-  const summary = getCheckoutSummary(items, donation);
+  const summary = isTrackerMode ? getTrackerCheckoutSummary() : getCheckoutSummary(items, donation);
   const { onCartPress, toastVisible, toastKey } = useCartIconPress();
   const footerBottom = Math.max(insets.bottom, 12);
+  /** iOS: pad the sticky footer so its white surface fills to the screen bottom above the keyboard. */
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const onShow = Keyboard.addListener(showEvent, (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const onHide = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+    return () => {
+      onShow.remove();
+      onHide.remove();
+    };
+  }, []);
+
+  // Android typically resizes the window; only extend footer padding on iOS.
+  const footerPaddingBottom =
+    Platform.OS === 'ios' && keyboardHeight > 0
+      ? keyboardHeight + 12
+      : footerBottom + FOOTER_PAD - 8;
 
   const [shipping, setShipping] = useState<ShippingForm>({
     fullName: '',
@@ -230,6 +277,16 @@ export function CheckoutScreen() {
   const [validationToastVisible, setValidationToastVisible] = useState(false);
   const [missingFields, setMissingFields] = useState<string[]>([]);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>(EMPTY_FIELD_ERRORS);
+  const [showCvv, setShowCvv] = useState(false);
+
+  const streetRef = useRef<TextInput>(null);
+  const cityRef = useRef<TextInput>(null);
+  const stateRef = useRef<TextInput>(null);
+  const zipRef = useRef<TextInput>(null);
+  const cardNumberRef = useRef<TextInput>(null);
+  const expiryRef = useRef<TextInput>(null);
+  const cvvRef = useRef<TextInput>(null);
+  const nameOnCardRef = useRef<TextInput>(null);
 
   function collectValidation(
     nextShipping = shipping,
@@ -301,6 +358,16 @@ export function CheckoutScreen() {
     if (!isValid) return;
     setFieldErrors(EMPTY_FIELD_ERRORS);
     setValidationToastVisible(false);
+
+    if (isTrackerMode) {
+      markTrackerPaid();
+      const confirmationHref = returnTo
+        ? (`/purchase-confirmation?mode=tracker&returnTo=${returnTo}` as Href)
+        : ('/purchase-confirmation?mode=tracker' as Href);
+      router.replace(confirmationHref);
+      return;
+    }
+
     router.replace('/purchase-confirmation' as Href);
   }
 
@@ -310,20 +377,19 @@ export function CheckoutScreen() {
         cartCount={summary.itemCount}
         onBack={() => router.back()}
         onCartPress={onCartPress}
+        isTrackerMode={isTrackerMode}
       />
-      <EmptyCartToast key={toastKey} visible={toastVisible} />
+      {!isTrackerMode ? <EmptyCartToast key={toastKey} visible={toastVisible} /> : null}
       <SessionSetupValidationToast visible={validationToastVisible} missingLabels={missingFields} />
 
-      <KeyboardAvoidingView
-        style={s.body}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={0}
-      >
+      <View style={s.body}>
         <ScrollView
           style={s.scroll}
           contentContainerStyle={s.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+          keyboardDismissMode="interactive"
         >
           {/* Order Summary */}
           <View style={s.card}>
@@ -333,10 +399,14 @@ export function CheckoutScreen() {
             </View>
 
             {summary.lines.map((line) => (
-              <View key={line.name} style={s.lineRow}>
+              <View key={line.id} style={s.lineRow}>
                 <View style={s.lineCopy}>
                   <Text style={s.lineName}>{line.name}</Text>
-                  <Text style={s.lineQty}>{`Qty: ${line.quantity}`}</Text>
+                  {isTrackerMode ? (
+                    <Text style={s.lineQty}>Includes shipping and cleanup kit</Text>
+                  ) : (
+                    <Text style={s.lineQty}>{`Qty: ${line.quantity}`}</Text>
+                  )}
                 </View>
                 <Text style={s.linePrice}>{formatUsd(line.lineTotal)}</Text>
               </View>
@@ -345,7 +415,7 @@ export function CheckoutScreen() {
             <View style={s.divider} />
 
             <View style={s.charges}>
-            {summary.donation > 0 ? (
+            {!isTrackerMode && summary.donation > 0 ? (
               <View style={s.summaryRow}>
                 <View style={s.donationLabelRow}>
                   <Text style={s.donationLabel}>Donation</Text>
@@ -358,10 +428,12 @@ export function CheckoutScreen() {
                 <Text style={s.mutedLabel}>Shipping</Text>
                 <Text style={s.mutedLabel}>{summary.shippingLabel}</Text>
               </View>
-              <View style={s.summaryRow}>
-                <Text style={s.mutedLabel}>Taxes</Text>
-                <Text style={s.mutedLabel}>{formatUsd(summary.tax)}</Text>
-              </View>
+              {!isTrackerMode ? (
+                <View style={s.summaryRow}>
+                  <Text style={s.mutedLabel}>Taxes</Text>
+                  <Text style={s.mutedLabel}>{formatUsd(summary.tax)}</Text>
+                </View>
+              ) : null}
             </View>
 
             <View style={s.divider} />
@@ -392,11 +464,14 @@ export function CheckoutScreen() {
                   accessibilityLabel="Full name"
                   autoCapitalize="words"
                   hasError={fieldErrors.fullName}
+                  returnKeyType="next"
+                  onSubmitEditing={() => streetRef.current?.focus()}
                 />
               </View>
               <View style={s.fieldBlock}>
                 <FieldLabel label="Street Address" muted hasError={fieldErrors.street} />
                 <FormField
+                  ref={streetRef}
                   value={shipping.street}
                   onChangeText={(street) => {
                     const next = { ...shipping, street };
@@ -405,12 +480,15 @@ export function CheckoutScreen() {
                   }}
                   accessibilityLabel="Street address"
                   hasError={fieldErrors.street}
+                  returnKeyType="next"
+                  onSubmitEditing={() => cityRef.current?.focus()}
                 />
               </View>
               <View style={s.halfRow}>
                 <View style={s.halfField}>
                   <FieldLabel label="City" muted hasError={fieldErrors.city} />
                   <FormField
+                    ref={cityRef}
                     value={shipping.city}
                     onChangeText={(city) => {
                       const next = { ...shipping, city };
@@ -419,11 +497,14 @@ export function CheckoutScreen() {
                     }}
                     accessibilityLabel="City"
                     hasError={fieldErrors.city}
+                    returnKeyType="next"
+                    onSubmitEditing={() => stateRef.current?.focus()}
                   />
                 </View>
                 <View style={s.halfField}>
                   <FieldLabel label="State" muted hasError={fieldErrors.state} />
                   <FormField
+                    ref={stateRef}
                     value={shipping.state}
                     onChangeText={(state) => {
                       const next = { ...shipping, state };
@@ -434,12 +515,15 @@ export function CheckoutScreen() {
                     maxLength={2}
                     autoCapitalize="characters"
                     hasError={fieldErrors.state}
+                    returnKeyType="next"
+                    onSubmitEditing={() => zipRef.current?.focus()}
                   />
                 </View>
               </View>
               <View style={s.fieldBlock}>
                 <FieldLabel label="ZIP Code" muted hasError={fieldErrors.zip} />
                 <FormField
+                  ref={zipRef}
                   value={shipping.zip}
                   onChangeText={(zip) => {
                     const next = {
@@ -453,6 +537,8 @@ export function CheckoutScreen() {
                   keyboardType="number-pad"
                   maxLength={10}
                   hasError={fieldErrors.zip}
+                  returnKeyType="next"
+                  onSubmitEditing={() => cardNumberRef.current?.focus()}
                 />
               </View>
             </View>
@@ -469,6 +555,7 @@ export function CheckoutScreen() {
               <View style={s.fieldBlock}>
                 <FieldLabel label="Card Number" hasError={fieldErrors.cardNumber} />
                 <FormField
+                  ref={cardNumberRef}
                   value={payment.cardNumber}
                   onChangeText={(text) => {
                     const next = { ...payment, cardNumber: formatCardNumber(text) };
@@ -481,12 +568,15 @@ export function CheckoutScreen() {
                   maxLength={19}
                   trailing={<ShopCheckoutCardIcon width={24} height={24} />}
                   hasError={fieldErrors.cardNumber}
+                  returnKeyType="next"
+                  onSubmitEditing={() => expiryRef.current?.focus()}
                 />
               </View>
               <View style={s.halfRow}>
                 <View style={s.halfField}>
                   <FieldLabel label="Expiry" hasError={fieldErrors.expiry} />
                   <FormField
+                    ref={expiryRef}
                     value={payment.expiry}
                     onChangeText={(text) => {
                       const next = { ...payment, expiry: formatExpiry(text) };
@@ -499,16 +589,19 @@ export function CheckoutScreen() {
                     maxLength={7}
                     textAlign="center"
                     hasError={fieldErrors.expiry}
+                    returnKeyType="next"
+                    onSubmitEditing={() => cvvRef.current?.focus()}
                   />
                 </View>
                 <View style={s.halfField}>
                   <FieldLabel label="CVV" hasError={fieldErrors.cvv} />
                   <FormField
+                    ref={cvvRef}
                     value={payment.cvv}
                     onChangeText={(cvv) => {
                       const next = {
                         ...payment,
-                        cvv: cvv.replace(/\D/g, '').slice(0, 4),
+                        cvv: cvv.replace(/\D/g, '').slice(0, 3),
                       };
                       setPayment(next);
                       requestAnimationFrame(() => refreshValidationFeedback(shipping, next));
@@ -516,16 +609,32 @@ export function CheckoutScreen() {
                     placeholder="•••"
                     accessibilityLabel="CVV"
                     keyboardType="number-pad"
-                    maxLength={4}
-                    secureTextEntry
+                    maxLength={3}
+                    secureTextEntry={!showCvv}
                     textAlign="center"
                     hasError={fieldErrors.cvv}
+                    returnKeyType="next"
+                    onSubmitEditing={() => nameOnCardRef.current?.focus()}
+                    trailing={
+                      <Pressable
+                        onPress={() => setShowCvv((v) => !v)}
+                        accessibilityRole="button"
+                        accessibilityLabel={showCvv ? 'Hide CVV' : 'Show CVV'}
+                        hitSlop={8}
+                      >
+                        {showCvv
+                          ? <EyeOpenIcon size={20} color={colors.textNavInactive} />
+                          : <EyeOffIcon size={20} color={colors.textNavInactive} />
+                        }
+                      </Pressable>
+                    }
                   />
                 </View>
               </View>
               <View style={s.fieldBlock}>
                 <FieldLabel label="Name on Card" hasError={fieldErrors.nameOnCard} />
                 <FormField
+                  ref={nameOnCardRef}
                   value={payment.nameOnCard}
                   onChangeText={(nameOnCard) => {
                     const next = { ...payment, nameOnCard };
@@ -535,6 +644,9 @@ export function CheckoutScreen() {
                   accessibilityLabel="Name on card"
                   autoCapitalize="words"
                   hasError={fieldErrors.nameOnCard}
+                  returnKeyType="done"
+                  onSubmitEditing={handlePlaceOrder}
+                  blurOnSubmit
                 />
               </View>
               <View style={s.secureRow}>
@@ -547,7 +659,7 @@ export function CheckoutScreen() {
           </View>
         </ScrollView>
 
-        <View style={[s.footer, { paddingBottom: footerBottom + FOOTER_PAD - 8 }]}>
+        <View style={[s.footer, { paddingBottom: footerPaddingBottom }]}>
           <AnimatedPressable
             scaleTo={0.98}
             style={s.placeOrderBtn}
@@ -562,7 +674,7 @@ export function CheckoutScreen() {
             <ShopStripeLogo width={24} height={24} />
           </View>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </View>
   );
 }

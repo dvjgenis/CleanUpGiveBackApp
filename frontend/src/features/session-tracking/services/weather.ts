@@ -4,6 +4,8 @@ const OPEN_METEO_REVERSE_GEOCODE = 'https://geocoding-api.open-meteo.com/v1/reve
 type OpenMeteoForecastResponse = {
   current?: {
     temperature_2m?: number;
+    weather_code?: number;
+    is_day?: number;
   };
 };
 
@@ -13,18 +15,24 @@ type OpenMeteoReverseGeocodeResponse = {
   }>;
 };
 
+export type CurrentWeatherSnapshot = {
+  temperatureF: number;
+  weatherCode: number | null;
+  isDay: boolean;
+};
+
 export function formatTemperatureFahrenheit(tempF: number): string {
   return `${Math.round(tempF)}°`;
 }
 
-export async function fetchCurrentTemperatureF(
+export async function fetchCurrentWeather(
   latitude: number,
   longitude: number,
-): Promise<number> {
+): Promise<CurrentWeatherSnapshot> {
   const params = new URLSearchParams({
     latitude: latitude.toString(),
     longitude: longitude.toString(),
-    current: 'temperature_2m',
+    current: 'temperature_2m,weather_code,is_day',
     temperature_unit: 'fahrenheit',
   });
 
@@ -39,7 +47,20 @@ export async function fetchCurrentTemperatureF(
     throw new Error('Weather response missing temperature');
   }
 
-  return temperature;
+  const weatherCode =
+    typeof data.current?.weather_code === 'number' ? data.current.weather_code : null;
+  const isDay = data.current?.is_day !== 0;
+
+  return { temperatureF: temperature, weatherCode, isDay };
+}
+
+/** @deprecated Prefer `fetchCurrentWeather` — kept for callers that only need °F. */
+export async function fetchCurrentTemperatureF(
+  latitude: number,
+  longitude: number,
+): Promise<number> {
+  const weather = await fetchCurrentWeather(latitude, longitude);
+  return weather.temperatureF;
 }
 
 /** City/town label — used on web and as a native fallback when reverse geocoding fails. */

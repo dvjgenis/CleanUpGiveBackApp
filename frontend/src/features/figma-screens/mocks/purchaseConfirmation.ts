@@ -4,14 +4,14 @@
  */
 
 import { getCartDonation, getCartItems } from '../cartStore';
-import { getCheckoutSummary, formatUsd, type CheckoutOrderLine } from './checkout';
+import { getCheckoutSummary, getTrackerCheckoutSummary, formatUsd, type CheckoutOrderLine } from './checkout';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 export const PURCHASE_CONFIRMATION_ASSETS = {
   kitThumb: require('@/assets/figma/shop/confirmation/kit-thumb.png') as number,
 };
 
-export type PurchaseConfirmationMode = 'order' | 'donation';
+export type PurchaseConfirmationMode = 'order' | 'donation' | 'tracker';
 
 export interface PurchaseConfirmationDetail {
   label: string;
@@ -61,6 +61,21 @@ export function getPurchaseConfirmationFromCart(): PurchaseConfirmationData {
       ...getSharedPaymentDetails(),
       { label: 'Taxes', value: formatUsd(summary.tax) },
       { label: 'Shipping', value: summary.shippingLabel },
+    ],
+    totalImpact: summary.total,
+  };
+}
+
+/** Tracker one-time payment — Continue on `FreeTrialModal` → Checkout `?mode=tracker`. */
+export function getTrackerPurchaseConfirmation(): PurchaseConfirmationData {
+  const summary = getTrackerCheckoutSummary();
+  return {
+    mode: 'tracker',
+    lines: summary.lines,
+    donationAmount: 0,
+    details: [
+      ...getSharedPaymentDetails(),
+      { label: 'Estimated Shipping', value: '~2-3 days' },
     ],
     totalImpact: summary.total,
   };

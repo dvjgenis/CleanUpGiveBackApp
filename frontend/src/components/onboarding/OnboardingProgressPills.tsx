@@ -1,9 +1,9 @@
 import { colors as C, radius } from '@/features/figma-screens/tokens';
 import { StyleSheet, View } from 'react-native';
 
-/** Figma ProgressPills — 5-step onboarding indicator (create → details → location → camera → notif). */
+/** Figma ProgressPills — 6-step onboarding indicator (create → details → location → camera → free-hour → notif). */
 export function OnboardingProgressPills({
-  total = 5,
+  total = 6,
   active = 1,
 }: {
   total?: number;

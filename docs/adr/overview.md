@@ -7,5 +7,6 @@
 | [ADR-003](ADR-003-minor-data-protection-baseline.md) | Minor data protection — strictest-baseline nationwide | Accepted |
 | [ADR-004](ADR-004-sessions-backend-supabase-fly.md) | Sessions backend — Supabase + Fastify on Fly | Accepted |
 | [ADR-005](ADR-005-expo-go-webview-map.md) | Live map in Expo Go via WebView (MapLibre GL JS) | Accepted |
+| [ADR-006](ADR-006-worldcover-land-cover-overlay.md) | ESA WorldCover land-cover overlay (keep MapLibre basemaps) | Superseded — feature removed |
 
 New decisions: copy [template.md](template.md), increment number, add a row here.

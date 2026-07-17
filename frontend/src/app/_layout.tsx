@@ -6,8 +6,26 @@ const guideBackwardScreenOptions = {
   animationTypeForReplace: 'pop' as const,
 };
 
+/**
+ * `session-setup-complete` is a forward-only finale: step7 can land here via
+ * `router.replace` (camera permission already granted) as well as via a normal
+ * push from free-hour/free-kit. Using the shared `guideBackwardScreenOptions`
+ * made the replace-path play a backward "pop" animation on a screen that is
+ * actually progressing the user forward, so it gets its own celebratory,
+ * always-forward transition instead.
+ */
+const sessionSetupCompleteScreenOptions = {
+  animation: 'fade_from_bottom' as const,
+  animationTypeForReplace: 'push' as const,
+};
+
 /** Tab roots: no animation when switching via BottomNavBar. */
 const tabRootScreenOptions = {
+  animation: 'none' as const,
+};
+
+/** Home root: no animation when switching via BottomNavBar (matches other tab roots). */
+const homeScreenOptions = {
   animation: 'none' as const,
 };
 
@@ -15,7 +33,7 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="index" options={tabRootScreenOptions} />
+      <Stack.Screen name="index" options={homeScreenOptions} />
       <Stack.Screen name="session-setup-guide" options={guideBackwardScreenOptions} />
       <Stack.Screen name="session-setup" />
       <Stack.Screen name="session-setup-step2" options={guideBackwardScreenOptions} />
@@ -24,8 +42,12 @@ export default function RootLayout() {
       <Stack.Screen name="session-setup-step5" options={guideBackwardScreenOptions} />
       <Stack.Screen name="session-setup-step6" />
       <Stack.Screen name="session-setup-step7" options={guideBackwardScreenOptions} />
-      <Stack.Screen name="session-setup-complete" options={guideBackwardScreenOptions} />
+      <Stack.Screen name="session-free-hour" options={guideBackwardScreenOptions} />
+      <Stack.Screen name="session-free-kit" options={guideBackwardScreenOptions} />
+      <Stack.Screen name="session-setup-complete" options={sessionSetupCompleteScreenOptions} />
       <Stack.Screen name="live-session" options={{ animation: 'slide_from_bottom', animationTypeForReplace: 'pop' }} />
+      <Stack.Screen name="session-feedback" />
+      <Stack.Screen name="feedback-thank-you" />
       <Stack.Screen name="photo-checkpoint" />
       <Stack.Screen name="photo-capture" />
       <Stack.Screen name="photo-submitted" />
@@ -41,6 +63,7 @@ export default function RootLayout() {
       <Stack.Screen name="sessions-list" options={tabRootScreenOptions} />
       <Stack.Screen name="session-detail" />
       <Stack.Screen name="account" options={tabRootScreenOptions} />
+      <Stack.Screen name="map-theme" />
       <Stack.Screen name="delete-account-confirm" />
       <Stack.Screen name="account-privacy" />
       <Stack.Screen name="privacy-policy" />
@@ -65,6 +88,8 @@ export default function RootLayout() {
       <Stack.Screen name="account-details" />
       <Stack.Screen name="location-permission" />
       <Stack.Screen name="camera-permission" />
+      <Stack.Screen name="free-hour" />
+      <Stack.Screen name="free-kit" />
       <Stack.Screen name="notification-preference" />
       <Stack.Screen name="setup-complete" />
       <Stack.Screen name="home-tour" />

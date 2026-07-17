@@ -151,10 +151,10 @@ export function EventsViewAllModal({ visible, events, onClose, onSelectEvent }: 
     translateY.value = dismissTravel;
     translateY.value = reducedMotion
       ? 0
-      : withSpring(0, { ...modalSpring, overshootClamping: true });
+      : withSpring(0, { damping: 24, mass: 1.4, stiffness: 140, overshootClamping: true });
     backdropOpacity.value = reducedMotion
       ? 1
-      : withTiming(1, { duration: durations.modalEnter, easing: easing.easeOut });
+      : withTiming(1, { duration: 420, easing: easing.easeOut });
   }, [backdropOpacity, dismissTravel, reducedMotion, translateY, visible]);
 
   const sheetStyle = useAnimatedStyle(() => ({

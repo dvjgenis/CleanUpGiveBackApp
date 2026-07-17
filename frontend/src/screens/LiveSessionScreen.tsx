@@ -16,6 +16,7 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  Vibration,
   View,
 } from 'react-native';
 import Animated from 'react-native-reanimated';
@@ -31,7 +32,11 @@ import { TrackerLayersIcon } from '@/features/session-tracking/components/icons/
 import { RouteIcon } from '@/features/session-tracking/components/icons/RouteIcon';
 import { TrackerMyLocationIcon } from '@/features/session-tracking/components/icons/TrackerMyLocationIcon';
 import { TrackerSubmitPhotoIcon } from '@/features/session-tracking/components/icons/TrackerSubmitPhotoIcon';
-import { TrackerWeatherIcon } from '@/features/session-tracking/components/icons/TrackerWeatherIcon';
+import { WeatherConditionIcon } from '@/features/session-tracking/components/icons/WeatherConditionIcon';
+import {
+  TrackerMapDarkIcon,
+  TrackerMapLightIcon,
+} from '@/features/session-tracking/components/icons/TrackerMapThemeIcons';
 import { CameraIcon } from '@/features/session-tracking/components/icons/CameraIcon';
 import { ChevronLeftIcon } from '@/features/session-tracking/components/icons/ChevronLeftIcon';
 import { ChevronRightIcon } from '@/features/session-tracking/components/icons/ChevronRightIcon';
@@ -51,6 +56,10 @@ import {
   toggleLiveSessionMapFollow,
   useLiveSession,
 } from '@/features/session-tracking/liveSessionStore';
+import {
+  toggleManualMapTheme,
+  useEffectiveMapTheme,
+} from '@/features/session-tracking/mapThemeStore';
 import { useLiveWeather } from '@/features/session-tracking/hooks/useLiveWeather';
 import { useLiveSessionMapReveal } from '@/features/session-tracking/hooks/useLiveSessionMapReveal';
 import { colors, radius } from '@/features/session-tracking/tokens';
@@ -104,18 +113,30 @@ function MapToolButton({
   children,
   onPress,
   accessibilityLabel,
+  active = false,
 }: {
   children: React.ReactNode;
   onPress?: () => void;
   accessibilityLabel: string;
+  /** Selected / on state — brand primary border + mint fill. */
+  active?: boolean;
 }) {
+  const [pressed, setPressed] = useState(false);
+
   return (
     <AnimatedPressable
-      style={s.mapToolBtn}
-      scaleTo={0.98}
+      style={[
+        s.mapToolBtn,
+        active && s.mapToolBtnActive,
+        pressed && s.mapToolBtnPressed,
+      ]}
+      scaleTo={0.96}
       onPress={onPress}
+      onPressIn={() => setPressed(true)}
+      onPressOut={() => setPressed(false)}
       hitSlop={14}
       accessibilityRole="button"
+      accessibilityState={{ selected: active }}
       accessibilityLabel={accessibilityLabel}
     >
       {children}
@@ -129,14 +150,19 @@ export function LiveSessionScreen() {
   const { from } = useLocalSearchParams<{ from?: string }>();
   const { elapsedSeconds, checkpointSecondsRemaining, distanceMiles, submittedCheckpoints, mapLayer, mapFollowEnabled } =
     useLiveSession();
+  const mapTheme = useEffectiveMapTheme();
   const { mapRevealStyle, chromeStyle } = useLiveSessionMapReveal();
   const submittedCheckpointCount = submittedCheckpoints.length;
   const showSubmissionCount = shouldShowCheckpointSubmissionCount(submittedCheckpoints);
   const submittedCheckpointLabel = formatSubmittedCheckpointCount(submittedCheckpointCount);
-  const { placeLabel, temperatureLabel, isLoading: isWeatherLoading } = useLiveWeather();
+  const {
+    placeLabel,
+    temperatureLabel,
+    weatherIcon,
+    isLoading: isWeatherLoading,
+  } = useLiveWeather();
   const [mapTypesVisible, setMapTypesVisible] = useState(false);
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
-
   const [fontsLoaded] = useFonts({
     NotoSans_400Regular,
     NotoSans_500Medium,
@@ -154,6 +180,7 @@ export function LiveSessionScreen() {
 
   useEffect(() => {
     if (checkpointSecondsRemaining === 0) {
+      Vibration.vibrate([0, 300, 150, 300, 150, 300]);
       router.push('/photo-checkpoint');
     }
   }, [checkpointSecondsRemaining]);
@@ -182,7 +209,7 @@ export function LiveSessionScreen() {
               </View>
               <View style={s.pillDivider} />
               <View style={s.temperatureRow}>
-                <TrackerWeatherIcon color={C.textTertiary} />
+                <WeatherConditionIcon condition={weatherIcon} color={C.textTertiary} size={18} />
                 <Text style={s.locationText}>
                   {isWeatherLoading ? '…' : temperatureLabel}
                 </Text>
@@ -223,7 +250,23 @@ export function LiveSessionScreen() {
                     <TrackerLayersIcon color={C.textTertiary} />
                   </MapToolButton>
                   <MapToolButton
+                    accessibilityLabel={
+                      mapTheme === 'dark'
+                        ? 'Switch Standard map to light mode'
+                        : 'Switch Standard map to dark mode'
+                    }
+                    active={mapTheme === 'dark'}
+                    onPress={toggleManualMapTheme}
+                  >
+                    {mapTheme === 'dark' ? (
+                      <TrackerMapDarkIcon color={C.primary} size={22} />
+                    ) : (
+                      <TrackerMapLightIcon color={C.textTertiary} size={22} />
+                    )}
+                  </MapToolButton>
+                  <MapToolButton
                     accessibilityLabel={mapFollowEnabled ? 'Stop following location' : 'Follow my location'}
+                    active={mapFollowEnabled}
                     onPress={toggleLiveSessionMapFollow}
                   >
                     <RouteIcon color={mapFollowEnabled ? C.primary : C.textTertiary} />
@@ -296,7 +339,7 @@ export function LiveSessionScreen() {
                   variant="secondary"
                   onPress={() => {
                     finalizeLiveSession();
-                    router.push('/submission-confirmation');
+                    router.push('/session-feedback');
                   }}
                   icon={<TrackerEndSessionIcon color={C.textTertiary} size={24} />}
                 />
@@ -396,6 +439,7 @@ export function LiveSessionScreen() {
           </Modal>
         );
       })()}
+
     </View>
   );
 }
@@ -591,6 +635,16 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     zIndex: 20,
     elevation: 20,
+  },
+
+  mapToolBtnPressed: {
+    backgroundColor: '#f7fff1',
+    borderColor: C.primary,
+  },
+
+  mapToolBtnActive: {
+    backgroundColor: '#f7fff1',
+    borderColor: C.primary,
   },
 
   checkpointCard: {
