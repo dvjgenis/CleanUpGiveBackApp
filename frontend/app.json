@@ -69,6 +69,7 @@
           }
         }
       ],
+      "./plugins/withNoPushEntitlement",
       [
         "expo-audio",
         {
