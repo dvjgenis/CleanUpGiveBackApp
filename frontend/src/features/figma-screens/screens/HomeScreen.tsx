@@ -381,17 +381,6 @@ export function HomeScreenWithData({ data }: { data: HomeDashboardData }) {
           )}
         </View>
 
-        {__DEV__ && (
-          <AnimatedPressable
-            style={s.devToggle}
-            onPress={() => router.push('/free-trial-done' as Href)}
-            accessibilityRole="button"
-            accessibilityLabel="Dev: preview free trial paywall"
-          >
-            <Text style={s.devToggleText}>DEV · Free Trial Paywall</Text>
-          </AnimatedPressable>
-        )}
-
         <ServiceHoursCard
           serviceHoursTotalLabel={data.serviceHoursTotalLabel}
           weekStartIso={data.weekStartIso}
@@ -619,20 +608,6 @@ const s = StyleSheet.create({
     fontFamily: fontFamilies.notoSansSemiBold,
     fontSize: 12,
     color: colors.primary,
-  },
-  devToggle: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#fff4de',
-    borderWidth: 1,
-    borderColor: colors.status.pending.border,
-    borderRadius: R.full,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  devToggleText: {
-    fontFamily: fontFamilies.ibmPlexSansMedium,
-    fontSize: 11,
-    color: colors.status.pending.text,
   },
   serviceHoursCard: {
     backgroundColor: colors.white,
