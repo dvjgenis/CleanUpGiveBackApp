@@ -53,15 +53,15 @@ const FEEDBACK_MAX_LENGTH = 1000;
  * PRD: Figma feedback_screen (1126:1516) "Feedback Icons Row" shows 5 icon slots, but
  * two are an identical duplicate "Neutral" glyph — a Figma authoring artifact, not an
  * intentional design. Extended into a coherent 5-point scale (Excited → Very Sad) using
- * the existing asset SVGs plus a hand-authored `VerySad.svg` (same style/viewBox) for
+ * the existing asset SVGs plus a hand-authored `very-sad.svg` (same style/viewBox) for
  * the 5th slot, which has no Figma source.
  */
 const EMOJIS = [
-  { key: 'excited', source: require('../../assets/Excited.svg'), label: 'Excited' },
-  { key: 'happy', source: require('../../assets/Happy.svg'), label: 'Happy' },
-  { key: 'neutral', source: require('../../assets/Neutral.svg'), label: 'Neutral' },
-  { key: 'sad', source: require('../../assets/Sad.svg'), label: 'Sad' },
-  { key: 'verySad', source: require('../../assets/VerySad.svg'), label: 'Very sad' },
+  { key: 'excited', source: require('../../assets/figma/feedback-screen/excited.svg'), label: 'Excited' },
+  { key: 'happy', source: require('../../assets/figma/feedback-screen/happy.svg'), label: 'Happy' },
+  { key: 'neutral', source: require('../../assets/figma/feedback-screen/neutral.svg'), label: 'Neutral' },
+  { key: 'sad', source: require('../../assets/figma/feedback-screen/sad.svg'), label: 'Sad' },
+  { key: 'verySad', source: require('../../assets/figma/feedback-screen/very-sad.svg'), label: 'Very sad' },
 ] as const;
 
 const BUBBLE_TIMING = { duration: 180, easing: Easing.out(Easing.ease) };
@@ -214,7 +214,7 @@ export function FeedbackScreen({
             {/* Chat bubble + progressive typing dots */}
             <Animated.View style={[s.iconGroup, iconStyle]}>
               <Image
-                source={require('../../assets/Chat.svg')}
+                source={require('../../assets/figma/feedback-screen/chat.svg')}
                 style={s.chatSvg}
                 contentFit="contain"
                 pointerEvents="none"
@@ -223,7 +223,7 @@ export function FeedbackScreen({
               {/* Bubbles trail along an arc, big (top-left) to small (bottom-right), fading in that order */}
               <Animated.View style={[s.bigBubble, bigBubbleStyle]}>
                 <Image
-                  source={require('../../assets/bigbubble.svg')}
+                  source={require('../../assets/figma/feedback-screen/big-bubble.svg')}
                   style={s.bigBubbleImg}
                   contentFit="contain"
                   pointerEvents="none"
@@ -232,7 +232,7 @@ export function FeedbackScreen({
               </Animated.View>
               <Animated.View style={[s.mediumBubble, mediumBubbleStyle]}>
                 <Image
-                  source={require('../../assets/mediumbubble.svg')}
+                  source={require('../../assets/figma/feedback-screen/medium-bubble.svg')}
                   style={s.mediumBubbleImg}
                   contentFit="contain"
                   pointerEvents="none"
@@ -241,7 +241,7 @@ export function FeedbackScreen({
               </Animated.View>
               <Animated.View style={[s.smallBubble, smallBubbleStyle]}>
                 <Image
-                  source={require('../../assets/smallbubble.svg')}
+                  source={require('../../assets/figma/feedback-screen/small-bubble.svg')}
                   style={s.smallBubbleImg}
                   contentFit="contain"
                   pointerEvents="none"
@@ -329,7 +329,7 @@ const s = StyleSheet.create({
   },
 
   // ── Chat bubble illustration ─────────────────────────────────────────────
-  // Container sized to 2× the Chat.svg source dimensions (81×71 → 162×142).
+  // Container sized to 2× the chat.svg source dimensions (81×71 → 162×142).
   // The bubble tail is at the bottom-left, so the body occupies the upper ~65%.
   iconGroup: {
     width: CHAT_W,

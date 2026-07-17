@@ -17,12 +17,10 @@ Static media and bundled prototype HTML.
 | `frontend/assets/figma/sessions-list/` | Sessions list SVGs (search, sort chevron, expand, meta-dot) |
 | `frontend/assets/figma/sessions-calendar/` | Sessions calendar glyphs (designed) |
 | `frontend/assets/figma/session-detail/` | Session detail SVGs (back, share, hours, miles, photos) |
-| `frontend/assets/figma/account/` | Account tab + settings SVG icons; profile hero leaves from Figma `569:917`/`569:918` as `leaf-large.svg` / `leaf-small.svg` (rotated −75° / −50° in `AccountScreen`) |
+| `frontend/assets/figma/account/` | Account tab + settings SVG icons; profile hero leaves from Figma `569:917`/`569:918` as `leaf-large.svg` / `leaf-small.svg` (rotated −75° / −50° in `AccountScreen`); Give Feedback row uses `give-feedback.svg` |
+| `frontend/assets/figma/feedback-screen/` | `FeedbackScreen` assets (Figma `1126:1516`) — rating glyphs `excited`/`happy`/`neutral`/`sad`/`very-sad.svg` (`fill="#BDCABA"`; `very-sad` hand-authored); header `chat.svg` + typing dots `big-bubble`/`medium-bubble`/`small-bubble.svg`; unused PNG exports (`chat-bubble.png`, `sparkle-*.png`) also live here |
 | `frontend/assets/figma/shared/` | Cross-screen brand mark / leftover vectors |
 | `frontend/assets/figma/{photo-checkpoint,photo-submitted,missed-checkpoint,submission-confirmation,permissions}/` | Pointers to raster/animation companions |
-| `frontend/assets/{Excited,Happy,Neutral,Sad,VerySad}.svg` | `FeedbackScreen` rating-row icons (Figma `1126:1516`); flat single-color glyphs (`fill="#BDCABA"`, static — not recolored on selection). First four are exact Figma exports; `VerySad.svg` is hand-authored (no Figma source) in the same viewBox/style to complete a coherent 5-point scale (Figma's row has a duplicate "Neutral" glyph — an authoring artifact) |
-| `frontend/assets/{bigbubble,mediumbubble,smallbubble}.svg` | `FeedbackScreen` "typing" chat-bubble dots (Figma `1126:1516`), faded in one-by-one — see Patterns in `components.md` |
-| `frontend/assets/Chat.svg` | Chat-avatar glyph for `FeedbackScreen`'s header illustration |
 | `frontend/assets/images/` | App icons, logos, product/scene images |
 | `frontend/assets/images/screens/<screen>/` | Per-flow rasters — `session-setup/`, `permissions/`, `photo-checkpoint/`, `photo-submitted/`, `missed-checkpoint/`, `submission-confirmation/`, `session-detail/` |
 | `frontend/assets/animations/` | Motion exports — `photo-submitted-success.gif`, `missed-checkpoint.json`, `hourglass.json` (free-trial paywall), plus alt Lottie/GIF sources |

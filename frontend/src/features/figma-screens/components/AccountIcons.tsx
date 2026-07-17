@@ -316,13 +316,13 @@ export function EmailReceiptIcon({ width = 16, height = 16, style }: Partial<Ass
   );
 }
 
-/** Give Feedback — reuses chat glyph from feedback screen assets */
-export function GiveFeedbackIcon({ width = 18, height = 16, style }: Partial<AssetIconProps>) {
+/** Give Feedback — `give-feedback.svg` */
+export function GiveFeedbackIcon({ width = 18, height = 18, style }: Partial<AssetIconProps>) {
   return (
     <AssetIcon
-      source={require('../../../../assets/Chat.svg')}
+      source={require('../../../../assets/figma/account/give-feedback.svg')}
       width={width ?? 18}
-      height={height ?? 16}
+      height={height ?? 18}
       style={style}
     />
   );

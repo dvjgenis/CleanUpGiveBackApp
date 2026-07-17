@@ -31,6 +31,7 @@ Bundled screen assets for Expo. Metro resolves `@/assets/figma/...`.
 | `sessions-calendar/` | Sessions calendar (designed) | List-check glyph |
 | `session-detail/` | Session detail | Back / share / hours / miles / photos |
 | `account/` | Account + settings subflows | Section + row icons |
+| `feedback-screen/` | Feedback (session-end + account Give Feedback) | Rating glyphs, chat header, typing-dot SVGs |
 | `shared/` | Cross-screen brand / leftovers | Brand mark, vectors, generic checks |
 
 ## Raster companions

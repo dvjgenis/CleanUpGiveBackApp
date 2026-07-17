@@ -325,11 +325,6 @@ export function AccountScreen({ profile = defaultAccountProfile }: { profile?: A
               icon={<TrackerMapDarkIcon color={colors.textTertiary} size={18} />}
               onPress={() => router.push('/map-theme' as Href)}
             />
-            <AccountNavRow
-              label="Give Feedback"
-              icon={<GiveFeedbackIcon />}
-              onPress={() => router.push('/give-feedback' as Href)}
-            />
           </SectionCard>
 
           <SectionCard title="Permissions" headerIcon={<PermissionsLockIcon width={24} height={24} />}>
@@ -352,6 +347,14 @@ export function AccountScreen({ profile = defaultAccountProfile }: { profile?: A
               onValueChange={handleNotificationsAccessChange}
             />
           </SectionCard>
+
+          <View style={s.feedbackCard}>
+            <AccountNavRow
+              label="Give Feedback"
+              icon={<GiveFeedbackIcon />}
+              onPress={() => router.push('/give-feedback' as Href)}
+            />
+          </View>
         </View>
 
         <View style={s.actions}>
@@ -529,6 +532,14 @@ const s = StyleSheet.create({
     borderRadius: radius.md,
     padding: 21,
     gap: 16,
+  },
+  feedbackCard: {
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.borderOutline,
+    borderRadius: radius.md,
+    paddingHorizontal: 21,
+    paddingVertical: 8,
   },
   sectionHeader: {
     flexDirection: 'row',
