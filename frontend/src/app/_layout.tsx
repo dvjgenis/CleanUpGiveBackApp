@@ -1,3 +1,5 @@
+import '@/global.css';
+
 import { Stack } from 'expo-router';
 
 import { AuthProvider } from '@/components/AuthProvider';
@@ -22,10 +24,14 @@ const tabRootScreenOptions = {
   animation: 'none' as const,
 };
 
-/** Home root: no animation when switching via BottomNavBar (matches other tab roots). */
-const homeScreenOptions = {
-  animation: 'none' as const,
-};
+/**
+ * Home stays instant for BottomNav (`replace('/')` with no params).
+ * Tour finale and submission-confirmation Go Home pass `enter=fade`
+ * for a cross-fade into home.
+ */
+const homeScreenOptions = ({ route }: { route: { params?: { enter?: string } } }) => ({
+  animation: route.params?.enter === 'fade' ? ('fade' as const) : ('none' as const),
+});
 
 export default function RootLayout() {
   return (

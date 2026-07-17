@@ -39,12 +39,13 @@ export function SessionRouteMapPreviewNative({
   const mapStyle = getNativeMapStyle(mapLayer, mapTheme);
   const displayRoute = simplifyRouteForDisplay(routeCoordinates);
   const startColors = getReplayStartMarkerColors(mapLayer, mapTheme);
+  const styleKey = `${mapLayer}-${mapTheme}`;
 
   return (
     <MapInteractionContainer style={[styles.container, style]}>
       <Map
-        key={`${mapLayer}-${mapTheme}`}
-        styles={{ light: mapStyle, dark: mapStyle }}
+        key={styleKey}
+        mapStyle={mapStyle}
         center={mapCenter}
         zoom={mapZoom}
         showLoader

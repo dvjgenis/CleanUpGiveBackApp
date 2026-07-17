@@ -105,11 +105,13 @@ function TrackerBackButton({ onPress }: { onPress: () => void }) {
 }
 
 function TrackerCompassControl() {
+  const { currentHeading } = useLiveSession();
   return (
     <Compass
       size={48}
       borderColor={C.borderOutline}
       backgroundColor={C.textOnPrimary}
+      headingDegrees={currentHeading}
     />
   );
 }
@@ -153,8 +155,15 @@ function MapToolButton({
 export function LiveSessionScreen() {
   const router = useRouter();
   const { from } = useLocalSearchParams<{ from?: string }>();
-  const { elapsedSeconds, checkpointSecondsRemaining, distanceMiles, submittedCheckpoints, mapLayer, mapFollowEnabled } =
-    useLiveSession();
+  const {
+    isActive,
+    elapsedSeconds,
+    checkpointSecondsRemaining,
+    distanceMiles,
+    submittedCheckpoints,
+    mapLayer,
+    mapFollowEnabled,
+  } = useLiveSession();
   const hasPaid = useTrackerHasPaid();
   const mapTheme = useEffectiveMapTheme();
   const { mapRevealStyle, chromeStyle } = useLiveSessionMapReveal();
@@ -188,9 +197,12 @@ export function LiveSessionScreen() {
     !hasPaid && !freeTrialDismissed && isFreeTrialExpired(elapsedSeconds);
 
   useEffect(() => {
+    if (!isActive) {
+      return;
+    }
     void ensureLocationWatching();
     ensureLiveSessionTicking();
-  }, []);
+  }, [isActive]);
 
   useEffect(() => {
     if (checkpointSecondsRemaining > 0) {

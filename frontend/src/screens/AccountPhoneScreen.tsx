@@ -2,6 +2,7 @@ import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { OnboardingInfoFooterActions } from '@/components/onboarding/OnboardingInfoFooterActions';
 import { OnboardingProgressPills } from '@/components/onboarding/OnboardingProgressPills';
 import { COUNTRIES, DEFAULT_COUNTRY, type Country } from '@/constants/countries';
+import { setPreferredName } from '@/features/onboarding/onboardingStore';
 import { colors as C } from '@/features/figma-screens/tokens';
 import { durations, easing, modalSpring } from '@/motion';
 import {
@@ -43,6 +44,13 @@ import Svg, { Path } from 'react-native-svg';
 
 /** Extra travel so the sheet starts fully off-screen below the fold. */
 const SHEET_BOTTOM_BLEED = 48;
+
+function validatePreferredName(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return 'Please tell us what to call you';
+  if (trimmed.length < 2) return 'Name must be at least 2 characters';
+  return undefined;
+}
 
 function validatePhone(digits: string, country: Country) {
   if (!digits) return 'Phone number is required';
@@ -225,10 +233,11 @@ function CountryPickerModal({
 /** Figma `details_account` phone step (712:323) — onboarding step 2 of 5. */
 export function AccountPhoneScreen() {
   const router = useRouter();
+  const [preferredName, setPreferredName] = useState('');
   const [country, setCountry] = useState<Country>(DEFAULT_COUNTRY);
   const [digits, setDigits] = useState('');
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [touched, setTouched] = useState(false);
+  const [touched, setTouched] = useState<{ preferredName?: boolean; phone?: boolean }>({});
   const [submitted, setSubmitted] = useState(false);
 
   const [fontsLoaded] = useFonts({
@@ -245,8 +254,11 @@ export function AccountPhoneScreen() {
 
   if (!fontsLoaded) return <View style={s.root} />;
 
+  const preferredNameError = validatePreferredName(preferredName);
   const phoneError = validatePhone(digits, country);
-  const showPhoneError = (submitted || touched) ? phoneError : undefined;
+  const showPreferredNameError =
+    submitted || touched.preferredName ? preferredNameError : undefined;
+  const showPhoneError = submitted || touched.phone ? phoneError : undefined;
 
   const dismissKeyboard = () => Keyboard.dismiss();
 
@@ -271,6 +283,30 @@ export function AccountPhoneScreen() {
                 <Text style={s.subtitle}>
                   We need this information to help tailor your clean-up experience and verify your impact.
                 </Text>
+              </View>
+
+              <View style={s.fieldSection}>
+                <Text style={s.fieldLabel}>What would you like to be called?</Text>
+                <View>
+                  <View style={[s.textField, showPreferredNameError ? s.fieldError : null]}>
+                    <TextInput
+                      style={s.textInput}
+                      value={preferredName}
+                      onChangeText={setPreferredName}
+                      onBlur={() => setTouched((t) => ({ ...t, preferredName: true }))}
+                      placeholder="Preferred name"
+                      placeholderTextColor={C.textNavInactive}
+                      autoCapitalize="words"
+                      autoCorrect={false}
+                      returnKeyType="next"
+                      textContentType="nickname"
+                      accessibilityLabel="What would you like to be called?"
+                    />
+                  </View>
+                  {showPreferredNameError ? (
+                    <Text style={s.errorText}>{showPreferredNameError}</Text>
+                  ) : null}
+                </View>
               </View>
 
               <View style={s.fieldSection}>
@@ -301,7 +337,7 @@ export function AccountPhoneScreen() {
                         onChangeText={(text) =>
                           setDigits(digitsOnly(text, country.maxDigits))
                         }
-                        onBlur={() => setTouched(true)}
+                        onBlur={() => setTouched((t) => ({ ...t, phone: true }))}
                         keyboardType="phone-pad"
                         placeholder={phonePlaceholder(country)}
                         placeholderTextColor={C.textNavInactive}
@@ -321,7 +357,8 @@ export function AccountPhoneScreen() {
           onContinue={() => {
             dismissKeyboard();
             setSubmitted(true);
-            if (phoneError) return;
+            if (preferredNameError || phoneError) return;
+            setPreferredName(preferredName);
             router.push('/account-details');
           }}
           onPrevious={() => {
@@ -387,6 +424,20 @@ const s = StyleSheet.create({
     fontFamily: 'Sanchez_400Regular',
     fontSize: 18,
     color: C.textPrimary,
+  },
+  textField: {
+    height: 56,
+    borderWidth: 1,
+    borderColor: C.borderOutline,
+    borderRadius: 8,
+    paddingHorizontal: 13,
+    justifyContent: 'center',
+  },
+  textInput: {
+    fontFamily: 'NotoSans_400Regular',
+    fontSize: 14,
+    color: C.textPrimary,
+    paddingVertical: 0,
   },
   phoneRow: {
     flexDirection: 'row',

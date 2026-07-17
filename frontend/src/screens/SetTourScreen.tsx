@@ -3,9 +3,10 @@ import { NotoSans_400Regular, NotoSans_600SemiBold } from '@expo-google-fonts/no
 import { Sanchez_400Regular } from '@expo-google-fonts/sanchez';
 import { useFonts } from 'expo-font';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, {
+  runOnJS,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
@@ -16,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { TourReplayIcon, TourSetStar } from '@/components/onboarding/TourIcons';
+import { requestHomeFadeIn } from '@/features/onboarding/homeEnterTransition';
 import { colors as C, radius } from '@/features/figma-screens/tokens';
 import { durations, easing, staggerDelay } from '@/motion';
 
@@ -141,6 +143,9 @@ function SetTourStars() {
 /** Figma `set_tour` (112:7170) — onboarding tour finale. */
 export function SetTourScreen() {
   const router = useRouter();
+  const reducedMotion = useReducedMotion();
+  const rootOpacity = useSharedValue(1);
+  const isLeaving = useRef(false);
 
   const [fontsLoaded] = useFonts({
     Sanchez_400Regular,
@@ -149,10 +154,35 @@ export function SetTourScreen() {
     IBMPlexSans_600SemiBold,
   });
 
-  if (!fontsLoaded) return <View style={s.root} />;
+  const rootStyle = useAnimatedStyle(() => ({
+    flex: 1,
+    opacity: rootOpacity.value,
+    backgroundColor: C.bgApp,
+  }));
+
+  const goHome = () => {
+    requestHomeFadeIn();
+    router.replace({ pathname: '/', params: { enter: 'fade' } });
+  };
 
   const finishToHome = () => {
-    router.replace('/');
+    if (isLeaving.current) return;
+    isLeaving.current = true;
+
+    if (reducedMotion) {
+      goHome();
+      return;
+    }
+
+    rootOpacity.value = withTiming(
+      0,
+      { duration: durations.modalExit, easing: easing.easeOut },
+      (finished) => {
+        if (finished) {
+          runOnJS(goHome)();
+        }
+      },
+    );
   };
 
   const startTracking = () => {
@@ -163,8 +193,10 @@ export function SetTourScreen() {
     router.replace('/home-tour');
   };
 
+  if (!fontsLoaded) return <View style={s.root} />;
+
   return (
-    <View style={s.root}>
+    <Animated.View style={rootStyle}>
       <SafeAreaView style={s.safe} edges={['top', 'bottom']}>
         <View style={s.hero}>
           <View style={s.copyBlock}>
@@ -207,7 +239,7 @@ export function SetTourScreen() {
           </AnimatedPressable>
         </View>
       </SafeAreaView>
-    </View>
+    </Animated.View>
   );
 }
 

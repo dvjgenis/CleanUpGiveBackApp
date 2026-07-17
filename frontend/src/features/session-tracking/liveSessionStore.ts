@@ -263,7 +263,11 @@ function stopLocationWatching() {
 }
 
 function handleCompassUpdate(reading: Location.LocationHeadingObject) {
-  const rawHeading = resolveCompassHeading(reading);
+  const rawHeading = resolveCompassHeading({
+    trueHeading: reading.trueHeading,
+    magHeading: reading.magHeading,
+    accuracy: reading.accuracy,
+  });
   if (rawHeading == null) {
     return;
   }
@@ -317,10 +321,15 @@ async function startLocationWatching() {
   void startHeadingWatching();
 
   try {
-    const position = await Location.getCurrentPositionAsync({
-      accuracy: Location.Accuracy.BestForNavigation,
-    });
-    recordLocationSample(position);
+    const position = await withTimeout(
+      Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.BestForNavigation,
+      }),
+      LOCATION_PREWARM_TIMEOUT_MS,
+    );
+    if (position) {
+      recordLocationSample(position);
+    }
   } catch {
     // Continue with watch subscription even if the initial fix fails.
   }
@@ -393,17 +402,59 @@ export async function ensureLocationWatching() {
   await startLocationWatching();
 }
 
+const LOCATION_PREWARM_TIMEOUT_MS = 2500;
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | null> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(null), ms);
+    promise
+      .then((value) => {
+        clearTimeout(timer);
+        resolve(value);
+      })
+      .catch(() => {
+        clearTimeout(timer);
+        resolve(null);
+      });
+  });
+}
+
 /** Starts a fresh live session: elapsed at 0, checkpoint countdown at 30:00. */
 export async function startNewLiveSession(setup: LiveSessionSetup) {
   stopTicking();
   stopLocationWatching();
   completedSessionSnapshot = null;
 
-  // Fetch last-known position and remote session ID in parallel so the map
-  // can center immediately when the WebView is ready, without waiting for a
-  // fresh GPS fix (which can take several seconds on cold start).
+  // Activate immediately so the tracker UI (timer, checkpoint countdown) is
+  // live even if GPS / remote create hang. Prewarm + remote ID fill in after.
+  const startedAt = Date.now();
+  state = {
+    isActive: true,
+    remoteSessionId: null,
+    startedAt,
+    checkpointWindowStartedAt: startedAt,
+    elapsedSeconds: 0,
+    checkpointSecondsRemaining: PHOTO_CHECKPOINT_INTERVAL_SECONDS,
+    distanceMiles: 0,
+    setup,
+    routeCoordinates: [],
+    currentCoordinate: null,
+    displayCoordinate: null,
+    currentHeading: null,
+    mapRecenterToken: 0,
+    mapFollowEnabled: false,
+    mapLayer: DEFAULT_MAP_LAYER,
+    submittedCheckpoints: [],
+  };
+  notify();
+  startTicking();
+  void startLocationWatching();
+
   const [lastKnown, created] = await Promise.all([
-    Location.getLastKnownPositionAsync({ maxAge: 5 * 60 * 1000 }).catch(() => null),
+    withTimeout(
+      Location.getLastKnownPositionAsync({ maxAge: 5 * 60 * 1000 }),
+      LOCATION_PREWARM_TIMEOUT_MS,
+    ),
     createSession({
       activity: setup.activity,
       courtOrdered: setup.courtOrdered,
@@ -415,41 +466,34 @@ export async function startNewLiveSession(setup: LiveSessionSetup) {
     }),
   ]);
 
-  const remoteSessionId = created?.id ?? null;
-  const prewarmCoord = lastKnown
-    ? toRouteCoordinate(lastKnown.coords.longitude, lastKnown.coords.latitude)
-    : null;
-  // Seed the heading beam from the cached fix's GPS course, if any, so it
-  // renders immediately instead of waiting for the compass's or a fresh GPS
-  // fix's first reading. It's replaced by a live reading within moments.
-  const prewarmHeading = resolveHeading({
-    heading: lastKnown?.coords.heading,
-    previous: null,
-    current: prewarmCoord ?? DEFAULT_MAP_CENTER,
-  });
+  if (!state.isActive || state.startedAt !== startedAt) {
+    return;
+  }
 
-  const startedAt = Date.now();
-  state = {
-    isActive: true,
-    remoteSessionId,
-    startedAt,
-    checkpointWindowStartedAt: startedAt,
-    elapsedSeconds: 0,
-    checkpointSecondsRemaining: PHOTO_CHECKPOINT_INTERVAL_SECONDS,
-    distanceMiles: 0,
-    setup,
-    routeCoordinates: [],
-    currentCoordinate: null,
-    displayCoordinate: prewarmCoord,
-    currentHeading: prewarmHeading,
-    mapRecenterToken: 0,
-    mapFollowEnabled: false,
-    mapLayer: DEFAULT_MAP_LAYER,
-    submittedCheckpoints: [],
-  };
-  notify();
-  startTicking();
-  void startLocationWatching();
+  const patch: Partial<LiveSessionState> = {};
+
+  if (created?.id) {
+    patch.remoteSessionId = created.id;
+  }
+
+  if (lastKnown && !state.displayCoordinate) {
+    const prewarmCoord = toRouteCoordinate(
+      lastKnown.coords.longitude,
+      lastKnown.coords.latitude,
+    );
+    patch.displayCoordinate = prewarmCoord;
+    if (state.currentHeading == null) {
+      patch.currentHeading = resolveHeading({
+        heading: lastKnown.coords.heading,
+        previous: null,
+        current: prewarmCoord,
+      });
+    }
+  }
+
+  if (Object.keys(patch).length > 0) {
+    setState(patch);
+  }
 }
 
 /** Records a submitted selfie + progress photo pair for the session detail screen. */

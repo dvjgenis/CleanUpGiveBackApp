@@ -198,31 +198,65 @@ export function resolveHeading({ heading, previous, current }: HeadingInput): nu
 type CompassHeadingInput = {
   trueHeading?: number | null;
   magHeading?: number | null;
+  /** Platform-specific compass accuracy from `Location.watchHeadingAsync`. */
+  accuracy?: number | null;
 };
+
+/** iOS reports accuracy as degrees of deviation (lower is better). */
+const IOS_TRUE_HEADING_MAX_DEVIATION_DEG = 25;
 
 /**
  * Resolves a compass reading (from `Location.watchHeadingAsync`) to a single
- * heading in degrees. True-north heading is preferred (requires a location
- * fix); falls back to magnetic-north heading when true heading is
- * unavailable (`-1` on both iOS and Android when uncalibrated/no fix yet).
+ * heading in degrees.
+ *
+ * Prefers true-north when available and sufficiently calibrated; otherwise
+ * uses magnetic-north. Returns null when neither reading is usable (avoids
+ * locking onto `-1` / uncalibrated spikes that make the UI spin).
  */
 export function resolveCompassHeading({
   trueHeading,
   magHeading,
+  accuracy = null,
 }: CompassHeadingInput): number | null {
-  if (trueHeading != null && Number.isFinite(trueHeading) && trueHeading >= 0) {
+  const trueOk =
+    trueHeading != null && Number.isFinite(trueHeading) && trueHeading >= 0;
+  const magOk =
+    magHeading != null && Number.isFinite(magHeading) && magHeading >= 0;
+
+  if (trueOk && isTrueHeadingReliable(accuracy)) {
     return trueHeading;
   }
 
-  if (magHeading != null && Number.isFinite(magHeading) && magHeading >= 0) {
+  if (magOk) {
     return magHeading;
+  }
+
+  // Last resort: accept true heading even with unknown accuracy.
+  if (trueOk) {
+    return trueHeading;
   }
 
   return null;
 }
 
+/**
+ * expo-location heading `accuracy`:
+ * - iOS: degrees of deviation (lower is better); negative = unreliable
+ * - Android: calibration level 0–3 (higher is better); negative = uncalibrated
+ *
+ * Accept 0–25 so excellent iOS readings (including 0°) and Android tiers 1–3
+ * pass, while large iOS deviation values are rejected.
+ */
+export function isTrueHeadingReliable(accuracy: number | null | undefined): boolean {
+  if (accuracy == null || !Number.isFinite(accuracy) || accuracy < 0) {
+    return false;
+  }
+
+  return accuracy <= IOS_TRUE_HEADING_MAX_DEVIATION_DEG;
+}
+
 /** EMA weight for compass heading smoothing (display only). */
-export const HEADING_EMA_ALPHA = 0.35;
+export const HEADING_EMA_ALPHA = 0.22;
 
 /**
  * EMA-smooths a compass heading to reduce magnetometer jitter, correctly

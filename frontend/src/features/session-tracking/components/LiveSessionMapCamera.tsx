@@ -49,10 +49,11 @@ export function LiveSessionMapCamera({
 
     if (!hasInitialCentered.current) {
       hasInitialCentered.current = true;
-      cameraRef.current.easeTo({
+      // Duration 0 — used after style remounts so layer/theme swaps land on the
+      // pin without a visible zoom-out/fly-in.
+      cameraRef.current.jumpTo({
         center: currentCoordinate,
         zoom: 15,
-        duration: 0,
       });
     }
   }, [cameraRef, currentCoordinate, isLoaded, mapFollowEnabled, recenterToken]);

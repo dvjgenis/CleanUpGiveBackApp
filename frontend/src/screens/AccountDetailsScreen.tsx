@@ -274,77 +274,81 @@ export function AccountDetailsScreen() {
 
               <View style={s.formSection}>
                 <Text style={s.sectionTitle}>Birthday</Text>
-                <View style={[s.dateField, showError('birthday') ? s.fieldError : null]}>
-                  <TextInput
-                    style={s.dateInput}
-                    value={birthdayText}
-                    onChangeText={(text) => {
-                      const next = formatBirthdayDraft(text);
-                      setBirthdayText(next);
-                      const parsed = parseBirthdayDraft(next);
-                      if (parsed) {
-                        setBirthday(parsed);
-                        setPickerDate(parsed);
-                      } else if (next.length === 0) {
-                        setBirthday(null);
-                      }
-                    }}
-                    onBlur={() => {
-                      commitTypedBirthday();
-                      setTouched((t) => ({ ...t, birthday: true }));
-                    }}
-                    onSubmitEditing={commitTypedBirthday}
-                    placeholder="MM/YYYY"
-                    placeholderTextColor={C.textTertiary}
-                    keyboardType="number-pad"
-                    returnKeyType="done"
-                    maxLength={7}
-                    accessibilityLabel="Birthday month and year"
-                  />
-                  <AnimatedPressable
-                    style={s.calendarBtn}
-                    onPress={openPicker}
-                    accessibilityRole="button"
-                    accessibilityLabel="Open birthday picker"
-                    hitSlop={8}
-                  >
-                    <CalendarIcon color={showError('birthday') ? C.statusDeclinedText : C.textTertiary} />
-                  </AnimatedPressable>
+                <View>
+                  <View style={[s.dateField, showError('birthday') ? s.fieldError : null]}>
+                    <TextInput
+                      style={s.dateInput}
+                      value={birthdayText}
+                      onChangeText={(text) => {
+                        const next = formatBirthdayDraft(text);
+                        setBirthdayText(next);
+                        const parsed = parseBirthdayDraft(next);
+                        if (parsed) {
+                          setBirthday(parsed);
+                          setPickerDate(parsed);
+                        } else if (next.length === 0) {
+                          setBirthday(null);
+                        }
+                      }}
+                      onBlur={() => {
+                        commitTypedBirthday();
+                        setTouched((t) => ({ ...t, birthday: true }));
+                      }}
+                      onSubmitEditing={commitTypedBirthday}
+                      placeholder="MM/YYYY"
+                      placeholderTextColor={C.textTertiary}
+                      keyboardType="number-pad"
+                      returnKeyType="done"
+                      maxLength={7}
+                      accessibilityLabel="Birthday month and year"
+                    />
+                    <AnimatedPressable
+                      style={s.calendarBtn}
+                      onPress={openPicker}
+                      accessibilityRole="button"
+                      accessibilityLabel="Open birthday picker"
+                      hitSlop={8}
+                    >
+                      <CalendarIcon color={showError('birthday') ? C.statusDeclinedText : C.textTertiary} />
+                    </AnimatedPressable>
+                  </View>
+                  {showError('birthday') ? <Text style={s.errorText}>{showError('birthday')}</Text> : null}
                 </View>
-                {showError('birthday') ? <Text style={s.errorText}>{showError('birthday')}</Text> : null}
               </View>
 
               <View style={s.formSection}>
                 <Text style={s.sectionTitle}>Service Type</Text>
-                <View style={s.serviceGrid}>
-                  <View style={s.serviceRow}>
-                    {(SERVICE_TYPES.slice(0, 2) as ServiceType[]).map((type) => (
-                      <ServiceTypeButton
-                        key={type}
-                        label={type}
-                        selected={serviceType === type}
-                        onPress={() => {
-                          setServiceType(type);
-                          setTouched((t) => ({ ...t, serviceType: true }));
-                        }}
-                      />
-                    ))}
+                <View>
+                  <View style={s.serviceGrid}>
+                    <View style={s.serviceRow}>
+                      {(SERVICE_TYPES.slice(0, 2) as ServiceType[]).map((type) => (
+                        <ServiceTypeButton
+                          key={type}
+                          label={type}
+                          selected={serviceType === type}
+                          onPress={() => {
+                            setServiceType(type);
+                            setTouched((t) => ({ ...t, serviceType: true }));
+                          }}
+                        />
+                      ))}
+                    </View>
+                    <View style={s.serviceRow}>
+                      {(SERVICE_TYPES.slice(2) as ServiceType[]).map((type) => (
+                        <ServiceTypeButton
+                          key={type}
+                          label={type}
+                          selected={serviceType === type}
+                          onPress={() => {
+                            setServiceType(type);
+                            setTouched((t) => ({ ...t, serviceType: true }));
+                          }}
+                        />
+                      ))}
+                    </View>
                   </View>
-                  <View style={s.serviceRow}>
-                    {(SERVICE_TYPES.slice(2) as ServiceType[]).map((type) => (
-                      <ServiceTypeButton
-                        key={type}
-                        label={type}
-                        selected={serviceType === type}
-                        onPress={() => {
-                          setServiceType(type);
-                          setTouched((t) => ({ ...t, serviceType: true }));
-                        }}
-                      />
-                    ))}
-                  </View>
+                  {showError('serviceType') ? <Text style={s.errorText}>{showError('serviceType')}</Text> : null}
                 </View>
-                {showError('serviceType') ? <Text style={s.errorText}>{showError('serviceType')}</Text> : null}
               </View>
             </View>
           </Pressable>

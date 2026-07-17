@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { BottomNavBar, type BottomNavTab } from '@/components/navigation/BottomNavBar';
+import { usePreferredName } from '@/features/onboarding/onboardingStore';
 import { LiveSessionMinimizedPill, LIVE_SESSION_PILL_MIN_HEIGHT } from '@/features/session-tracking/components/LiveSessionMinimizedPill';
 import { useLiveSessionBarExit } from '@/features/session-tracking/hooks/useLiveSessionBarExit';
 import {
@@ -436,13 +437,17 @@ export function HomeScreenWithData({ data }: { data: HomeDashboardData }) {
 /** First-time user home — empty stats, current calendar week. */
 export function HomeScreen() {
   const recentSessions = useRecentSessions();
+  const preferredName = usePreferredName();
   const data = useMemo(
     () => ({
       ...firstTimeHomeDashboard,
       ...getCurrentWeekMeta(),
       recentSessions,
+      homeUser: {
+        firstName: preferredName || firstTimeHomeDashboard.homeUser.firstName,
+      },
     }),
-    [recentSessions],
+    [preferredName, recentSessions],
   );
 
   return <HomeScreenWithData data={data} />;
@@ -455,7 +460,7 @@ const chart = StyleSheet.create({
     gap: 8,
     alignItems: 'flex-start',
   },
-  /** Flush with the week-picker left chevron (same card content edge). */
+  /** Left edge matches the week-picker chevron glyph (icon tip sits ~8px inside the 24px box). */
   yAxis: {
     width: 28,
     height: CHART_H,
@@ -463,8 +468,8 @@ const chart = StyleSheet.create({
   },
   yLabel: {
     position: 'absolute',
-    left: 0,
-    width: 28,
+    left: 8,
+    width: 20,
     fontFamily: fontFamilies.ibmPlexSansRegular,
     fontSize: 11,
     lineHeight: 11,

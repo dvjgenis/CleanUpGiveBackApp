@@ -1,22 +1,30 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import Svg, { G, Polygon } from 'react-native-svg';
 import * as Location from 'expo-location';
+
+import {
+  HEADING_EMA_ALPHA,
+  resolveCompassHeading,
+  smoothHeadingEma,
+} from '@/features/session-tracking/utils/routeFiltering';
 
 // Figma 985:567 — compass geometry (47.25×47.25 frame)
 const VIEW = 47.25;
 const CENTER = VIEW / 2; // 23.625
 
 const NEEDLE_HALF = 18.9; // radius to arrowhead tip
-const DIAG_HALF = 17.48;  // intercardinal spoke radius (slightly shorter)
-const DIAG_W = 2.469;     // tick width
+const DIAG_HALF = 17.48; // intercardinal spoke radius (slightly shorter)
+const DIAG_W = 2.469; // tick width
 
-// Green cardinal tick at each of N / E / S / W positions
 const CARDINAL_ANGLES = [0, 90, 180, 270] as const;
-
-// Grey intercardinal ticks (NNE, NE, NW, NNW + their opposites)
-const INTERCARDINAL_ANGLES = [-112.5, -67.5, -45, -22.5, 22.5, 45] as const;
+const INTERCARDINAL_ANGLES = [22.5, 45, 67.5, 112.5, 135, 157.5] as const;
 
 const GREEN = '#009540';
 const RED = '#BA1A1A';
@@ -24,53 +32,93 @@ const TICK_COLOR = '#3E4A3D';
 
 const DIRECTIONS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'] as const;
 
+const HEADING_ANIM_MS = 180;
+const HEADING_EASING = Easing.out(Easing.cubic);
+
 function bearingToLabel(deg: number): string {
   const normalized = ((deg % 360) + 360) % 360;
   return DIRECTIONS[Math.round(normalized / 45) % 8];
 }
 
-// Returns positive heading angle (clockwise = facing direction) + readable label
-function useHeadingAngle() {
+function normalizeDegrees(deg: number): number {
+  return ((deg % 360) + 360) % 360;
+}
+
+/** Shortest signed delta from `from` → `to` in (-180, 180]. */
+function shortestDeltaDegrees(from: number, to: number): number {
+  return ((to - from + 180) % 360 + 360) % 360 - 180;
+}
+
+/**
+ * Device heading subscription with accuracy gating + EMA.
+ * When `headingDegrees` is provided (e.g. live-session store), uses that
+ * instead of opening a second magnetometer watch.
+ */
+function useCompassHeading(headingDegrees?: number | null) {
   const angle = useSharedValue(0);
   const [label, setLabel] = useState('N');
-  const prevRaw = useRef(0);
-  const cumulative = useRef(0);
-  const initialized = useRef(false);
+  const smoothedRef = useRef<number | null>(null);
+  const displayRef = useRef(0);
 
+  const applyHeading = (raw: number) => {
+    const smoothed = smoothHeadingEma(smoothedRef.current, raw, HEADING_EMA_ALPHA);
+    smoothedRef.current = smoothed;
+
+    const delta = shortestDeltaDegrees(displayRef.current, smoothed);
+    // Ignore sub-degree noise after EMA — avoids micro-jitters.
+    if (Math.abs(delta) < 0.75 && smoothedRef.current != null) {
+      setLabel(bearingToLabel(smoothed));
+      return;
+    }
+
+    const nextDisplay = displayRef.current + delta;
+    displayRef.current = nextDisplay;
+    angle.value = withTiming(nextDisplay, {
+      duration: HEADING_ANIM_MS,
+      easing: HEADING_EASING,
+    });
+    setLabel(bearingToLabel(smoothed));
+  };
+
+  // Controlled heading from parent (preferred on live tracker).
   useEffect(() => {
+    if (headingDegrees == null || !Number.isFinite(headingDegrees)) {
+      return;
+    }
+    applyHeading(normalizeDegrees(headingDegrees));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- applyHeading closes over refs/shared values
+  }, [headingDegrees, angle]);
+
+  // Standalone subscription when no controlled heading is passed.
+  useEffect(() => {
+    if (headingDegrees !== undefined) {
+      return;
+    }
+
     let sub: Location.LocationSubscription | null = null;
+    let cancelled = false;
 
     (async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') return;
+      if (cancelled || status !== 'granted') return;
 
       sub = await Location.watchHeadingAsync((data) => {
-        const raw = (data.trueHeading > 0 || (data.trueHeading === 0 && data.accuracy != null && data.accuracy < 30))
-          ? data.trueHeading
-          : data.magHeading;
-
-        if (!initialized.current) {
-          initialized.current = true;
-          prevRaw.current = raw;
-          cumulative.current = raw;
-          angle.value = raw;
-          setLabel(bearingToLabel(raw));
-          return;
-        }
-
-        let delta = raw - prevRaw.current;
-        if (delta > 180) delta -= 360;
-        if (delta < -180) delta += 360;
-        if (Math.abs(delta) < 2) return;
-        cumulative.current += delta;
-        prevRaw.current = raw;
-        angle.value = withTiming(cumulative.current, { duration: 100 });
-        setLabel(bearingToLabel(raw));
+        const raw = resolveCompassHeading({
+          trueHeading: data.trueHeading,
+          magHeading: data.magHeading,
+          accuracy: data.accuracy,
+        });
+        if (raw == null) return;
+        applyHeading(raw);
       });
     })();
 
-    return () => { sub?.remove(); };
-  }, [angle]);
+    return () => {
+      cancelled = true;
+      sub?.remove();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [headingDegrees, angle]);
 
   return { angle, label };
 }
@@ -79,13 +127,29 @@ type Props = {
   size?: number;
   borderColor?: string;
   backgroundColor?: string;
+  /**
+   * Optional controlled heading in degrees (0–360, clockwise from true/magnetic
+   * north). When set, Compass does not open its own heading watch — pass the
+   * live-session store heading on the tracker so map arrow + compass stay in sync.
+   */
+  headingDegrees?: number | null;
 };
 
-export function Compass({ size = 44, borderColor = '#C8C8C8', backgroundColor = '#FFFFFF' }: Props) {
-  const { angle: headingAngle, label: directionLabel } = useHeadingAngle();
+/**
+ * Compass control: dial rotates so geographic N stays correct; red tip stays
+ * fixed at the top (phone facing). Center label is the facing direction.
+ */
+export function Compass({
+  size = 44,
+  borderColor = '#C8C8C8',
+  backgroundColor = '#FFFFFF',
+  headingDegrees,
+}: Props) {
+  const { angle: headingAngle, label: directionLabel } = useCompassHeading(headingDegrees);
 
-  const tickStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${headingAngle.value}deg` }],
+  // Dial counter-rotates with heading so N points north in the world.
+  const dialStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${-headingAngle.value}deg` }],
   }));
 
   const borderWidth = 1;
@@ -105,40 +169,45 @@ export function Compass({ size = 44, borderColor = '#C8C8C8', backgroundColor = 
           borderWidth,
         },
       ]}
+      accessibilityRole="image"
+      accessibilityLabel={`Facing ${directionLabel}`}
     >
       <View style={[styles.content, { width: innerSize, height: innerSize }]}>
-        <Svg
-          width={innerSize}
-          height={innerSize}
-          viewBox={`0 0 ${VIEW} ${VIEW}`}
-          style={StyleSheet.absoluteFill}
-        >
-          <G transform={`translate(${CENTER}, ${CENTER})`}>
-            {INTERCARDINAL_ANGLES.map((a) => (
-              <G key={a} transform={`rotate(${a})`} opacity={0.5}>
-                <Polygon
-                  points={`0,${-DIAG_HALF} ${-DIAG_W},${-DIAG_HALF + 3} ${DIAG_W},${-DIAG_HALF + 3}`}
-                  fill={TICK_COLOR}
-                />
-                <Polygon
-                  points={`0,${DIAG_HALF} ${-DIAG_W},${DIAG_HALF - 3} ${DIAG_W},${DIAG_HALF - 3}`}
-                  fill={TICK_COLOR}
-                />
-              </G>
-            ))}
+        <Animated.View style={[StyleSheet.absoluteFill, dialStyle]}>
+          <Svg
+            width={innerSize}
+            height={innerSize}
+            viewBox={`0 0 ${VIEW} ${VIEW}`}
+            style={StyleSheet.absoluteFill}
+          >
+            <G transform={`translate(${CENTER}, ${CENTER})`}>
+              {INTERCARDINAL_ANGLES.map((a) => (
+                <G key={a} transform={`rotate(${a})`} opacity={0.5}>
+                  <Polygon
+                    points={`0,${-DIAG_HALF} ${-DIAG_W},${-DIAG_HALF + 3} ${DIAG_W},${-DIAG_HALF + 3}`}
+                    fill={TICK_COLOR}
+                  />
+                  <Polygon
+                    points={`0,${DIAG_HALF} ${-DIAG_W},${DIAG_HALF - 3} ${DIAG_W},${DIAG_HALF - 3}`}
+                    fill={TICK_COLOR}
+                  />
+                </G>
+              ))}
 
-            {CARDINAL_ANGLES.map((a) => (
-              <G key={a} transform={`rotate(${a})`} opacity={0.8}>
-                <Polygon
-                  points={`0,${-NEEDLE_HALF} ${-DIAG_W},${-NEEDLE_HALF + 3} ${DIAG_W},${-NEEDLE_HALF + 3}`}
-                  fill={GREEN}
-                />
-              </G>
-            ))}
-          </G>
-        </Svg>
+              {CARDINAL_ANGLES.map((a) => (
+                <G key={a} transform={`rotate(${a})`} opacity={0.8}>
+                  <Polygon
+                    points={`0,${-NEEDLE_HALF} ${-DIAG_W},${-NEEDLE_HALF + 3} ${DIAG_W},${-NEEDLE_HALF + 3}`}
+                    fill={GREEN}
+                  />
+                </G>
+              ))}
+            </G>
+          </Svg>
+        </Animated.View>
 
-        <Animated.View style={[StyleSheet.absoluteFill, tickStyle]}>
+        {/* Fixed phone-forward marker (top) */}
+        <View style={StyleSheet.absoluteFill} pointerEvents="none">
           <Svg width={innerSize} height={innerSize} viewBox={`0 0 ${VIEW} ${VIEW}`}>
             <G transform={`translate(${CENTER}, ${CENTER})`}>
               <Polygon
@@ -148,13 +217,10 @@ export function Compass({ size = 44, borderColor = '#C8C8C8', backgroundColor = 
               />
             </G>
           </Svg>
-        </Animated.View>
+        </View>
 
         <View style={styles.labelLayer} pointerEvents="none">
-          <Text
-            style={[styles.directionLabel, { fontSize, lineHeight: fontSize }]}
-            accessibilityLabel={`Facing ${directionLabel}`}
-          >
+          <Text style={[styles.directionLabel, { fontSize, lineHeight: fontSize }]}>
             {directionLabel}
           </Text>
         </View>

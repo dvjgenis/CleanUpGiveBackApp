@@ -24,6 +24,7 @@ import Svg, { Circle, Path } from 'react-native-svg';
 
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { useFadeUpEnter } from '@/components/motion/hooks';
+import { requestHomeFadeIn } from '@/features/onboarding/homeEnterTransition';
 import { staggerDelay } from '@/motion';
 import { PhotoEnlargeModal } from '@/components/ui/PhotoEnlargeModal';
 
@@ -387,7 +388,10 @@ export function SubmissionConfirmationScreen() {
             <AnimatedPressable
               style={s.goHomeBtn}
               scaleTo={0.98}
-              onPress={() => router.replace('/')}
+              onPress={() => {
+                requestHomeFadeIn();
+                router.replace({ pathname: '/', params: { enter: 'fade' } });
+              }}
               accessibilityRole="button"
               accessibilityLabel="Go home"
             >

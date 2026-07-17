@@ -5,13 +5,24 @@ export type MultiCamCheckResult =
   | { supported: true; front: CameraDevice; back: CameraDevice }
   | { supported: false; reason: string };
 
+function preferWideAngle(devices: CameraDevice[], position: 'front' | 'back'): CameraDevice | undefined {
+  const matching = devices.filter((d) => d.position === position);
+  // Wide-angle physical cameras work most reliably when front+back run together.
+  // Avoid gating on `isMultiCam` — that flag means "logical dual/triple lens",
+  // not "supports simultaneous front+back capture".
+  return (
+    matching.find((d) => d.physicalDevices.includes('wide-angle-camera')) ??
+    matching.find((d) => d.hardwareLevel !== 'legacy') ??
+    matching[0]
+  );
+}
+
 /**
- * Checks whether the device supports mounting front and back cameras simultaneously.
+ * Picks front + back devices for simultaneous dual-camera capture (BeReal-style).
  *
- * iOS:     Requires A12 Bionic or later (iPhone XS / XR+) running iOS 13+.
- *          Vision Camera v4 exposes this via `device.isMultiCam`.
- * Android: Concurrent camera support is device-specific; we verify both
- *          cameras are available and let a runtime failure surface naturally.
+ * iOS XS / XR+ (A12+) can run front+back at once via AVCaptureMultiCamSession;
+ * Vision Camera mounts two `<Camera>` views when both devices are available.
+ * Runtime failure still falls back to sequential capture in the screen.
  */
 export async function checkMultiCamSupport(): Promise<MultiCamCheckResult> {
   const status = await Camera.requestCameraPermission();
@@ -20,13 +31,8 @@ export async function checkMultiCamSupport(): Promise<MultiCamCheckResult> {
   }
 
   const devices = Camera.getAvailableCameraDevices();
-
-  const back = devices.find(
-    (d) => d.position === 'back' && d.hardwareLevel !== 'legacy',
-  );
-  const front = devices.find(
-    (d) => d.position === 'front' && d.hardwareLevel !== 'legacy',
-  );
+  const back = preferWideAngle(devices, 'back');
+  const front = preferWideAngle(devices, 'front');
 
   if (!back || !front) {
     return {
@@ -35,15 +41,9 @@ export async function checkMultiCamSupport(): Promise<MultiCamCheckResult> {
     };
   }
 
-  if (Platform.OS === 'ios') {
-    // isMultiCam signals AVCaptureMultiCamSession support (A12+ chip required)
-    if (!back.isMultiCam || !front.isMultiCam) {
-      return {
-        supported: false,
-        reason:
-          'Device requires A12 Bionic or later for simultaneous dual-camera capture.',
-      };
-    }
+  // Web / unsupported platforms never get true dual preview.
+  if (Platform.OS === 'web') {
+    return { supported: false, reason: 'Dual camera is not available on web.' };
   }
 
   return { supported: true, front, back };

@@ -61,6 +61,12 @@ type MapProps = {
     light?: MapStyleOption;
     dark?: MapStyleOption;
   };
+  /**
+   * When set, used as the MapLibre `mapStyle` directly (ignores system
+   * color-scheme + `styles.light`/`styles.dark`). Prefer this for app-controlled
+   * basemap themes (e.g. live-session sun/moon toggle).
+   */
+  mapStyle?: MapStyleOption;
   /** Initial center coordinate [longitude, latitude] */
   center?: [number, number];
   /** Initial zoom level */
@@ -80,6 +86,7 @@ const DefaultLoader = () => (
 function Map({
   children,
   styles,
+  mapStyle: mapStyleOverride,
   center = [0, 0],
   zoom = 10,
   className,
@@ -91,10 +98,11 @@ function Map({
   const { colorScheme } = useTheme();
   const theme = colorScheme === "dark" ? "dark" : "light";
 
-  const mapStyle =
+  const themedStyle =
     theme === "dark"
       ? styles?.dark ?? defaultStyles.dark
       : styles?.light ?? defaultStyles.light;
+  const mapStyle = mapStyleOverride ?? themedStyle;
 
   const handleMapIdle = () => {
     if (!isLoaded) {
@@ -102,9 +110,28 @@ function Map({
     }
   };
 
+  useEffect(() => {
+    // If style/tiles never fire onDidFinishLoadingMap (offline, blocked CDN),
+    // drop the spinner so the tracker chrome isn't stuck behind a loader.
+    if (isLoaded) {
+      return;
+    }
+    const timer = setTimeout(() => setIsLoaded(true), 8000);
+    return () => clearTimeout(timer);
+  }, [isLoaded]);
+
+  // Prefer initialViewState over continuous stop props. Passing zoom/center
+  // with easing="fly" on every render makes the camera re-fly to the pin —
+  // the zoom-out-then-in glitch on layer/theme remounts. Imperative moves live
+  // in LiveSessionMapCamera instead.
+  const initialViewState = useRef({ center, zoom }).current;
+
   return (
     <MapContext value={{ mapRef, cameraRef, isLoaded, theme }}>
-      <View className={cn("flex-1 relative", className)}>
+      <View
+        className={cn("flex-1 relative", className)}
+        style={{ flex: 1, position: "relative" }}
+      >
         <MapLibreMap
           ref={mapRef}
           style={{ flex: 1 }}
@@ -114,13 +141,7 @@ function Map({
           logo={false}
           attribution={false}
         >
-          <Camera
-            ref={cameraRef}
-            zoom={zoom}
-            center={center}
-            easing="fly"
-            duration={1000}
-          />
+          <Camera ref={cameraRef} initialViewState={initialViewState} />
           {children}
         </MapLibreMap>
         {showLoader && !isLoaded && <DefaultLoader />}

@@ -50,9 +50,18 @@ async function loadLiveWeather(): Promise<
     return { placeLabel: null, temperatureLabel: '—', weatherIcon: 'sunny' };
   }
 
-  const position = await Location.getCurrentPositionAsync({
-    accuracy: Location.Accuracy.Balanced,
-  });
+  const position = await Promise.race([
+    Location.getCurrentPositionAsync({
+      accuracy: Location.Accuracy.Balanced,
+    }),
+    new Promise<null>((resolve) => {
+      setTimeout(() => resolve(null), 8000);
+    }),
+  ]);
+
+  if (!position) {
+    return { placeLabel: null, temperatureLabel: '—', weatherIcon: 'sunny' };
+  }
 
   const { latitude, longitude } = position.coords;
   const [placeLabel, weather] = await Promise.all([

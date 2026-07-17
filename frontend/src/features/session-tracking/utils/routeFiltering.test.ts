@@ -5,6 +5,7 @@ import {
   isPlausibleMovement,
   isSharpReversal,
   isStationary,
+  isTrueHeadingReliable,
   resolveCompassHeading,
   resolveHeading,
   shouldAppendRoutePoint,
@@ -180,16 +181,40 @@ describe('resolveHeading', () => {
 });
 
 describe('resolveCompassHeading', () => {
-  it('prefers true-north heading when valid', () => {
-    expect(resolveCompassHeading({ trueHeading: 120, magHeading: 118 })).toBe(120);
+  it('prefers true-north heading when valid and accurate', () => {
+    expect(
+      resolveCompassHeading({ trueHeading: 120, magHeading: 118, accuracy: 10 }),
+    ).toBe(120);
   });
 
   it('falls back to magnetic heading when true heading is unavailable', () => {
     expect(resolveCompassHeading({ trueHeading: -1, magHeading: 200 })).toBe(200);
   });
 
+  it('falls back to magnetic when true-heading accuracy is poor', () => {
+    expect(
+      resolveCompassHeading({ trueHeading: 90, magHeading: 100, accuracy: 45 }),
+    ).toBe(100);
+  });
+
   it('returns null when neither reading is valid', () => {
     expect(resolveCompassHeading({ trueHeading: -1, magHeading: -1 })).toBeNull();
+  });
+});
+
+describe('isTrueHeadingReliable', () => {
+  it('rejects negative or missing accuracy', () => {
+    expect(isTrueHeadingReliable(-1)).toBe(false);
+    expect(isTrueHeadingReliable(null)).toBe(false);
+  });
+
+  it('accepts low deviation / calibration values', () => {
+    expect(isTrueHeadingReliable(0)).toBe(true);
+    expect(isTrueHeadingReliable(12)).toBe(true);
+  });
+
+  it('rejects large deviation values', () => {
+    expect(isTrueHeadingReliable(45)).toBe(false);
   });
 });
 

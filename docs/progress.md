@@ -4,6 +4,152 @@ Session-by-session progress tracker. Distinct from `notes/journey.md` (correctio
 
 ---
 
+## [2026-07-17 Session 157] — Tighten onboarding field error spacing
+
+**Session goal:** Align missing-field error messages with the phone-number error (closer to the input).
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Nest preferred-name error under input (not section gap) | `AccountPhoneScreen.tsx` | ✅ |
+| Nest birthday + service-type errors the same way | `AccountDetailsScreen.tsx` | ✅ |
+| Docs | `app.md`, `progress.md` | ✅ |
+
+### Key Decisions
+
+- Phone error was already tight because it lived inside `phoneFieldCol`; other errors were siblings in `gap: 20` sections, which pushed them 20px away from the control.
+
+---
+
+## [2026-07-17 Session 156] — Map style zoom jump + dual-camera default
+
+**Session goal:** Stop map zoom-out/in when switching basemap layer or light/dark; prefer true simultaneous dual-camera capture.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Remove Map remount `key` on layer/theme | `LiveSessionMapNative.tsx`, `SessionRouteMapPreviewNative.tsx` | ✅ Style updates in place |
+| Camera uses `initialViewState` only | `ui/map.tsx` | ✅ No declarative fly on every render/style swap |
+| Dual-cam device pick (not `isMultiCam` gate) | `checkMultiCamSupport.ts` | ✅ Prefer wide-angle; `isMultiCam` ≠ concurrent front+back |
+| DualCapture default + sequential fallback | `PhotoCaptureScreen.tsx` | ✅ `onError` / capture fail → SequentialCapture |
+| Docs | `app.md`, `progress.md` | ✅ |
+
+### Key Decisions
+
+- Remounting Map via `key={layer-theme}` was the zoom glitch (fresh camera + re-center fly).
+- Vision Camera’s `isMultiCam` means logical dual/triple lens, not AVCaptureMultiCamSession — gating on it incorrectly forced sequential capture on many phones.
+
+---
+
+## [2026-07-17 Session 156] — Fix set-tour Go Home fade (was still instant)
+
+**Session goal:** You’re-all-set Go Home was still cutting instantly; make exit + home enter fade reliably.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Fade out set-tour before navigate | `SetTourScreen.tsx` | ✅ |
+| Fix home opacity race (`rAF` after 0) + delay clearing `enter` | `app/index.tsx` | ✅ |
+| Docs | `homeEnterTransition.ts`, `progress.md`, `app.md` | ✅ |
+
+### Key Decisions
+
+- Stack `?enter=fade` alone is unreliable (param clear / native-stack timing); source fade-out + destination opacity fade is the source of truth.
+- Assigning `opacity = 0` then `withTiming(1)` in one tick can no-op when the view was already at 1 — defer the timing with `requestAnimationFrame`.
+
+---
+
+## [2026-07-17 Session 155] — Submission confirmation Go Home fade
+
+**Session goal:** Fade into home from session-details Go Home (same path as tour finale).
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Go Home uses `?enter=fade` + `requestHomeFadeIn` | `SubmissionConfirmationScreen.tsx` | ✅ |
+| Docs / comments | `homeEnterTransition.ts`, `_layout.tsx`, `app.md`, `progress.md` | ✅ |
+
+### Key Decisions
+
+- Reuse the existing tour Go Home fade path so BottomNav `replace('/')` stays instant.
+
+---
+
+## [2026-07-17 Session 154] — Go Home fade + live-tracker unlock on Xcode build
+
+**Session goal:** Fade into home from set-tour Go Home; fix live tracker (map / location / weather / compass / timer / photo-due) hanging on Xcode development builds.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Go Home fade (`?enter=fade` + opacity) | `SetTourScreen.tsx`, `app/index.tsx`, `_layout.tsx`, `homeEnterTransition.ts` | ✅ |
+| Activate session before GPS/API await | `liveSessionStore.ts` | ✅ Timer/checkpoint tick immediately; location prewarm timed out |
+| NativeWind CSS at app root + map flex fallback | `_layout.tsx`, `ui/map.tsx` | ✅ Map no longer depends solely on className sizing |
+| Weather GPS timeout | `useLiveWeather.ts` | ✅ |
+| Docs | `app.md`, `progress.md` | ✅ |
+
+### Key Decisions
+
+- Session start must not block on `getLastKnownPositionAsync` / remote `createSession` — both could hang and left `isActive=false`, freezing timer + checkpoint + location watchers.
+- Tab BottomNav keeps `animation: 'none'`; only tour Go Home opts into fade via route param.
+
+---
+
+## [2026-07-17 Session 154] — Align chart Y labels with week chevron
+
+**Session goal:** Nudge service-hours bar-chart Y-axis labels inward so their left edge matches the week-picker left chevron glyph.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Y-label `left: 0` → `8` | `HomeScreen.tsx` | ✅ Matches chevron tip inset in 24px icon |
+| Docs | `components.md`, `progress.md` | ✅ |
+
+---
+
+## [2026-07-17 Session 153] — Home greeting uses preferred name
+
+**Session goal:** Show the preferred name from account-phone in the home time-of-day greeting.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Store preferred name in onboardingStore | `onboardingStore.ts` | ✅ `setPreferredName` / `usePreferredName` |
+| Save on account-phone Continue | `AccountPhoneScreen.tsx` | ✅ |
+| Home greeting override | `HomeScreen.tsx` | ✅ Falls back to mock if unset |
+| Docs | `app.md`, `components.md`, `progress.md`, `current.md` | ✅ |
+
+### Key Decisions
+
+- In-memory only (same as onboarding complete flag); Log In without onboarding keeps mock first name.
+
+---
+
+## [2026-07-17 Session 152] — Preferred name on first details screen
+
+**Session goal:** Add a “What would you like to be called?” field to the first “A few details” onboarding step (`/account-phone`).
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Preferred name field + validation | `AccountPhoneScreen.tsx` | ✅ Required, min 2 chars; above phone |
+| Docs | `app.md`, `progress.md`, `current.md` | ✅ |
+
+### Key Decisions
+
+- Placed on `/account-phone` (first “A few details” screen), not `/account-details`, so it’s asked before birthday/service type.
+- Distinct from create-account legal “Name” — this is the preferred/display nickname for greetings.
+
+---
+
 ## [2026-07-17 Session 151] — Organize loose feedback assets
 
 **Session goal:** Move nine root-level feedback SVGs into `assets/figma/feedback-screen/` (kebab-case) so the assets tree matches the per-screen convention.
@@ -444,7 +590,7 @@ The theme-toggle icon was previously an "action" icon (showing what tapping it *
 
 ### History
 
-Native MapLibre dev-client path (`LiveSessionMapNative.tsx`) remounts the whole `<Map>` via a `key={mapLayer-mapTheme}` change instead of an imperative style swap, so it isn't subject to this WebView-specific race — only the Expo Go WebView path needed the fix.
+Native MapLibre path (`LiveSessionMapNative.tsx`) remounts via `key={layer-theme}` when style changes (Fabric often ignores in-place `mapStyle` updates) and restores the camera with `jumpTo` (no fly) so toggles do not zoom-out/in; WebView path uses `setStyle` + marker resync.
 
 ## [2026-07-16 Session 132] — Feature: Standard map light/dark + weather condition icons
 

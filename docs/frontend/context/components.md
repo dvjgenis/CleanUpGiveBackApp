@@ -63,7 +63,7 @@ Shared UI components in `frontend/src/components/`.
 | EventDetailScreen | `screens/EventDetailScreen.tsx` | Event detail (Figma `196:226`); copy → Maps link + `LinkCopiedToast`; map tap → Apple/Google Maps; Register opens success modal; route `/event-detail` |
 | weekCalendar utils | `utils/weekCalendar.ts` | Monday-based week math, ISO week labels, month grid builder |
 | getTimeOfDayGreeting | `utils/getTimeOfDayGreeting.ts` | Local-time greeting: night (midnight–4:59 AM), morning (5 AM–noon), afternoon (noon–4:59 PM), evening (5 PM–11:59 PM) |
-| HomeScreen | `screens/HomeScreen.tsx` | Home dashboard (`home_dashboard___final_branding`, Figma `406:291`); `HomeScreenWithData` accepts `HomeDashboardData`; greeting uses `getTimeOfDayGreeting`; default export uses first-time-user mock; recent events navigate to `/event-detail` |
+| HomeScreen | `screens/HomeScreen.tsx` | Home dashboard (`home_dashboard___final_branding`, Figma `406:291`); `HomeScreenWithData` accepts `HomeDashboardData`; greeting uses `getTimeOfDayGreeting` + preferred name from `onboardingStore` (falls back to mock `firstName` if unset, e.g. Log In skip); bar-chart Y labels inset `left: 8` to match week-picker chevron glyph; default export uses first-time-user mock; recent events navigate to `/event-detail` |
 | RecentSessionCard | `components/RecentSessionCard.tsx` | Recent Sessions list row (Figma `406:409`): activity title, date/time chips, duration |
 | HomeScreenReturningUser | `screens/HomeScreenReturningUser.tsx` | Populated returning-user snapshot (preserved copy); preview via figma-screens `PreviewApp` |
 | AccountIcons | `components/AccountIcons.tsx` | Account tab icons via `expo-image` + relative `require(.../assets/figma/account/*.svg)` |
