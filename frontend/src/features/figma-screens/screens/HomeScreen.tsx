@@ -455,20 +455,21 @@ const chart = StyleSheet.create({
     gap: 8,
     alignItems: 'flex-start',
   },
+  /** Flush with the week-picker left chevron (same card content edge). */
   yAxis: {
-    width: 37,
+    width: 28,
     height: CHART_H,
     position: 'relative',
   },
   yLabel: {
     position: 'absolute',
-    right: 0,
-    width: 37,
+    left: 0,
+    width: 28,
     fontFamily: fontFamilies.ibmPlexSansRegular,
     fontSize: 11,
     lineHeight: 11,
     color: colors.primary,
-    textAlign: 'right',
+    textAlign: 'left',
   },
   gridLine: {
     position: 'absolute',
