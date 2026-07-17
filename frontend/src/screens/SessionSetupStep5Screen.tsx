@@ -1,5 +1,6 @@
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { CoachmarkEnter } from '@/components/motion/CoachmarkEnter';
+import { OnboardingProgressPills } from '@/components/onboarding/OnboardingProgressPills';
 import { staggerDelay } from '@/motion';
 import { goBackInSessionSetupGuide } from '@/utils/sessionSetupGuideNavigation';
 import {
@@ -13,20 +14,6 @@ import { useFonts } from 'expo-font';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors as C } from '@/constants/tokens';
-
-
-function ProgressPills({ total = 7, active = 5 }: { total?: number; active?: number }) {
-  return (
-    <View style={s.pillsRow}>
-      {Array.from({ length: total }).map((_, i) => (
-        <View
-          key={i}
-          style={[s.pill, { backgroundColor: i < active ? C.primary : C.borderOutline }]}
-        />
-      ))}
-    </View>
-  );
-}
 
 export function SessionSetupStep5Screen() {
   const router = useRouter();
@@ -48,7 +35,7 @@ export function SessionSetupStep5Screen() {
       {/* Header */}
       <View style={s.header}>
         <View style={s.navContainer}>
-          <ProgressPills total={6} active={5} />
+          <OnboardingProgressPills total={10} active={5} />
         </View>
 
         <CoachmarkEnter style={s.guideTextContainer}>
@@ -75,7 +62,7 @@ export function SessionSetupStep5Screen() {
         <View style={s.buttonContainer}>
           <AnimatedPressable
             style={s.continueBtn}
-            onPress={() => router.push('/session-setup-step6')}
+            onPress={() => router.push('/session-free-hour')}
           >
             <Text style={s.continueBtnText}>Continue</Text>
           </AnimatedPressable>
@@ -113,17 +100,6 @@ const s = StyleSheet.create({
 
   navContainer: {
     gap: 20,
-  },
-
-  pillsRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-
-  pill: {
-    flex: 1,
-    height: 4,
-    borderRadius: 9999,
   },
 
   guideTextContainer: {

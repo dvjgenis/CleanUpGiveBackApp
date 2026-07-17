@@ -316,6 +316,18 @@ export function EmailReceiptIcon({ width = 16, height = 16, style }: Partial<Ass
   );
 }
 
+/** Give Feedback — reuses chat glyph from feedback screen assets */
+export function GiveFeedbackIcon({ width = 18, height = 16, style }: Partial<AssetIconProps>) {
+  return (
+    <AssetIcon
+      source={require('../../../../assets/Chat.svg')}
+      width={width ?? 18}
+      height={height ?? 16}
+      style={style}
+    />
+  );
+}
+
 /** Profile hero — large leaf (Figma `569:917`, 57.6×57.6, rotated −75°) */
 export function ProfileLeafLargeIcon({ width = 58, height = 58, style }: Partial<AssetIconProps>) {
   return (

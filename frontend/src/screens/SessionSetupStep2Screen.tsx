@@ -2,6 +2,7 @@ import { IBMPlexSans_400Regular } from '@expo-google-fonts/ibm-plex-sans';
 
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { CoachmarkEnter } from '@/components/motion/CoachmarkEnter';
+import { OnboardingProgressPills } from '@/components/onboarding/OnboardingProgressPills';
 import { staggerDelay } from '@/motion';
 import { goBackInSessionSetupGuide } from '@/utils/sessionSetupGuideNavigation';
 import {
@@ -14,20 +15,6 @@ import { useFonts } from 'expo-font';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors as C } from '@/constants/tokens';
-
-
-function ProgressPills({ total = 7, active = 2 }: { total?: number; active?: number }) {
-  return (
-    <View style={s.pillsRow}>
-      {Array.from({ length: total }).map((_, i) => (
-        <View
-          key={i}
-          style={[s.pill, { backgroundColor: i < active ? C.primary : C.borderOutline }]}
-        />
-      ))}
-    </View>
-  );
-}
 
 export function SessionSetupStep2Screen() {
   const router = useRouter();
@@ -49,7 +36,7 @@ export function SessionSetupStep2Screen() {
       {/* Header */}
       <View style={s.header}>
         <View style={s.navContainer}>
-          <ProgressPills total={6} active={2} />
+          <OnboardingProgressPills total={10} active={2} />
         </View>
 
         <CoachmarkEnter style={s.guideTextContainer}>
@@ -114,17 +101,6 @@ const s = StyleSheet.create({
   // Nav row — gap 20 between back arrow and pills
   navContainer: {
     gap: 20,
-  },
-
-  pillsRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-
-  pill: {
-    flex: 1,
-    height: 4,
-    borderRadius: 9999,
   },
 
   // Guide text — gap 10 between title and subtitle

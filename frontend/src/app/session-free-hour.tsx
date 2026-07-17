@@ -8,11 +8,11 @@ export default function SessionFreeHourRoute() {
   return (
     <SafeAreaProvider>
       <FreeHourScreen
-        totalPills={7}
+        totalPills={10}
         activePills={6}
         onContinue={() => router.push('/session-free-kit')}
         onPrevious={() => goBackInSessionSetupGuide(router)}
-        onSkip={() => router.push('/session-setup-complete')}
+        onSkip={() => router.push('/session-setup-step6')}
       />
     </SafeAreaProvider>
   );

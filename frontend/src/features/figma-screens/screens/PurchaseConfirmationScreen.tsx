@@ -170,7 +170,7 @@ export function PurchaseConfirmationScreen() {
   }, [isDonation, isTracker, params.amount]);
 
   const orderReceiptHeight = useMemo(
-    () => (!isDonation ? computeOrderReceiptHeight(data) : RECEIPT_HEIGHT),
+    () => (!isDonation ? Math.max(computeOrderReceiptHeight(data), DONATION_RECEIPT_HEIGHT) : RECEIPT_HEIGHT),
     [data, isDonation],
   );
 

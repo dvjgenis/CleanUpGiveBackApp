@@ -118,8 +118,26 @@ function EmojiRatingButton({
   );
 }
 
+export type FeedbackSource = 'session' | 'account';
+
+type FeedbackScreenProps = {
+  /** Defaults to the session-end copy so `/session-feedback` is unchanged. */
+  title?: string;
+  subtitle?: string;
+  /** Controls post-submit / skip destinations. Default `'session'`. */
+  source?: FeedbackSource;
+};
+
+const DEFAULT_TITLE = 'Rate your experience!';
+const DEFAULT_SUBTITLE =
+  'Your feedback will help us improve this experience for others.';
+
 /** PRD: Figma feedback_screen (1126:1516) */
-export function FeedbackScreen() {
+export function FeedbackScreen({
+  title = DEFAULT_TITLE,
+  subtitle = DEFAULT_SUBTITLE,
+  source = 'session',
+}: FeedbackScreenProps = {}) {
   const router = useRouter();
   const [selectedRating, setSelectedRating] = useState<number | null>(null);
   const [feedbackText, setFeedbackText] = useState('');
@@ -159,11 +177,33 @@ export function FeedbackScreen() {
   }
 
   function handleSubmit() {
-    router.push('/feedback-thank-you');
+    switch (source) {
+      case 'account':
+        router.push({ pathname: '/feedback-thank-you', params: { returnTo: 'account' } });
+        return;
+      case 'session':
+        router.push('/feedback-thank-you');
+        return;
+      default: {
+        const _exhaustive: never = source;
+        return _exhaustive;
+      }
+    }
   }
 
   function handleSkip() {
-    router.push('/submission-confirmation');
+    switch (source) {
+      case 'account':
+        router.back();
+        return;
+      case 'session':
+        router.push('/submission-confirmation');
+        return;
+      default: {
+        const _exhaustive: never = source;
+        return _exhaustive;
+      }
+    }
   }
 
   return (
@@ -212,10 +252,8 @@ export function FeedbackScreen() {
 
             {/* Title + subtitle */}
             <Animated.View style={[s.textBlock, titleStyle]}>
-              <Text style={s.title}>Rate your experience!</Text>
-              <Text style={s.subtitle}>
-                Your feedback will help us improve this experience for others.
-              </Text>
+              <Text style={s.title}>{title}</Text>
+              <Text style={s.subtitle}>{subtitle}</Text>
             </Animated.View>
 
             {/* Emoji rating row */}

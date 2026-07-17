@@ -9,7 +9,7 @@ import {
   NotoSans_600SemiBold,
 } from '@expo-google-fonts/noto-sans';
 import { Sanchez_400Regular } from '@expo-google-fonts/sanchez';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -226,7 +226,8 @@ export function SessionSetupFormScreen() {
       courtOrdered,
       description: description.trim(),
     });
-    router.push('/live-session');
+    // Tag so tracker back goes to home, not the session-setup stack (onboarding / Track-tab guide).
+    router.push('/live-session?from=onboarding' as Href);
   };
 
   if (!fontsLoaded) {

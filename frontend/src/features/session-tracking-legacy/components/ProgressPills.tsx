@@ -10,10 +10,9 @@ type Props = {
 };
 
 /**
- * Step indicator for the Session Setup wizard — matches the Figma
- * `ProgressPills` component seen on the permission frames (728:639/728:658):
- * completed/current pills filled `color/primary`, remaining pills
- * `color/border/outline`.
+ * Step indicator for the Session Setup wizard — matches onboarding /
+ * `OnboardingProgressPills`: completed/current pills fill `color/primary`,
+ * remaining pills are outlined (`transparent` + `borderOutline`).
  */
 export function ProgressPills({ total, currentIndex }: Props) {
   return (
@@ -23,7 +22,13 @@ export function ProgressPills({ total, currentIndex }: Props) {
           key={index}
           style={[
             styles.pill,
-            { backgroundColor: index <= currentIndex ? colors.primary : colors.borderOutline },
+            index <= currentIndex
+              ? { backgroundColor: colors.primary }
+              : {
+                  backgroundColor: 'transparent',
+                  borderWidth: 1,
+                  borderColor: colors.borderOutline,
+                },
           ]}
         />
       ))}

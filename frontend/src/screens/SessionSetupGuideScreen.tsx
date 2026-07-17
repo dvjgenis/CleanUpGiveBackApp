@@ -1,4 +1,5 @@
 import { CoachmarkEnter } from '@/components/motion/CoachmarkEnter';
+import { OnboardingProgressPills } from '@/components/onboarding/OnboardingProgressPills';
 import { staggerDelay } from '@/motion';
 import { SessionSetupGuideFooterActions } from '@/components/session-setup/SessionSetupGuideFooterActions';
 import { NotoSans_600SemiBold } from '@expo-google-fonts/noto-sans';
@@ -8,20 +9,6 @@ import { useFonts } from 'expo-font';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors as C } from '@/constants/tokens';
-
-
-function ProgressPills({ total = 7, active = 1 }: { total?: number; active?: number }) {
-  return (
-    <View style={s.pillsRow}>
-      {Array.from({ length: total }).map((_, i) => (
-        <View
-          key={i}
-          style={[s.pill, { backgroundColor: i < active ? C.primary : C.borderOutline }]}
-        />
-      ))}
-    </View>
-  );
-}
 
 export function SessionSetupGuideScreen() {
   const router = useRouter();
@@ -41,7 +28,7 @@ export function SessionSetupGuideScreen() {
       {/* Header — gap 30 between top section and headline, gap 20 within top section */}
       <View style={s.header}>
         <View style={s.topSection}>
-          <ProgressPills total={7} active={1} />
+          <OnboardingProgressPills total={10} active={1} />
         </View>
 
         <CoachmarkEnter>
@@ -88,17 +75,6 @@ const s = StyleSheet.create({
   // Top section (back arrow + pills) — gap 20
   topSection: {
     gap: 20,
-  },
-
-  pillsRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-
-  pill: {
-    flex: 1,
-    height: 4,
-    borderRadius: 9999,
   },
 
   headline: {

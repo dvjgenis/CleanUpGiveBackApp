@@ -7,15 +7,13 @@ const guideBackwardScreenOptions = {
 };
 
 /**
- * `session-setup-complete` is a forward-only finale: step7 can land here via
- * `router.replace` (camera permission already granted) as well as via a normal
- * push from free-hour/free-kit. Using the shared `guideBackwardScreenOptions`
- * made the replace-path play a backward "pop" animation on a screen that is
- * actually progressing the user forward, so it gets its own celebratory,
- * always-forward transition instead.
+ * `session-setup-complete` uses the same default slide as the other guide
+ * screens. Step7 can land here via `router.replace` (camera already granted)
+ * as well as via a normal push from free-hour/free-kit — so keep replace
+ * forward (`push`) instead of the shared guide `pop`, which would reverse
+ * the slide on a screen that is progressing the user forward.
  */
 const sessionSetupCompleteScreenOptions = {
-  animation: 'fade_from_bottom' as const,
   animationTypeForReplace: 'push' as const,
 };
 
@@ -47,6 +45,7 @@ export default function RootLayout() {
       <Stack.Screen name="session-setup-complete" options={sessionSetupCompleteScreenOptions} />
       <Stack.Screen name="live-session" options={{ animation: 'slide_from_bottom', animationTypeForReplace: 'pop' }} />
       <Stack.Screen name="session-feedback" />
+      <Stack.Screen name="give-feedback" />
       <Stack.Screen name="feedback-thank-you" />
       <Stack.Screen name="photo-checkpoint" />
       <Stack.Screen name="photo-capture" />

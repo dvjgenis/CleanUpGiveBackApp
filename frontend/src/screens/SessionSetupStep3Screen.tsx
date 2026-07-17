@@ -1,5 +1,6 @@
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { CoachmarkEnter } from '@/components/motion/CoachmarkEnter';
+import { OnboardingProgressPills } from '@/components/onboarding/OnboardingProgressPills';
 import { staggerDelay } from '@/motion';
 import { goBackInSessionSetupGuide } from '@/utils/sessionSetupGuideNavigation';
 import {
@@ -12,20 +13,6 @@ import { useFonts } from 'expo-font';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors as C } from '@/constants/tokens';
-
-
-function ProgressPills({ total = 7, active = 3 }: { total?: number; active?: number }) {
-  return (
-    <View style={s.pillsRow}>
-      {Array.from({ length: total }).map((_, i) => (
-        <View
-          key={i}
-          style={[s.pill, { backgroundColor: i < active ? C.primary : C.borderOutline }]}
-        />
-      ))}
-    </View>
-  );
-}
 
 export function SessionSetupStep3Screen() {
   const router = useRouter();
@@ -46,7 +33,7 @@ export function SessionSetupStep3Screen() {
       {/* Header — gap 20 between all three sections */}
       <View style={s.header}>
         <View style={s.navContainer}>
-          <ProgressPills total={6} active={3} />
+          <OnboardingProgressPills total={10} active={3} />
         </View>
 
         <CoachmarkEnter>
@@ -111,17 +98,6 @@ const s = StyleSheet.create({
 
   navContainer: {
     gap: 20,
-  },
-
-  pillsRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-
-  pill: {
-    flex: 1,
-    height: 4,
-    borderRadius: 9999,
   },
 
   title: {

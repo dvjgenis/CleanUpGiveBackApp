@@ -27,6 +27,7 @@ import {
   DeleteAccountIcon,
   DonationHistoryIcon,
   ExportRecordIcon,
+  GiveFeedbackIcon,
   LocationAccessIcon,
   LogOutIcon,
   NotificationsRowIcon,
@@ -323,6 +324,11 @@ export function AccountScreen({ profile = defaultAccountProfile }: { profile?: A
               label="Map Theme"
               icon={<TrackerMapDarkIcon color={colors.textTertiary} size={18} />}
               onPress={() => router.push('/map-theme' as Href)}
+            />
+            <AccountNavRow
+              label="Give Feedback"
+              icon={<GiveFeedbackIcon />}
+              onPress={() => router.push('/give-feedback' as Href)}
             />
           </SectionCard>
 

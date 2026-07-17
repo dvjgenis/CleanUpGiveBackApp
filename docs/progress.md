@@ -4,6 +4,105 @@ Session-by-session progress tracker. Distinct from `notes/journey.md` (correctio
 
 ---
 
+## [2026-07-17 Session 149] — Account Give Feedback entry
+
+**Session goal:** Add a Give Feedback option on Account that opens the feedback UI with alternate title copy, without changing the session-end "Rate your experience!" experience.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Preferences row → `/give-feedback` | `AccountScreen.tsx`, `AccountIcons.tsx` | ✅ |
+| Account feedback route (alternate title) | `app/give-feedback.tsx`, `_layout.tsx` | ✅ title **"We'd love your feedback!"** |
+| Optional props on FeedbackScreen (defaults unchanged) | `FeedbackScreen.tsx` | ✅ `source: 'account'` skips/submit return to Account |
+| Thank-you `returnTo=account` | `FeedbackThankYouScreen.tsx` | ✅ Continue → `/account` |
+| Docs | `app.md`, `components.md`, `progress.md` | ✅ |
+
+### Key Decisions
+
+- `/session-feedback` still mounts bare `<FeedbackScreen />` so session-end copy stays **"Rate your experience!"**.
+- Account path uses the same screen component with props rather than duplicating the Figma layout.
+
+---
+
+## [2026-07-17 Session 148] — Photo checkpoint sound + haptic on timer expiry
+
+**Session goal:** When the 30-minute checkpoint timer hits zero and the photo-required popup appears, play an alert sound and haptic buzz (not only vibration).
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Alert helper (sound + haptics) | `src/utils/photoCheckpointAlert.ts` | ✅ `expo-audio` + `expo-haptics` / Android `Vibration` |
+| Fire once on timer expiry → popup | `src/screens/LiveSessionScreen.tsx` | ✅ ref-guarded; resets when countdown restarts |
+| Alert WAV asset | `assets/sounds/photo-checkpoint-alert.wav` | ✅ short two-tone chime |
+| Config plugin (playback only) | `app.json` | ✅ `expo-audio` with mic/record disabled |
+| Docs | `app.md`, `assets.md`, `progress.md` | ✅ |
+
+### Key Decisions
+
+- Feedback runs from live-session when the countdown hits 0 (not on manual **Submit Photo**), matching setup-guide copy that the phone buzzes when it's time.
+- Ref guard prevents repeat sound/navigation while `checkpointSecondsRemaining` stays at 0 each tick.
+- iOS uses `expo-haptics` (Warning + Heavy impacts); Android keeps the three-burst `Vibration` pattern plus a notification haptic.
+
+---
+
+## [2026-07-17 Session 147] — Tracker back from onboarding → home
+
+**Session goal:** After reaching the live tracker via the onboarding / session-setup guide, the back chevron should return to home — not the session-setup form.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Pass `from=onboarding` when starting session | `SessionSetupFormScreen.tsx` | ✅ `router.push('/live-session?from=onboarding')` |
+| Back already branches on that param | `LiveSessionScreen.tsx` | ✅ existing `from === 'onboarding' ? replace('/') : back()` |
+| Docs | `app.md`, `progress.md` | ✅ |
+
+### Key Decisions
+
+- Reuse the existing `from=onboarding` query flag rather than always `replace('/')` — home→tracker still gets a reverse `slide_from_bottom` via `router.back()`.
+
+---
+
+## [2026-07-17 Session 146] — Live tracker free-hour countdown → paywall
+
+**Session goal:** On first-time (unpaid) tracker use, show a one-hour countdown on the live session screen; when it hits zero, present the "Your one hour is up!" `FreeTrialModal`.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Free-trial helpers + duration constant | `trackerPaymentStore.ts` | ✅ `FREE_TRIAL_DURATION_SECONDS` (3600; `__DEV__` override via `EXPO_PUBLIC_FREE_TRIAL_SECONDS`), `getFreeTrialSecondsRemaining`, `isFreeTrialExpired` |
+| Countdown UI + paywall trigger | `LiveSessionScreen.tsx` | ✅ "Free hour left: MM:SS" under timer card; Modal wraps `FreeTrialModal` at expiry; Continue → tracker checkout; Pay Later dismisses for session |
+| Docs | `app.md`, `components.md`, `progress.md` | ✅ |
+
+### Key Decisions
+
+- Countdown is session-elapsed based (same clock as the live timer), gated by `!hasPaid` — matches Free Hour copy ("1 hour before paying").
+- Pay Later only dismisses for the current mount so the paywall does not re-fire every second; payment clears it permanently via `markTrackerPaid`.
+
+---
+
+## [2026-07-17 Session 145] — Unify session-setup transitions + progress pills
+
+**Session goal:** Make transitions between session setup guide screens consistent — especially landing on the finale (`session-setup-complete`), which used a different `fade_from_bottom` animation than the default slide used by steps 2–7 / free-hour / free-kit. Also align progress pill design with onboarding (outlined inactive pills, not solid gray).
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Match complete-screen stack animation to other guide steps | `frontend/src/app/_layout.tsx` | ✅ Dropped `fade_from_bottom`; keep `animationTypeForReplace: 'push'` for step7 camera auto-skip |
+| Reuse onboarding pill design on session-setup guide | guide + steps 2–7 + complete screens | ✅ Replaced local solid-fill `ProgressPills` with `OnboardingProgressPills` |
+| Docs | `docs/frontend/context/app.md`, `components.md`, `docs/progress.md` | ✅ |
+
+### Key Decisions
+
+- Keep replace as forward (`push`) on the finale so `router.replace('/session-setup-complete')` from step7 still slides forward, not a backward pop.
+- Single shared pill component (`OnboardingProgressPills`) so onboarding and session-setup stay visually identical.
+
+---
+
 ## [2026-07-17 Session 144] — Event detail live location map preview
 
 **Session goal:** Event detail Location section should show a live maps preview; tapping it opens Apple Maps (iOS) or Google Maps (Android).

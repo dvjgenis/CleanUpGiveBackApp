@@ -1,6 +1,6 @@
 import { NotoSans_400Regular, NotoSans_600SemiBold } from '@expo-google-fonts/noto-sans';
 import { Sanchez_400Regular } from '@expo-google-fonts/sanchez';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -41,6 +41,7 @@ const CHECK_SIZE = 84;
  */
 export function FeedbackThankYouScreen() {
   const router = useRouter();
+  const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
   const reducedMotion = useReducedMotion();
 
   const titleStyle = useFadeUpEnter(staggerDelay(1));
@@ -74,6 +75,10 @@ export function FeedbackThankYouScreen() {
   }
 
   function handleContinue() {
+    if (returnTo === 'account') {
+      router.replace('/account');
+      return;
+    }
     router.replace('/submission-confirmation');
   }
 

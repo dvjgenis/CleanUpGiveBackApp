@@ -25,7 +25,7 @@ export function FreeTrialModal({ onContinue, onPayLater }: Props) {
           <View style={s.heroBlock}>
             <PlayOnceLottie
               source={require('@/assets/animations/hourglass.json')}
-              size={150}
+            size={150}
               style={s.hourglass}
               accessibilityLabel="Hourglass"
               loop

@@ -8,11 +8,11 @@ export default function SessionFreeKitRoute() {
   return (
     <SafeAreaProvider>
       <FreeKitScreen
-        totalPills={7}
+        totalPills={10}
         activePills={7}
-        onContinue={() => router.push('/session-setup-complete')}
+        onContinue={() => router.push('/session-setup-step6')}
         onPrevious={() => goBackInSessionSetupGuide(router)}
-        onSkip={() => router.push('/session-setup-complete')}
+        onSkip={() => router.push('/session-setup-step6')}
       />
     </SafeAreaProvider>
   );

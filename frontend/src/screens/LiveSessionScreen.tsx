@@ -7,27 +7,27 @@ import {
   NotoSans_500Medium,
   NotoSans_600SemiBold,
 } from '@expo-google-fonts/noto-sans';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useFonts } from 'expo-font';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Image,
   Modal,
-  Pressable,
   StyleSheet,
   Text,
-  Vibration,
   View,
 } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Compass } from '@/components/ui/Compass';
 import { SessionSetupBackChevronIcon } from '@/components/session-setup/icons/SessionSetupBackChevronIcon';
+import { FreeTrialModal } from '@/features/session-tracking/components/FreeTrialModal';
 import { LiveSessionMap } from '@/features/session-tracking/components/LiveSessionMap';
 import { MapTypesSheet } from '@/features/session-tracking/components/MapTypesSheet';
 import { TrackerActionButton } from '@/features/session-tracking/components/TrackerActionButton';
 import { LocationPinIcon } from '@/features/session-tracking/components/icons/LocationPinIcon';
 import { TrackerEndSessionIcon } from '@/features/session-tracking/components/icons/TrackerEndSessionIcon';
+import { alertPhotoCheckpointDue } from '@/utils/photoCheckpointAlert';
 import { TrackerLayersIcon } from '@/features/session-tracking/components/icons/TrackerLayersIcon';
 import { RouteIcon } from '@/features/session-tracking/components/icons/RouteIcon';
 import { TrackerMyLocationIcon } from '@/features/session-tracking/components/icons/TrackerMyLocationIcon';
@@ -37,12 +37,12 @@ import {
   TrackerMapDarkIcon,
   TrackerMapLightIcon,
 } from '@/features/session-tracking/components/icons/TrackerMapThemeIcons';
-import { CameraIcon } from '@/features/session-tracking/components/icons/CameraIcon';
 import { ChevronLeftIcon } from '@/features/session-tracking/components/icons/ChevronLeftIcon';
 import { ChevronRightIcon } from '@/features/session-tracking/components/icons/ChevronRightIcon';
 import { CloseIcon } from '@/features/session-tracking/components/icons/CloseIcon';
 import {
   formatCheckpointDue,
+  formatCountdown,
   formatElapsed,
 } from '@/features/session-tracking/mocks/session';
 import { formatSubmittedCheckpointCount, shouldShowCheckpointSubmissionCount } from '@/features/session-tracking/utils/sessionFormat';
@@ -56,6 +56,11 @@ import {
   toggleLiveSessionMapFollow,
   useLiveSession,
 } from '@/features/session-tracking/liveSessionStore';
+import {
+  getFreeTrialSecondsRemaining,
+  isFreeTrialExpired,
+  useTrackerHasPaid,
+} from '@/features/session-tracking/trackerPaymentStore';
 import {
   toggleManualMapTheme,
   useEffectiveMapTheme,
@@ -150,6 +155,7 @@ export function LiveSessionScreen() {
   const { from } = useLocalSearchParams<{ from?: string }>();
   const { elapsedSeconds, checkpointSecondsRemaining, distanceMiles, submittedCheckpoints, mapLayer, mapFollowEnabled } =
     useLiveSession();
+  const hasPaid = useTrackerHasPaid();
   const mapTheme = useEffectiveMapTheme();
   const { mapRevealStyle, chromeStyle } = useLiveSessionMapReveal();
   const submittedCheckpointCount = submittedCheckpoints.length;
@@ -163,6 +169,10 @@ export function LiveSessionScreen() {
   } = useLiveWeather();
   const [mapTypesVisible, setMapTypesVisible] = useState(false);
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
+  /** Pay Later dismisses the paywall for this session mount so it does not reappear every tick. */
+  const [freeTrialDismissed, setFreeTrialDismissed] = useState(false);
+  /** Prevents repeating sound/haptic/navigation while the countdown stays at 0. */
+  const checkpointDueAlertFiredRef = useRef(false);
   const [fontsLoaded] = useFonts({
     NotoSans_400Regular,
     NotoSans_500Medium,
@@ -172,6 +182,10 @@ export function LiveSessionScreen() {
   });
 
   const checkpointProgress = getCheckpointProgress(checkpointSecondsRemaining);
+  const freeTrialSecondsRemaining = getFreeTrialSecondsRemaining(elapsedSeconds);
+  const showFreeTrialCountdown = !hasPaid && !isFreeTrialExpired(elapsedSeconds);
+  const showFreeTrialPaywall =
+    !hasPaid && !freeTrialDismissed && isFreeTrialExpired(elapsedSeconds);
 
   useEffect(() => {
     void ensureLocationWatching();
@@ -179,11 +193,19 @@ export function LiveSessionScreen() {
   }, []);
 
   useEffect(() => {
-    if (checkpointSecondsRemaining === 0) {
-      Vibration.vibrate([0, 300, 150, 300, 150, 300]);
-      router.push('/photo-checkpoint');
+    if (checkpointSecondsRemaining > 0) {
+      checkpointDueAlertFiredRef.current = false;
+      return;
     }
-  }, [checkpointSecondsRemaining]);
+
+    if (checkpointSecondsRemaining !== 0 || checkpointDueAlertFiredRef.current) {
+      return;
+    }
+
+    checkpointDueAlertFiredRef.current = true;
+    void alertPhotoCheckpointDue();
+    router.push('/photo-checkpoint');
+  }, [checkpointSecondsRemaining, router]);
 
   if (!fontsLoaded) {
     return <View style={s.root} />;
@@ -237,6 +259,17 @@ export function LiveSessionScreen() {
                   <Text style={s.distanceLabel}>Distance:</Text>
                   <Text style={s.distanceValue}>{formatDistanceMiles(distanceMiles)} miles</Text>
                 </View>
+                {showFreeTrialCountdown && (
+                  <View
+                    style={s.freeTrialRow}
+                    accessibilityLabel={`Free hour left ${formatCountdown(freeTrialSecondsRemaining)}`}
+                  >
+                    <Text style={s.freeTrialLabel}>Free hour left:</Text>
+                    <Text style={s.freeTrialValue}>
+                      {formatCountdown(freeTrialSecondsRemaining)}
+                    </Text>
+                  </View>
+                )}
               </View>
             </View>
 
@@ -355,6 +388,20 @@ export function LiveSessionScreen() {
         onSelect={setLiveSessionMapLayer}
         onClose={() => setMapTypesVisible(false)}
       />
+
+      <Modal
+        visible={showFreeTrialPaywall}
+        animationType="fade"
+        presentationStyle="fullScreen"
+        onRequestClose={() => setFreeTrialDismissed(true)}
+      >
+        <FreeTrialModal
+          onContinue={() =>
+            router.push('/checkout?mode=tracker&returnTo=live-session' as Href)
+          }
+          onPayLater={() => setFreeTrialDismissed(true)}
+        />
+      </Modal>
 
       {(() => {
         const allPhotos = submittedCheckpoints.flatMap((cp) => [
@@ -598,6 +645,24 @@ const s = StyleSheet.create({
     fontFamily: 'IBMPlexSans_500Medium',
     fontSize: 16,
     color: C.textTertiary,
+  },
+
+  freeTrialRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+
+  freeTrialLabel: {
+    fontFamily: 'IBMPlexSans_500Medium',
+    fontSize: 14,
+    color: C.textTertiary,
+  },
+
+  freeTrialValue: {
+    fontFamily: 'IBMPlexSans_600SemiBold',
+    fontSize: 14,
+    color: C.primary,
   },
 
   bottomSection: {

@@ -3,35 +3,19 @@ import { Sanchez_400Regular } from '@expo-google-fonts/sanchez';
 import { useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { StyleSheet, Text, View } from 'react-native';
-import Animated from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
+import { CoachmarkEnter } from '@/components/motion/CoachmarkEnter';
 import { goBackInSessionSetupGuide } from '@/utils/sessionSetupGuideNavigation';
-import { useFadeUpEnter } from '@/components/motion/hooks';
+import { OnboardingProgressPills } from '@/components/onboarding/OnboardingProgressPills';
 import { SessionSetupCelebration } from '@/components/session-setup/SessionSetupCelebration';
 import { staggerDelay } from '@/motion';
 import { colors as C } from '@/constants/tokens';
 
-
-function ProgressPills({ total = 6, active = 6 }: { total?: number; active?: number }) {
-  return (
-    <View style={s.pillsRow}>
-      {Array.from({ length: total }).map((_, i) => (
-        <View
-          key={i}
-          style={[s.pill, { backgroundColor: i < active ? C.primary : C.borderOutline }]}
-        />
-      ))}
-    </View>
-  );
-}
-
 /** Figma `session_setup_guide` finale (251:405) — "That's it! Let's get tracking!" */
 export function SessionSetupCompleteScreen() {
   const router = useRouter();
-  const headerStyle = useFadeUpEnter(0);
-  const footerStyle = useFadeUpEnter(staggerDelay(2));
 
   const [fontsLoaded] = useFonts({
     Sanchez_400Regular,
@@ -45,22 +29,22 @@ export function SessionSetupCompleteScreen() {
   return (
     <SafeAreaView style={s.root} edges={['top', 'bottom']}>
 
-      <Animated.View style={[s.header, headerStyle]}>
+      <CoachmarkEnter style={s.header}>
         <View style={s.navContainer}>
-          <ProgressPills total={6} active={6} />
+          <OnboardingProgressPills total={10} active={10} />
         </View>
 
         <Text style={s.headline}>
           <Text style={s.headlineDark}>{"That's it! "}</Text>
           <Text style={s.headlineGreen}>{"Let's get tracking!"}</Text>
         </Text>
-      </Animated.View>
+      </CoachmarkEnter>
 
       <View style={s.celebrationZone}>
         <SessionSetupCelebration />
       </View>
 
-      <Animated.View style={[s.footer, footerStyle]}>
+      <CoachmarkEnter delayMs={staggerDelay(1)} style={s.footer}>
         <AnimatedPressable
           style={s.startBtn}
           onPress={() => router.push('/session-setup')}
@@ -77,7 +61,7 @@ export function SessionSetupCompleteScreen() {
         >
           <Text style={s.previousBtnText}>Previous</Text>
         </AnimatedPressable>
-      </Animated.View>
+      </CoachmarkEnter>
 
     </SafeAreaView>
   );
@@ -97,17 +81,6 @@ const s = StyleSheet.create({
 
   navContainer: {
     gap: 20,
-  },
-
-  pillsRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-
-  pill: {
-    flex: 1,
-    height: 4,
-    borderRadius: 9999,
   },
 
   headline: {

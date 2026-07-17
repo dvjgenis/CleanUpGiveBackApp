@@ -10,5 +10,8 @@
     "web": "npm --prefix frontend run web",
     "lint": "npm --prefix frontend run lint",
     "typecheck": "npm --prefix frontend exec -- tsc --noEmit"
+  },
+  "dependencies": {
+    "expo": "^57.0.7"
   }
 }

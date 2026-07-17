@@ -1,7 +1,11 @@
 import { colors as C, radius } from '@/features/figma-screens/tokens';
 import { StyleSheet, View } from 'react-native';
 
-/** Figma ProgressPills — 6-step onboarding indicator (create → details → location → camera → free-hour → notif). */
+/**
+ * Figma ProgressPills — shared step indicator for onboarding and session-setup
+ * guide screens. Active pills fill `primary`; remaining pills are outlined
+ * (`transparent` fill + `borderOutline`), not solid gray.
+ */
 export function OnboardingProgressPills({
   total = 6,
   active = 1,

@@ -10,10 +10,10 @@
     "newArchEnabled": true,
     "ios": {
       "icon": "./assets/expo.icon",
-      "bundleIdentifier": "com.anonymous.nonprofitmobileapp"
+      "bundleIdentifier": "com.shivpat.cleanupgiveback"
     },
     "android": {
-      "package": "com.anonymous.nonprofitmobileapp",
+      "package": "com.shivpat.cleanupgiveback",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -50,12 +50,32 @@
         }
       ],
       [
-        "expo-camera",
+        "react-native-vision-camera",
         {
-          "cameraPermission": "Allow Clean Up Give Back to use your camera for photo checkpoints during cleanup sessions."
+          "cameraPermissionText": "Allow Clean Up Give Back to use your camera for photo checkpoints during cleanup sessions.",
+          "enableMicrophonePermission": false
         }
       ],
-      "expo-notifications"
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "15.1"
+          },
+          "android": {
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35,
+            "minSdkVersion": 26
+          }
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

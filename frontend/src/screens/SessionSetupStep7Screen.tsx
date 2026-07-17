@@ -2,6 +2,7 @@ import { IBMPlexSans_600SemiBold } from '@expo-google-fonts/ibm-plex-sans';
 
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { CoachmarkEnter } from '@/components/motion/CoachmarkEnter';
+import { OnboardingProgressPills } from '@/components/onboarding/OnboardingProgressPills';
 import { staggerDelay } from '@/motion';
 import { goBackInSessionSetupGuide } from '@/utils/sessionSetupGuideNavigation';
 import {
@@ -20,20 +21,6 @@ import {
   requestSessionCameraPermission,
 } from '@/utils/sessionPermissions';
 import { colors as C } from '@/constants/tokens';
-
-
-function ProgressPills({ total = 7, active = 5 }: { total?: number; active?: number }) {
-  return (
-    <View style={s.pillsRow}>
-      {Array.from({ length: total }).map((_, i) => (
-        <View
-          key={i}
-          style={[s.pill, { backgroundColor: i < active ? C.primary : C.borderOutline }]}
-        />
-      ))}
-    </View>
-  );
-}
 
 /** PRD §6.10 · Figma `camera_permission` (728:658) — session setup guide step 7. */
 export function SessionSetupStep7Screen() {
@@ -101,7 +88,7 @@ export function SessionSetupStep7Screen() {
     <SafeAreaView style={s.root} edges={['top', 'bottom']}>
 
       <View style={s.navSection}>
-        <ProgressPills total={6} active={5} />
+        <OnboardingProgressPills total={10} active={9} />
       </View>
 
       <CoachmarkEnter style={s.main}>
@@ -158,17 +145,6 @@ const s = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 8,
     gap: 20,
-  },
-
-  pillsRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-
-  pill: {
-    flex: 1,
-    height: 4,
-    borderRadius: 9999,
   },
 
   main: {
