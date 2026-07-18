@@ -4,9 +4,13 @@ import {
   MIN_ROUTE_SAMPLE_METERS,
   type RouteCoordinate,
 } from './geo';
+import { DEFAULT_ACCURACY_METERS } from './locationKalman';
 
 /** Reject fixes with horizontal accuracy worse than this (meters). */
 export const MAX_ACCEPTABLE_ACCURACY_METERS = 15;
+
+/** After this gap since last route append, relax movement gates (ms). */
+export const ROUTE_GAP_RECOVERY_MS = 30_000;
 
 /** Reject implied speeds above this when appending route points (m/s). */
 export const MAX_PLAUSIBLE_SPEED_MPS = 6;
@@ -23,33 +27,66 @@ export const DISPLAY_COORDINATE_EMA_ALPHA = 0.35;
 /** Douglas-Peucker tolerance for display simplification (meters). */
 export const DISPLAY_SIMPLIFY_TOLERANCE_METERS = 4;
 
+export type MotionState = 'walking' | 'stationary';
+
+export type RouteSample = {
+  coordinate: RouteCoordinate;
+  accuracyMeters: number;
+  speedMps: number | null;
+  heading: number | null;
+  timestampMs: number;
+};
+
 /** Max distance for sharp-reversal outlier detection (meters). */
 const SHARP_REVERSAL_MAX_DISTANCE_METERS = 12;
 
 /** Bearing change above this with short segment is treated as a spike (degrees). */
 const SHARP_REVERSAL_BEARING_DEGREES = 120;
 
+export function resolveAccuracyMeters(accuracyMeters: number | null | undefined): number {
+  if (accuracyMeters == null || !Number.isFinite(accuracyMeters) || accuracyMeters <= 0) {
+    return DEFAULT_ACCURACY_METERS;
+  }
+
+  return accuracyMeters;
+}
+
 export function isAcceptableAccuracy(accuracyMeters: number | null | undefined): boolean {
   if (accuracyMeters == null || !Number.isFinite(accuracyMeters)) {
-    return false;
+    return true;
   }
 
   return accuracyMeters > 0 && accuracyMeters <= MAX_ACCEPTABLE_ACCURACY_METERS;
 }
 
-export function isPlausibleMovement(deltaMeters: number, deltaMs: number): boolean {
+export function isPlausibleMovement(
+  deltaMeters: number,
+  deltaMs: number,
+  options?: { relaxed?: boolean },
+): boolean {
   if (deltaMs <= 0) {
     return deltaMeters === 0;
   }
 
   const speedMps = deltaMeters / (deltaMs / 1000);
-  return speedMps <= MAX_PLAUSIBLE_SPEED_MPS;
+  const maxSpeed = options?.relaxed ? MAX_PLAUSIBLE_SPEED_MPS * 1.35 : MAX_PLAUSIBLE_SPEED_MPS;
+  return speedMps <= maxSpeed;
 }
 
 /** Movement must exceed GPS error radius before appending a route point. */
 export function getMinMovementMeters(accuracyMeters: number): number {
-  const safeAccuracy = Number.isFinite(accuracyMeters) && accuracyMeters > 0 ? accuracyMeters : 0;
-  return Math.max(MIN_ROUTE_SAMPLE_METERS, safeAccuracy * 0.6);
+  const safeAccuracy = resolveAccuracyMeters(accuracyMeters);
+  return Math.max(MIN_ROUTE_SAMPLE_METERS, safeAccuracy * 0.35);
+}
+
+export function detectMotionState(
+  speedMps: number | null,
+  deltaMeters: number,
+  deltaMs: number,
+): MotionState {
+  const impliedSpeed = deltaMs > 0 ? deltaMeters / (deltaMs / 1000) : 0;
+  const effectiveSpeed = speedMps != null && Number.isFinite(speedMps) ? speedMps : impliedSpeed;
+  return effectiveSpeed >= MIN_SPEED_TO_RECORD_MPS ? 'walking' : 'stationary';
 }
 
 type StationaryInput = {
@@ -111,6 +148,7 @@ export type AppendRoutePointInput = {
   deltaMs: number;
   sessionStartedAt: number;
   sampleTimestamp: number;
+  lastRouteAppendTimestamp: number | null;
 };
 
 export function shouldAppendRoutePoint(input: AppendRoutePointInput): boolean {
@@ -125,6 +163,7 @@ export function shouldAppendRoutePoint(input: AppendRoutePointInput): boolean {
     deltaMs,
     sessionStartedAt,
     sampleTimestamp,
+    lastRouteAppendTimestamp,
   } = input;
 
   if (sampleTimestamp - sessionStartedAt < GPS_WARMUP_MS) {
@@ -132,7 +171,12 @@ export function shouldAppendRoutePoint(input: AppendRoutePointInput): boolean {
   }
 
   const minMovementMeters = getMinMovementMeters(accuracyMeters);
-  if (deltaMetersFromRoute < minMovementMeters) {
+  const gapSinceRouteAppend =
+    lastRouteAppendTimestamp != null ? sampleTimestamp - lastRouteAppendTimestamp : deltaMs;
+  const longGapRecovery = gapSinceRouteAppend >= ROUTE_GAP_RECOVERY_MS;
+  const effectiveMinMovement = longGapRecovery ? minMovementMeters * 0.5 : minMovementMeters;
+
+  if (deltaMetersFromRoute < effectiveMinMovement) {
     return false;
   }
 
@@ -141,13 +185,13 @@ export function shouldAppendRoutePoint(input: AppendRoutePointInput): boolean {
       speedMps,
       deltaMeters: deltaMetersFromLastFix,
       deltaMs,
-      minMovementMeters,
+      minMovementMeters: effectiveMinMovement,
     })
   ) {
     return false;
   }
 
-  if (!isPlausibleMovement(deltaMetersFromLastFix, deltaMs)) {
+  if (!isPlausibleMovement(deltaMetersFromLastFix, deltaMs, { relaxed: longGapRecovery })) {
     return false;
   }
 

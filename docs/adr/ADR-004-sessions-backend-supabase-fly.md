@@ -21,7 +21,7 @@ Privacy baseline ([ADR-003](ADR-003-minor-data-protection-baseline.md)) requires
 3. **Client → Fly** for session CRUD; **client → Supabase Storage** for photo uploads (user JWT + RLS); Fly stores storage paths only.
 4. **Anonymous auth** for the Expo Go test phase — `supabase.auth.signInAnonymously()` on first launch; each device gets a `user_id` for RLS.
 5. **Geolocation is client-owned** — `expo-location` + `liveSessionStore` sample GPS during active sessions only; Fly persists the finalized route as jsonb on `PATCH /sessions/:id/finalize`. No separate `backend/maps/` microservice for v1.
-6. **No Google Maps API key** for tracking — map tiles use Carto Positron via MapLibre (native or WebView; see [ADR-005](ADR-005-expo-go-webview-map.md)).
+6. **No Google Maps API key** for tracking — map tiles use Carto Voyager / Dark Matter + Esri via MapLibre (native or WebView; see [ADR-005](ADR-005-expo-go-webview-map.md)).
 
 ### Env split
 

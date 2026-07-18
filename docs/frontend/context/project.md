@@ -32,7 +32,9 @@ Product-wide ontology and cross-cutting decisions.
 - Privacy UI split: `account-privacy` hub, `privacy-permissions`, policy viewers — see [privacy-screen-split-decision.md](../../compliance/privacy-screen-split-decision.md)
 - Session Tracking flow (PRD §6.9–6.15) built as an isolated feature slice at `frontend/src/features/session-tracking/` — not wired into `frontend/src/app/` Expo Router or `manifest.yaml`'s `implemented` status; a parallel exploratory build reviewed via its own `dev/PreviewApp.tsx` harness, separate from the Phase 1 migration path in [figma-to-native-handoff.md](../specs/figma-to-native-handoff.md)
 - **Session duration:** wall-clock timestamps (`startedAt` → `endedAt`) are the canonical source for completed-session duration; `liveSessionStore` derives live elapsed time and checkpoint countdown from timestamps (not a fragile `+1s` counter). Backend finalize recomputes `durationSeconds` server-side.
-- **GPS route capture:** route points append only when movement from the last stored point exceeds `max(6m, accuracy × 0.6)` and pass stationary/speed/turn filters; live map arrow uses EMA-smoothed `displayCoordinate`; optional Follow toggle (default off) pans the map on GPS updates.
+- **GPS route capture:** samples pass a 2D Kalman filter, then append when movement exceeds `max(3m, accuracy × 0.35)` (plus stationary/speed/turn/gap-recovery gates); optional background GPS while session active (`expo-task-manager`); live map arrow uses EMA-smoothed `displayCoordinate` + compass heading; optional Follow toggle (default off, ~450 ms ease).
+- **Checkpoint camera:** VisionCamera sequential selfie → progress by default; simultaneous dual-cam disabled pending Fabric/Nitro fix ([photo-checkpoint-dual-capture.md](../specs/photo-checkpoint-dual-capture.md)).
+- **Home stats:** Service Hours / impact derive from `sessionStatsStore` (local finalize snapshots + `GET /sessions` with `photoCount`).
 
 ## Related
 

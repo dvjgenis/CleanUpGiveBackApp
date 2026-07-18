@@ -16,7 +16,7 @@ Adopt a **strictest-baseline nationwide** strategy:
 1. **Neutral age-gate** before any PII collection — month/year of birth only.
 2. **Parental consent flow** for users under 13 before selfies or GPS.
 3. **Teen privacy tier** (13–17) with highest privacy defaults and plain-language notice.
-4. **Session-only geolocation** with a persistent on-screen tracking indicator.
+4. **Session-only geolocation** with a persistent on-screen tracking indicator (Always permission may be used **only while a session is active** so the route continues when locked; tracking stops on finalize/cancel).
 5. **Account-tab privacy hub** (`account-privacy`) as the primary in-app privacy destination.
 6. **CCPA baseline rights** for all users (access, deletion, portability, do-not-sell, non-discrimination).
 7. **App Store age signals** ingested for enforcement and discarded after use — never persisted long-term.

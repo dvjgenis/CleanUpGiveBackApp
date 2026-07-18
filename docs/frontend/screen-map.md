@@ -49,7 +49,7 @@ Full token reference: [`docs/frontend/brand.md`](../brand.md).
 | # | PRD Screen | PRD § | Stitch Match *(legacy)* | Stitch ID *(legacy)* | Code File | Status |
 |---|---|---|---|---|---|---|
 | 7 | Home | 6.7 | Home Dashboard - Final Branding | `68fe23e48c51440aa28e15830b3236c6` | `prototype/screens/home/Home.tsx` | ✅ |
-| 8 | Event Detail | 6.8 | `196:226` | `event-detail` | `features/figma-screens/screens/EventDetailScreen.tsx` | ✅ Implemented (Register → `787:406`) |
+| 8 | Event Detail | 6.8 | `196:226` | `event-detail` | `features/figma-screens/screens/EventDetailScreen.tsx` | ✅ Implemented (Register → `787:406`; Add to calendar via `expo-calendar`) |
 | 9 | Session Setup | 6.9 | Session Setup - PRD Aligned Standardized | `ac088fa0affe4ae8b4c3661cf41cfe95` | `prototype/screens/session/SessionSetup.tsx` | ✅ |
 | 10 | Permission Check — Location | 6.10 | — | — | `prototype/screens/session/Permissions.tsx` (step 0) | ✅ Generated |
 | 11 | Permission Check — Camera | 6.10 | — | — | `prototype/screens/session/Permissions.tsx` (step 1) | ✅ Generated |

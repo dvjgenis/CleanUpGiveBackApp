@@ -62,7 +62,7 @@ Record checkpoint metadata after client uploads photos to Storage.
 
 #### `PATCH /sessions/:id/finalize`
 
-End session and submit for review.
+End session and submit for review (or mark invalid after a missed checkpoint).
 
 - **Body:**
   ```json
@@ -70,11 +70,13 @@ End session and submit for review.
     "endedAt": "<iso8601>",
     "durationSeconds": 3600,
     "distanceMiles": 1.2,
-    "route": [[-122.4, 37.8], [-122.41, 37.81]]
+    "route": [[-122.4, 37.8], [-122.41, 37.81]],
+    "status": "under_review"
   }
   ```
-- **Response:** `200 { "id": "<uuid>", "status": "under_review" }`
-- **Side effects:** sets `ended_at`, duration, distance, route jsonb; `status → under_review`
+- **`status` (optional):** `under_review` (default) or `invalid` (missed-checkpoint flow from the client)
+- **Response:** `200 { "id": "<uuid>", "status": "under_review" | "invalid" }`
+- **Side effects:** sets `ended_at`, duration, distance, route jsonb; `status → under_review` or `invalid`
 - **Duration:** server computes `duration_seconds` from `started_at` and request `endedAt` (client `durationSeconds` is ignored when `started_at` is set)
 
 #### `GET /sessions`
@@ -82,7 +84,7 @@ End session and submit for review.
 List caller's sessions (newest first).
 
 - **Query:** `status` (optional filter), `limit` (default 50), `offset` (default 0)
-- **Response:** `200 { "sessions": [ … ] }`
+- **Response:** `200 { "sessions": [ … ] }` — each session includes `checkpointCount` (Prisma `_count.checkpoints`) and `photoCount` (`checkpointCount * 2`, selfie + progress per checkpoint) for Home dashboard hydration
 
 #### `GET /sessions/:id`
 
@@ -137,20 +139,21 @@ Private bucket. Path: `{user_id}/{session_id}/{checkpoint_id}-selfie.jpg`.
 
 - [ ] **AC-1:** `POST /sessions` creates an `active` session tied to the JWT `user_id`
 - [ ] **AC-2:** `POST /sessions/:id/checkpoints` stores metadata; rejects if session not `active` or not owned
-- [ ] **AC-3:** `PATCH /sessions/:id/finalize` sets `under_review` with route, duration, distance
-- [ ] **AC-4:** `GET /sessions` and `GET /sessions/:id` return only the caller's data (RLS + API check)
-- [ ] **AC-5:** Anonymous Supabase users can create sessions (test phase)
-- [ ] **AC-6:** GPS route stored as jsonb `[[lng, lat], …]` matching `liveSessionStore` `RouteCoordinate` type
-- [ ] **AC-7:** Photo binaries never pass through Fly — client uploads to Storage; API stores paths only
-- [ ] **AC-8:** Session ends with `invalid` status when missed-checkpoint flow triggers (client sends finalize with `invalid` or dedicated endpoint — align with frontend implementation)
-- [ ] **AC-9:** `GET /health` returns 200 for Fly health checks
+- [x] **AC-3:** `PATCH /sessions/:id/finalize` sets `under_review` (or `invalid`) with route, duration, distance
+- [x] **AC-4:** `GET /sessions` and `GET /sessions/:id` return only the caller's data (RLS + API check)
+- [x] **AC-5:** Anonymous Supabase users can create sessions (test phase)
+- [x] **AC-6:** GPS route stored as jsonb `[[lng, lat], …]` matching `liveSessionStore` `RouteCoordinate` type
+- [x] **AC-7:** Photo binaries never pass through Fly — client uploads to Storage; API stores paths only
+- [x] **AC-8:** Session ends with `invalid` when client calls finalize with `status: "invalid"` (missed-checkpoint grace expiry)
+- [x] **AC-9:** `GET /health` returns 200 for Fly health checks
+- [x] **AC-10:** `GET /sessions` includes `checkpointCount` and `photoCount` per row for Home impact stats
 
 ## Security & privacy
 
 - JWT verification via Supabase JWT secret on Fly (see [supabase.md](../../supabase.md))
 - RLS on `sessions` and `checkpoints` — users read/write own rows only
 - `service_role` key only on Fly secrets — never in client or docs
-- Session-only geolocation: client stops `watchPositionAsync` when session ends (`endLiveSession` in `liveSessionStore`)
+- Session-only geolocation: client stops foreground watch + background task when session ends (`finalizeLiveSession` / cancel in `liveSessionStore`)
 - Retention, cascade deletion, minor protection: [privacy-and-data-rights.md](privacy-and-data-rights.md) (full ACs not blocking test phase)
 
 ## Test plan

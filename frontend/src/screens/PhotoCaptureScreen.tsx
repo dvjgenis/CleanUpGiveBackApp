@@ -8,6 +8,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Image,
   Platform,
   Pressable,
@@ -218,6 +219,11 @@ function DualCapture({
 
   useEffect(() => {
     let cancelled = false;
+    const readyTimeout = setTimeout(() => {
+      if (!cancelled && !fellBackRef.current) {
+        fallback('Dual camera readiness timeout');
+      }
+    }, 8000);
 
     (async () => {
       try {
@@ -264,6 +270,7 @@ function DualCapture({
         if (!cancelled) {
           sessionRef.current = session;
           setReady(true);
+          clearTimeout(readyTimeout);
         }
       } catch (err) {
         if (!cancelled) fallback(err);
@@ -272,6 +279,7 @@ function DualCapture({
 
     return () => {
       cancelled = true;
+      clearTimeout(readyTimeout);
       void sessionRef.current?.stop?.();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -371,23 +379,40 @@ function SequentialCapture({
   const [step, setStep] = useState<'front' | 'back'>('front');
   const [selfieUri, setSelfieUri] = useState<string | null>(null);
   const [capturing, setCapturing] = useState(false);
+  const [cameraReady, setCameraReady] = useState(false);
+  const [captureError, setCaptureError] = useState<string | null>(null);
 
   const backDevice = useCameraDevice('back');
   const frontDevice = useCameraDevice('front');
   // Single photo output shared across both camera steps
   const photoOutput = usePhotoOutput();
 
+  useEffect(() => {
+    setCameraReady(false);
+    setCaptureError(null);
+  }, [step]);
+
   const capture = async () => {
-    if (capturing) return;
+    if (capturing || !cameraReady) return;
     setCapturing(true);
+    setCaptureError(null);
     try {
       const file = await photoOutput.capturePhotoToFile({}, EMPTY_CALLBACKS);
+      const filePath = (file as { filePath?: string } | null)?.filePath;
+      if (!filePath) {
+        throw new Error('Capture returned no file path');
+      }
       if (step === 'front') {
-        setSelfieUri(file.filePath);
+        setSelfieUri(filePath);
         setStep('back');
       } else if (selfieUri) {
-        onDone(file.filePath, selfieUri);
+        onDone(filePath, selfieUri);
       }
+    } catch (error) {
+      console.warn('[SequentialCapture] capture failed:', error);
+      const message = 'Could not capture photo. Please try again.';
+      setCaptureError(message);
+      Alert.alert('Capture failed', message);
     } finally {
       setCapturing(false);
     }
@@ -395,7 +420,22 @@ function SequentialCapture({
 
   const activeDevice = step === 'front' ? frontDevice : backDevice;
 
-  if (!activeDevice) return null;
+  if (!activeDevice) {
+    return (
+      <View style={[s.root, s.center]}>
+        <Text style={s.copyTitle}>Camera unavailable</Text>
+        <Text style={s.copySubtitle}>No {step === 'front' ? 'front' : 'back'} camera found.</Text>
+        <AnimatedPressable
+          style={s.backBtn}
+          onPress={onCancel}
+          accessibilityRole="button"
+          accessibilityLabel="Cancel"
+        >
+          <Text style={s.backBtnText}>Go Back</Text>
+        </AnimatedPressable>
+      </View>
+    );
+  }
 
   return (
     <View style={s.root}>
@@ -404,7 +444,20 @@ function SequentialCapture({
         device={activeDevice}
         isActive
         outputs={[photoOutput]}
+        onStarted={() => setCameraReady(true)}
+        onPreviewStarted={() => setCameraReady(true)}
+        onError={(error) => {
+          console.warn('[SequentialCapture] camera error:', error);
+          setCameraReady(false);
+          setCaptureError('Camera error — try again or go back.');
+        }}
       />
+
+      {!cameraReady && (
+        <View style={[StyleSheet.absoluteFillObject, s.center]} pointerEvents="none">
+          <ActivityIndicator color={C.primary} />
+        </View>
+      )}
 
       <SafeAreaView style={s.overlay} edges={['top', 'bottom']} pointerEvents="box-none">
         <View style={s.topBar}>
@@ -435,13 +488,14 @@ function SequentialCapture({
                 </Text>
               </>
             )}
+            {captureError ? <Text style={s.captureError}>{captureError}</Text> : null}
           </View>
         </CoachmarkEnter>
 
         <View style={s.controls}>
           <ShutterButton
             onPress={() => { void capture(); }}
-            disabled={capturing}
+            disabled={capturing || !cameraReady}
           />
         </View>
       </SafeAreaView>
@@ -604,6 +658,15 @@ const s = StyleSheet.create({
     lineHeight: 20,
     color: C.textOnPrimary,
     textAlign: 'center',
+  },
+
+  captureError: {
+    fontFamily: 'NotoSans_400Regular',
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#FFB4AB',
+    textAlign: 'center',
+    marginTop: 4,
   },
 
   controls: {

@@ -4,6 +4,8 @@ import { Stack } from 'expo-router';
 
 import { AuthProvider } from '@/components/AuthProvider';
 
+import '@/features/session-tracking/backgroundLocationTask';
+
 const guideBackwardScreenOptions = {
   animationTypeForReplace: 'pop' as const,
 };

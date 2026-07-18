@@ -4,15 +4,24 @@ Org-owned accounts for this project. **Do not store secrets, API keys, or passwo
 
 | Service | Purpose | Notes |
 |---------|---------|-------|
-| Expo / EAS | App builds, OTA, Expo Go testing | Org account; `eas.json` configured; dev-client builds deferred for session test phase |
+| Expo / EAS | App builds, OTA, Expo Go testing | Org account; `eas.json` configured; **EAS development build required** for VisionCamera checkpoint capture, native MapLibre, and **background GPS while session active** (`expo-task-manager`) |
 | Supabase | Auth (anonymous), Postgres, Storage | Project created; setup guide: [supabase.md](supabase.md) |
 | Fly.io | Sessions API hosting | Install CLI: `curl -L https://fly.io/install.sh \| sh` then `fly auth login`; deploy `backend/sessions/` when implemented |
 | Apple Developer | iOS distribution (TestFlight) | Org account TBD; not required for Expo Go testing |
 | Google Play | Android distribution | Org account TBD; not required for Expo Go testing |
-| Map provider | Live session map tiles | **Carto Positron** via MapLibre (native + WebView) — no API key for v1 |
+| Map provider | Live session map tiles | **Carto Voyager / Dark Matter** (Standard light/dark) + **Esri** (Satellite / Hybrid) via MapLibre — no API key for v1 |
 | Weather | Live session navbar | **Open-Meteo** — no API key |
 | Google Cloud | — | Not used for session tracking v1; defer until push notifications or Google geocoding needed |
 | Payments | Shop and donations | Stripe — out of scope for sessions test phase |
+
+## EAS development build
+
+Required for VisionCamera checkpoint capture, native MapLibre maps, and background route tracking during active sessions. Expo Go uses foreground-only GPS and WebView maps (camera/background GPS limited).
+
+1. `cd frontend && eas build --profile development --platform ios` (and/or `android`)
+2. Install the build on a physical device (iPhone XS+ or dual-cam Android recommended)
+3. `npm run start:dev-client` (or `npx expo start --dev-client`) and open the dev client on the same network
+4. Smoke test: **Start Tracking** → grant **Always** location when prompted → `/live-session` (GPS + map; lock screen and verify route continues) → **Submit Photo** → `/photo-capture` (sequential selfie → progress; dual path disabled)
 
 ## Environment files
 

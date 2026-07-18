@@ -26,6 +26,7 @@ type Props = {
 export function LiveSessionMapNative({ style }: Props) {
   const {
     routeCoordinates,
+    displayRouteCoordinates,
     displayCoordinate,
     currentHeading,
     mapRecenterToken,
@@ -37,10 +38,10 @@ export function LiveSessionMapNative({ style }: Props) {
   const mapCenter = getLiveSessionMapCenter();
   const routeStart = routeCoordinates[0] ?? null;
   const mapStyle = getNativeMapStyle(mapLayer, mapTheme);
-  const displayRoute = simplifyRouteForDisplay(routeCoordinates);
-  // Remount when layer/theme changes — MapLibre Fabric often ignores in-place
-  // `mapStyle` updates. Camera uses `initialViewState` (no fly) + duration-0
-  // restore in LiveSessionMapCamera so remount does not zoom-out/in.
+  const displayRoute =
+    displayRouteCoordinates.length >= 2
+      ? displayRouteCoordinates
+      : simplifyRouteForDisplay(routeCoordinates);
   const styleKey = `${mapLayer}-${mapTheme}`;
 
   return (

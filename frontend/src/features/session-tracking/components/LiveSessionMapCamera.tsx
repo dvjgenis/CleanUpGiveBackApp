@@ -42,7 +42,7 @@ export function LiveSessionMapCamera({
     if (mapFollowEnabled) {
       cameraRef.current.easeTo({
         center: currentCoordinate,
-        duration: 300,
+        duration: 450,
       });
       return;
     }

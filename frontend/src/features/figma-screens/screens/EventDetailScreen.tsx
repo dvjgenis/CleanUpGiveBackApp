@@ -36,6 +36,7 @@ import {
 import { RegisterButton } from '../components/RegisterButton';
 import { getEventDetail, type WhatToBringIcon } from '../mocks/eventDetail';
 import { layout, colors, fontFamilies, radius, shadows } from '../tokens';
+import { promptAddEventToCalendar } from '../utils/addEventToCalendar';
 import { mapsLinkForLocation, openLocationInMaps } from '../utils/openLocationInMaps';
 
 const HERO_HEIGHT = 195;
@@ -169,8 +170,8 @@ export function EventDetailScreen() {
   }, [event.coordinate, event.locationAddress]);
 
   const handleAddToCalendar = useCallback(() => {
-    Alert.alert('Add to calendar', 'Calendar export will be available in a future release.');
-  }, []);
+    promptAddEventToCalendar(event);
+  }, [event]);
 
   const handleVisit = useCallback(() => {
     void Linking.openURL('https://cleanupgiveback.org');

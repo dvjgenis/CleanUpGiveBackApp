@@ -23,10 +23,13 @@ describe('isAcceptableAccuracy', () => {
     expect(isAcceptableAccuracy(15)).toBe(true);
   });
 
-  it('rejects poor or missing accuracy', () => {
+  it('rejects poor accuracy', () => {
     expect(isAcceptableAccuracy(16)).toBe(false);
-    expect(isAcceptableAccuracy(null)).toBe(false);
-    expect(isAcceptableAccuracy(undefined)).toBe(false);
+  });
+
+  it('allows missing accuracy for Kalman default trust', () => {
+    expect(isAcceptableAccuracy(null)).toBe(true);
+    expect(isAcceptableAccuracy(undefined)).toBe(true);
   });
 });
 
@@ -42,11 +45,11 @@ describe('isPlausibleMovement', () => {
 
 describe('getMinMovementMeters', () => {
   it('uses at least MIN_ROUTE_SAMPLE_METERS', () => {
-    expect(getMinMovementMeters(5)).toBe(6);
+    expect(getMinMovementMeters(5)).toBe(3);
   });
 
   it('scales with reported accuracy', () => {
-    expect(getMinMovementMeters(20)).toBe(12);
+    expect(getMinMovementMeters(20)).toBe(7);
   });
 });
 
@@ -108,6 +111,7 @@ describe('shouldAppendRoutePoint', () => {
         deltaMs: 2000,
         sessionStartedAt,
         sampleTimestamp: sessionStartedAt + 3000,
+        lastRouteAppendTimestamp: sessionStartedAt + 1000,
       }),
     ).toBe(false);
   });
@@ -120,11 +124,12 @@ describe('shouldAppendRoutePoint', () => {
         candidate: [-87.6299, 41.88],
         accuracyMeters: 8,
         speedMps: 1.5,
-        deltaMetersFromRoute: 4,
-        deltaMetersFromLastFix: 4,
+        deltaMetersFromRoute: 2,
+        deltaMetersFromLastFix: 2,
         deltaMs: 2000,
         sessionStartedAt,
         sampleTimestamp: sessionStartedAt + 10_000,
+        lastRouteAppendTimestamp: sessionStartedAt + 9_000,
       }),
     ).toBe(false);
   });
@@ -142,6 +147,7 @@ describe('shouldAppendRoutePoint', () => {
         deltaMs: 2000,
         sessionStartedAt,
         sampleTimestamp: sessionStartedAt + 10_000,
+        lastRouteAppendTimestamp: sessionStartedAt + 9_000,
       }),
     ).toBe(true);
   });
@@ -159,13 +165,14 @@ describe('computeBearingDegrees', () => {
 
 describe('resolveHeading', () => {
   it('prefers GPS heading when available', () => {
-    expect(
-      resolveHeading({
-        heading: 45,
-        previous: [-87.63, 41.88],
-        current: [-87.62, 41.89],
-      }),
-    ).toBe(45);
+    const heading = resolveHeading({
+      heading: 45,
+      previous: [-87.63, 41.88],
+      current: [-87.62, 41.89],
+    });
+    expect(heading).not.toBeNull();
+    expect(heading!).toBeGreaterThan(40);
+    expect(heading!).toBeLessThan(50);
   });
 
   it('falls back to movement bearing', () => {

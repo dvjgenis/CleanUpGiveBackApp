@@ -14,6 +14,13 @@ import {
   useLiveSession,
 } from '@/features/session-tracking/liveSessionStore';
 import { useRecentSessions } from '@/features/session-tracking/recentSessionsStore';
+import { useSessionStats } from '@/features/session-tracking/sessionStatsStore';
+import {
+  buildImpactStats,
+  buildWeeklyHoursChart,
+  computeWeeklyStreakHours,
+  formatWeekServiceHoursTotal,
+} from '@/features/session-tracking/utils/homeDashboardStats';
 
 import { EventsViewAllModal } from '../components/EventsViewAllModal';
 import { RecentSessionCard } from '../components/RecentSessionCard';
@@ -114,14 +121,13 @@ function ServiceHoursCard({
   weekRangeLabel,
   weekNumberLabel,
   weeklyHoursChart,
+  onWeekStartChange,
 }: Pick<
   HomeDashboardData,
   'serviceHoursTotalLabel' | 'weekStartIso' | 'weekRangeLabel' | 'weekNumberLabel' | 'weeklyHoursChart'
->) {
-  const [activeChart, setActiveChart] = useState<HomeDashboardData['weeklyHoursChart']>(() => [
-    ...weeklyHoursChart,
-  ]);
-
+> & {
+  onWeekStartChange: (weekStartIso: string) => void;
+}) {
   return (
     <View style={s.serviceHoursCard}>
       <View style={s.rowBetween}>
@@ -133,11 +139,10 @@ function ServiceHoursCard({
         weekStartIso={weekStartIso}
         weekRangeLabel={weekRangeLabel}
         weekNumberLabel={weekNumberLabel}
-        weeklyHoursChart={weeklyHoursChart}
-        onWeekChartChange={setActiveChart}
+        onWeekStartChange={onWeekStartChange}
       />
 
-      <BarChart weeklyHoursChart={activeChart} />
+      <BarChart weeklyHoursChart={weeklyHoursChart} />
     </View>
   );
 }
@@ -324,7 +329,13 @@ function LiveSessionBar({ barStyle, onExpand }: LiveSessionBarProps) {
  * Home dashboard (Figma `home_dashboard___final_branding`, node `406:291`).
  * Pass `data` to render a specific mock variant; defaults to first-time user.
  */
-export function HomeScreenWithData({ data }: { data: HomeDashboardData }) {
+export function HomeScreenWithData({
+  data,
+  onWeekStartChange = () => {},
+}: {
+  data: HomeDashboardData;
+  onWeekStartChange?: (weekStartIso: string) => void;
+}) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { isActive } = useLiveSession();
@@ -388,6 +399,7 @@ export function HomeScreenWithData({ data }: { data: HomeDashboardData }) {
           weekRangeLabel={data.weekRangeLabel}
           weekNumberLabel={data.weekNumberLabel}
           weeklyHoursChart={data.weeklyHoursChart}
+          onWeekStartChange={onWeekStartChange}
         />
         <ImpactSection impactStats={data.impactStats} />
         <RecentSessionsSection
@@ -434,23 +446,36 @@ export function HomeScreenWithData({ data }: { data: HomeDashboardData }) {
   );
 }
 
-/** First-time user home — empty stats, current calendar week. */
+/** First-time user home — session-driven stats, current calendar week. */
 export function HomeScreen() {
   const recentSessions = useRecentSessions();
   const preferredName = usePreferredName();
-  const data = useMemo(
-    () => ({
+  const sessionStats = useSessionStats();
+  const [selectedWeekStartIso, setSelectedWeekStartIso] = useState(
+    () => getCurrentWeekMeta().weekStartIso,
+  );
+
+  const data = useMemo(() => {
+    const weekMeta = getCurrentWeekMeta();
+
+    return {
       ...firstTimeHomeDashboard,
-      ...getCurrentWeekMeta(),
+      ...weekMeta,
+      weekStartIso: selectedWeekStartIso,
+      weeklyHoursChart: buildWeeklyHoursChart(sessionStats, selectedWeekStartIso),
+      serviceHoursTotalLabel: formatWeekServiceHoursTotal(sessionStats, selectedWeekStartIso),
+      weeklyStreakHours: computeWeeklyStreakHours(sessionStats),
+      impactStats: buildImpactStats(sessionStats),
       recentSessions,
       homeUser: {
         firstName: preferredName || firstTimeHomeDashboard.homeUser.firstName,
       },
-    }),
-    [preferredName, recentSessions],
-  );
+    };
+  }, [preferredName, recentSessions, selectedWeekStartIso, sessionStats]);
 
-  return <HomeScreenWithData data={data} />;
+  return (
+    <HomeScreenWithData data={data} onWeekStartChange={setSelectedWeekStartIso} />
+  );
 }
 
 const chart = StyleSheet.create({

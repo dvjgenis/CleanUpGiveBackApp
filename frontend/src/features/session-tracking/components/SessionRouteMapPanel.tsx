@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
@@ -11,6 +11,8 @@ import { MapLayerPicker } from './MapLayerPicker';
 import { TrackerLayersIcon } from './icons/TrackerLayersIcon';
 import { SessionRouteMapPreview } from './SessionRouteMapPreview';
 
+const REPLAY_DURATION_MS = 8000;
+
 type Props = {
   routeCoordinates: RouteCoordinate[];
   /** Animate the route drawing once (grow line + tip marker) instead of showing it fully drawn. Expo Go / WebView only. */
@@ -21,6 +23,7 @@ type Props = {
    * the session ended. Defaults to `DEFAULT_MAP_LAYER`. */
   initialMapLayer?: MapLayerType;
   style?: object;
+  enableReplay?: boolean;
 };
 
 function SessionRouteMapEmptyState() {
@@ -32,17 +35,96 @@ function SessionRouteMapEmptyState() {
   );
 }
 
-/** Interactive route preview with pan/zoom and basemap layer picker. */
+/** Interactive route preview with pan/zoom, basemap picker, and optional replay. */
 export function SessionRouteMapPanel({
   routeCoordinates,
   replayOnce = false,
   showLayerControl = true,
   initialMapLayer = DEFAULT_MAP_LAYER,
+  enableReplay = true,
   style,
 }: Props) {
   const [mapLayer, setMapLayer] = useState<MapLayerType>(initialMapLayer);
   const [pickerVisible, setPickerVisible] = useState(false);
+  const [replayProgress, setReplayProgress] = useState(1);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const animationRef = useRef<number | null>(null);
+  const playStartRef = useRef(0);
+  const playFromRef = useRef(0);
+
   const hasRoute = routeCoordinates.length >= 2;
+  const canReplay = enableReplay && hasRoute;
+
+  const stopAnimation = useCallback(() => {
+    if (animationRef.current != null) {
+      cancelAnimationFrame(animationRef.current);
+      animationRef.current = null;
+    }
+  }, []);
+
+  const tickReplay = useCallback(() => {
+    const elapsed = Date.now() - playStartRef.current;
+    const next = Math.min(1, playFromRef.current + elapsed / REPLAY_DURATION_MS);
+    setReplayProgress(next);
+
+    if (next >= 1) {
+      setIsPlaying(false);
+      animationRef.current = null;
+      return;
+    }
+
+    animationRef.current = requestAnimationFrame(tickReplay);
+  }, []);
+
+  const startReplay = useCallback(
+    (fromProgress = 0) => {
+      stopAnimation();
+      playFromRef.current = fromProgress;
+      playStartRef.current = Date.now();
+      setReplayProgress(fromProgress);
+      setIsPlaying(true);
+    },
+    [stopAnimation],
+  );
+
+  useEffect(() => {
+    if (!isPlaying) {
+      return undefined;
+    }
+
+    animationRef.current = requestAnimationFrame(tickReplay);
+
+    return () => {
+      stopAnimation();
+    };
+  }, [isPlaying, stopAnimation, tickReplay]);
+
+  useEffect(() => {
+    setReplayProgress(1);
+    setIsPlaying(false);
+    stopAnimation();
+  }, [routeCoordinates, stopAnimation]);
+
+  const handlePlayPause = () => {
+    if (isPlaying) {
+      stopAnimation();
+      setIsPlaying(false);
+      return;
+    }
+
+    if (replayProgress >= 1) {
+      startReplay(0);
+      return;
+    }
+
+    playFromRef.current = replayProgress;
+    playStartRef.current = Date.now();
+    setIsPlaying(true);
+  };
+
+  const handleReplay = () => {
+    startReplay(0);
+  };
 
   return (
     <View style={[styles.panel, style]}>
@@ -50,7 +132,7 @@ export function SessionRouteMapPanel({
         <SessionRouteMapPreview
           routeCoordinates={routeCoordinates}
           mapLayer={mapLayer}
-          replayOnce={replayOnce}
+          replayProgress={canReplay ? replayProgress : 1}
           style={styles.map}
         />
       ) : (
@@ -59,6 +141,29 @@ export function SessionRouteMapPanel({
 
       {hasRoute && showLayerControl && (
         <View style={styles.controls} pointerEvents="box-none">
+          {canReplay && (
+            <View style={styles.replayRow}>
+              <AnimatedPressable
+                style={styles.replayButton}
+                scaleTo={0.98}
+                onPress={handlePlayPause}
+                accessibilityRole="button"
+                accessibilityLabel={isPlaying ? 'Pause route replay' : 'Play route replay'}
+              >
+                <Text style={styles.replayButtonText}>{isPlaying ? 'Pause' : 'Play'}</Text>
+              </AnimatedPressable>
+              <AnimatedPressable
+                style={styles.replayButton}
+                scaleTo={0.98}
+                onPress={handleReplay}
+                accessibilityRole="button"
+                accessibilityLabel="Replay route from start"
+              >
+                <Text style={styles.replayButtonText}>Replay</Text>
+              </AnimatedPressable>
+            </View>
+          )}
+
           <View style={styles.layerControl}>
             {pickerVisible && (
               <MapLayerPicker
@@ -110,6 +215,26 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     alignItems: 'flex-end',
     padding: 12,
+    gap: 8,
+  },
+  replayRow: {
+    alignSelf: 'stretch',
+    flexDirection: 'row',
+    gap: 8,
+    marginRight: 52,
+  },
+  replayButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 9999,
+    borderWidth: 1,
+    borderColor: colors.textTertiary,
+    backgroundColor: colors.bgApp,
+  },
+  replayButtonText: {
+    fontFamily: 'NotoSans_600SemiBold',
+    fontSize: 13,
+    color: colors.textPrimary,
   },
   layerControl: {
     position: 'relative',

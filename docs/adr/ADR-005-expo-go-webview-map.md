@@ -53,6 +53,18 @@ else → native MapLibre (lazy require)
 - **Follow-up:** Bundle MapLibre GL JS as a local asset if CDN reliability is a concern; native MapLibre remains the production path after EAS builds.
 - **Follow-up (2026-07-15):** Once EAS dev-client builds are the norm for testing, evaluate retiring this WebView map tier (`LiveSessionMapWebView.tsx`, `SessionRouteMapPreviewWebView.tsx`, `webViewMapHelpers.ts`) entirely in favor of the native `mapcn-react-native` path already used by `LiveSessionMapNative.tsx` (`frontend/src/components/ui/map.tsx`). Not pursuing a rewrite to web `mapcn` ([mapcn.dev](https://www.mapcn.dev/)) for the WebView tier now — that library targets bundled React DOM apps, not this WebView's hand-rolled HTML string, and doesn't address basemap tile/style choices.
 
+## Amendment (2026-07-18) — basemap styles in production use
+
+The original decision referenced **Carto Positron** as the Standard style. Live tracking now uses:
+
+| Layer / theme | Style |
+|---------------|--------|
+| Standard light | Carto **Voyager** |
+| Standard dark | Carto **Dark Matter** (with park/landcover paint overrides — see `mapStyles.ts` / [map-theme-and-weather-icons.md](../frontend/specs/map-theme-and-weather-icons.md)) |
+| Satellite / Hybrid | Esri World Imagery (+ transportation/labels for Hybrid) |
+
+The WebView tier decision (Expo Go via MapLibre GL JS) is unchanged; only the default Standard tileset evolved for richer street/park detail.
+
 ## Alternatives considered
 
 - **Placeholder only in Expo Go** — rejected; testers cannot validate map UX.

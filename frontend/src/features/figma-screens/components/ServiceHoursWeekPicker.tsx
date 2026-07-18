@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Modal,
   Pressable,
@@ -16,7 +16,6 @@ import {
   PickerMonthYearChevronIcon,
 } from './HomeIcons';
 import { colors, fontFamilies, radius as R, shadows } from '../tokens';
-import type { WeeklyHoursDatum } from '../mocks/home.types';
 import {
   addMonths,
   addWeeks,
@@ -34,16 +33,10 @@ import {
   toIsoDate,
 } from '../utils/weekCalendar';
 
-const CHART_DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
-
 function clampFocusDay(month: number, year: number, day: Date): Date {
   const maxDay = daysInMonth(month, year);
   const dayNum = Math.min(day.getDate(), maxDay);
-  return new Date(year, month, dayNum);
-}
-
-function emptyWeekChart(): WeeklyHoursDatum[] {
-  return CHART_DAY_LABELS.map((day) => ({ day, value: 0 }));
+  return startOfDay(new Date(year, month, dayNum));
 }
 
 type Props = {
@@ -51,26 +44,30 @@ type Props = {
   /** Figma mock labels for the default week; recomputed when the user navigates weeks. */
   weekRangeLabel?: string;
   weekNumberLabel?: string;
-  weeklyHoursChart: readonly WeeklyHoursDatum[];
-  onWeekChartChange?: (chart: WeeklyHoursDatum[]) => void;
+  onWeekStartChange?: (weekStartIso: string) => void;
 };
 
 export function ServiceHoursWeekPicker({
   weekStartIso,
   weekRangeLabel: _defaultWeekRangeLabel,
   weekNumberLabel: _defaultWeekNumberLabel,
-  weeklyHoursChart,
-  onWeekChartChange,
+  onWeekStartChange,
 }: Props) {
+  const initialWeekStart = useMemo(() => parseIsoDate(weekStartIso), [weekStartIso]);
   const currentWeekStart = useMemo(() => startOfWeekMonday(new Date()), []);
-  const currentWeekIso = useMemo(() => toIsoDate(currentWeekStart), [currentWeekStart]);
-  const [weekStart, setWeekStart] = useState(currentWeekStart);
+  const [weekStart, setWeekStart] = useState(initialWeekStart);
   const [pickerVisible, setPickerVisible] = useState(false);
   const [monthYearPickerVisible, setMonthYearPickerVisible] = useState(false);
   const [pickerMonth, setPickerMonth] = useState(currentWeekStart.getMonth());
   const [pickerYear, setPickerYear] = useState(currentWeekStart.getFullYear());
   const [selectedDay, setSelectedDay] = useState(currentWeekStart);
   const [pickerFocusDay, setPickerFocusDay] = useState(currentWeekStart);
+
+  useEffect(() => {
+    const nextWeekStart = parseIsoDate(weekStartIso);
+    setWeekStart(nextWeekStart);
+    setSelectedDay(nextWeekStart);
+  }, [weekStartIso]);
 
   const today = useMemo(() => startOfDay(new Date()), []);
   const showTodayButton =
@@ -90,12 +87,7 @@ export function ServiceHoursWeekPicker({
     setSelectedDay(focusDay ? startOfDay(focusDay) : normalized);
     setPickerMonth((focusDay ?? normalized).getMonth());
     setPickerYear((focusDay ?? normalized).getFullYear());
-
-    const chart =
-      toIsoDate(normalized) === weekStartIso || toIsoDate(normalized) === currentWeekIso
-        ? [...weeklyHoursChart]
-        : emptyWeekChart();
-    onWeekChartChange?.(chart);
+    onWeekStartChange?.(toIsoDate(normalized));
   };
 
   const openPicker = () => {

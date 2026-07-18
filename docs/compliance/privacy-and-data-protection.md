@@ -37,7 +37,7 @@ Clean Up - Give Back collects highly sensitive personal information to verify co
 | **Identifiers** | Legal name, email, phone, street address, unique participant ID | High |
 | **Account credentials** | Password (hashed), auth tokens | High |
 | **Sensory / visual** | Live selfies (safety vest), hourly selfies (court-ordered), trash-bag photos | High — COPPA personal information |
-| **Precise geolocation** | GPS walking path during active sessions via Google Maps | High — COPPA personal information |
+| **Precise geolocation** | GPS walking path during active sessions (client `expo-location`; MapLibre / Carto / Esri tiles for display) | High — COPPA personal information |
 | **Service metadata** | Session duration, court-ordered flag, approval status | Medium |
 | **Payment** | Stripe checkout for $49.99 app payment, shop, donations | High — PCI via Stripe |
 
@@ -56,7 +56,8 @@ Clean Up - Give Back collects highly sensitive personal information to verify co
 | Processor | Data shared | Purpose |
 |-----------|-------------|---------|
 | **Supabase** | Auth, profiles, session records, photo storage | Backend, database, file storage |
-| **Google Maps Platform** | Precise location during sessions | Route display and path recording |
+| **MapLibre + Carto / Esri** | Map tiles only (no personal data to tile vendors beyond IP for CDN) | Route display during / after sessions |
+| **Open-Meteo** | Approximate coordinates for weather / reverse geocode during live session | Live session location pill |
 | **Stripe** | Payment identifiers, transaction metadata | App payment, shop, donations |
 | **Apple / Google** | Age-verification signals (ephemeral) | App Store compliance — **do not persist beyond session need** |
 | **Expo / EAS** | Build metadata, crash logs (if enabled) | App distribution |
@@ -121,7 +122,7 @@ For users under 13:
 ### 4.3 Session-only geolocation
 
 - Track location **only during active cleanup sessions**.
-- **No background tracking** when session is inactive.
+- **No background tracking** when session is inactive. During an **active** cleanup session, Always location may be used so the route continues when the screen is locked; tracking stops on finalize/cancel.
 - Display an **obvious visual indicator** for the entire duration of location collection (banner/badge on live session screen).
 
 ### 4.4 Highest privacy defaults
@@ -202,7 +203,7 @@ See [../backend/specs/privacy-and-data-rights.md](../backend/specs/privacy-and-d
 
 | Risk | Mitigation |
 |------|------------|
-| Physical tracking of minors | Session-only GPS; visible indicator; no background tracking |
+| Physical tracking of minors | Session-only GPS; visible Live indicator; background GPS only while session active |
 | Photos of minors stored insecurely | Supabase Storage RLS; encrypted at rest; access logging |
 | Unauthorized access to child data | Parental consent gate; RLS; admin access controls |
 | Dark patterns reducing privacy | Highest defaults; no manipulative consent UI |

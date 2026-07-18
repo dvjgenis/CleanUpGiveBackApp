@@ -17,7 +17,9 @@ Shared UI components in `frontend/src/components/`.
 | PhotoSubmittedHeroVideo | `ui/PhotoSubmittedHeroVideo.tsx` | Photo-submitted hero — animated checkmark GIF via `expo-image` |
 | PlayOnceLottie | `ui/PlayOnceLottie.tsx` | Lottie hero wrapper — `autoPlay`, optional `loop` (default `false`), optional `topInset` headroom for upward overflow, `resizeMode="contain"` for missed-checkpoint / web photo-submitted fallback |
 | PhotoEnlargeModal | `ui/PhotoEnlargeModal.tsx` | Full-screen read-only photo viewer with caption, close control, and optional prev/next — used on Session Detail photo gallery |
-| SessionRouteMapPreview | `features/session-tracking/components/SessionRouteMapPreview.tsx` | Read-only MapLibre route preview for Session Detail — uses completed-session `routeCoordinates`; Expo Go/web fallback shows GPS point count; `replayOnce` prop (Expo Go/WebView) plays a one-shot growing-polyline + tip-marker walking-path animation before settling into the static view, skipped when `useReducedMotion` is on; basemap layer comes from `mapLayer` (session-end layer via `SessionRouteMapPanel.initialMapLayer`) |
+| SessionRouteMapPreview | `features/session-tracking/components/SessionRouteMapPreview.tsx` | Read-only MapLibre route preview — uses completed-session `routeCoordinates` + `replayProgress`; Expo Go/web WebView path; basemap layer from `mapLayer` (session-end via `SessionRouteMapPanel.initialMapLayer`) |
+| SessionRouteMapPanel | `features/session-tracking/components/SessionRouteMapPanel.tsx` | Session detail / submission confirmation map chrome — wraps preview with **Play / Pause / Replay** (single RAF owner via `isPlaying` effect); optional layer picker; auto-starts replay once when coordinates arrive |
+| Compass | `ui/Compass.tsx` | Live-session navbar compass dial — counter-rotates from `currentHeading` so N stays geographic north |
 | MapTypesSheet | `features/session-tracking/components/MapTypesSheet.tsx` | Live-tracker Map Types bottom sheet (Standard / Satellite / Hybrid) — basemap wired to `liveSessionStore.mapLayer` via `setLiveSessionMapLayer`; brand-primary highlight on selected basemap |
 | FreeTrialModal | `features/session-tracking/components/FreeTrialModal.tsx` | Paywall modal (Figma `1141:2178`) — shown full-screen from `LiveSessionScreen` when unpaid free-hour countdown hits zero (`elapsedSeconds >= FREE_TRIAL_DURATION_SECONDS`, default 3600; unless `trackerPaymentStore.hasPaid`); opaque `primary` full-screen backdrop, centered card, hourglass Lottie, $49.99 one-time pricing; Continue → `/checkout?mode=tracker&returnTo=live-session`; Pay Later → dismisses for this session mount. Live tracker also shows **Free hour left** `MM:SS` under the timer until expiry. Dev QA: `EXPO_PUBLIC_FREE_TRIAL_SECONDS` |
 | HourglassIcon | `features/session-tracking/components/HourglassIcon.tsx` | 80×80 Lottie hourglass (`assets/animations/hourglass.json`) via `PlayOnceLottie`; plays once inside `FreeTrialModal` |
@@ -60,10 +62,10 @@ Shared UI components in `frontend/src/components/`.
 | EventIcons | `components/EventIcons.tsx` | Event detail icons via `expo-image` + `require('@/assets/figma/event-detail/*')` |
 | EventRegistrationSuccessModal | `components/EventRegistrationSuccessModal.tsx` | Registration confirmation overlay (Figma `787:406`); **Go Home** CTA |
 | RegisterButton | `components/RegisterButton.tsx` | Figma `RegisterButton` (`196:272`) — primary 50px CTA, radius 12, Noto Sans 16 |
-| EventDetailScreen | `screens/EventDetailScreen.tsx` | Event detail (Figma `196:226`); copy → Maps link + `LinkCopiedToast`; map tap → Apple/Google Maps; Register opens success modal; route `/event-detail` |
+| EventDetailScreen | `screens/EventDetailScreen.tsx` | Event detail (Figma `196:226`); copy → Maps link + `LinkCopiedToast`; map tap → Apple/Google Maps; **Add to calendar** via `addEventToCalendar.ts` (`expo-calendar` permission before write); Register opens success modal; route `/event-detail` |
 | weekCalendar utils | `utils/weekCalendar.ts` | Monday-based week math, ISO week labels, month grid builder |
 | getTimeOfDayGreeting | `utils/getTimeOfDayGreeting.ts` | Local-time greeting: night (midnight–4:59 AM), morning (5 AM–noon), afternoon (noon–4:59 PM), evening (5 PM–11:59 PM) |
-| HomeScreen | `screens/HomeScreen.tsx` | Home dashboard (`home_dashboard___final_branding`, Figma `406:291`); `HomeScreenWithData` accepts `HomeDashboardData`; greeting uses `getTimeOfDayGreeting` + preferred name from `onboardingStore` (falls back to mock `firstName` if unset, e.g. Log In skip); bar-chart Y labels inset `left: 8` to match week-picker chevron glyph; default export uses first-time-user mock; recent events navigate to `/event-detail` |
+| HomeScreen | `screens/HomeScreen.tsx` | Home dashboard (`home_dashboard___final_branding`, Figma `406:291`); Service Hours / streak / Your Impact from `sessionStatsStore` + `homeDashboardStats`; greeting uses `getTimeOfDayGreeting` + preferred name from `onboardingStore`; week picker drives real chart buckets; recent sessions from `recentSessionsStore`; recent events → `/event-detail` |
 | RecentSessionCard | `components/RecentSessionCard.tsx` | Recent Sessions list row (Figma `406:409`): activity title, date/time chips, duration |
 | HomeScreenReturningUser | `screens/HomeScreenReturningUser.tsx` | Populated returning-user snapshot (preserved copy); preview via figma-screens `PreviewApp` |
 | AccountIcons | `components/AccountIcons.tsx` | Account tab icons via `expo-image` + relative `require(.../assets/figma/account/*.svg)` |
@@ -83,7 +85,7 @@ Shared UI components in `frontend/src/components/`.
 | ExportRecordSuccessScreen | `screens/ExportRecordSuccessScreen.tsx` | Export success (Figma `840:561`); Continue → Account; View PDF/CSV placeholder |
 | NotificationsScreen | `screens/NotificationsScreen.tsx` | Notification preferences (Figma `649:774`); category cards with toggles; opened from home bell |
 | SessionsScreen | `screens/SessionsScreen.tsx` | Sessions list (Figma `515:1791`); search + filter chips + sort dropdown (Most Recent / Oldest First / A–Z / Z–A); row opens `/session-detail` |
-| SessionDetailScreen | `screens/SessionDetailScreen.tsx` | Session detail (Figma `515:1848`); `useSessionDetail` fetches from Fly API + signed Storage URLs; `SessionRouteMapPanel` walking path from cache or API; Photo Evidence card when checkpoints exist |
+| SessionDetailScreen | `screens/SessionDetailScreen.tsx` | Session detail (Figma `515:1848`); `useSessionDetail` fetches from Fly API + signed Storage URLs; `SessionRouteMapPanel` walking path with **Play / Pause / Replay**; Photo Evidence card when checkpoints exist |
 | SessionDetailIcons | `components/SessionDetailIcons.tsx` | Back/share/hours/miles/photos via `expo-image` + `require('@/assets/figma/session-detail/*.svg')` |
 | SessionsIcons | `components/SessionsIcons.tsx` | Sessions list icons via `expo-image` + `require('@/assets/figma/sessions-list/*.svg')` |
 | ShopIcons | `components/ShopIcons.tsx` + `ShopAssetIcons.generated.tsx` | Shop/cart/checkout glyphs via `react-native-svg` (home cart/donate/streak + generated cart/checkout set) |
@@ -112,6 +114,9 @@ Shared UI components in `frontend/src/components/`.
 
 | Component | Path | Role |
 |-----------|------|------|
+| liveSessionStore | `features/session-tracking/liveSessionStore.ts` | Active session: Kalman GPS, compass heading, route samples, sync warnings, background task lifecycle, finalize |
+| backgroundLocationTask | `features/session-tracking/backgroundLocationTask.ts` | TaskManager task → `ingestBackgroundLocationSample` (active session only) |
+| sessionStatsStore | `features/session-tracking/sessionStatsStore.ts` | Home Service Hours / impact; local snapshots + `GET /sessions` hydration |
 | LiveSessionMinimizedPill | `features/session-tracking/components/LiveSessionMinimizedPill.tsx` | Green minimized tracker pill (Figma `622:176`); checkpoint progress fill animates via `useAnimatedProgressFill` |
 | useLiveSessionBarExit | `features/session-tracking/hooks/useLiveSessionBarExit.ts` | Pill slides down on expand; resets slide-up on Home refocus (`useFocusEffect`) |
 | useLiveSessionMapReveal | `features/session-tracking/hooks/useLiveSessionMapReveal.ts` | Bottom-up map wipe (`mapRevealWipe` 480ms) + chrome fade when expanding from Home |

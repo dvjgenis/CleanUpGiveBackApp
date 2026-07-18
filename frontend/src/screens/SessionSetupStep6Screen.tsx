@@ -105,7 +105,8 @@ export function SessionSetupStep6Screen() {
         <CoachmarkEnter delayMs={staggerDelay(1)} style={s.headingContainer}>
           <Text style={s.title}>Allow location?</Text>
           <Text style={s.subtitle}>
-            Location is used only during active cleanup sessions to verify your route.
+            Location is used only during active cleanup sessions to verify your route. Allow Always
+            access so tracking continues when the screen is locked.
           </Text>
         </CoachmarkEnter>
       </CoachmarkEnter>

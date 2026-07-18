@@ -122,7 +122,7 @@ function buildHtml(initialCenter: [number, number] | null, theme: MapBasemapThem
     // this guard to avoid touching the map before it's ready at all.
     if (!forceApply && !map.isStyleLoaded()) return;
 
-    const displayCoords = simplifyRouteForDisplay(pendingCoords);
+    const displayCoords = pendingCoords;
     const data = { type: 'Feature', geometry: { type: 'LineString', coordinates: displayCoords } };
     if (!routeAdded && displayCoords.length >= 2) {
       map.addSource('route', { type: 'geojson', data });
@@ -147,7 +147,7 @@ function buildHtml(initialCenter: [number, number] | null, theme: MapBasemapThem
         return;
       }
       if (pendingFollowEnabled) {
-        map.easeTo({ center: pendingCurrent, duration: 300 });
+        map.easeTo({ center: pendingCurrent, duration: 450 });
         return;
       }
       if (!hasInitialCentered) {
@@ -210,6 +210,7 @@ type Props = {
 export function LiveSessionMapWebView({ style }: Props) {
   const {
     routeCoordinates,
+    displayRouteCoordinates,
     displayCoordinate,
     currentCoordinate,
     currentHeading,
@@ -220,6 +221,8 @@ export function LiveSessionMapWebView({ style }: Props) {
   const mapTheme = useEffectiveMapTheme();
   const webRef = useRef<WebView>(null);
   const readyRef = useRef(false);
+  const routeForMap =
+    displayRouteCoordinates.length >= 2 ? displayRouteCoordinates : routeCoordinates;
 
   // Capture the best available position at mount time so the HTML itself starts
   // centered on the user — prevents the USA-map flash on first open.
@@ -234,7 +237,7 @@ export function LiveSessionMapWebView({ style }: Props) {
       return;
     }
 
-    const script = `window.updateRoute(${JSON.stringify(routeCoordinates)}, ${JSON.stringify(displayCoordinate)}, ${currentHeading ?? 'null'}, ${mapRecenterToken}, ${mapFollowEnabled}); true;`;
+    const script = `window.updateRoute(${JSON.stringify(routeForMap)}, ${JSON.stringify(displayCoordinate)}, ${currentHeading ?? 'null'}, ${mapRecenterToken}, ${mapFollowEnabled}); true;`;
     webRef.current.injectJavaScript(script);
   };
 
@@ -272,7 +275,7 @@ export function LiveSessionMapWebView({ style }: Props) {
 
   useEffect(() => {
     pushRouteUpdate();
-  }, [routeCoordinates, displayCoordinate, currentHeading, mapRecenterToken, mapFollowEnabled]);
+  }, [routeForMap, displayCoordinate, currentHeading, mapRecenterToken, mapFollowEnabled]);
 
   useEffect(() => {
     pushStyleUpdate();

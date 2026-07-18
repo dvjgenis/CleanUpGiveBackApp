@@ -1,19 +1,21 @@
 # Backend
 
-Planned backend services for Clean Up - Give Back. Each domain has its own folder and matching docs under `docs/backend/context/`.
+Backend services for Clean Up - Give Back. Each domain has its own folder and matching docs under `docs/backend/context/`.
 
-| Service | Folder | Domain doc |
-|---------|--------|------------|
-| Map & GPS tracking | [`maps/`](maps/) | [maps.md](../docs/backend/context/maps.md) |
-| Payments & donations | [`payments/`](payments/) | [payments.md](../docs/backend/context/payments.md) |
-| Sessions, photos, activity log | [`sessions/`](sessions/) | [sessions.md](../docs/backend/context/sessions.md) |
+| Service | Folder | Domain doc | Status |
+|---------|--------|------------|--------|
+| Sessions, photos, activity log | [`sessions/`](sessions/) | [sessions.md](../docs/backend/context/sessions.md) | **Live** on Fly (`https://cleanup-sessions.fly.dev`) |
+| Map & GPS tracking | [`maps/`](maps/) | [maps.md](../docs/backend/context/maps.md) | Scaffold — GPS is client-owned; route persisted on session finalize |
+| Payments & donations | [`payments/`](payments/) | [payments.md](../docs/backend/context/payments.md) | Scaffold |
 
-## Status
+## Sessions API (live)
 
-Scaffold only — no runtime services yet. The mobile app currently uses HTML prototype screens without live APIs.
+Fastify + Prisma against Supabase Postgres. Deploy from `backend/sessions/` — see [sessions-api.md](../docs/backend/specs/sessions-api.md) and [supabase.md](../docs/supabase.md).
+
+List responses include `checkpointCount` / `photoCount` for Home dashboard hydration. Finalize accepts `status: under_review | invalid`.
 
 ## Next steps
 
-1. Define API specs in `docs/backend/specs/`
-2. Implement session service first (core product loop)
-3. Integrate maps and payments as dependencies of sessions/shop flows
+1. Keep sessions API as the core product loop; deploy after schema/API changes
+2. Payments service when Stripe is in scope
+3. Maps microservice remains deferred (client GPS + finalize polyline is enough for v1)

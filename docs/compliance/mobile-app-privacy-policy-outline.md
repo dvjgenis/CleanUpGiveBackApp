@@ -88,7 +88,8 @@
 
 - We only track location during active cleanup sessions
 - You will always see a clear indicator when location is being tracked
-- We do not track you in the background when sessions are off
+- While a session is active, we may use Always location so your route continues when the screen is locked; tracking stops when you end or cancel the session
+- We do not track you in the background when no session is active
 
 ### 11. Changes to this policy
 

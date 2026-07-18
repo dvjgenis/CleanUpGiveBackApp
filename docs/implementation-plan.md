@@ -39,7 +39,11 @@ Docs complete — see [ADR-004](adr/ADR-004-sessions-backend-supabase-fly.md), [
 - [x] Native session flow in `frontend/src/app/` — `expo-location`/`expo-camera` wired; GPS route + distance live in Expo Go
 - [ ] `backend/payments/` — shop checkout and donation processing
 - [ ] Replace remaining HTML prototype screens per [manifest.yaml](../frontend/design/figma/manifest.yaml) and [figma-to-native-handoff.md](frontend/specs/figma-to-native-handoff.md)
-- [ ] EAS dev-client builds (deferred — Expo Go sufficient for session test phase; `app.json` plugins already configured)
+- [x] One-click dual camera capture — [photo-checkpoint-dual-capture.md](frontend/specs/photo-checkpoint-dual-capture.md)
+- [x] Home dashboard session stats — chart + impact from `sessionStatsStore` — [home-dashboard-session-stats.md](frontend/specs/home-dashboard-session-stats.md)
+- [x] Session route replay on detail maps — [session-route-replay.md](frontend/specs/session-route-replay.md)
+- [x] Event calendar export — [event-calendar-export.md](frontend/specs/event-calendar-export.md)
+- [ ] EAS dev-client builds — run `eas build --profile development` from `frontend/` (see [accounts-and-access.md](accounts-and-access.md))
 
 ## Privacy & compliance
 
@@ -48,7 +52,8 @@ Docs complete — see [ADR-004](adr/ADR-004-sessions-backend-supabase-fly.md), [
 - [x] Figma Page 7 — pre-auth compliance screens (age-gate, parental consent, policy viewers)
 - [ ] Age-gate + parental consent backend (Supabase flags, parent verification state machine)
 - [ ] App Store Declared Age Range API integration (iOS / Google Play age signals)
-- [ ] Session-only geolocation enforcement (no background task when session inactive)
+- [x] Session-only geolocation enforcement — background GPS only while session active; stops on finalize
+- [x] Core tracking audit — Kalman + adaptive sampling, Always-while-active background GPS (`expo-task-manager`), sync-failure banners, missed-checkpoint → `invalid`, list `photoCount` for Home stats (see [session-tracking-expo-go.md](frontend/specs/session-tracking-expo-go.md) AC-32–36)
 - [ ] CCPA deletion/export endpoints + admin audit log
 - [ ] DPIA completed and signed off
 

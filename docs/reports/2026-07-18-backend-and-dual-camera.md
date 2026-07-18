@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-18  
 **Source:** Chat session (backend structure Q&A → Fastify/Prisma/Fly → dual-cam crash → App Store recommendation)  
-**Status:** Guidance recorded; code still defaults to dual when multi-cam check passes (see Recommended follow-up).
+**Status:** Guidance recorded; **code now defaults to sequential** (2026-07-18 Session 181). DualCapture remains in file but is not mounted.
 
 ---
 
@@ -25,7 +25,7 @@ The monorepo splits backend work by domain under `backend/`. Matching living doc
 - **Auth:** Supabase JWT (JWKS / ES256) for user routes; admin approval via `X-Admin-Key`  
 - **Photos:** Client uploads to Supabase Storage; API stores paths only  
 
-**Note:** Root `backend/README.md` still says “scaffold only,” which is outdated relative to the live sessions service.
+**Note:** Root `backend/README.md` updated 2026-07-18 — sessions service marked live; maps/payments remain scaffold.
 
 ### Maps & payments
 
@@ -67,11 +67,11 @@ Rough expectations:
 - **iPhone:** typically A12+ (XS / XR and newer) for multi-cam sessions; older devices fail the check.  
 - **Android:** fragmented — many devices unsupported or flaky.  
 
-### Current UX path (`PhotoCaptureScreen`)
+### Current UX path (`PhotoCaptureScreen`) — updated 2026-07-18
 
-1. If check passes → mount **`DualCapture`** (back full-bleed + front PiP; one shutter fires both `capturePhotoToFile`s).  
-2. If session **setup** or capture throws in **JavaScript** → fall back to **`SequentialCapture`**.  
-3. **`SequentialCapture`:** front selfie first, then back cleanup photo (reliable single-camera path).
+1. **Always mount `SequentialCapture`** (front selfie → back progress); shutter gated on camera ready; capture errors Alert + inline.  
+2. **`DualCapture`** remains in the file (8s readiness timeout + JS error → sequential) but is **not rendered** until Fabric/Nitro HybridObject serialization is fixed.  
+3. Do **not** treat “try dual, catch in JS” as App Store-safe — native SIGABRT bypasses the fallback.
 
 ### Observed issue (dev build)
 
@@ -113,18 +113,19 @@ Sequential (clear two-step coachmarks, or auto-advance after selfie) is an accep
 |------|-----------|
 | `frontend/src/screens/PhotoCaptureScreen.tsx` | `DualCapture` / `SequentialCapture` |
 | `frontend/src/utils/checkMultiCamSupport.ts` | Pre-flight multi-cam check |
-| `docs/frontend/context/app.md` | `/photo-capture` route notes (still describes dual-as-default; update when code changes) |
+| `docs/frontend/context/app.md` | `/photo-capture` — sequential default documented |
+| `docs/frontend/specs/photo-checkpoint-dual-capture.md` | Spec aligned to sequential-first |
 | `docs/backend/context/sessions.md` | Live sessions API surface |
 | `backend/sessions/README.md` | Local + Fly deploy |
 
 ---
 
-## 6. Recommended follow-up (not done in this chat)
+## 6. Recommended follow-up
 
-- [ ] Change production default to sequential (`forceSequential` / `__DEV__`-only dual / feature flag).  
-- [ ] Update `docs/frontend/context/app.md` `/photo-capture` row to match.  
-- [ ] Optional: remote kill-switch for dual after release.  
-- [ ] Refresh outdated “scaffold only” wording in `backend/README.md`.
+- [x] Change production default to sequential (always mount `SequentialCapture`).  
+- [x] Update `docs/frontend/context/app.md` `/photo-capture` row to match.  
+- [ ] Optional: remote kill-switch if dual is re-enabled after release.  
+- [x] Refresh outdated “scaffold only” wording in `backend/README.md`.
 
 ---
 

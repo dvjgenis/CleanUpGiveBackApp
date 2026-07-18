@@ -45,11 +45,15 @@
       "expo-font",
       "expo-web-browser",
       "expo-dev-client",
+      "expo-task-manager",
       "@maplibre/maplibre-react-native",
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Allow Clean Up Give Back to use your location during cleanup sessions to show local weather and track your route."
+          "locationWhenInUsePermission": "Allow Clean Up Give Back to use your location during cleanup sessions to show local weather and track your route.",
+          "locationAlwaysAndWhenInUsePermission": "Allow Clean Up Give Back to track your cleanup route while a session is active, including when the screen is locked.",
+          "isIosBackgroundLocationEnabled": true,
+          "isAndroidBackgroundLocationEnabled": true
         }
       ],
       [
@@ -73,6 +77,13 @@
         {
           "microphonePermission": false,
           "recordAudioAndroid": false
+        }
+      ],
+      "expo-dual-camera",
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "Allow Clean Up Give Back to add volunteer events to your calendar."
         }
       ]
     ],

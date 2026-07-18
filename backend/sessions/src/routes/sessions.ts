@@ -44,7 +44,10 @@ function serializeSession(session: {
   route: Prisma.JsonValue;
   status: SessionStatus;
   createdAt: Date;
+  _count?: { checkpoints: number };
 }) {
+  const checkpointCount = session._count?.checkpoints ?? 0;
+
   return {
     id: session.id,
     userId: session.userId,
@@ -58,6 +61,8 @@ function serializeSession(session: {
     route: session.route,
     status: session.status,
     createdAt: session.createdAt.toISOString(),
+    checkpointCount,
+    photoCount: checkpointCount * 2,
   };
 }
 
@@ -196,6 +201,11 @@ export async function registerSessionRoutes(app: FastifyInstance) {
         orderBy: { createdAt: 'desc' },
         take: Math.min(Number(limit) || 50, 100),
         skip: Number(offset) || 0,
+        include: {
+          _count: {
+            select: { checkpoints: true },
+          },
+        },
       });
 
       return { sessions: sessions.map(serializeSession) };

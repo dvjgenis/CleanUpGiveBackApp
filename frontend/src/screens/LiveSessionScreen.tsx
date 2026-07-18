@@ -7,12 +7,10 @@ import {
   NotoSans_500Medium,
   NotoSans_600SemiBold,
 } from '@expo-google-fonts/noto-sans';
-import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
-  Image,
-  Modal,
   StyleSheet,
   Text,
   View,
@@ -21,28 +19,18 @@ import Animated from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Compass } from '@/components/ui/Compass';
 import { SessionSetupBackChevronIcon } from '@/components/session-setup/icons/SessionSetupBackChevronIcon';
-import { FreeTrialModal } from '@/features/session-tracking/components/FreeTrialModal';
 import { LiveSessionMap } from '@/features/session-tracking/components/LiveSessionMap';
-import { MapTypesSheet } from '@/features/session-tracking/components/MapTypesSheet';
+import { MapLayerPicker } from '@/features/session-tracking/components/MapLayerPicker';
 import { TrackerActionButton } from '@/features/session-tracking/components/TrackerActionButton';
 import { LocationPinIcon } from '@/features/session-tracking/components/icons/LocationPinIcon';
 import { TrackerEndSessionIcon } from '@/features/session-tracking/components/icons/TrackerEndSessionIcon';
-import { alertPhotoCheckpointDue } from '@/utils/photoCheckpointAlert';
 import { TrackerLayersIcon } from '@/features/session-tracking/components/icons/TrackerLayersIcon';
 import { RouteIcon } from '@/features/session-tracking/components/icons/RouteIcon';
 import { TrackerMyLocationIcon } from '@/features/session-tracking/components/icons/TrackerMyLocationIcon';
 import { TrackerSubmitPhotoIcon } from '@/features/session-tracking/components/icons/TrackerSubmitPhotoIcon';
-import { WeatherConditionIcon } from '@/features/session-tracking/components/icons/WeatherConditionIcon';
-import {
-  TrackerMapDarkIcon,
-  TrackerMapLightIcon,
-} from '@/features/session-tracking/components/icons/TrackerMapThemeIcons';
-import { ChevronLeftIcon } from '@/features/session-tracking/components/icons/ChevronLeftIcon';
-import { ChevronRightIcon } from '@/features/session-tracking/components/icons/ChevronRightIcon';
-import { CloseIcon } from '@/features/session-tracking/components/icons/CloseIcon';
+import { TrackerWeatherIcon } from '@/features/session-tracking/components/icons/TrackerWeatherIcon';
 import {
   formatCheckpointDue,
-  formatCountdown,
   formatElapsed,
 } from '@/features/session-tracking/mocks/session';
 import { formatSubmittedCheckpointCount, shouldShowCheckpointSubmissionCount } from '@/features/session-tracking/utils/sessionFormat';
@@ -51,20 +39,12 @@ import {
   ensureLocationWatching,
   ensureLiveSessionTicking,
   getCheckpointProgress,
+  isCheckpointMissed,
   requestLiveSessionMapRecenter,
   setLiveSessionMapLayer,
   toggleLiveSessionMapFollow,
   useLiveSession,
 } from '@/features/session-tracking/liveSessionStore';
-import {
-  getFreeTrialSecondsRemaining,
-  isFreeTrialExpired,
-  useTrackerHasPaid,
-} from '@/features/session-tracking/trackerPaymentStore';
-import {
-  toggleManualMapTheme,
-  useEffectiveMapTheme,
-} from '@/features/session-tracking/mapThemeStore';
 import { useLiveWeather } from '@/features/session-tracking/hooks/useLiveWeather';
 import { useLiveSessionMapReveal } from '@/features/session-tracking/hooks/useLiveSessionMapReveal';
 import { colors, radius } from '@/features/session-tracking/tokens';
@@ -106,12 +86,13 @@ function TrackerBackButton({ onPress }: { onPress: () => void }) {
 
 function TrackerCompassControl() {
   const { currentHeading } = useLiveSession();
+
   return (
     <Compass
       size={48}
       borderColor={C.borderOutline}
       backgroundColor={C.textOnPrimary}
-      headingDegrees={currentHeading}
+      heading={currentHeading}
     />
   );
 }
@@ -120,30 +101,17 @@ function MapToolButton({
   children,
   onPress,
   accessibilityLabel,
-  active = false,
 }: {
   children: React.ReactNode;
   onPress?: () => void;
   accessibilityLabel: string;
-  /** Selected / on state — brand primary border + mint fill. */
-  active?: boolean;
 }) {
-  const [pressed, setPressed] = useState(false);
-
   return (
     <AnimatedPressable
-      style={[
-        s.mapToolBtn,
-        active && s.mapToolBtnActive,
-        pressed && s.mapToolBtnPressed,
-      ]}
-      scaleTo={0.96}
+      style={s.mapToolBtn}
+      scaleTo={0.98}
       onPress={onPress}
-      onPressIn={() => setPressed(true)}
-      onPressOut={() => setPressed(false)}
-      hitSlop={14}
       accessibilityRole="button"
-      accessibilityState={{ selected: active }}
       accessibilityLabel={accessibilityLabel}
     >
       {children}
@@ -154,34 +122,15 @@ function MapToolButton({
 /** PRD §6.11 · Figma `session_setup_guide` live tracker (`251:439`). */
 export function LiveSessionScreen() {
   const router = useRouter();
-  const { from } = useLocalSearchParams<{ from?: string }>();
-  const {
-    isActive,
-    elapsedSeconds,
-    checkpointSecondsRemaining,
-    distanceMiles,
-    submittedCheckpoints,
-    mapLayer,
-    mapFollowEnabled,
-  } = useLiveSession();
-  const hasPaid = useTrackerHasPaid();
-  const mapTheme = useEffectiveMapTheme();
+  const { elapsedSeconds, checkpointSecondsRemaining, distanceMiles, submittedCheckpoints, mapLayer, mapFollowEnabled, sessionSyncWarning, backgroundLocationEnabled } =
+    useLiveSession();
+  const [mapLayerPickerVisible, setMapLayerPickerVisible] = useState(false);
   const { mapRevealStyle, chromeStyle } = useLiveSessionMapReveal();
   const submittedCheckpointCount = submittedCheckpoints.length;
   const showSubmissionCount = shouldShowCheckpointSubmissionCount(submittedCheckpoints);
   const submittedCheckpointLabel = formatSubmittedCheckpointCount(submittedCheckpointCount);
-  const {
-    placeLabel,
-    temperatureLabel,
-    weatherIcon,
-    isLoading: isWeatherLoading,
-  } = useLiveWeather();
-  const [mapTypesVisible, setMapTypesVisible] = useState(false);
-  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
-  /** Pay Later dismisses the paywall for this session mount so it does not reappear every tick. */
-  const [freeTrialDismissed, setFreeTrialDismissed] = useState(false);
-  /** Prevents repeating sound/haptic/navigation while the countdown stays at 0. */
-  const checkpointDueAlertFiredRef = useRef(false);
+  const { placeLabel, temperatureLabel, isLoading: isWeatherLoading } = useLiveWeather();
+
   const [fontsLoaded] = useFonts({
     NotoSans_400Regular,
     NotoSans_500Medium,
@@ -191,33 +140,24 @@ export function LiveSessionScreen() {
   });
 
   const checkpointProgress = getCheckpointProgress(checkpointSecondsRemaining);
-  const freeTrialSecondsRemaining = getFreeTrialSecondsRemaining(elapsedSeconds);
-  const showFreeTrialCountdown = !hasPaid && !isFreeTrialExpired(elapsedSeconds);
-  const showFreeTrialPaywall =
-    !hasPaid && !freeTrialDismissed && isFreeTrialExpired(elapsedSeconds);
 
   useEffect(() => {
-    if (!isActive) {
-      return;
-    }
     void ensureLocationWatching();
     ensureLiveSessionTicking();
-  }, [isActive]);
+  }, []);
 
   useEffect(() => {
-    if (checkpointSecondsRemaining > 0) {
-      checkpointDueAlertFiredRef.current = false;
-      return;
+    if (checkpointSecondsRemaining === 0) {
+      router.push('/photo-checkpoint');
     }
-
-    if (checkpointSecondsRemaining !== 0 || checkpointDueAlertFiredRef.current) {
-      return;
-    }
-
-    checkpointDueAlertFiredRef.current = true;
-    void alertPhotoCheckpointDue();
-    router.push('/photo-checkpoint');
   }, [checkpointSecondsRemaining, router]);
+
+  useEffect(() => {
+    if (isCheckpointMissed()) {
+      finalizeLiveSession({ status: 'invalid' });
+      router.replace('/missed-checkpoint');
+    }
+  }, [elapsedSeconds, router]);
 
   if (!fontsLoaded) {
     return <View style={s.root} />;
@@ -232,7 +172,7 @@ export function LiveSessionScreen() {
       <SafeAreaView style={s.overlay} edges={['top', 'bottom']} pointerEvents="box-none">
         <Animated.View style={[s.main, chromeStyle]} pointerEvents="box-none">
           <View style={s.navbar}>
-            <TrackerBackButton onPress={() => from === 'onboarding' ? router.replace('/') : router.back()} />
+            <TrackerBackButton onPress={() => router.replace('/')} />
 
             <View style={s.locationPill}>
               <View style={s.locationRow}>
@@ -243,7 +183,7 @@ export function LiveSessionScreen() {
               </View>
               <View style={s.pillDivider} />
               <View style={s.temperatureRow}>
-                <WeatherConditionIcon condition={weatherIcon} color={C.textTertiary} size={18} />
+                <TrackerWeatherIcon color={C.textTertiary} />
                 <Text style={s.locationText}>
                   {isWeatherLoading ? '…' : temperatureLabel}
                 </Text>
@@ -252,6 +192,20 @@ export function LiveSessionScreen() {
 
             <TrackerCompassControl />
           </View>
+
+          {sessionSyncWarning ? (
+            <View style={s.syncBanner} accessibilityRole="alert">
+              <Text style={s.syncBannerText}>{sessionSyncWarning}</Text>
+            </View>
+          ) : null}
+
+          {!backgroundLocationEnabled && !sessionSyncWarning ? (
+            <View style={s.syncBanner}>
+              <Text style={s.syncBannerText}>
+                Route tracks while the app is open. Allow Always location to continue when locked.
+              </Text>
+            </View>
+          ) : null}
 
           <View style={s.inProgressSection} pointerEvents="box-none">
             <View style={s.timerBlock} pointerEvents="box-none">
@@ -271,47 +225,29 @@ export function LiveSessionScreen() {
                   <Text style={s.distanceLabel}>Distance:</Text>
                   <Text style={s.distanceValue}>{formatDistanceMiles(distanceMiles)} miles</Text>
                 </View>
-                {showFreeTrialCountdown && (
-                  <View
-                    style={s.freeTrialRow}
-                    accessibilityLabel={`Free hour left ${formatCountdown(freeTrialSecondsRemaining)}`}
-                  >
-                    <Text style={s.freeTrialLabel}>Free hour left:</Text>
-                    <Text style={s.freeTrialValue}>
-                      {formatCountdown(freeTrialSecondsRemaining)}
-                    </Text>
-                  </View>
-                )}
               </View>
             </View>
 
             <View style={s.bottomSection} pointerEvents="box-none">
               <View style={s.checkpointSection} pointerEvents="box-none">
-                <View style={s.mapTools} collapsable={false}>
-                  <MapToolButton
-                    accessibilityLabel="Map layers"
-                    onPress={() => setMapTypesVisible(true)}
-                  >
-                    <TrackerLayersIcon color={C.textTertiary} />
-                  </MapToolButton>
-                  <MapToolButton
-                    accessibilityLabel={
-                      mapTheme === 'dark'
-                        ? 'Switch Standard map to light mode'
-                        : 'Switch Standard map to dark mode'
-                    }
-                    active={mapTheme === 'dark'}
-                    onPress={toggleManualMapTheme}
-                  >
-                    {mapTheme === 'dark' ? (
-                      <TrackerMapDarkIcon color={C.primary} size={22} />
-                    ) : (
-                      <TrackerMapLightIcon color={C.textTertiary} size={22} />
+                <View style={s.mapTools}>
+                  <View style={s.mapLayerControl}>
+                    {mapLayerPickerVisible && (
+                      <MapLayerPicker
+                        currentLayer={mapLayer}
+                        onSelect={setLiveSessionMapLayer}
+                        onClose={() => setMapLayerPickerVisible(false)}
+                      />
                     )}
-                  </MapToolButton>
+                    <MapToolButton
+                      accessibilityLabel="Map layers"
+                      onPress={() => setMapLayerPickerVisible((visible) => !visible)}
+                    >
+                      <TrackerLayersIcon color={C.textTertiary} />
+                    </MapToolButton>
+                  </View>
                   <MapToolButton
                     accessibilityLabel={mapFollowEnabled ? 'Stop following location' : 'Follow my location'}
-                    active={mapFollowEnabled}
                     onPress={toggleLiveSessionMapFollow}
                   >
                     <RouteIcon color={mapFollowEnabled ? C.primary : C.textTertiary} />
@@ -325,39 +261,22 @@ export function LiveSessionScreen() {
                 </View>
 
                 <View style={s.checkpointCard}>
-                  {showSubmissionCount && (() => {
-                    const MAX_VISIBLE = 5;
-                    const startIndex = Math.max(0, submittedCheckpoints.length - MAX_VISIBLE);
-                    const visible = submittedCheckpoints.slice(startIndex);
-                    const overflow = submittedCheckpoints.length - MAX_VISIBLE;
-                    return (
-                      <View
-                        style={s.photoStack}
-                        accessibilityLabel={`${submittedCheckpointCount} checkpoint photos submitted`}
-                      >
-                        {visible.map((checkpoint, i) => (
-                          <AnimatedPressable
-                            key={checkpoint.id}
-                            style={[s.photoThumbWrap, i > 0 && s.photoThumbOverlap]}
-                            scaleTo={0.95}
-                            onPress={() => setSelectedPhotoIndex((startIndex + i) * 2)}
-                            accessibilityRole="button"
-                            accessibilityLabel="View checkpoint photo"
-                          >
-                            <Image
-                              source={{ uri: checkpoint.progressUri }}
-                              style={s.photoThumb}
-                            />
-                          </AnimatedPressable>
-                        ))}
-                        {overflow > 0 && (
-                          <View style={[s.photoOverflow, s.photoThumbOverlap]}>
-                            <Text style={s.photoOverflowText}>+{overflow}</Text>
-                          </View>
-                        )}
-                      </View>
-                    );
-                  })()}
+                  <View style={s.checkpointHeader}>
+                    <Text style={s.checkpointTitle}>Checkpoint Photo</Text>
+                    {showSubmissionCount && (
+                      <Text style={s.checkpointSubmittedCount}>{submittedCheckpointLabel}</Text>
+                    )}
+                  </View>
+                  {showSubmissionCount && (
+                    <View
+                      style={s.checkpointDots}
+                      accessibilityLabel={`${submittedCheckpointCount} checkpoint photos submitted`}
+                    >
+                      {submittedCheckpoints.map((checkpoint) => (
+                        <View key={checkpoint.id} style={s.checkpointDot} />
+                      ))}
+                    </View>
+                  )}
                   <View style={s.nextPhotoBlock}>
                     <View style={s.nextPhotoRow}>
                       <Text style={s.nextPhotoLabel}>Next photo due in:</Text>
@@ -384,7 +303,7 @@ export function LiveSessionScreen() {
                   variant="secondary"
                   onPress={() => {
                     finalizeLiveSession();
-                    router.push('/session-feedback');
+                    router.push('/submission-confirmation');
                   }}
                   icon={<TrackerEndSessionIcon color={C.textTertiary} size={24} />}
                 />
@@ -393,112 +312,6 @@ export function LiveSessionScreen() {
           </View>
         </Animated.View>
       </SafeAreaView>
-
-      <MapTypesSheet
-        visible={mapTypesVisible}
-        selectedType={mapLayer}
-        onSelect={setLiveSessionMapLayer}
-        onClose={() => setMapTypesVisible(false)}
-      />
-
-      <Modal
-        visible={showFreeTrialPaywall}
-        animationType="fade"
-        presentationStyle="fullScreen"
-        onRequestClose={() => setFreeTrialDismissed(true)}
-      >
-        <FreeTrialModal
-          onContinue={() =>
-            router.push('/checkout?mode=tracker&returnTo=live-session' as Href)
-          }
-          onPayLater={() => setFreeTrialDismissed(true)}
-        />
-      </Modal>
-
-      {(() => {
-        const allPhotos = submittedCheckpoints.flatMap((cp) => [
-          { uri: cp.selfieUri, label: 'Selfie', capturedAt: cp.capturedAt },
-          { uri: cp.progressUri, label: 'Cleanup Area', capturedAt: cp.capturedAt },
-        ]);
-        const photo = selectedPhotoIndex !== null ? allPhotos[selectedPhotoIndex] : null;
-        const hasPrev = selectedPhotoIndex !== null && selectedPhotoIndex > 0;
-        const hasNext = selectedPhotoIndex !== null && selectedPhotoIndex < allPhotos.length - 1;
-        return (
-          <Modal
-            visible={selectedPhotoIndex !== null}
-            transparent={false}
-            animationType="fade"
-            onRequestClose={() => setSelectedPhotoIndex(null)}
-          >
-            {photo !== null && (
-              <View style={s.photoModalRoot}>
-                <Image
-                  source={{ uri: photo.uri }}
-                  style={StyleSheet.absoluteFill}
-                  resizeMode="cover"
-                  accessibilityIgnoresInvertColors
-                />
-
-                {/* Top bar: label + timestamp + counter + close */}
-                {(() => {
-                  const ts = new Date(photo.capturedAt);
-                  const timeLabel = ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                  const dateLabel = ts.toLocaleDateString([], { month: 'short', day: 'numeric' });
-                  return (
-                <View style={s.photoModalTopBar}>
-                  <View style={s.photoModalChip}>
-                    <Text style={s.photoModalChipText}>{photo.label}</Text>
-                  </View>
-                  <View style={s.photoModalChip}>
-                    <Text style={s.photoModalChipText}>{dateLabel} · {timeLabel}</Text>
-                  </View>
-                  <View style={s.photoModalChip}>
-                    <Text style={s.photoModalChipText}>
-                      {(selectedPhotoIndex ?? 0) + 1} / {allPhotos.length}
-                    </Text>
-                  </View>
-                  <AnimatedPressable
-                    style={s.photoModalClose}
-                    scaleTo={0.92}
-                    onPress={() => setSelectedPhotoIndex(null)}
-                    accessibilityRole="button"
-                    accessibilityLabel="Close"
-                  >
-                    <CloseIcon color={C.textOnPrimary} size={20} strokeWidth={2} />
-                  </AnimatedPressable>
-                </View>
-                  );
-                })()}
-
-                {/* Side nav arrows */}
-                {hasPrev && (
-                  <AnimatedPressable
-                    style={s.photoNavLeft}
-                    scaleTo={0.92}
-                    onPress={() => setSelectedPhotoIndex((selectedPhotoIndex ?? 1) - 1)}
-                    accessibilityRole="button"
-                    accessibilityLabel="Previous photo"
-                  >
-                    <ChevronLeftIcon color={C.textOnPrimary} size={22} strokeWidth={2.5} />
-                  </AnimatedPressable>
-                )}
-                {hasNext && (
-                  <AnimatedPressable
-                    style={s.photoNavRight}
-                    scaleTo={0.92}
-                    onPress={() => setSelectedPhotoIndex((selectedPhotoIndex ?? 0) + 1)}
-                    accessibilityRole="button"
-                    accessibilityLabel="Next photo"
-                  >
-                    <ChevronRightIcon color={C.textOnPrimary} size={22} strokeWidth={2.5} />
-                  </AnimatedPressable>
-                )}
-              </View>
-            )}
-          </Modal>
-        );
-      })()}
-
     </View>
   );
 }
@@ -527,7 +340,7 @@ const s = StyleSheet.create({
   main: {
     flex: 1,
     paddingHorizontal: 16,
-    gap: 20,
+    gap: 33,
   },
 
   navbar: {
@@ -535,6 +348,22 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: 34,
     marginTop: 8,
+  },
+
+  syncBanner: {
+    backgroundColor: C.textOnPrimary,
+    borderWidth: 1,
+    borderColor: C.borderOutline,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+
+  syncBannerText: {
+    fontFamily: 'NotoSans_400Regular',
+    fontSize: 12,
+    lineHeight: 18,
+    color: C.textTertiary,
   },
 
   backBtn: {
@@ -594,12 +423,12 @@ const s = StyleSheet.create({
 
   inProgressSection: {
     flex: 1,
-    gap: 40,
+    gap: 74,
   },
 
   timerBlock: {
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
   },
 
   statusBadge: {
@@ -626,16 +455,16 @@ const s = StyleSheet.create({
     borderWidth: 3,
     borderColor: C.accentLime,
     borderRadius: radius.md,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
+    paddingHorizontal: 35,
+    paddingVertical: 22,
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
   },
 
   timerText: {
     fontFamily: 'NotoSans_600SemiBold',
-    fontSize: 42,
-    lineHeight: 56,
+    fontSize: 50,
+    lineHeight: 68,
     letterSpacing: 5,
     color: C.textPrimary,
     textAlign: 'center',
@@ -659,24 +488,6 @@ const s = StyleSheet.create({
     color: C.textTertiary,
   },
 
-  freeTrialRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-
-  freeTrialLabel: {
-    fontFamily: 'IBMPlexSans_500Medium',
-    fontSize: 14,
-    color: C.textTertiary,
-  },
-
-  freeTrialValue: {
-    fontFamily: 'IBMPlexSans_600SemiBold',
-    fontSize: 14,
-    color: C.primary,
-  },
-
   bottomSection: {
     flex: 1,
     justifyContent: 'flex-end',
@@ -692,8 +503,6 @@ const s = StyleSheet.create({
     alignSelf: 'flex-end',
     gap: 10,
     width: 44,
-    zIndex: 20,
-    elevation: 20,
   },
 
   mapLayerControl: {
@@ -710,18 +519,6 @@ const s = StyleSheet.create({
     backgroundColor: C.bgApp,
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 20,
-    elevation: 20,
-  },
-
-  mapToolBtnPressed: {
-    backgroundColor: '#f7fff1',
-    borderColor: C.primary,
-  },
-
-  mapToolBtnActive: {
-    backgroundColor: '#f7fff1',
-    borderColor: C.primary,
   },
 
   checkpointCard: {
@@ -731,117 +528,40 @@ const s = StyleSheet.create({
     borderRadius: radius.md,
     paddingHorizontal: 23,
     paddingVertical: 20,
-    gap: 16,
+    gap: 25,
+    minHeight: 127,
   },
 
-  photoStack: {
+  checkpointHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
   },
 
-  photoThumbWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: C.textOnPrimary,
-    overflow: 'hidden',
+  checkpointTitle: {
+    fontFamily: 'NotoSans_400Regular',
+    fontSize: 12,
+    color: C.textPrimary,
   },
 
-  photoThumbOverlap: {
-    marginLeft: -14,
-  },
-
-  photoThumb: {
-    width: 44,
-    height: 44,
-    borderRadius: 6,
-    backgroundColor: C.borderOutline,
-  },
-
-  photoOverflow: {
-    width: 44,
-    height: 44,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: C.textOnPrimary,
-    backgroundColor: C.borderOutline,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  photoOverflowText: {
+  checkpointSubmittedCount: {
     fontFamily: 'NotoSans_500Medium',
     fontSize: 12,
-    color: C.textTertiary,
+    color: C.primary,
   },
 
-  photoModalRoot: {
-    flex: 1,
-    backgroundColor: '#000',
-  },
-
-  photoModalTopBar: {
-    position: 'absolute',
-    top: 60,
-    left: 16,
-    right: 16,
+  checkpointDots: {
     flexDirection: 'row',
     alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 8,
-    zIndex: 20,
+    gap: 6,
   },
 
-  photoModalChip: {
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    borderRadius: 9999,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-
-  photoModalChipText: {
-    fontFamily: 'NotoSans_600SemiBold',
-    fontSize: 13,
-    color: C.textOnPrimary,
-  },
-
-  photoModalClose: {
-    marginLeft: 'auto',
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  photoNavLeft: {
-    position: 'absolute',
-    left: 12,
-    top: '50%',
-    marginTop: -22,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 20,
-  },
-
-  photoNavRight: {
-    position: 'absolute',
-    right: 12,
-    top: '50%',
-    marginTop: -22,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 20,
+  checkpointDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: C.primary,
   },
 
   nextPhotoBlock: {

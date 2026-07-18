@@ -20,6 +20,8 @@ export type ApiSession = {
   route: number[][] | null;
   status: ApiSessionStatus;
   createdAt: string;
+  checkpointCount?: number;
+  photoCount?: number;
 };
 
 export type CreateSessionInput = {

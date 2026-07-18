@@ -20,6 +20,10 @@ export type EventDetail = {
   statusLabel: string;
   registeredCount: number;
   dateTimeLabel: string;
+  /** ISO 8601 local start for calendar export. */
+  calendarStartIso: string;
+  /** ISO 8601 local end for calendar export. */
+  calendarEndIso: string;
   addressShort: string;
   overview: string;
   organizer: EventOrganizer;
@@ -59,6 +63,8 @@ export const downtownRiverfrontEvent: EventDetail = {
   statusLabel: 'UPCOMING',
   registeredCount: 14,
   dateTimeLabel: 'July 15 at 5PM',
+  calendarStartIso: '2026-07-15T17:00:00',
+  calendarEndIso: '2026-07-15T19:00:00',
   addressShort: '600 E Algonquin Rd, Des Plaines, IL, 60018',
   overview:
     "Join us for a community clean-up at the downtown riverfront! Let's come together to beautify our local waterways and enjoy a day of teamwork and fun. Bring your friends and family, and help us make a difference!",
@@ -83,6 +89,8 @@ const EVENT_DETAILS: Record<string, EventDetail> = {
     title: 'McKinley Road Clean-up',
     registeredCount: 9,
     dateTimeLabel: 'July 27 at 9AM',
+    calendarStartIso: '2026-07-27T09:00:00',
+    calendarEndIso: '2026-07-27T11:00:00',
     addressShort: '1425 N McKinley Rd, Des Plaines, IL, 60016',
     locationAddress: '1425 N McKinley Rd, Des Plaines, IL, 60016',
     coordinate: { latitude: 42.0512, longitude: -87.9005 },
@@ -98,6 +106,8 @@ const EVENT_DETAILS: Record<string, EventDetail> = {
     title: 'Mt Prospect Trail Clean-up',
     registeredCount: 11,
     dateTimeLabel: 'August 3 at 1PM',
+    calendarStartIso: '2026-08-03T13:00:00',
+    calendarEndIso: '2026-08-03T15:30:00',
     addressShort: '2200 E Algonquin Rd, Mt Prospect, IL, 60056',
     locationAddress: '2200 E Algonquin Rd, Mt Prospect, IL, 60056',
     coordinate: { latitude: 42.0458, longitude: -87.9372 },
@@ -113,6 +123,8 @@ const EVENT_DETAILS: Record<string, EventDetail> = {
     title: 'Glenview Central Clean-up',
     registeredCount: 6,
     dateTimeLabel: 'August 10 at 8:30AM',
+    calendarStartIso: '2026-08-10T08:30:00',
+    calendarEndIso: '2026-08-10T10:30:00',
     addressShort: '800 Central Rd, Glenview, IL, 60025',
     locationAddress: '800 Central Rd, Glenview, IL, 60025',
     coordinate: { latitude: 42.0696, longitude: -87.7874 },

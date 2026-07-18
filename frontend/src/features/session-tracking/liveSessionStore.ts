@@ -8,8 +8,10 @@ import {
 } from '@/lib/sessionsApi';
 import { uploadCheckpointPhotos } from '@/lib/uploadCheckpointPhotos';
 
+import { BACKGROUND_LOCATION_TASK } from './backgroundLocationConstants';
 import { recordCompletedSession } from './recentSessionsStore';
 import { cacheCompletedSession } from './completedSessionCache';
+import { recordSessionStatFromSnapshot } from './sessionStatsStore';
 import { DEFAULT_MAP_LAYER, type MapLayerType } from './utils/mapStyles';
 import { computeSessionDurationSeconds } from './utils/sessionFormat';
 import {
@@ -20,17 +22,30 @@ import {
   type RouteCoordinate,
 } from './utils/geo';
 import {
+  createLocationKalmanFilter,
+  resetLocationKalmanFilter,
+  updateLocationKalman,
+  type LocationKalmanFilter,
+} from './utils/locationKalman';
+import {
   deltaMetersBetween,
+  detectMotionState,
   isAcceptableAccuracy,
-  MAX_ACCEPTABLE_ACCURACY_METERS,
+  resolveAccuracyMeters,
   resolveCompassHeading,
   resolveHeading,
   shouldAppendRoutePoint,
+  simplifyRouteForDisplay,
   smoothCoordinateEma,
   smoothHeadingEma,
+  type MotionState,
+  type RouteSample,
 } from './utils/routeFiltering';
 
 export const PHOTO_CHECKPOINT_INTERVAL_SECONDS = 30 * 60;
+
+/** Grace after checkpoint deadline before session is marked invalid (ms). */
+export const CHECKPOINT_MISS_GRACE_MS = 5 * 60 * 1000;
 
 export type LiveSessionSetup = {
   activity: string;
@@ -56,10 +71,9 @@ export type CompletedSessionSnapshot = {
   elapsedSeconds: number;
   distanceMiles: number;
   routeCoordinates: RouteCoordinate[];
+  routeSamples: RouteSample[];
   submittedCheckpoints: PhotoCheckpointSubmission[];
-  /** Basemap layer the user had selected when the session ended, so the
-   * route replay (session detail, submission confirmation) opens on the
-   * same layer instead of always resetting to the default. */
+  /** Basemap layer at session end — preserved for route replay screens. */
   mapLayer: MapLayerType;
 };
 
@@ -73,6 +87,8 @@ type LiveSessionState = {
   distanceMiles: number;
   setup: LiveSessionSetup | null;
   routeCoordinates: RouteCoordinate[];
+  routeSamples: RouteSample[];
+  displayRouteCoordinates: RouteCoordinate[];
   currentCoordinate: RouteCoordinate | null;
   displayCoordinate: RouteCoordinate | null;
   currentHeading: number | null;
@@ -80,6 +96,8 @@ type LiveSessionState = {
   mapFollowEnabled: boolean;
   mapLayer: MapLayerType;
   submittedCheckpoints: PhotoCheckpointSubmission[];
+  sessionSyncWarning: string | null;
+  backgroundLocationEnabled: boolean;
 };
 
 let state: LiveSessionState = {
@@ -92,6 +110,8 @@ let state: LiveSessionState = {
   distanceMiles: 0,
   setup: null,
   routeCoordinates: [],
+  routeSamples: [],
+  displayRouteCoordinates: [],
   currentCoordinate: null,
   displayCoordinate: null,
   currentHeading: null,
@@ -99,6 +119,8 @@ let state: LiveSessionState = {
   mapFollowEnabled: false,
   mapLayer: DEFAULT_MAP_LAYER,
   submittedCheckpoints: [],
+  sessionSyncWarning: null,
+  backgroundLocationEnabled: false,
 };
 
 let completedSessionSnapshot: CompletedSessionSnapshot | null = null;
@@ -106,10 +128,12 @@ let completedSessionSnapshot: CompletedSessionSnapshot | null = null;
 let tickInterval: ReturnType<typeof setInterval> | null = null;
 let locationSubscription: Location.LocationSubscription | null = null;
 let headingSubscription: Location.LocationSubscription | null = null;
-/** True once the device compass has delivered at least one reading for the
- * active session — GPS-derived heading is only used as a fallback until then. */
-let compassAvailable = false;
 let lastAcceptedTimestamp: number | null = null;
+let lastRouteAppendTimestamp: number | null = null;
+let lastProcessedSampleTimestamp: number | null = null;
+let motionState: MotionState = 'walking';
+let locationKalman: LocationKalmanFilter = createLocationKalmanFilter();
+let compassAvailable = false;
 let lastHeadingNotifyMs = 0;
 const listeners = new Set<() => void>();
 
@@ -120,6 +144,14 @@ function notify() {
 function setState(patch: Partial<LiveSessionState>) {
   state = { ...state, ...patch };
   notify();
+}
+
+function setSessionSyncWarning(message: string | null) {
+  if (state.sessionSyncWarning === message) {
+    return;
+  }
+
+  setState({ sessionSyncWarning: message });
 }
 
 function deriveElapsedSeconds(startedAt: number | null): number {
@@ -173,29 +205,56 @@ function stopTicking() {
   tickInterval = null;
 }
 
+function buildDisplayRoute(routeCoordinates: RouteCoordinate[]): RouteCoordinate[] {
+  return simplifyRouteForDisplay(routeCoordinates);
+}
+
+function appendRouteSample(sample: RouteSample) {
+  const displayRouteCoordinates = buildDisplayRoute([...state.routeCoordinates, sample.coordinate]);
+  setState({
+    routeCoordinates: [...state.routeCoordinates, sample.coordinate],
+    routeSamples: [...state.routeSamples, sample],
+    displayRouteCoordinates,
+  });
+}
+
 function recordLocationSample(position: Location.LocationObject) {
   if (!state.isActive || state.startedAt == null) {
     return;
   }
 
-  const { latitude, longitude, accuracy, heading, speed } = position.coords;
   const sampleTimestamp = position.timestamp ?? Date.now();
-  const nextCoordinate = toRouteCoordinate(longitude, latitude);
+  if (
+    lastProcessedSampleTimestamp != null &&
+    sampleTimestamp <= lastProcessedSampleTimestamp
+  ) {
+    return;
+  }
+
+  lastProcessedSampleTimestamp = sampleTimestamp;
+
+  const { latitude, longitude, accuracy, heading, speed } = position.coords;
+  const resolvedAccuracy = resolveAccuracyMeters(accuracy);
+  const filteredCoordinate = updateLocationKalman(locationKalman, {
+    latitude,
+    longitude,
+    accuracyMeters: resolvedAccuracy,
+    timestampMs: sampleTimestamp,
+  });
+
   const previousCoordinate = state.currentCoordinate;
-  // The device compass (see `startHeadingWatching`) is the primary heading
-  // source once available — it updates independently of GPS movement, like
-  // a real compass. GPS-derived heading is only a fallback until then.
   const nextHeading = compassAvailable
     ? state.currentHeading
-    : resolveHeading({ heading, previous: previousCoordinate, current: nextCoordinate });
-  const nextDisplayCoordinate = smoothCoordinateEma(state.displayCoordinate, nextCoordinate);
+    : resolveHeading({
+        heading,
+        previous: previousCoordinate,
+        current: filteredCoordinate,
+      });
+  const nextDisplayCoordinate = smoothCoordinateEma(state.displayCoordinate, filteredCoordinate);
 
-  // Pin the map to the latest fix immediately, even before GPS accuracy
-  // settles — otherwise the tracker never centers on the user while the
-  // first fix(es) are still above `MAX_ACCEPTABLE_ACCURACY_METERS`. Route
-  // accumulation (distance, polyline) below still requires the accuracy gate.
+  // Pin the map to the latest fix immediately, even before GPS accuracy settles.
   setState({
-    currentCoordinate: nextCoordinate,
+    currentCoordinate: filteredCoordinate,
     displayCoordinate: nextDisplayCoordinate,
     currentHeading: nextHeading,
   });
@@ -208,46 +267,67 @@ function recordLocationSample(position: Location.LocationObject) {
   const deltaMs =
     lastAcceptedTimestamp != null ? sampleTimestamp - lastAcceptedTimestamp : 0;
   const deltaMetersFromLastFix = previousCoordinate
-    ? deltaMetersBetween(previousCoordinate, nextCoordinate)
+    ? deltaMetersBetween(previousCoordinate, filteredCoordinate)
     : 0;
 
-  const lastRoutePoint = state.routeCoordinates[state.routeCoordinates.length - 1];
-  if (!lastRoutePoint) {
+  const nextMotion = detectMotionState(speedMps, deltaMetersFromLastFix, deltaMs);
+  if (nextMotion !== motionState) {
+    motionState = nextMotion;
+    void restartForegroundLocationWatch();
+  }
+
+  const sample: RouteSample = {
+    coordinate: filteredCoordinate,
+    accuracyMeters: resolvedAccuracy,
+    speedMps,
+    heading: nextHeading,
+    timestampMs: sampleTimestamp,
+  };
+
+  if (!previousCoordinate) {
     lastAcceptedTimestamp = sampleTimestamp;
-    setState({ routeCoordinates: [nextCoordinate] });
+    lastRouteAppendTimestamp = sampleTimestamp;
+    setState({
+      routeCoordinates: [filteredCoordinate],
+      routeSamples: [sample],
+      displayRouteCoordinates: buildDisplayRoute([filteredCoordinate]),
+    });
     return;
   }
 
+  const lastRoutePoint = state.routeCoordinates[state.routeCoordinates.length - 1];
   const prevRoutePoint =
     state.routeCoordinates.length >= 2
       ? state.routeCoordinates[state.routeCoordinates.length - 2]
       : null;
-  const deltaMetersFromRoute = deltaMetersBetween(lastRoutePoint, nextCoordinate);
+  const deltaMetersFromRoute = deltaMetersBetween(lastRoutePoint, filteredCoordinate);
 
   if (
     shouldAppendRoutePoint({
       lastRoutePoint,
       prevRoutePoint,
-      candidate: nextCoordinate,
-      accuracyMeters: accuracy ?? MAX_ACCEPTABLE_ACCURACY_METERS,
+      candidate: filteredCoordinate,
+      accuracyMeters: resolvedAccuracy,
       speedMps,
       deltaMetersFromRoute,
       deltaMetersFromLastFix,
       deltaMs,
       sessionStartedAt: state.startedAt,
       sampleTimestamp,
+      lastRouteAppendTimestamp,
     })
   ) {
     const deltaMiles = haversineMiles(
       lastRoutePoint[1],
       lastRoutePoint[0],
-      latitude,
-      longitude,
+      filteredCoordinate[1],
+      filteredCoordinate[0],
     );
 
     lastAcceptedTimestamp = sampleTimestamp;
+    lastRouteAppendTimestamp = sampleTimestamp;
+    appendRouteSample(sample);
     setState({
-      routeCoordinates: [...state.routeCoordinates, nextCoordinate],
       distanceMiles: state.distanceMiles + deltaMiles,
     });
     return;
@@ -256,11 +336,52 @@ function recordLocationSample(position: Location.LocationObject) {
   lastAcceptedTimestamp = sampleTimestamp;
 }
 
-function stopLocationWatching() {
-  locationSubscription?.remove();
-  locationSubscription = null;
-  lastAcceptedTimestamp = null;
-  stopHeadingWatching();
+export function ingestBackgroundLocationSample(position: Location.LocationObject) {
+  recordLocationSample(position);
+}
+
+function getForegroundWatchOptions(): Location.LocationOptions {
+  const walking = motionState === 'walking';
+
+  return {
+    accuracy: Location.Accuracy.BestForNavigation,
+    timeInterval: walking ? 1000 : 3000,
+    distanceInterval: walking ? MIN_ROUTE_SAMPLE_METERS : MIN_ROUTE_SAMPLE_METERS * 3,
+    mayShowUserSettingsDialog: true,
+    ...(Location.ActivityType && {
+      activityType: Location.ActivityType.Fitness,
+      pausesUpdatesAutomatically: false,
+    }),
+  };
+}
+
+function getBackgroundWatchOptions(): Location.LocationTaskOptions {
+  return {
+    accuracy: Location.Accuracy.BestForNavigation,
+    timeInterval: 1000,
+    distanceInterval: MIN_ROUTE_SAMPLE_METERS,
+    showsBackgroundLocationIndicator: true,
+    foregroundService: {
+      notificationTitle: 'Clean Up Give Back',
+      notificationBody: 'Tracking your cleanup route',
+      notificationColor: '#009540',
+    },
+    ...(Location.ActivityType && {
+      activityType: Location.ActivityType.Fitness,
+      pausesUpdatesAutomatically: false,
+    }),
+  };
+}
+
+async function restartForegroundLocationWatch() {
+  if (!state.isActive || !locationSubscription) {
+    return;
+  }
+
+  locationSubscription.remove();
+  locationSubscription = await Location.watchPositionAsync(getForegroundWatchOptions(), (position) => {
+    recordLocationSample(position);
+  });
 }
 
 function handleCompassUpdate(reading: Location.LocationHeadingObject) {
@@ -275,10 +396,6 @@ function handleCompassUpdate(reading: Location.LocationHeadingObject) {
 
   compassAvailable = true;
   const newHeading = smoothHeadingEma(state.currentHeading, rawHeading);
-  // Gate heading updates to React: require both a meaningful angle change AND
-  // a minimum 100ms gap. The magnetometer fires at 30-60Hz; flooding
-  // useSyncExternalStore at that rate causes nested synchronous re-renders that
-  // exceed React's max update depth.
   const now = Date.now();
   const prevHeading = state.currentHeading ?? 0;
   const delta = Math.abs(((newHeading - prevHeading + 180) % 360 + 360) % 360 - 180);
@@ -289,76 +406,111 @@ function handleCompassUpdate(reading: Location.LocationHeadingObject) {
   setState({ currentHeading: newHeading });
 }
 
+async function startHeadingWatching() {
+  headingSubscription?.remove();
+  headingSubscription = null;
+
+  try {
+    headingSubscription = await Location.watchHeadingAsync(handleCompassUpdate);
+  } catch {
+    // Compass unavailable — GPS-derived heading in recordLocationSample is the fallback.
+  }
+}
+
 function stopHeadingWatching() {
   headingSubscription?.remove();
   headingSubscription = null;
   compassAvailable = false;
 }
 
-/** Subscribe to the device compass so the live marker's heading beam tracks
- * which way the phone is facing in real time, not just direction of travel. */
-async function startHeadingWatching() {
-  stopHeadingWatching();
-
+async function startBackgroundLocationUpdates(): Promise<boolean> {
   try {
-    headingSubscription = await Location.watchHeadingAsync(handleCompassUpdate);
-  } catch {
-    // Compass unavailable (e.g. simulator with no magnetometer) — GPS-derived
-    // heading in `recordLocationSample` remains the fallback.
+    const hasStarted = await Location.hasStartedLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
+    if (hasStarted) {
+      return true;
+    }
+
+    await Location.startLocationUpdatesAsync(BACKGROUND_LOCATION_TASK, getBackgroundWatchOptions());
+    return true;
+  } catch (error) {
+    console.warn('[location] background updates failed:', error);
+    return false;
   }
 }
 
-const LOCATION_WATCH_OPTIONS: Location.LocationOptions = {
-  accuracy: Location.Accuracy.BestForNavigation,
-  timeInterval: 1000,
-  distanceInterval: MIN_ROUTE_SAMPLE_METERS,
-  mayShowUserSettingsDialog: true,
-  ...(Location.ActivityType && {
-    activityType: Location.ActivityType.Fitness,
-    pausesUpdatesAutomatically: false,
-  }),
-};
+async function stopBackgroundLocationUpdates() {
+  try {
+    const hasStarted = await Location.hasStartedLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
+    if (hasStarted) {
+      await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
+    }
+  } catch (error) {
+    console.warn('[location] stop background updates failed:', error);
+  }
+}
+
+function stopLocationWatching() {
+  locationSubscription?.remove();
+  locationSubscription = null;
+  stopHeadingWatching();
+  void stopBackgroundLocationUpdates();
+  lastAcceptedTimestamp = null;
+  lastRouteAppendTimestamp = null;
+  lastProcessedSampleTimestamp = null;
+  motionState = 'walking';
+  resetLocationKalmanFilter(locationKalman);
+}
 
 async function startLocationWatching() {
   stopLocationWatching();
 
   const { status } = await Location.requestForegroundPermissionsAsync();
   if (status !== 'granted') {
+    setSessionSyncWarning('Location permission denied — route tracking is unavailable.');
     return;
   }
 
-  // Start the compass in parallel with the (slower) GPS fix below, rather
-  // than after it — compass readings arrive almost instantly, so this is
-  // what makes the heading beam appear right away instead of lagging a few
-  // seconds behind the first GPS fix.
+  let backgroundEnabled = false;
+  try {
+    const backgroundPermission = await Location.requestBackgroundPermissionsAsync();
+    backgroundEnabled = backgroundPermission.status === 'granted';
+    if (backgroundEnabled) {
+      backgroundEnabled = await startBackgroundLocationUpdates();
+    }
+  } catch {
+    backgroundEnabled = false;
+  }
+
+  if (!backgroundEnabled) {
+    setSessionSyncWarning(
+      'Route tracks while the app is open. Allow Always location during sessions to continue when the screen is locked.',
+    );
+  } else {
+    setSessionSyncWarning(null);
+  }
+
+  setState({ backgroundLocationEnabled: backgroundEnabled });
   void startHeadingWatching();
 
   try {
-    const position = await withTimeout(
-      Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.BestForNavigation,
-      }),
-      LOCATION_PREWARM_TIMEOUT_MS,
-    );
-    if (position) {
-      recordLocationSample(position);
-    }
+    const position = await Location.getCurrentPositionAsync({
+      accuracy: Location.Accuracy.BestForNavigation,
+    });
+    recordLocationSample(position);
   } catch {
     // Continue with watch subscription even if the initial fix fails.
   }
 
-  locationSubscription = await Location.watchPositionAsync(
-    LOCATION_WATCH_OPTIONS,
-    (position) => {
-      recordLocationSample(position);
-    },
-  );
+  locationSubscription = await Location.watchPositionAsync(getForegroundWatchOptions(), (position) => {
+    recordLocationSample(position);
+  });
 }
 
-async function persistCheckpointToRemote(checkpoint: PhotoCheckpointSubmission) {
+async function persistCheckpointToRemote(checkpoint: PhotoCheckpointSubmission): Promise<boolean> {
   const sessionId = state.remoteSessionId;
   if (!sessionId) {
-    return;
+    setSessionSyncWarning('Session saved on device only — photos will not sync to the server.');
+    return false;
   }
 
   try {
@@ -370,7 +522,8 @@ async function persistCheckpointToRemote(checkpoint: PhotoCheckpointSubmission) 
     });
 
     if (!paths) {
-      return;
+      setSessionSyncWarning('Photo upload failed — checkpoint not saved to the server.');
+      return false;
     }
 
     await addCheckpoint(sessionId, {
@@ -379,18 +532,23 @@ async function persistCheckpointToRemote(checkpoint: PhotoCheckpointSubmission) 
       capturedAt: new Date(checkpoint.capturedAt).toISOString(),
       submittedEarly: checkpoint.submittedEarly,
     });
+
+    return true;
   } catch (error) {
     console.warn('[sessions] checkpoint persist failed:', error);
+    setSessionSyncWarning('Could not sync checkpoint to the server. Photos are saved on device.');
+    return false;
   }
 }
 
 async function persistFinalizeToRemote(
   snapshot: CompletedSessionSnapshot,
   status: 'under_review' | 'invalid' = 'under_review',
-) {
+): Promise<boolean> {
   const sessionId = snapshot.remoteSessionId;
   if (!sessionId) {
-    return;
+    setSessionSyncWarning('Session saved on device only — it was not synced to the server.');
+    return false;
   }
 
   try {
@@ -401,8 +559,11 @@ async function persistFinalizeToRemote(
       route: snapshot.routeCoordinates,
       status,
     });
+    return true;
   } catch (error) {
     console.warn('[sessions] finalize persist failed:', error);
+    setSessionSyncWarning('Could not sync session to the server. Your route is saved on device.');
+    return false;
   }
 }
 
@@ -415,21 +576,33 @@ export async function ensureLocationWatching() {
   await startLocationWatching();
 }
 
-const LOCATION_PREWARM_TIMEOUT_MS = 2500;
+export function hasSubmittedCheckpointForCurrentWindow(): boolean {
+  const windowStart = state.checkpointWindowStartedAt;
+  if (!windowStart) {
+    return false;
+  }
 
-function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | null> {
-  return new Promise((resolve) => {
-    const timer = setTimeout(() => resolve(null), ms);
-    promise
-      .then((value) => {
-        clearTimeout(timer);
-        resolve(value);
-      })
-      .catch(() => {
-        clearTimeout(timer);
-        resolve(null);
-      });
-  });
+  return state.submittedCheckpoints.some((checkpoint) => checkpoint.capturedAt >= windowStart);
+}
+
+export function isCheckpointMissed(): boolean {
+  if (!state.isActive || state.checkpointWindowStartedAt == null) {
+    return false;
+  }
+
+  if (hasSubmittedCheckpointForCurrentWindow()) {
+    return false;
+  }
+
+  const overdueMs = Date.now() - state.checkpointWindowStartedAt;
+  return (
+    overdueMs >
+    PHOTO_CHECKPOINT_INTERVAL_SECONDS * 1000 + CHECKPOINT_MISS_GRACE_MS
+  );
+}
+
+export function clearSessionSyncWarning() {
+  setSessionSyncWarning(null);
 }
 
 /** Starts a fresh live session: elapsed at 0, checkpoint countdown at 30:00. */
@@ -437,13 +610,31 @@ export async function startNewLiveSession(setup: LiveSessionSetup) {
   stopTicking();
   stopLocationWatching();
   completedSessionSnapshot = null;
+  locationKalman = createLocationKalmanFilter();
 
-  // Activate immediately so the tracker UI (timer, checkpoint countdown) is
-  // live even if GPS / remote create hang. Prewarm + remote ID fill in after.
+  let remoteSessionId: string | null = null;
+  let sessionSyncWarning: string | null = null;
+
+  try {
+    const created = await createSession({
+      activity: setup.activity,
+      courtOrdered: setup.courtOrdered,
+      description: setup.description,
+      date: setup.date.toISOString().slice(0, 10),
+    });
+    remoteSessionId = created?.id ?? null;
+    if (!remoteSessionId) {
+      sessionSyncWarning = 'Session saved on device only — it was not synced to the server.';
+    }
+  } catch (error) {
+    console.warn('[sessions] create session failed:', error);
+    sessionSyncWarning = 'Session saved on device only — it was not synced to the server.';
+  }
+
   const startedAt = Date.now();
   state = {
     isActive: true,
-    remoteSessionId: null,
+    remoteSessionId,
     startedAt,
     checkpointWindowStartedAt: startedAt,
     elapsedSeconds: 0,
@@ -451,6 +642,8 @@ export async function startNewLiveSession(setup: LiveSessionSetup) {
     distanceMiles: 0,
     setup,
     routeCoordinates: [],
+    routeSamples: [],
+    displayRouteCoordinates: [],
     currentCoordinate: null,
     displayCoordinate: null,
     currentHeading: null,
@@ -458,55 +651,12 @@ export async function startNewLiveSession(setup: LiveSessionSetup) {
     mapFollowEnabled: false,
     mapLayer: DEFAULT_MAP_LAYER,
     submittedCheckpoints: [],
+    sessionSyncWarning,
+    backgroundLocationEnabled: false,
   };
   notify();
   startTicking();
   void startLocationWatching();
-
-  const [lastKnown, created] = await Promise.all([
-    withTimeout(
-      Location.getLastKnownPositionAsync({ maxAge: 5 * 60 * 1000 }),
-      LOCATION_PREWARM_TIMEOUT_MS,
-    ),
-    createSession({
-      activity: setup.activity,
-      courtOrdered: setup.courtOrdered,
-      description: setup.description,
-      date: setup.date.toISOString().slice(0, 10),
-    }).catch((error) => {
-      console.warn('[sessions] create session failed:', error);
-      return null;
-    }),
-  ]);
-
-  if (!state.isActive || state.startedAt !== startedAt) {
-    return;
-  }
-
-  const patch: Partial<LiveSessionState> = {};
-
-  if (created?.id) {
-    patch.remoteSessionId = created.id;
-  }
-
-  if (lastKnown && !state.displayCoordinate) {
-    const prewarmCoord = toRouteCoordinate(
-      lastKnown.coords.longitude,
-      lastKnown.coords.latitude,
-    );
-    patch.displayCoordinate = prewarmCoord;
-    if (state.currentHeading == null) {
-      patch.currentHeading = resolveHeading({
-        heading: lastKnown.coords.heading,
-        previous: null,
-        current: prewarmCoord,
-      });
-    }
-  }
-
-  if (Object.keys(patch).length > 0) {
-    setState(patch);
-  }
 }
 
 /** Records a submitted selfie + progress photo pair for the session detail screen. */
@@ -515,6 +665,10 @@ export function addPhotoCheckpoint(submission: {
   progressUri: string;
   capturedAt: number;
 }): boolean {
+  if (!state.isActive) {
+    return false;
+  }
+
   const nextIndex = state.submittedCheckpoints.length;
   const submittedEarly = state.checkpointSecondsRemaining > 0;
   const checkpoint: PhotoCheckpointSubmission = {
@@ -570,12 +724,14 @@ export function finalizeLiveSession(options?: { status?: 'under_review' | 'inval
     elapsedSeconds: computeSessionDurationSeconds(startedAt, endedAt),
     distanceMiles: state.distanceMiles,
     routeCoordinates: [...state.routeCoordinates],
+    routeSamples: [...state.routeSamples],
     submittedCheckpoints: [...state.submittedCheckpoints],
     mapLayer: state.mapLayer,
   };
 
   void persistFinalizeToRemote(completedSessionSnapshot, status);
   recordCompletedSession(completedSessionSnapshot);
+  recordSessionStatFromSnapshot(completedSessionSnapshot);
   cacheCompletedSession(completedSessionSnapshot);
   endLiveSession();
 }
@@ -597,6 +753,8 @@ export function endLiveSession() {
     distanceMiles: 0,
     setup: null,
     routeCoordinates: [],
+    routeSamples: [],
+    displayRouteCoordinates: [],
     currentCoordinate: null,
     displayCoordinate: null,
     currentHeading: null,
@@ -604,6 +762,8 @@ export function endLiveSession() {
     mapFollowEnabled: false,
     mapLayer: DEFAULT_MAP_LAYER,
     submittedCheckpoints: [],
+    sessionSyncWarning: null,
+    backgroundLocationEnabled: false,
   };
   notify();
 }

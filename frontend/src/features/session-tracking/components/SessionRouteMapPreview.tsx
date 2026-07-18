@@ -12,8 +12,7 @@ const needsFallback = Platform.OS === 'web';
 type Props = {
   routeCoordinates: RouteCoordinate[];
   mapLayer?: MapLayerType;
-  /** Animate the route drawing once (grow line + tip marker) instead of showing it fully drawn. Expo Go / WebView only. */
-  replayOnce?: boolean;
+  replayProgress?: number;
   style?: object;
 };
 
@@ -44,7 +43,7 @@ function SessionRouteMapPreviewFallback({
 export function SessionRouteMapPreview({
   routeCoordinates,
   mapLayer = DEFAULT_MAP_LAYER,
-  replayOnce = false,
+  replayProgress = 1,
   style,
 }: Props) {
   if (isExpoGo) {
@@ -54,7 +53,7 @@ export function SessionRouteMapPreview({
       <SessionRouteMapPreviewWebView
         routeCoordinates={routeCoordinates}
         mapLayer={mapLayer}
-        replayOnce={replayOnce}
+        replayProgress={replayProgress}
         style={style}
       />
     );
@@ -71,6 +70,7 @@ export function SessionRouteMapPreview({
     <SessionRouteMapPreviewNative
       routeCoordinates={routeCoordinates}
       mapLayer={mapLayer}
+      replayProgress={replayProgress}
       style={style}
     />
   );
