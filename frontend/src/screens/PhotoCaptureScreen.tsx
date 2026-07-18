@@ -9,7 +9,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
-  InteractionManager,
   Platform,
   Pressable,
   StyleSheet,
@@ -28,6 +27,7 @@ import {
   type CapturePhotoCallbacks,
   CommonResolutions,
 } from 'react-native-vision-camera';
+import { callback } from 'react-native-nitro-modules';
 
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { CoachmarkEnter } from '@/components/motion/CoachmarkEnter';
@@ -36,10 +36,6 @@ import { staggerDelay } from '@/motion';
 import { addPhotoCheckpoint } from '@/features/session-tracking/liveSessionStore';
 import { persistCheckpointPhotos } from '@/features/session-tracking/utils/persistCheckpointPhotos';
 import { colors as tokens } from '@/constants/tokens';
-import {
-  checkMultiCamSupport,
-  type MultiCamCheckResult,
-} from '@/utils/checkMultiCamSupport';
 
 const C = {
   bgApp: tokens.bgApp,
@@ -184,23 +180,34 @@ function DualCapture({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const frontPhotoOutput = useMemo<any>(() => VisionCamera.createPhotoOutput(PHOTO_OUTPUT_OPTIONS), []);
 
-  const [showPreviews, setShowPreviews] = useState(false);
   const [ready, setReady] = useState(false);
   const [capturing, setCapturing] = useState(false);
   const sessionRef = useRef<any>(null);
   const fellBackRef = useRef(false);
   const insets = useSafeAreaInsets();
 
-  // Delay NativePreviewView mount until after navigation + any in-flight Reanimated
-  // animations complete. Reanimated's cloneShadowTreeWithNewPropsRecursive crashes
-  // when it traverses a NativePreviewView that holds a Nitro HybridObject prop
-  // (previewOutput) — the merge path tries to serialize it via folly::dynamic.
-  useEffect(() => {
-    const task = InteractionManager.runAfterInteractions(() => {
-      setShowPreviews(true);
-    });
-    return () => task.cancel();
-  }, []);
+  // hybridRef callbacks — set previewOutput imperatively via JSI after mount.
+  // Passing previewOutput as a React prop goes through Fabric's folly::dynamic
+  // serialization (UIManager::createNode → HybridPreviewViewProps(folly::dynamic))
+  // which cannot represent a Nitro HybridObject → RawValue::castValue → SIGABRT.
+  // Mounting WITHOUT the prop leaves rawProps.at("previewOutput") == nullptr (safe),
+  // then setting ref.previewOutput = output calls setPreviewOutput() directly via JSI.
+  const onBackRef = useMemo(
+    () =>
+      callback((ref: any) => {
+        if (ref) ref.previewOutput = backPreviewOutput;
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+  const onFrontRef = useMemo(
+    () =>
+      callback((ref: any) => {
+        if (ref) ref.previewOutput = frontPreviewOutput;
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
 
   const fallback = (reason: unknown) => {
     if (fellBackRef.current) return;
@@ -293,37 +300,30 @@ function DualCapture({
 
   return (
     <View style={s.root}>
-      {/* NativePreviewView is only mounted after InteractionManager.runAfterInteractions
-          fires, ensuring the navigation animation (and any other Reanimated commit cycle)
-          has fully completed. Reanimated crashes if it traverses a shadow tree node that
-          holds a Nitro HybridObject prop (previewOutput) during folly::dynamic mergeProps. */}
-      {showPreviews && (
-        <NativePreviewView
-          style={StyleSheet.absoluteFillObject}
-          previewOutput={backPreviewOutput}
-        />
-      )}
+      {/* Mount WITHOUT previewOutput prop — Fabric's createNode serializes props
+          through folly::dynamic which cannot carry a Nitro HybridObject.
+          previewOutput is set imperatively via hybridRef → JSI setPreviewOutput(). */}
+      <NativePreviewView
+        style={StyleSheet.absoluteFillObject}
+        hybridRef={onBackRef}
+      />
 
-      {(!ready || !showPreviews) && (
+      {!ready && (
         <View style={[StyleSheet.absoluteFillObject, s.center]}>
           <ActivityIndicator color={C.primary} />
         </View>
       )}
 
-      {showPreviews && (
-        <View
-          style={[s.pip, { top: insets.top + PIP_TOP, right: PIP_RIGHT }]}
-          pointerEvents="none"
-        >
-          <NativePreviewView
-            style={StyleSheet.absoluteFillObject}
-            previewOutput={frontPreviewOutput}
-          />
-        </View>
-      )}
+      <View
+        style={[s.pip, { top: insets.top + PIP_TOP, right: PIP_RIGHT }]}
+        pointerEvents="none"
+      >
+        <NativePreviewView
+          style={StyleSheet.absoluteFillObject}
+          hybridRef={onFrontRef}
+        />
+      </View>
 
-      {/* No Reanimated components below — AnimatedPressable / CoachmarkEnter would
-          trigger Reanimated commits that traverse the tree and hit NativePreviewView. */}
       <SafeAreaView style={s.overlay} edges={['top', 'bottom']} pointerEvents="box-none">
         <View style={s.topBar}>
           <Pressable
@@ -453,9 +453,6 @@ function SequentialCapture({
 
 export function PhotoCaptureScreen() {
   const router = useRouter();
-  const [multiCamResult, setMultiCamResult] =
-    useState<MultiCamCheckResult | null>(null);
-  const [forceSequential, setForceSequential] = useState(false);
   const [selfieUri, setSelfieUri] = useState<string | null>(null);
   const [progressUri, setProgressUri] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -467,11 +464,7 @@ export function PhotoCaptureScreen() {
     NotoSans_600SemiBold,
   });
 
-  useEffect(() => {
-    void checkMultiCamSupport().then(setMultiCamResult);
-  }, []);
-
-  if (!fontsLoaded || !multiCamResult) {
+  if (!fontsLoaded) {
     return (
       <View style={[s.root, s.center]}>
         <ActivityIndicator color={C.primary} />
@@ -546,18 +539,9 @@ export function PhotoCaptureScreen() {
     );
   }
 
-  // Prefer true simultaneous dual-camera (front PiP + back full-bleed).
-  if (multiCamResult.supported && !forceSequential) {
-    return (
-      <DualCapture
-        onDone={handleDone}
-        onCancel={() => router.dismissTo('/live-session')}
-        onFallbackSequential={() => setForceSequential(true)}
-      />
-    );
-  }
-
-  // Fallback: back photo first, then front selfie
+  // DualCapture (simultaneous front+back) is disabled — VisionCamera v5 HybridObject
+  // props cannot survive Fabric's folly::dynamic serialization at createNode time.
+  // Always use sequential capture until a viable workaround is found.
   return (
     <SequentialCapture
       onDone={handleDone}
