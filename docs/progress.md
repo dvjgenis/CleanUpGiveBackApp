@@ -4,6 +4,39 @@ Session-by-session progress tracker. Distinct from `notes/journey.md` (correctio
 
 ---
 
+## [2026-07-18 Session 178] — Migrate react-native-vision-camera v4 → v5
+
+**Session goal:** Fix VisionCamera iOS 26 native crash by migrating to v5 Nitro Modules API.
+**Workflow used:** Chat / iterative debug
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Upgrade package version | `frontend/package.json` | ✅ `^4.7.3` → `^5` |
+| Install Nitro peer deps | `package.json` | ✅ Added `react-native-nitro-modules`, `react-native-nitro-image` |
+| Remove broken Expo plugin entry | `frontend/app.json` | ✅ No `app.plugin.js` in v5; camera perm moved to `ios.infoPlist` |
+| Rewrite `checkMultiCamSupport` | `src/utils/checkMultiCamSupport.ts` | ✅ Uses `VisionCamera.requestCameraPermission()` + `createDeviceFactory()` |
+| Rewrite `DualCapture` | `src/screens/PhotoCaptureScreen.tsx` | ✅ Full v5 session API: `createCameraSession(true)`, `NativePreviewView`, `capturePhotoToFile` |
+| Rewrite `SequentialCapture` | `src/screens/PhotoCaptureScreen.tsx` | ✅ `useCameraDevice()` hook + `usePhotoOutput()` + `capturePhotoToFile` |
+| Fix selfie order | `src/screens/PhotoCaptureScreen.tsx` | ✅ Sequential now selfie-first (front), then cleanup area (back) |
+| Fix compass null heading TS error | `src/features/session-tracking/liveSessionStore.ts` | ✅ `prevHeading ?? 0` guard |
+
+### Key Decisions
+
+- `DualCapture` auto-falls back to `SequentialCapture` if the native multi-cam session fails — no user-visible error
+- `PhotoFile.path` (v4) → `PhotoFile.filePath` (v5); `capturePhotoToFile` used throughout
+- `Camera.requestCameraPermission()` (v4 static) → `VisionCamera.requestCameraPermission()` (v5)
+- `photo={true}` prop removed; v5 uses `outputs={[photoOutput]}`
+
+### Learnings
+
+- VisionCamera v5 has no `app.plugin.js` — remove from Expo `plugins` array; set `NSCameraUsageDescription` via `ios.infoPlist` in `app.json`
+- SDWebImage CocoaPods 1.16.2 modulemap bug recurs after every `prebuild --clean`; fix: `pod cache clean SDWebImage --all && pod install --repo-update`
+- `react-native-nitro-modules` and `react-native-nitro-image` must be installed as explicit deps alongside v5
+
+---
+
 ## [2026-07-17 Session 157] — Tighten onboarding field error spacing
 
 **Session goal:** Align missing-field error messages with the phone-number error (closer to the input).

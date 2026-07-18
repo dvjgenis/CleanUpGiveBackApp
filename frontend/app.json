@@ -56,7 +56,10 @@
         "expo-build-properties",
         {
           "ios": {
-            "deploymentTarget": "15.1"
+            "deploymentTarget": "15.1",
+            "extraBuildSettings": {
+              "ENABLE_USER_SCRIPT_SANDBOXING": "NO"
+            }
           },
           "android": {
             "compileSdkVersion": 35,
