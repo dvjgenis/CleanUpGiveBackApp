@@ -56,10 +56,7 @@
         "expo-build-properties",
         {
           "ios": {
-            "deploymentTarget": "15.1",
-            "extraBuildSettings": {
-              "ENABLE_USER_SCRIPT_SANDBOXING": "NO"
-            }
+            "deploymentTarget": "15.1"
           },
           "android": {
             "compileSdkVersion": 35,
@@ -70,6 +67,7 @@
       ],
       "./plugins/withNoPushEntitlement",
       "./plugins/withLocalNetworkATS",
+      "./plugins/withUserScriptSandboxingDisabled",
       [
         "expo-audio",
         {
