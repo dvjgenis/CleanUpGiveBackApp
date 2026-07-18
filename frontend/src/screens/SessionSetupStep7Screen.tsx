@@ -36,7 +36,7 @@ export function SessionSetupStep7Screen() {
   });
 
   const goToComplete = useCallback(() => {
-    router.push('/session-free-hour');
+    router.push('/session-setup-complete');
   }, [router]);
 
   // Camera was already granted (e.g. during onboarding) — nothing to ask,

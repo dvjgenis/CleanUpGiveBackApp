@@ -10,7 +10,10 @@
     "newArchEnabled": true,
     "ios": {
       "icon": "./assets/expo.icon",
-      "bundleIdentifier": "com.shivpat.cleanupgiveback"
+      "bundleIdentifier": "com.shivpat.cleanupgiveback",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Allow Clean Up Give Back to use your camera for photo checkpoints during cleanup sessions."
+      }
     },
     "android": {
       "package": "com.shivpat.cleanupgiveback",
@@ -47,13 +50,6 @@
         "expo-location",
         {
           "locationWhenInUsePermission": "Allow Clean Up Give Back to use your location during cleanup sessions to show local weather and track your route."
-        }
-      ],
-      [
-        "react-native-vision-camera",
-        {
-          "cameraPermissionText": "Allow Clean Up Give Back to use your camera for photo checkpoints during cleanup sessions.",
-          "enableMicrophonePermission": false
         }
       ],
       [

@@ -17,6 +17,7 @@ import { Image, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
+  isSessionCameraPermissionGranted,
   isSessionLocationPermissionGranted,
   requestSessionLocationPermission,
 } from '@/utils/sessionPermissions';
@@ -27,6 +28,8 @@ export function SessionSetupStep6Screen() {
   const router = useRouter();
   const [isRequesting, setIsRequesting] = useState(false);
   const [isCheckingPermission, setIsCheckingPermission] = useState(true);
+  /** 8 when camera is still ahead; 9 when camera will auto-skip (finale next). */
+  const [activePills, setActivePills] = useState(8);
 
   const [fontsLoaded] = useFonts({
     Sanchez_400Regular,
@@ -44,15 +47,19 @@ export function SessionSetupStep6Screen() {
   useEffect(() => {
     let isMounted = true;
 
-    void isSessionLocationPermissionGranted()
-      .then((granted) => {
+    void Promise.all([
+      isSessionLocationPermissionGranted(),
+      isSessionCameraPermissionGranted(),
+    ])
+      .then(([locationGranted, cameraGranted]) => {
         if (!isMounted) {
           return;
         }
-        if (granted) {
+        if (locationGranted) {
           router.replace('/session-setup-step7');
           return;
         }
+        setActivePills(cameraGranted ? 9 : 8);
         setIsCheckingPermission(false);
       })
       .catch(() => {
@@ -88,7 +95,7 @@ export function SessionSetupStep6Screen() {
     <SafeAreaView style={s.root} edges={['top', 'bottom']}>
 
       <View style={s.navSection}>
-        <OnboardingProgressPills total={10} active={8} />
+        <OnboardingProgressPills total={10} active={activePills} />
       </View>
 
       <CoachmarkEnter style={s.main}>

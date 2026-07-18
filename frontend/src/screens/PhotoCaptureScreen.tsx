@@ -18,8 +18,13 @@ import Animated from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Camera,
+  NativePreviewView,
+  VisionCamera,
+  useCameraDevice,
+  usePhotoOutput,
   type CameraDevice,
-  type PhotoFile,
+  type CapturePhotoCallbacks,
+  CommonResolutions,
 } from 'react-native-vision-camera';
 
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
@@ -44,8 +49,10 @@ const C = {
 } as const;
 
 const PIP_SIZE = 170;
-const PIP_LEFT = 17;
+const PIP_RIGHT = 17;
 const PIP_TOP = 14;
+
+const EMPTY_CALLBACKS: CapturePhotoCallbacks = {};
 
 // ─── Shutter button ───────────────────────────────────────────────────────────
 
@@ -99,7 +106,7 @@ function BeRealPreview({
         accessibilityLabel="Cleanup progress photo"
       />
 
-      <View style={[s.pip, { top: insets.top + PIP_TOP }]} pointerEvents="none">
+      <View style={[s.pip, { top: insets.top + PIP_TOP, right: PIP_RIGHT }]} pointerEvents="none">
         <Image
           source={{ uri: selfieUri }}
           style={StyleSheet.absoluteFillObject}
@@ -142,26 +149,34 @@ function BeRealPreview({
   );
 }
 
-// ─── Option A: simultaneous dual-camera (iPhone XS / A12+ only) ──────────────
+// ─── Option A: simultaneous dual-camera via VisionCamera v5 session API ───────
+
+type SessionData = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  session: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  backPhotoOutput: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  frontPhotoOutput: any;
+};
 
 function DualCapture({
-  front,
-  back,
   onDone,
   onCancel,
   onFallbackSequential,
 }: {
-  front: CameraDevice;
-  back: CameraDevice;
   onDone: (progressUri: string, selfieUri: string) => void;
   onCancel: () => void;
   /** Called when the dual session fails to start or capture (device limitation). */
   onFallbackSequential: () => void;
 }) {
-  const backRef = useRef<Camera>(null);
-  const frontRef = useRef<Camera>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [backPreviewOutput, setBackPreviewOutput] = useState<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [frontPreviewOutput, setFrontPreviewOutput] = useState<any>(null);
+  const [ready, setReady] = useState(false);
   const [capturing, setCapturing] = useState(false);
-  const [dualReady, setDualReady] = useState({ back: false, front: false });
+  const sessionDataRef = useRef<SessionData | null>(null);
   const fellBackRef = useRef(false);
   const insets = useSafeAreaInsets();
 
@@ -172,16 +187,96 @@ function DualCapture({
     onFallbackSequential();
   };
 
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const deviceFactory = await VisionCamera.createDeviceFactory();
+        const combination = (
+          deviceFactory.supportedMultiCamDeviceCombinations as CameraDevice[][]
+        ).find(
+          (devices) =>
+            devices.some((d) => d.position === 'front') &&
+            devices.some((d) => d.position === 'back')
+        );
+
+        if (!combination) {
+          fallback('No compatible front+back camera combination');
+          return;
+        }
+
+        // Safe: combination is guaranteed to contain both positions above
+        const frontDevice = combination.find((d) => d.position === 'front')!;
+        const backDevice = combination.find((d) => d.position === 'back')!;
+
+        const photoOptions = {
+          targetResolution: CommonResolutions.FHD_4_3,
+          containerFormat: 'native' as const,
+          quality: 0.9,
+          qualityPrioritization: 'balanced' as const,
+        };
+
+        const frontPreview = VisionCamera.createPreviewOutput();
+        const frontPhoto = VisionCamera.createPhotoOutput(photoOptions);
+        const backPreview = VisionCamera.createPreviewOutput();
+        const backPhoto = VisionCamera.createPhotoOutput(photoOptions);
+
+        const session = await VisionCamera.createCameraSession(true);
+        await session.configure([
+          {
+            input: frontDevice,
+            outputs: [
+              { output: frontPreview, mirrorMode: 'on' },
+              { output: frontPhoto, mirrorMode: 'off' },
+            ],
+            constraints: [],
+          },
+          {
+            input: backDevice,
+            outputs: [
+              { output: backPreview, mirrorMode: 'off' },
+              { output: backPhoto, mirrorMode: 'off' },
+            ],
+            constraints: [],
+          },
+        ]);
+
+        await session.start();
+
+        if (!cancelled) {
+          sessionDataRef.current = { session, backPhotoOutput: backPhoto, frontPhotoOutput: frontPhoto };
+          setBackPreviewOutput(backPreview);
+          setFrontPreviewOutput(frontPreview);
+          setReady(true);
+        }
+      } catch (err) {
+        if (!cancelled) fallback(err);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      void sessionDataRef.current?.session?.stop?.();
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const captureSimultaneous = async () => {
-    if (capturing || !backRef.current || !frontRef.current) return;
-    if (!dualReady.back || !dualReady.front) return;
+    if (!ready || capturing || !sessionDataRef.current) return;
     setCapturing(true);
     try {
-      const [backPhoto, frontPhoto] = await Promise.all<PhotoFile>([
-        backRef.current.takePhoto({ flash: 'off' }),
-        frontRef.current.takePhoto({ flash: 'off' }),
+      const { backPhotoOutput, frontPhotoOutput } = sessionDataRef.current;
+      const [backFile, frontFile] = await Promise.all([
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+        backPhotoOutput.capturePhotoToFile({}, EMPTY_CALLBACKS),
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+        frontPhotoOutput.capturePhotoToFile({}, EMPTY_CALLBACKS),
       ]);
-      onDone(backPhoto.path, frontPhoto.path);
+      onDone(
+        (backFile as { filePath: string }).filePath,
+        (frontFile as { filePath: string }).filePath
+      );
     } catch (err) {
       fallback(err);
     } finally {
@@ -191,30 +286,28 @@ function DualCapture({
 
   return (
     <View style={s.root}>
-      {/* Back camera — full screen */}
-      <Camera
-        ref={backRef}
-        style={StyleSheet.absoluteFillObject}
-        device={back}
-        isActive
-        photo
-        onInitialized={() => setDualReady((prev) => ({ ...prev, back: true }))}
-        onError={(error) => fallback(error)}
-      />
-
-      {/* Front camera — PIP top-left */}
-      <View style={[s.pip, { top: insets.top + PIP_TOP }]} pointerEvents="none">
-        <Camera
-          ref={frontRef}
+      {backPreviewOutput ? (
+        <NativePreviewView
           style={StyleSheet.absoluteFillObject}
-          device={front}
-          isActive
-          photo
-          outputOrientation="device"
-          onInitialized={() => setDualReady((prev) => ({ ...prev, front: true }))}
-          onError={(error) => fallback(error)}
+          previewOutput={backPreviewOutput}
         />
-      </View>
+      ) : (
+        <View style={[StyleSheet.absoluteFillObject, s.center]}>
+          <ActivityIndicator color={C.primary} />
+        </View>
+      )}
+
+      {frontPreviewOutput && (
+        <View
+          style={[s.pip, { top: insets.top + PIP_TOP, right: PIP_RIGHT }]}
+          pointerEvents="none"
+        >
+          <NativePreviewView
+            style={StyleSheet.absoluteFillObject}
+            previewOutput={frontPreviewOutput}
+          />
+        </View>
+      )}
 
       <SafeAreaView style={s.overlay} edges={['top', 'bottom']} pointerEvents="box-none">
         <View style={s.topBar}>
@@ -242,7 +335,7 @@ function DualCapture({
             onPress={() => {
               void captureSimultaneous();
             }}
-            disabled={capturing || !dualReady.back || !dualReady.front}
+            disabled={capturing || !ready}
           />
         </View>
       </SafeAreaView>
@@ -259,66 +352,47 @@ function SequentialCapture({
   onDone: (progressUri: string, selfieUri: string) => void;
   onCancel: () => void;
 }) {
-  const [step, setStep] = useState<'back' | 'front'>('back');
-  const [progressUri, setProgressUri] = useState<string | null>(null);
+  const [step, setStep] = useState<'front' | 'back'>('front');
+  const [selfieUri, setSelfieUri] = useState<string | null>(null);
   const [capturing, setCapturing] = useState(false);
-  const backRef = useRef<Camera>(null);
-  const frontRef = useRef<Camera>(null);
 
-  const devices = Camera.getAvailableCameraDevices();
-  const backDevice = devices.find((d) => d.position === 'back');
-  const frontDevice = devices.find((d) => d.position === 'front');
+  const backDevice = useCameraDevice('back');
+  const frontDevice = useCameraDevice('front');
+  // Single photo output shared across both camera steps
+  const photoOutput = usePhotoOutput();
 
-  // After capturing the back photo, auto-trigger the front after a brief delay
-  // so the camera has time to switch — no second tap needed.
-  useEffect(() => {
-    if (step !== 'front') return;
-    const timer = setTimeout(() => { void captureFront(); }, 900);
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step]);
-
-  const captureBack = async () => {
-    if (capturing || !backRef.current) return;
+  const capture = async () => {
+    if (capturing) return;
     setCapturing(true);
     try {
-      const photo = await backRef.current.takePhoto({ flash: 'off' });
-      setProgressUri(photo.path);
-      setStep('front');
+      const file = await photoOutput.capturePhotoToFile({}, EMPTY_CALLBACKS);
+      if (step === 'front') {
+        setSelfieUri(file.filePath);
+        setStep('back');
+      } else if (selfieUri) {
+        onDone(file.filePath, selfieUri);
+      }
     } finally {
       setCapturing(false);
     }
   };
 
-  const captureFront = async () => {
-    if (capturing || !frontRef.current || !progressUri) return;
-    setCapturing(true);
-    try {
-      const photo = await frontRef.current.takePhoto({ flash: 'off' });
-      onDone(progressUri, photo.path);
-    } finally {
-      setCapturing(false);
-    }
-  };
-
-  const activeDevice = step === 'back' ? backDevice : frontDevice;
-  const activeRef = step === 'back' ? backRef : frontRef;
+  const activeDevice = step === 'front' ? frontDevice : backDevice;
 
   if (!activeDevice) return null;
 
   return (
     <View style={s.root}>
       <Camera
-        ref={activeRef}
         style={StyleSheet.absoluteFillObject}
         device={activeDevice}
         isActive
-        photo
+        outputs={[photoOutput]}
       />
 
       <SafeAreaView style={s.overlay} edges={['top', 'bottom']} pointerEvents="box-none">
         <View style={s.topBar}>
-          {step === 'back' && (
+          {step === 'front' && (
             <AnimatedPressable
               style={s.backBtn}
               onPress={onCancel}
@@ -332,26 +406,27 @@ function SequentialCapture({
 
         <CoachmarkEnter>
           <View style={s.copyBlock}>
-            {step === 'back' ? (
+            {step === 'front' ? (
               <>
-                <Text style={s.copyTitle}>Capture your progress</Text>
-                <Text style={s.copySubtitle}>
-                  Point at the cleanup area — selfie is taken automatically after.
-                </Text>
+                <Text style={s.copyTitle}>Take your selfie</Text>
+                <Text style={s.copySubtitle}>Face the camera and tap the button.</Text>
               </>
             ) : (
               <>
-                <Text style={s.copyTitle}>Capturing selfie…</Text>
-                <Text style={s.copySubtitle}>Hold still</Text>
+                <Text style={s.copyTitle}>Capture your progress</Text>
+                <Text style={s.copySubtitle}>
+                  Point at the cleanup area and tap the button.
+                </Text>
               </>
             )}
           </View>
         </CoachmarkEnter>
 
         <View style={s.controls}>
-          {step === 'back' && (
-            <ShutterButton onPress={() => { void captureBack(); }} disabled={capturing} />
-          )}
+          <ShutterButton
+            onPress={() => { void capture(); }}
+            disabled={capturing}
+          />
         </View>
       </SafeAreaView>
     </View>
@@ -459,8 +534,6 @@ export function PhotoCaptureScreen() {
   if (multiCamResult.supported && !forceSequential) {
     return (
       <DualCapture
-        front={multiCamResult.front}
-        back={multiCamResult.back}
         onDone={handleDone}
         onCancel={() => router.dismissTo('/live-session')}
         onFallbackSequential={() => setForceSequential(true)}
@@ -468,7 +541,7 @@ export function PhotoCaptureScreen() {
     );
   }
 
-  // Fallback: one tap on back, then auto selfie after camera switch
+  // Fallback: back photo first, then front selfie
   return (
     <SequentialCapture
       onDone={handleDone}
@@ -560,7 +633,6 @@ const s = StyleSheet.create({
 
   pip: {
     position: 'absolute',
-    left: PIP_LEFT,
     width: PIP_SIZE,
     height: PIP_SIZE,
     borderRadius: 16,

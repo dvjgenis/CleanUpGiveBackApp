@@ -110,6 +110,7 @@ let headingSubscription: Location.LocationSubscription | null = null;
  * active session — GPS-derived heading is only used as a fallback until then. */
 let compassAvailable = false;
 let lastAcceptedTimestamp: number | null = null;
+let lastHeadingNotifyMs = 0;
 const listeners = new Set<() => void>();
 
 function notify() {
@@ -273,7 +274,19 @@ function handleCompassUpdate(reading: Location.LocationHeadingObject) {
   }
 
   compassAvailable = true;
-  setState({ currentHeading: smoothHeadingEma(state.currentHeading, rawHeading) });
+  const newHeading = smoothHeadingEma(state.currentHeading, rawHeading);
+  // Gate heading updates to React: require both a meaningful angle change AND
+  // a minimum 100ms gap. The magnetometer fires at 30-60Hz; flooding
+  // useSyncExternalStore at that rate causes nested synchronous re-renders that
+  // exceed React's max update depth.
+  const now = Date.now();
+  const prevHeading = state.currentHeading ?? 0;
+  const delta = Math.abs(((newHeading - prevHeading + 180) % 360 + 360) % 360 - 180);
+  if (delta < 1 || now - lastHeadingNotifyMs < 100) {
+    return;
+  }
+  lastHeadingNotifyMs = now;
+  setState({ currentHeading: newHeading });
 }
 
 function stopHeadingWatching() {

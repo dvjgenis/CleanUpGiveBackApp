@@ -1,50 +1,42 @@
 import { Platform } from 'react-native';
-import { Camera, type CameraDevice } from 'react-native-vision-camera';
+import { VisionCamera, type CameraDevice } from 'react-native-vision-camera';
 
 export type MultiCamCheckResult =
-  | { supported: true; front: CameraDevice; back: CameraDevice }
+  | { supported: true }
   | { supported: false; reason: string };
 
-function preferWideAngle(devices: CameraDevice[], position: 'front' | 'back'): CameraDevice | undefined {
-  const matching = devices.filter((d) => d.position === position);
-  // Wide-angle physical cameras work most reliably when front+back run together.
-  // Avoid gating on `isMultiCam` — that flag means "logical dual/triple lens",
-  // not "supports simultaneous front+back capture".
-  return (
-    matching.find((d) => d.physicalDevices.includes('wide-angle-camera')) ??
-    matching.find((d) => d.hardwareLevel !== 'legacy') ??
-    matching[0]
-  );
-}
-
 /**
- * Picks front + back devices for simultaneous dual-camera capture (BeReal-style).
+ * Checks permission and whether AVCaptureMultiCamSession (front+back simultaneously)
+ * is available on this device. Uses the VisionCamera v5 session API.
  *
- * iOS XS / XR+ (A12+) can run front+back at once via AVCaptureMultiCamSession;
- * Vision Camera mounts two `<Camera>` views when both devices are available.
- * Runtime failure still falls back to sequential capture in the screen.
+ * Runtime failure inside DualCapture still falls back to SequentialCapture.
  */
 export async function checkMultiCamSupport(): Promise<MultiCamCheckResult> {
-  const status = await Camera.requestCameraPermission();
-  if (status !== 'granted') {
+  const granted = await VisionCamera.requestCameraPermission();
+  if (!granted) {
     return { supported: false, reason: 'Camera permission not granted.' };
   }
 
-  const devices = Camera.getAvailableCameraDevices();
-  const back = preferWideAngle(devices, 'back');
-  const front = preferWideAngle(devices, 'front');
-
-  if (!back || !front) {
-    return {
-      supported: false,
-      reason: 'Device does not expose both a front and back camera.',
-    };
-  }
-
-  // Web / unsupported platforms never get true dual preview.
   if (Platform.OS === 'web') {
     return { supported: false, reason: 'Dual camera is not available on web.' };
   }
 
-  return { supported: true, front, back };
+  if (!VisionCamera.supportsMultiCamSessions) {
+    return { supported: false, reason: 'Device does not support multi-cam sessions.' };
+  }
+
+  try {
+    const deviceFactory = await VisionCamera.createDeviceFactory();
+    const hasCombination = (deviceFactory.supportedMultiCamDeviceCombinations as CameraDevice[][]).some(
+      (devices) =>
+        devices.some((d) => d.position === 'front') &&
+        devices.some((d) => d.position === 'back')
+    );
+    if (!hasCombination) {
+      return { supported: false, reason: 'No compatible front+back camera combination.' };
+    }
+    return { supported: true };
+  } catch (e) {
+    return { supported: false, reason: String(e) };
+  }
 }
