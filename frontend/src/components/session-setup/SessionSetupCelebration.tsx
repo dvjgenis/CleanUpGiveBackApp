@@ -30,7 +30,7 @@ type StarLayout = {
  */
 const STARS: StarLayout[] = [
   { style: { top: 54, left: 14, width: 50, height: 56 }, rotateTo: 18, rotateFromOffset: -ROTATE_OFFSET },
-  { style: { top: 6, right: 22, width: 42, height: 48 }, rotateTo: -14, rotateFromOffset: ROTATE_OFFSET },
+  { style: { top: 22, right: 46, width: 42, height: 48 }, rotateTo: -14, rotateFromOffset: ROTATE_OFFSET },
   { style: { bottom: 10, left: 2, width: 62, height: 70 }, rotateTo: -34, rotateFromOffset: -ROTATE_OFFSET },
   { style: { bottom: 52, right: 12, width: 52, height: 59 }, rotateTo: 14, rotateFromOffset: ROTATE_OFFSET },
 ];
