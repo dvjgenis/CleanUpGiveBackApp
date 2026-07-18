@@ -1,8 +1,8 @@
 import { CoachmarkEnter } from '@/components/motion/CoachmarkEnter';
 import { OnboardingProgressPills } from '@/components/onboarding/OnboardingProgressPills';
-import { staggerDelay } from '@/motion';
 import { SessionSetupGuideFooterActions } from '@/components/session-setup/SessionSetupGuideFooterActions';
-import { NotoSans_600SemiBold } from '@expo-google-fonts/noto-sans';
+import { staggerDelay } from '@/motion';
+import { IBMPlexSans_600SemiBold } from '@expo-google-fonts/ibm-plex-sans';
 import { Sanchez_400Regular } from '@expo-google-fonts/sanchez';
 import { useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
@@ -15,7 +15,7 @@ export function SessionSetupGuideScreen() {
 
   const [fontsLoaded] = useFonts({
     Sanchez_400Regular,
-    NotoSans_600SemiBold,
+    IBMPlexSans_600SemiBold,
   });
 
   if (!fontsLoaded) {
@@ -49,6 +49,7 @@ export function SessionSetupGuideScreen() {
 
       <View style={s.footer}>
         <SessionSetupGuideFooterActions
+          hidePrevious
           onContinuePress={() => router.push('/session-setup-step2')}
           onSkipPress={() => router.replace('/session-setup-step6')}
           skipAccessibilityLabel="Skip to location permission"

@@ -11,6 +11,7 @@ Living docs for the Clean Up - Give Back monorepo. Templates are copy-only.
 | [implementation-plan.md](implementation-plan.md) | Planned work and milestones |
 | [accounts-and-access.md](accounts-and-access.md) | Org accounts (no secrets in repo) |
 | [supabase.md](supabase.md) | Supabase + Fly setup for sessions (schema, env vars) |
+| [reports/](reports/) | Session / decision reports (e.g. dual-cam App Store stance) |
 
 ## Frontend
 

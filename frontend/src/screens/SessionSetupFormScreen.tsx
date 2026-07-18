@@ -1,4 +1,7 @@
-import { IBMPlexSans_400Regular } from '@expo-google-fonts/ibm-plex-sans';
+import {
+  IBMPlexSans_400Regular,
+  IBMPlexSans_600SemiBold,
+} from '@expo-google-fonts/ibm-plex-sans';
 
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { useAttentionShake, useFadeUpEnter } from '@/components/motion/hooks';
@@ -109,6 +112,7 @@ export function SessionSetupFormScreen() {
     NotoSans_500Medium,
     NotoSans_600SemiBold,
     IBMPlexSans_400Regular,
+    IBMPlexSans_600SemiBold,
   });
   // Default the permission toggles to "on" when the OS has already granted
   // them (e.g. via the onboarding or session-setup-guide permission prompts),
@@ -596,17 +600,17 @@ const s = StyleSheet.create({
   },
 
   startBtn: {
-    height: 56,
     backgroundColor: C.primary,
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 20,
     marginTop: 30,
   },
 
   startBtnText: {
-    fontFamily: 'NotoSans_600SemiBold',
-    fontSize: 16,
+    fontFamily: 'IBMPlexSans_600SemiBold',
+    fontSize: 18,
     color: C.textOnPrimary,
   },
 });

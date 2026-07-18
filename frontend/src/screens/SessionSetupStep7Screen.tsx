@@ -1,14 +1,10 @@
-import { IBMPlexSans_600SemiBold } from '@expo-google-fonts/ibm-plex-sans';
-
-import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { CoachmarkEnter } from '@/components/motion/CoachmarkEnter';
 import { OnboardingProgressPills } from '@/components/onboarding/OnboardingProgressPills';
+import { SessionSetupGuideFooterActions } from '@/components/session-setup/SessionSetupGuideFooterActions';
 import { staggerDelay } from '@/motion';
 import { goBackInSessionSetupGuide } from '@/utils/sessionSetupGuideNavigation';
-import {
-  NotoSans_400Regular,
-  NotoSans_600SemiBold,
-} from '@expo-google-fonts/noto-sans';
+import { IBMPlexSans_600SemiBold } from '@expo-google-fonts/ibm-plex-sans';
+import { NotoSans_400Regular } from '@expo-google-fonts/noto-sans';
 import { Sanchez_400Regular } from '@expo-google-fonts/sanchez';
 import { useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
@@ -31,7 +27,6 @@ export function SessionSetupStep7Screen() {
   const [fontsLoaded] = useFonts({
     Sanchez_400Regular,
     NotoSans_400Regular,
-    NotoSans_600SemiBold,
     IBMPlexSans_600SemiBold,
   });
 
@@ -108,28 +103,16 @@ export function SessionSetupStep7Screen() {
         </CoachmarkEnter>
       </CoachmarkEnter>
 
-      <View style={s.actions}>
-        <AnimatedPressable
-          style={[s.enableBtn, isRequesting && s.enableBtnDisabled]}
-          onPress={handleEnableCamera}
-          disabled={isRequesting}
-        >
-          <Text style={s.enableBtnText}>{isRequesting ? 'Requesting…' : 'Enable camera'}</Text>
-        </AnimatedPressable>
-        <AnimatedPressable
-          style={s.previousBtn}
-          onPress={() => goBackInSessionSetupGuide(router)}
-        >
-          <Text style={s.previousBtnText}>Previous</Text>
-        </AnimatedPressable>
-        <AnimatedPressable
-          style={s.notNowBtn}
-          onPress={goToComplete}
-          disabled={isRequesting}
-        >
-          <Text style={s.notNowText}>Not now</Text>
-        </AnimatedPressable>
-      </View>
+      <SessionSetupGuideFooterActions
+        continueLabel={isRequesting ? 'Requesting…' : 'Enable camera'}
+        skipLabel="Not now"
+        disabled={isRequesting}
+        onContinuePress={() => {
+          void handleEnableCamera();
+        }}
+        onPreviousPress={() => goBackInSessionSetupGuide(router)}
+        onSkipPress={goToComplete}
+      />
 
     </SafeAreaView>
   );
@@ -179,52 +162,5 @@ const s = StyleSheet.create({
     fontSize: 16,
     color: C.textTertiary,
     lineHeight: 22,
-  },
-
-  actions: {
-    paddingHorizontal: 16,
-    paddingBottom: 8,
-    gap: 20,
-  },
-
-  enableBtn: {
-    height: 56,
-    backgroundColor: C.primary,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  enableBtnDisabled: {
-    opacity: 0.7,
-  },
-  enableBtnText: {
-    fontFamily: 'IBMPlexSans_600SemiBold',
-    fontSize: 18,
-    color: C.textOnPrimary,
-  },
-
-  previousBtn: {
-    height: 56,
-    borderWidth: 1,
-    borderColor: C.primary,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  previousBtnText: {
-    fontFamily: 'IBMPlexSans_600SemiBold',
-    fontSize: 18,
-    color: C.primary,
-  },
-
-  notNowBtn: {
-    height: 56,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  notNowText: {
-    fontFamily: 'NotoSans_600SemiBold',
-    fontSize: 16,
-    color: C.primary,
   },
 });

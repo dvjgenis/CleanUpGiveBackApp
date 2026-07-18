@@ -5,11 +5,11 @@ import { useFonts } from 'expo-font';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { CoachmarkEnter } from '@/components/motion/CoachmarkEnter';
 import { goBackInSessionSetupGuide } from '@/utils/sessionSetupGuideNavigation';
 import { OnboardingProgressPills } from '@/components/onboarding/OnboardingProgressPills';
 import { SessionSetupCelebration } from '@/components/session-setup/SessionSetupCelebration';
+import { SessionSetupGuideFooterActions } from '@/components/session-setup/SessionSetupGuideFooterActions';
 import { staggerDelay } from '@/motion';
 import { colors as C } from '@/constants/tokens';
 
@@ -44,23 +44,13 @@ export function SessionSetupCompleteScreen() {
         <SessionSetupCelebration />
       </View>
 
-      <CoachmarkEnter delayMs={staggerDelay(1)} style={s.footer}>
-        <AnimatedPressable
-          style={s.startBtn}
-          onPress={() => router.push('/session-setup')}
-          accessibilityRole="button"
-          accessibilityLabel="Start tracking"
-        >
-          <Text style={s.startBtnText}>Start Tracking</Text>
-        </AnimatedPressable>
-        <AnimatedPressable
-          style={s.previousBtn}
-          onPress={() => goBackInSessionSetupGuide(router)}
-          accessibilityRole="button"
-          accessibilityLabel="Previous step"
-        >
-          <Text style={s.previousBtnText}>Previous</Text>
-        </AnimatedPressable>
+      <CoachmarkEnter delayMs={staggerDelay(1)}>
+        <SessionSetupGuideFooterActions
+          continueLabel="Start Tracking"
+          hideSkip
+          onContinuePress={() => router.push('/session-setup')}
+          onPreviousPress={() => goBackInSessionSetupGuide(router)}
+        />
       </CoachmarkEnter>
 
     </SafeAreaView>
@@ -100,38 +90,5 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 16,
-  },
-
-  footer: {
-    paddingHorizontal: 16,
-    paddingBottom: 8,
-    gap: 20,
-  },
-
-  startBtn: {
-    height: 56,
-    backgroundColor: C.primary,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  startBtnText: {
-    fontFamily: 'IBMPlexSans_600SemiBold',
-    fontSize: 18,
-    color: C.textOnPrimary,
-  },
-
-  previousBtn: {
-    height: 56,
-    borderWidth: 1,
-    borderColor: C.primary,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  previousBtnText: {
-    fontFamily: 'IBMPlexSans_600SemiBold',
-    fontSize: 18,
-    color: C.primary,
   },
 });

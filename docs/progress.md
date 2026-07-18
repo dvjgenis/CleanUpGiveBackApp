@@ -4,6 +4,54 @@ Session-by-session progress tracker. Distinct from `notes/journey.md` (correctio
 
 ---
 
+## [2026-07-18 Session 180] — Align session-setup buttons with onboarding
+
+**Session goal:** Make session-setup guide / form CTAs match onboarding button styles.
+**Workflow used:** Chat / visual consistency pass
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Expand shared guide footer to Continue / Previous / Skip | `SessionSetupGuideFooterActions.tsx` | ✅ IBM Plex 18 · `paddingVertical: 20` · matches `OnboardingInfoFooterActions` |
+| Wire guide steps 1–7 + finale to shared footer | `SessionSetupGuideScreen` + `Step2`–`Step7` + `Complete` | ✅ |
+| Align form Start Session CTA | `SessionSetupFormScreen.tsx` | ✅ Same type + padding as onboarding primary |
+
+### Key Decisions
+
+- Keep session-setup footer chrome (inline, lighter padding) separate from onboarding’s absolute-pinned footer; only the **button** styles are shared visually.
+- Permission steps reuse the same component with `continueLabel` / `skipLabel="Not now"` / `disabled`.
+
+### Learnings
+
+- Steps 2–5 were still on Noto Sans 16 / fixed `height: 56`; steps 6–7/complete already had IBM Plex text but kept the shorter 56px hit target.
+
+---
+
+## [2026-07-18 Session 179] — Backend overview + dual-cam production report
+
+**Session goal:** Explain backend layout / Fastify·Prisma·Fly; diagnose dual-cam crash risk; record App Store stance.
+**Workflow used:** Chat / Q&A
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Write conversation report | `docs/reports/2026-07-18-backend-and-dual-camera.md` | ✅ |
+| Index reports folder | `docs/README.md` | ✅ |
+
+### Key Decisions
+
+- **App Store v1:** prefer **sequential** photo capture as production default; dual simultaneous front+back is optional and crash-prone (native failures bypass JS fallback).
+- Dual requires hardware multi-cam sessions (roughly iPhone A12+); not all phones support it.
+
+### Learnings
+
+- `checkMultiCamSupport` + DualCapture JS fallback do not protect against native shutter crashes.
+- Root `backend/README.md` “scaffold only” is outdated — sessions API is live on Fly.
+
+---
+
 ## [2026-07-18 Session 178] — Migrate react-native-vision-camera v4 → v5
 
 **Session goal:** Fix VisionCamera iOS 26 native crash by migrating to v5 Nitro Modules API.

@@ -5,11 +5,13 @@ import {
 import { Sanchez_400Regular } from '@expo-google-fonts/sanchez';
 import { useFonts } from 'expo-font';
 import { useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
+  InteractionManager,
   Platform,
+  Pressable,
   StyleSheet,
   Text,
   View,
@@ -151,13 +153,12 @@ function BeRealPreview({
 
 // ─── Option A: simultaneous dual-camera via VisionCamera v5 session API ───────
 
-type SessionData = {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  session: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  backPhotoOutput: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  frontPhotoOutput: any;
+
+const PHOTO_OUTPUT_OPTIONS = {
+  targetResolution: CommonResolutions.FHD_4_3,
+  containerFormat: 'native' as const,
+  quality: 0.9,
+  qualityPrioritization: 'balanced' as const,
 };
 
 function DualCapture({
@@ -170,15 +171,36 @@ function DualCapture({
   /** Called when the dual session fails to start or capture (device limitation). */
   onFallbackSequential: () => void;
 }) {
+  // Create outputs synchronously via useMemo — same pattern as usePreviewOutput()
+  // and usePhotoOutput(). This ensures NativePreviewView always receives a stable
+  // JSI reference from its very first render, never triggering the folly::dynamic
+  // prop serialization path that crashes on HybridObject values.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [backPreviewOutput, setBackPreviewOutput] = useState<any>(null);
+  const backPreviewOutput = useMemo<any>(() => VisionCamera.createPreviewOutput(), []);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [frontPreviewOutput, setFrontPreviewOutput] = useState<any>(null);
+  const frontPreviewOutput = useMemo<any>(() => VisionCamera.createPreviewOutput(), []);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const backPhotoOutput = useMemo<any>(() => VisionCamera.createPhotoOutput(PHOTO_OUTPUT_OPTIONS), []);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const frontPhotoOutput = useMemo<any>(() => VisionCamera.createPhotoOutput(PHOTO_OUTPUT_OPTIONS), []);
+
+  const [showPreviews, setShowPreviews] = useState(false);
   const [ready, setReady] = useState(false);
   const [capturing, setCapturing] = useState(false);
-  const sessionDataRef = useRef<SessionData | null>(null);
+  const sessionRef = useRef<any>(null);
   const fellBackRef = useRef(false);
   const insets = useSafeAreaInsets();
+
+  // Delay NativePreviewView mount until after navigation + any in-flight Reanimated
+  // animations complete. Reanimated's cloneShadowTreeWithNewPropsRecursive crashes
+  // when it traverses a NativePreviewView that holds a Nitro HybridObject prop
+  // (previewOutput) — the merge path tries to serialize it via folly::dynamic.
+  useEffect(() => {
+    const task = InteractionManager.runAfterInteractions(() => {
+      setShowPreviews(true);
+    });
+    return () => task.cancel();
+  }, []);
 
   const fallback = (reason: unknown) => {
     if (fellBackRef.current) return;
@@ -210,33 +232,21 @@ function DualCapture({
         const frontDevice = combination.find((d) => d.position === 'front')!;
         const backDevice = combination.find((d) => d.position === 'back')!;
 
-        const photoOptions = {
-          targetResolution: CommonResolutions.FHD_4_3,
-          containerFormat: 'native' as const,
-          quality: 0.9,
-          qualityPrioritization: 'balanced' as const,
-        };
-
-        const frontPreview = VisionCamera.createPreviewOutput();
-        const frontPhoto = VisionCamera.createPhotoOutput(photoOptions);
-        const backPreview = VisionCamera.createPreviewOutput();
-        const backPhoto = VisionCamera.createPhotoOutput(photoOptions);
-
         const session = await VisionCamera.createCameraSession(true);
         await session.configure([
           {
             input: frontDevice,
             outputs: [
-              { output: frontPreview, mirrorMode: 'on' },
-              { output: frontPhoto, mirrorMode: 'off' },
+              { output: frontPreviewOutput, mirrorMode: 'on' },
+              { output: frontPhotoOutput, mirrorMode: 'off' },
             ],
             constraints: [],
           },
           {
             input: backDevice,
             outputs: [
-              { output: backPreview, mirrorMode: 'off' },
-              { output: backPhoto, mirrorMode: 'off' },
+              { output: backPreviewOutput, mirrorMode: 'off' },
+              { output: backPhotoOutput, mirrorMode: 'off' },
             ],
             constraints: [],
           },
@@ -245,9 +255,7 @@ function DualCapture({
         await session.start();
 
         if (!cancelled) {
-          sessionDataRef.current = { session, backPhotoOutput: backPhoto, frontPhotoOutput: frontPhoto };
-          setBackPreviewOutput(backPreview);
-          setFrontPreviewOutput(frontPreview);
+          sessionRef.current = session;
           setReady(true);
         }
       } catch (err) {
@@ -257,16 +265,15 @@ function DualCapture({
 
     return () => {
       cancelled = true;
-      void sessionDataRef.current?.session?.stop?.();
+      void sessionRef.current?.stop?.();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const captureSimultaneous = async () => {
-    if (!ready || capturing || !sessionDataRef.current) return;
+    if (!ready || capturing) return;
     setCapturing(true);
     try {
-      const { backPhotoOutput, frontPhotoOutput } = sessionDataRef.current;
       const [backFile, frontFile] = await Promise.all([
         // eslint-disable-next-line @typescript-eslint/no-unsafe-call
         backPhotoOutput.capturePhotoToFile({}, EMPTY_CALLBACKS),
@@ -286,18 +293,24 @@ function DualCapture({
 
   return (
     <View style={s.root}>
-      {backPreviewOutput ? (
+      {/* NativePreviewView is only mounted after InteractionManager.runAfterInteractions
+          fires, ensuring the navigation animation (and any other Reanimated commit cycle)
+          has fully completed. Reanimated crashes if it traverses a shadow tree node that
+          holds a Nitro HybridObject prop (previewOutput) during folly::dynamic mergeProps. */}
+      {showPreviews && (
         <NativePreviewView
           style={StyleSheet.absoluteFillObject}
           previewOutput={backPreviewOutput}
         />
-      ) : (
+      )}
+
+      {(!ready || !showPreviews) && (
         <View style={[StyleSheet.absoluteFillObject, s.center]}>
           <ActivityIndicator color={C.primary} />
         </View>
       )}
 
-      {frontPreviewOutput && (
+      {showPreviews && (
         <View
           style={[s.pip, { top: insets.top + PIP_TOP, right: PIP_RIGHT }]}
           pointerEvents="none"
@@ -309,34 +322,37 @@ function DualCapture({
         </View>
       )}
 
+      {/* No Reanimated components below — AnimatedPressable / CoachmarkEnter would
+          trigger Reanimated commits that traverse the tree and hit NativePreviewView. */}
       <SafeAreaView style={s.overlay} edges={['top', 'bottom']} pointerEvents="box-none">
         <View style={s.topBar}>
-          <AnimatedPressable
+          <Pressable
             style={s.backBtn}
             onPress={onCancel}
             accessibilityRole="button"
             accessibilityLabel="Cancel"
           >
             <Text style={s.backBtnText}>Cancel</Text>
-          </AnimatedPressable>
+          </Pressable>
         </View>
 
-        <CoachmarkEnter>
-          <View style={s.copyBlock}>
-            <Text style={s.copyTitle}>Ready to snap</Text>
-            <Text style={s.copySubtitle}>
-              Point at your cleanup area — one tap captures both cameras at once.
-            </Text>
-          </View>
-        </CoachmarkEnter>
+        <View style={s.copyBlock}>
+          <Text style={s.copyTitle}>Ready to snap</Text>
+          <Text style={s.copySubtitle}>
+            Point at your cleanup area — one tap captures both cameras at once.
+          </Text>
+        </View>
 
         <View style={s.controls}>
-          <ShutterButton
-            onPress={() => {
-              void captureSimultaneous();
-            }}
+          <Pressable
+            style={[s.shutterOuter, (capturing || !ready) && s.disabled]}
+            onPress={() => { void captureSimultaneous(); }}
             disabled={capturing || !ready}
-          />
+            accessibilityRole="button"
+            accessibilityLabel="Take photo"
+          >
+            <View style={s.shutterInner} />
+          </Pressable>
         </View>
       </SafeAreaView>
     </View>

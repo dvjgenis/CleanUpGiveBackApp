@@ -26,7 +26,7 @@ Shared UI components in `frontend/src/components/`.
 | BottomNavBar | `navigation/BottomNavBar.tsx` | 5-tab Home dashboard navbar (Figma `566:376`): Home · Shop · Track · Sessions · Profile. `activeTab` drives green highlight; press handlers are wired per screen. |
 | NavHomeIcon / NavShopIcon / NavTrackIcon / NavSessionsIcon / NavProfileIcon | `navigation/icons/*.tsx` | Fill-based `react-native-svg` icons hand-ported from `frontend/assets/figma/home-screen/nav/*.svg` for `BottomNavBar` |
 | PulsingDot | `motion/PulsingDot.tsx` | Live-status indicator dot — gentle ~2.4s opacity pulse; respects reduced motion |
-| SessionSetupGuideFooterActions | `session-setup/SessionSetupGuideFooterActions.tsx` | Guide step 1 footer — same Continue / Skip styles as steps 2–5 (top border, Noto Sans SemiBold 16) |
+| SessionSetupGuideFooterActions | `session-setup/SessionSetupGuideFooterActions.tsx` | Shared Continue / Previous / (optional) Skip footer for session-setup guide screens — button styles match onboarding (`IBMPlexSans_600SemiBold` 18, `paddingVertical: 20`, `radius.md`); `hidePrevious` for guide step 1, `hideSkip` for finale, `continueLabel`/`skipLabel`/`disabled` for permission steps |
 | SessionSetupTopAppBar | `session-setup/SessionSetupTopAppBar.tsx` | Figma `260:1392` — white top bar, drop shadow, back chevron + screen-centered Sanchez title |
 | SessionSetupBackChevronIcon | `session-setup/icons/SessionSetupBackChevronIcon.tsx` | Figma `260:1497` back chevron for TopAppBar |
 | SessionSetupCelebration | `session-setup/SessionSetupCelebration.tsx` | Setup-guide finale graphic: centered smiley + four stars with staggered fade/rotate entrance (Reanimated, Emil motion rules) |
