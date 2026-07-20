@@ -22,6 +22,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { durations, easing, modalSpring, sheetDismissSpring } from '@/motion';
 import { colors, fontFamilies, radius as R } from '../tokens';
+import type { MapBasemapTheme } from '../mapThemeStore';
+import { getTrackerChromeColors } from '../utils/trackerChromeTheme';
 import type { MapLayerType } from '../utils/mapStyles';
 
 /** Travel distance for slide — sheet height plus bleed so the panel starts fully off-screen. */
@@ -34,6 +36,8 @@ type Props = {
   selectedType: MapTypeOption;
   onSelect: (type: MapTypeOption) => void;
   onClose: () => void;
+  /** Matches live tracker map theme so the sheet chrome follows dark mode. */
+  mapTheme?: MapBasemapTheme;
 };
 
 const OPTIONS: {
@@ -77,11 +81,15 @@ function MapTypeOptionButton({
   source,
   selected,
   onPress,
+  labelColor,
+  frameBg,
 }: {
   label: string;
   source: ImageSourcePropType;
   selected: boolean;
   onPress: () => void;
+  labelColor: string;
+  frameBg: string;
 }) {
   return (
     <AnimatedPressable
@@ -92,10 +100,24 @@ function MapTypeOptionButton({
       accessibilityState={{ selected }}
       accessibilityLabel={`${label} map type${selected ? ', selected' : ''}`}
     >
-      <View style={[s.thumbFrame, selected && s.thumbFrameSelected]}>
+      <View
+        style={[
+          s.thumbFrame,
+          { backgroundColor: frameBg },
+          selected && s.thumbFrameSelected,
+        ]}
+      >
         <Image source={source} style={s.thumb} accessibilityIgnoresInvertColors />
       </View>
-      <Text style={[s.optionLabel, selected && s.optionLabelSelected]}>{label}</Text>
+      <Text
+        style={[
+          s.optionLabel,
+          { color: labelColor },
+          selected && s.optionLabelSelected,
+        ]}
+      >
+        {label}
+      </Text>
     </AnimatedPressable>
   );
 }
@@ -105,7 +127,9 @@ export function MapTypesSheet({
   selectedType,
   onSelect,
   onClose,
+  mapTheme = 'light',
 }: Props) {
+  const chrome = getTrackerChromeColors(mapTheme);
   const insets = useSafeAreaInsets();
   const reducedMotion = useReducedMotion();
   const dismissTravel = 280 + insets.bottom + SHEET_BOTTOM_BLEED;
@@ -179,8 +203,20 @@ export function MapTypesSheet({
         />
 
         <Animated.View style={[s.sheetWrap, sheetStyle]}>
-          <View style={[s.sheet, { paddingBottom: 20 + insets.bottom }]}>
-            <View style={s.grabber} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
+          <View
+            style={[
+              s.sheet,
+              {
+                backgroundColor: chrome.surface,
+                paddingBottom: 20 + insets.bottom,
+              },
+            ]}
+          >
+            <View
+              style={[s.grabber, { backgroundColor: chrome.borderOutline }]}
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
+            />
 
             <AnimatedPressable
               scaleTo={0.98}
@@ -190,10 +226,10 @@ export function MapTypesSheet({
               hitSlop={8}
               style={s.closeBtn}
             >
-              <CloseIcon />
+              <CloseIcon color={chrome.textPrimary} />
             </AnimatedPressable>
 
-            <Text style={s.title}>Map Types</Text>
+            <Text style={[s.title, { color: chrome.textPrimary }]}>Map Types</Text>
 
             <View style={s.optionsRow}>
               {OPTIONS.map((option) => (
@@ -203,11 +239,18 @@ export function MapTypesSheet({
                   source={option.source}
                   selected={selectedType === option.id}
                   onPress={() => handleSelect(option.id)}
+                  labelColor={chrome.textPrimary}
+                  frameBg={chrome.surfaceMuted}
                 />
               ))}
             </View>
           </View>
-          <View style={[s.sheetBleed, { height: SHEET_BOTTOM_BLEED }]} />
+          <View
+            style={[
+              s.sheetBleed,
+              { height: SHEET_BOTTOM_BLEED, backgroundColor: chrome.surface },
+            ]}
+          />
         </Animated.View>
       </View>
     </Modal>
@@ -229,7 +272,6 @@ const s = StyleSheet.create({
     width: '100%',
   },
   sheet: {
-    backgroundColor: colors.white,
     borderTopLeftRadius: R.md,
     borderTopRightRadius: R.md,
     width: '100%',
@@ -237,15 +279,12 @@ const s = StyleSheet.create({
     paddingHorizontal: 20,
     overflow: 'hidden',
   },
-  sheetBleed: {
-    backgroundColor: colors.white,
-  },
+  sheetBleed: {},
   grabber: {
     alignSelf: 'center',
     width: 36,
     height: 4,
     borderRadius: R.full,
-    backgroundColor: colors.borderOutline,
     marginBottom: 12,
   },
   closeBtn: {
@@ -262,7 +301,6 @@ const s = StyleSheet.create({
     fontFamily: fontFamilies.notoSansSemiBold,
     fontSize: 20,
     lineHeight: 28,
-    color: colors.textPrimary,
     marginBottom: 20,
     marginTop: 8,
   },
@@ -281,7 +319,6 @@ const s = StyleSheet.create({
     width: THUMB_SIZE + 8,
     height: THUMB_SIZE + 8,
     borderRadius: 14,
-    backgroundColor: colors.bgSurface,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
@@ -299,7 +336,6 @@ const s = StyleSheet.create({
     fontFamily: fontFamilies.notoSansMedium,
     fontSize: 13,
     lineHeight: 18,
-    color: colors.textPrimary,
     textAlign: 'center',
   },
   optionLabelSelected: {

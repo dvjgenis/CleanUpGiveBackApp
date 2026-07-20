@@ -27,7 +27,8 @@ const INTERCARDINAL_ANGLES = [22.5, 45, 67.5, 112.5, 135, 157.5] as const;
 
 const GREEN = '#009540';
 const RED = '#BA1A1A';
-const TICK_COLOR = '#3E4A3D';
+/** Default dial ticks / facing label when no theme color is passed. */
+const DEFAULT_MUTED = '#6e7a6c';
 
 const DIRECTIONS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'] as const;
 
@@ -133,6 +134,11 @@ type Props = {
   borderColor?: string;
   backgroundColor?: string;
   /**
+   * Facing-direction letter + non-green/red tick marks. Pass tracker
+   * `chrome.textTertiary` so the dial matches location/weather contrast.
+   */
+  mutedColor?: string;
+  /**
    * Optional controlled heading in degrees (0–360, clockwise from true/magnetic
    * north). When set, Compass does not open its own heading watch — pass the
    * live-session store heading on the tracker so map arrow + compass stay in sync.
@@ -148,6 +154,7 @@ export function Compass({
   size = 44,
   borderColor = '#C8C8C8',
   backgroundColor = '#FFFFFF',
+  mutedColor = DEFAULT_MUTED,
   headingDegrees,
 }: Props) {
   const { angle: headingAngle, label: directionLabel } = useCompassHeading(headingDegrees);
@@ -187,14 +194,14 @@ export function Compass({
           >
             <G transform={`translate(${CENTER}, ${CENTER})`}>
               {INTERCARDINAL_ANGLES.map((a) => (
-                <G key={a} transform={`rotate(${a})`} opacity={0.5}>
+                <G key={a} transform={`rotate(${a})`} opacity={0.9}>
                   <Polygon
                     points={`0,${-DIAG_HALF} ${-DIAG_W},${-DIAG_HALF + 3} ${DIAG_W},${-DIAG_HALF + 3}`}
-                    fill={TICK_COLOR}
+                    fill={mutedColor}
                   />
                   <Polygon
                     points={`0,${DIAG_HALF} ${-DIAG_W},${DIAG_HALF - 3} ${DIAG_W},${DIAG_HALF - 3}`}
-                    fill={TICK_COLOR}
+                    fill={mutedColor}
                   />
                 </G>
               ))}
@@ -225,7 +232,12 @@ export function Compass({
         </View>
 
         <View style={styles.labelLayer} pointerEvents="none">
-          <Text style={[styles.directionLabel, { fontSize, lineHeight: fontSize }]}>
+          <Text
+            style={[
+              styles.directionLabel,
+              { fontSize, lineHeight: fontSize, color: mutedColor },
+            ]}
+          >
             {directionLabel}
           </Text>
         </View>
@@ -252,7 +264,6 @@ const styles = StyleSheet.create({
   },
   directionLabel: {
     fontWeight: '700',
-    color: TICK_COLOR,
     textAlign: 'center',
     includeFontPadding: false,
   },

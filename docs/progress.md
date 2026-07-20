@@ -4,6 +4,65 @@ Session-by-session progress tracker. Distinct from `notes/journey.md` (correctio
 
 ---
 
+## [2026-07-20 Session 207] — Tracker chrome follows map dark mode
+
+**Session goal:** When map dark mode is on (sun/moon or auto night), restyle live-tracker UI chrome to match — even if that means leaving cream brand surfaces.
+**Workflow used:** Chat
+
+### Skills Invoked
+
+_None this session — direct inline edits._
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Add `getTrackerChromeColors(theme)` palette | `trackerChromeTheme.ts` | ✅ Light = brand; dark = near-black + light type |
+| Wire `LiveSessionScreen` overlays to chrome | `LiveSessionScreen.tsx` | ✅ Cards, pill, tools, timer, CTAs |
+| Theme `TrackerActionButton` + `MapTypesSheet` | those components | ✅ Optional/required chrome / `mapTheme` |
+| Spec + docs | `map-theme-and-weather-icons.md`, `app.md`, `current.md` | ✅ AC-10 |
+
+### Key Decisions
+
+- Chrome tracks **`mapThemeStore` effective theme**, not OS appearance — same toggle as the basemap.
+- Dark chrome intentionally deviates from cream brand tokens for night-map contrast; primary/lime accents stay.
+
+### Learnings
+
+- Static `StyleSheet` color constants can't follow theme — pass chrome into children or build styles via `useMemo`.
+
+---
+
+## [2026-07-20 Session 206] — Photo capture: flash (back only) + zoom
+
+**Session goal:** Add flash and zoom controls to checkpoint photo capture using expo-camera only (no VisionCamera).
+**Workflow used:** Chat
+
+### Skills Invoked
+
+_None this session — direct inline edits._
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Flash cycle Off → On → Auto on back-camera step | `PhotoCaptureScreen.tsx` | ✅ `flash` prop; hidden on front |
+| Apple-style curved zoom dial (1×–5×) + dim black shutter footer | `PhotoCaptureScreen.tsx` | ✅ Replaced vertical slider; GestureHandlerRootView wrap |
+| Docs sync | `app.md`, `current.md`, `progress.md` | ✅ |
+
+### Key Decisions
+
+- **Flash back-only:** Front cameras rarely have a flash unit; `flash` stays `'off'` on the selfie step and the toggle is not rendered.
+- **Stay on expo-camera:** Zoom/flash are first-class `CameraView` props — no VisionCamera for this feature.
+- **Zoom UX:** Curved dial inspired by iOS Camera (yellow caret + major stops 1/2/3/5); display factor maps onto expo-camera `zoom` 0–1. Dim black footer behind shutter for contrast (no Apple mode strip).
+
+### Learnings
+
+- expo-camera `zoom` is normalized 0–1 (fraction of device max); UI shows a cosmetic 1×–5× dial for readability.
+- `GestureDetector` on this screen needs a local `GestureHandlerRootView` — root `_layout` does not wrap one.
+
+---
+
 ## [2026-07-20 Session 205] — UI polish: Did-you-know icon swap and session-setup chevron exit fix
 
 **Session goal:** Replace the question-mark icon on the creating-account screen with the info-circle asset, improve "Did you know" label visibility, and fix the top-left chevron on all session-setup guide screens to exit back to the originating screen rather than stepping backward through the guide.
@@ -4339,3 +4398,41 @@ useEffect(() => {
 
 - Expo Go App Store version supports SDK 54; SDK 57 requires TestFlight beta. Do not upgrade SDK without planning a dev build.
 - `npm audit fix` silently upgrades react-native and expo to incompatible major versions — treat it as a breaking operation on this project.
+
+---
+
+## [2026-07-20 Session 208] — Remove VisionCamera v5; add checkpoint photo thumbnails with full-screen viewer
+
+**Session goal:** Permanently fix sequential photo capture crashes by replacing react-native-vision-camera v5 with expo-camera; add overlapping checkpoint thumbnails with tappable full-screen viewer on live tracker.
+**Workflow used:** Skill-driven (systematic-debugging)
+
+### Skills Invoked
+
+| Skill | Purpose | Outcome |
+|---|---|---|
+| `superpowers:systematic-debugging` | Root-cause the sequential capture crash before attempting any fix | Identified VisionCamera v5 `folly::dynamic` / Nitro HybridObject serialization as the structural crash cause |
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Replace VisionCamera v5 with expo-camera | `screens/PhotoCaptureScreen.tsx` | ✅ CameraView + useCameraPermissions; key={step} remount trick |
+| Remove all VisionCamera packages | `package.json`, `app.json`, `src/utils/checkMultiCamSupport.ts` | ✅ 7 packages removed; npm install synced |
+| PIP moved to left side in preview | `screens/PhotoCaptureScreen.tsx` | ✅ `left: PIP_RIGHT` |
+| Remove route-tracking banner | `screens/LiveSessionScreen.tsx` | ✅ backgroundLocationEnabled banner removed |
+| Overlapping checkpoint thumbnails | `screens/LiveSessionScreen.tsx` | ✅ 44px rounded thumbs, -14px overlap, up to 5 + overflow badge |
+| Checkpoint photo full-screen viewer | `screens/LiveSessionScreen.tsx` | ✅ `CheckpointPhotoViewer` Modal — selfie PIP top-left, date/time top-left, ‹/› nav, 1/N counter |
+| Update stale app.md `/photo-capture` entry | `docs/frontend/context/app.md` | ✅ VisionCamera refs replaced with expo-camera description |
+| Update vision-camera memory | `memory/vision-camera.md` | ✅ Reflects full removal of all VisionCamera packages |
+
+### Key Decisions
+
+- `key={step}` on `CameraView` is the correct fix for front→back camera transitions — forces a full native session teardown rather than in-place reconfiguration (which VisionCamera v5 crashed on).
+- `CheckpointPhotoViewer` built as a `Modal` overlay inside `LiveSessionScreen` rather than a separate route — avoids navigation stack complexity for a transient viewer.
+- Viewer shows `progressUri` full-screen and `selfieUri` as PIP (mirrors the capture preview layout).
+
+### Learnings
+
+- VisionCamera v5 Nitro HybridObjects cannot be passed as React props through Fabric's `folly::dynamic` serialization path — this is a structural incompatibility, not a race condition.
+- expo-camera `CameraView` cleanly supports device switching via React key remounting; no special session management needed.
+- EAS builds blocked by Apple Developer Program License Agreement require the account **holder** (not a team member) to accept at developer.apple.com/account.

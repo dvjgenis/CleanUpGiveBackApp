@@ -22,10 +22,11 @@ Live tracker Standard basemap supports light (Carto Voyager) and dark (Carto Dar
 - [x] **AC-7:** Works on Expo Go WebView and native MapLibre paths
 - [x] **AC-8:** Dark Matter parks, nature reserves, and green landcover (wood/grass/recreation ground) are repainted a legible dark green — upstream Dark Matter renders them the same near-black as the background
 - [x] **AC-9:** Named local parks (e.g. Devonshire Park; `class == "park"` in Carto's `park` source-layer) render as a shaded fill in dark mode, not just a point label — upstream style (both themes) only ships a fill layer for `national_park`/`nature_reserve` classes
+- [x] **AC-10:** Live tracker overlay chrome (timer card, location pill, compass, map tools, checkpoint card, CTAs, Map Types sheet) follows the same effective map theme as the basemap — dark mode uses near-black surfaces + light type (intentional brand deviation for night contrast)
 
 ## Out of scope
 
-- App-wide chrome dark mode
+- App-wide chrome dark mode (outside the live tracker)
 - Custom sunrise/sunset by coordinates
 - Full Weather Icons set (subset of common conditions only)
 

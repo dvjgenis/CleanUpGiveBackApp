@@ -1,7 +1,8 @@
 import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
-import { colors, radius } from '../tokens';
+import { radius } from '../tokens';
+import type { TrackerChromeColors } from '../utils/trackerChromeTheme';
 
 const ICON_SIZE = 24;
 const LABEL_LINE_HEIGHT = 24;
@@ -16,6 +17,15 @@ type Props = {
   variant?: Variant;
   accessibilityLabel?: string;
   style?: StyleProp<ViewStyle>;
+  /** Live-tracker chrome palette (follows map light/dark). */
+  chrome: Pick<
+    TrackerChromeColors,
+    | 'primary'
+    | 'textOnPrimary'
+    | 'secondaryFill'
+    | 'secondaryBorder'
+    | 'secondaryLabel'
+  >;
 };
 
 /**
@@ -29,12 +39,23 @@ export function TrackerActionButton({
   variant = 'primary',
   accessibilityLabel,
   style,
+  chrome,
 }: Props) {
   const isPrimary = variant === 'primary';
 
   return (
     <AnimatedPressable
-      style={[styles.button, isPrimary ? styles.primary : styles.secondary, style]}
+      style={[
+        styles.button,
+        isPrimary
+          ? { backgroundColor: chrome.primary }
+          : {
+              backgroundColor: chrome.secondaryFill,
+              borderWidth: 1,
+              borderColor: chrome.secondaryBorder,
+            },
+        style,
+      ]}
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
@@ -44,7 +65,9 @@ export function TrackerActionButton({
         <Text
           style={[
             styles.label,
-            isPrimary ? styles.primaryLabel : styles.secondaryLabel,
+            {
+              color: isPrimary ? chrome.textOnPrimary : chrome.secondaryLabel,
+            },
           ]}
         >
           {label}
@@ -63,14 +86,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 18,
     paddingHorizontal: 24,
-  },
-  primary: {
-    backgroundColor: colors.primary,
-  },
-  secondary: {
-    backgroundColor: colors.bgApp,
-    borderWidth: 1,
-    borderColor: colors.borderOutline,
   },
   content: {
     flexDirection: 'row',
@@ -92,11 +107,5 @@ const styles = StyleSheet.create({
     height: LABEL_LINE_HEIGHT,
     includeFontPadding: false,
     textAlignVertical: 'center',
-  },
-  primaryLabel: {
-    color: colors.textOnPrimary,
-  },
-  secondaryLabel: {
-    color: colors.textTertiary,
   },
 });

@@ -64,25 +64,17 @@ import {
   getTrackerHasPaid,
   isFreeTrialExpired,
 } from '@/features/session-tracking/trackerPaymentStore';
-import { colors, radius } from '@/features/session-tracking/tokens';
+import { radius } from '@/features/session-tracking/tokens';
+import {
+  getTrackerChromeColors,
+  type TrackerChromeColors,
+} from '@/features/session-tracking/utils/trackerChromeTheme';
 import {
   formatPhotoTimeLabel,
   formatSessionDateLabel,
   formatSubmittedCheckpointCount,
   shouldShowCheckpointSubmissionCount,
 } from '@/features/session-tracking/utils/sessionFormat';
-
-const C = {
-  bgApp: colors.bgApp,
-  mapTint: '#eae3d0',
-  primary: colors.primary,
-  accentLime: colors.accentLime,
-  textPrimary: colors.textPrimary,
-  textTertiary: colors.textTertiary,
-  textOnPrimary: colors.textOnPrimary,
-  borderOutline: colors.borderOutline,
-  statusPending: colors.status.pending.border,
-} as const;
 
 const TIMER_BORDER_PULSE_MS = 2400;
 const CHECKPOINT_THUMB_SIZE = 44;
@@ -127,7 +119,15 @@ function formatDistanceMiles(miles: number): string {
   return miles.toFixed(1);
 }
 
-function PulsingTimerCard({ children }: { children: React.ReactNode }) {
+function PulsingTimerCard({
+  children,
+  chrome,
+  styles,
+}: {
+  children: React.ReactNode;
+  chrome: TrackerChromeColors;
+  styles: ReturnType<typeof createStyles>;
+}) {
   const borderOpacity = useSharedValue(1);
 
   useEffect(() => {
@@ -146,36 +146,57 @@ function PulsingTimerCard({ children }: { children: React.ReactNode }) {
   }));
 
   return (
-    <Animated.View style={[s.timerCard, borderStyle]}>
+    <Animated.View
+      style={[
+        styles.timerCard,
+        { backgroundColor: chrome.surface },
+        borderStyle,
+      ]}
+    >
       {children}
     </Animated.View>
   );
 }
 
-function TrackerBackButton({ onPress }: { onPress: () => void }) {
+function TrackerBackButton({
+  onPress,
+  chrome,
+  styles,
+}: {
+  onPress: () => void;
+  chrome: TrackerChromeColors;
+  styles: ReturnType<typeof createStyles>;
+}) {
   return (
     <AnimatedPressable
-      style={s.backBtn}
+      style={[
+        styles.backBtn,
+        {
+          borderColor: chrome.borderOutline,
+          backgroundColor: chrome.surface,
+        },
+      ]}
       scaleTo={0.98}
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel="Go back"
     >
-      <View style={s.backBtnIconWrap} pointerEvents="none">
-        <SessionSetupBackChevronIcon color={C.textTertiary} width={8.485} height={14.142} />
+      <View style={styles.backBtnIconWrap} pointerEvents="none">
+        <SessionSetupBackChevronIcon color={chrome.textTertiary} width={8.485} height={14.142} />
       </View>
     </AnimatedPressable>
   );
 }
 
-function TrackerCompassControl() {
+function TrackerCompassControl({ chrome }: { chrome: TrackerChromeColors }) {
   const { currentHeading } = useLiveSession();
 
   return (
     <Compass
       size={48}
-      borderColor={C.borderOutline}
-      backgroundColor={C.textOnPrimary}
+      borderColor={chrome.borderOutline}
+      backgroundColor={chrome.surface}
+      mutedColor={chrome.textTertiary}
       headingDegrees={currentHeading}
     />
   );
@@ -185,14 +206,24 @@ function MapToolButton({
   children,
   onPress,
   accessibilityLabel,
+  chrome,
+  styles,
 }: {
   children: React.ReactNode;
   onPress?: () => void;
   accessibilityLabel: string;
+  chrome: TrackerChromeColors;
+  styles: ReturnType<typeof createStyles>;
 }) {
   return (
     <AnimatedPressable
-      style={s.mapToolBtn}
+      style={[
+        styles.mapToolBtn,
+        {
+          borderColor: chrome.borderStrong,
+          backgroundColor: chrome.surfaceMuted,
+        },
+      ]}
       scaleTo={0.98}
       onPress={onPress}
       accessibilityRole="button"
@@ -211,6 +242,8 @@ export function LiveSessionScreen() {
   const [mapLayerPickerVisible, setMapLayerPickerVisible] = useState(false);
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
   const mapTheme = useEffectiveMapTheme();
+  const chrome = useMemo(() => getTrackerChromeColors(mapTheme), [mapTheme]);
+  const s = useMemo(() => createStyles(chrome), [chrome]);
   const { mapRevealStyle, chromeStyle } = useLiveSessionMapReveal();
   const submittedCheckpointCount = submittedCheckpoints.length;
   const showSubmissionCount = shouldShowCheckpointSubmissionCount(submittedCheckpoints);
@@ -271,59 +304,75 @@ export function LiveSessionScreen() {
   }, [freeTrialExpired, router]);
 
   if (!fontsLoaded) {
-    return <View style={s.root} />;
+    return <View style={[s.root, { backgroundColor: chrome.mapTint }]} />;
   }
 
   return (
-    <View style={s.root}>
-      <Animated.View style={[s.mapLayer, mapRevealStyle]}>
+    <View style={[s.root, { backgroundColor: chrome.mapTint }]}>
+      <Animated.View
+        style={[s.mapLayer, { backgroundColor: chrome.mapTint }, mapRevealStyle]}
+      >
         <LiveSessionMap style={s.map} />
       </Animated.View>
 
       <SafeAreaView style={s.overlay} edges={['top', 'bottom']} pointerEvents="box-none">
         <Animated.View style={[s.main, chromeStyle]} pointerEvents="box-none">
           <View style={s.navbar}>
-            <TrackerBackButton onPress={() => router.replace('/')} />
+            <TrackerBackButton
+              onPress={() => router.replace('/')}
+              chrome={chrome}
+              styles={s}
+            />
 
-            <View style={s.locationPill}>
+            <View
+              style={[
+                s.locationPill,
+                {
+                  borderColor: chrome.borderOutline,
+                  backgroundColor: chrome.surface,
+                },
+              ]}
+            >
               <View style={s.locationRow}>
-                <LocationPinIcon color={C.textTertiary} size={18} strokeWidth={1.5} />
-                <Text style={s.locationText}>
+                <LocationPinIcon color={chrome.textTertiary} size={18} strokeWidth={1.5} />
+                <Text style={[s.locationText, { color: chrome.textTertiary }]}>
                   {isWeatherLoading && !placeLabel ? '…' : (placeLabel ?? 'Location off')}
                 </Text>
               </View>
-              <View style={s.pillDivider} />
+              <View style={[s.pillDivider, { backgroundColor: chrome.borderOutline }]} />
               <View style={s.temperatureRow}>
-                <TrackerWeatherIcon color={C.textTertiary} />
-                <Text style={s.locationText}>
+                <TrackerWeatherIcon color={chrome.textTertiary} />
+                <Text style={[s.locationText, { color: chrome.textTertiary }]}>
                   {isWeatherLoading ? '…' : temperatureLabel}
                 </Text>
               </View>
             </View>
 
-            <TrackerCompassControl />
+            <TrackerCompassControl chrome={chrome} />
           </View>
 
           <View style={s.inProgressSection} pointerEvents="box-none">
             <View style={s.timerBlock} pointerEvents="box-none">
-              <PulsingTimerCard>
+              <PulsingTimerCard chrome={chrome} styles={s}>
                 <Text
-                  style={s.timerText}
+                  style={[s.timerText, { color: chrome.textPrimary }]}
                   accessibilityLabel={`Elapsed time ${formatElapsed(elapsedSeconds)}`}
                 >
                   {formatElapsed(elapsedSeconds)}
                 </Text>
                 {showFreeTrialCountdown ? (
                   <Text
-                    style={s.freeHourText}
+                    style={[s.freeHourText, { color: chrome.primary }]}
                     accessibilityLabel={`Free hour remaining ${formatElapsed(freeTrialRemaining)}`}
                   >
                     {formatElapsed(freeTrialRemaining)}
                   </Text>
                 ) : null}
                 <View style={s.distanceRow}>
-                  <Text style={s.distanceLabel}>Distance:</Text>
-                  <Text style={s.distanceValue}>{formatDistanceMiles(distanceMiles)} miles</Text>
+                  <Text style={[s.distanceLabel, { color: chrome.textTertiary }]}>Distance:</Text>
+                  <Text style={[s.distanceValue, { color: chrome.textTertiary }]}>
+                    {formatDistanceMiles(distanceMiles)} miles
+                  </Text>
                 </View>
               </PulsingTimerCard>
             </View>
@@ -335,37 +384,57 @@ export function LiveSessionScreen() {
                     <MapToolButton
                       accessibilityLabel="Map layers"
                       onPress={() => setMapLayerPickerVisible((visible) => !visible)}
+                      chrome={chrome}
+                      styles={s}
                     >
-                      <TrackerLayersIcon color={C.textTertiary} />
+                      <TrackerLayersIcon color={chrome.textTertiary} />
                     </MapToolButton>
                   </View>
                   <MapToolButton
                     accessibilityLabel={mapFollowEnabled ? 'Stop following location' : 'Follow my location'}
                     onPress={toggleLiveSessionMapFollow}
+                    chrome={chrome}
+                    styles={s}
                   >
-                    <RouteIcon color={mapFollowEnabled ? C.primary : C.textTertiary} />
+                    <RouteIcon color={mapFollowEnabled ? chrome.primary : chrome.textTertiary} />
                   </MapToolButton>
                   <MapToolButton
                     accessibilityLabel="Center on my location"
                     onPress={requestLiveSessionMapRecenter}
+                    chrome={chrome}
+                    styles={s}
                   >
-                    <TrackerMyLocationIcon color={C.textTertiary} />
+                    <TrackerMyLocationIcon color={chrome.textTertiary} />
                   </MapToolButton>
                   <MapToolButton
                     accessibilityLabel={mapTheme === 'dark' ? 'Switch to light map' : 'Switch to dark map'}
                     onPress={toggleManualMapTheme}
+                    chrome={chrome}
+                    styles={s}
                   >
                     {mapTheme === 'dark'
-                      ? <TrackerMapDarkIcon color={C.textTertiary} />
-                      : <TrackerMapLightIcon color={C.textTertiary} />}
+                      ? <TrackerMapDarkIcon color={chrome.textTertiary} />
+                      : <TrackerMapLightIcon color={chrome.textTertiary} />}
                   </MapToolButton>
                 </View>
 
-                <View style={s.checkpointCard}>
+                <View
+                  style={[
+                    s.checkpointCard,
+                    {
+                      backgroundColor: chrome.surface,
+                      borderColor: chrome.borderOutline,
+                    },
+                  ]}
+                >
                   <View style={s.checkpointHeader}>
-                    <Text style={s.checkpointTitle}>Checkpoint Photo</Text>
+                    <Text style={[s.checkpointTitle, { color: chrome.textPrimary }]}>
+                      Checkpoint Photo
+                    </Text>
                     {showSubmissionCount && (
-                      <Text style={s.checkpointSubmittedCount}>{submittedCheckpointLabel}</Text>
+                      <Text style={[s.checkpointSubmittedCount, { color: chrome.primary }]}>
+                        {submittedCheckpointLabel}
+                      </Text>
                     )}
                   </View>
                   {showSubmissionCount && (
@@ -387,7 +456,10 @@ export function LiveSessionScreen() {
                         >
                           <ExpoImage
                             source={{ uri: checkpoint.selfieUri || checkpoint.progressUri }}
-                            style={s.checkpointThumb}
+                            style={[
+                              s.checkpointThumb,
+                              { backgroundColor: chrome.borderOutline },
+                            ]}
                             contentFit="cover"
                             cachePolicy="memory-disk"
                             transition={0}
@@ -398,13 +470,28 @@ export function LiveSessionScreen() {
                   )}
                   <View style={s.nextPhotoBlock}>
                     <View style={s.nextPhotoRow}>
-                      <Text style={s.nextPhotoLabel}>Next photo due in:</Text>
-                      <Text style={s.nextPhotoTime}>
+                      <Text style={[s.nextPhotoLabel, { color: chrome.textPrimary }]}>
+                        Next photo due in:
+                      </Text>
+                      <Text style={[s.nextPhotoTime, { color: chrome.primary }]}>
                         {formatCheckpointDue(checkpointSecondsRemaining)}
                       </Text>
                     </View>
-                    <View style={s.progressTrack}>
-                      <View style={[s.progressFill, { width: `${checkpointProgress * 100}%` }]} />
+                    <View
+                      style={[
+                        s.progressTrack,
+                        { backgroundColor: chrome.borderOutline },
+                      ]}
+                    >
+                      <View
+                        style={[
+                          s.progressFill,
+                          {
+                            width: `${checkpointProgress * 100}%`,
+                            backgroundColor: chrome.statusPending,
+                          },
+                        ]}
+                      />
                     </View>
                   </View>
                 </View>
@@ -414,17 +501,19 @@ export function LiveSessionScreen() {
                 <TrackerActionButton
                   label="Submit Photo"
                   variant="primary"
+                  chrome={chrome}
                   onPress={() => router.push('/photo-checkpoint')}
-                  icon={<TrackerSubmitPhotoIcon color={C.textOnPrimary} size={24} />}
+                  icon={<TrackerSubmitPhotoIcon color={chrome.textOnPrimary} size={24} />}
                 />
                 <TrackerActionButton
                   label="End Session"
                   variant="secondary"
+                  chrome={chrome}
                   onPress={() => {
                     finalizeLiveSession();
                     router.push('/session-feedback');
                   }}
-                  icon={<TrackerEndSessionIcon color={C.textTertiary} size={24} />}
+                  icon={<TrackerEndSessionIcon color={chrome.textTertiary} size={24} />}
                 />
               </View>
             </View>
@@ -437,6 +526,7 @@ export function LiveSessionScreen() {
         selectedType={mapLayer}
         onSelect={setLiveSessionMapLayer}
         onClose={() => setMapLayerPickerVisible(false)}
+        mapTheme={mapTheme}
       />
 
       <PhotoEnlargeModal
@@ -474,265 +564,205 @@ export function LiveSessionScreen() {
   );
 }
 
-const s = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: C.mapTint,
-    overflow: 'hidden',
-  },
-
-  mapLayer: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: C.mapTint,
-  },
-
-  map: {
-    flex: 1,
-    borderRadius: 0,
-  },
-
-  overlay: {
-    flex: 1,
-  },
-
-  main: {
-    flex: 1,
-    paddingHorizontal: 16,
-    gap: 10,
-  },
-
-  navbar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 34,
-    marginTop: 8,
-  },
-
-  backBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 30,
-    borderWidth: 1,
-    borderColor: C.borderOutline,
-    backgroundColor: C.textOnPrimary,
-    overflow: 'hidden',
-  },
-
-  backBtnIconWrap: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  locationPill: {
-    width: 203,
-    height: 44,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: C.borderOutline,
-    backgroundColor: C.textOnPrimary,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 15,
-    paddingHorizontal: 16,
-  },
-
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-
-  temperatureRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-
-  locationText: {
-    fontFamily: 'NotoSans_500Medium',
-    fontSize: 12,
-    lineHeight: 16,
-    color: C.textTertiary,
-  },
-
-  pillDivider: {
-    width: 1,
-    height: 13,
-    backgroundColor: C.borderOutline,
-  },
-
-  inProgressSection: {
-    flex: 1,
-    gap: 16,
-  },
-
-  timerBlock: {
-    alignItems: 'center',
-    gap: 10,
-  },
-
-  timerCard: {
-    width: '100%',
-    backgroundColor: C.textOnPrimary,
-    borderWidth: 3,
-    borderColor: C.accentLime,
-    borderRadius: radius.md,
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    alignItems: 'center',
-    gap: 4,
-  },
-
-  timerText: {
-    fontFamily: 'NotoSans_600SemiBold',
-    fontSize: 38,
-    lineHeight: 50,
-    letterSpacing: 4,
-    color: C.textPrimary,
-    textAlign: 'center',
-  },
-
-  freeHourText: {
-    fontFamily: 'NotoSans_600SemiBold',
-    fontSize: 14,
-    lineHeight: 18,
-    letterSpacing: 1.5,
-    color: C.primary,
-    textAlign: 'center',
-  },
-
-  distanceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-
-  distanceLabel: {
-    fontFamily: 'IBMPlexSans_500Medium',
-    fontSize: 16,
-    color: C.textTertiary,
-  },
-
-  distanceValue: {
-    fontFamily: 'IBMPlexSans_500Medium',
-    fontSize: 16,
-    color: C.textTertiary,
-  },
-
-  bottomSection: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    gap: 30,
-    paddingBottom: 8,
-  },
-
-  checkpointSection: {
-    gap: 25,
-  },
-
-  mapTools: {
-    alignSelf: 'flex-end',
-    gap: 10,
-    width: 44,
-  },
-
-  mapLayerControl: {
-    position: 'relative',
-    width: 44,
-  },
-
-  mapToolBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: C.textTertiary,
-    backgroundColor: C.bgApp,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  checkpointCard: {
-    backgroundColor: C.textOnPrimary,
-    borderWidth: 1,
-    borderColor: C.borderOutline,
-    borderRadius: radius.md,
-    paddingHorizontal: 23,
-    paddingVertical: 14,
-    gap: 12,
-    minHeight: 0,
-  },
-
-  checkpointHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-
-  checkpointTitle: {
-    fontFamily: 'NotoSans_400Regular',
-    fontSize: 12,
-    color: C.textPrimary,
-  },
-
-  checkpointSubmittedCount: {
-    fontFamily: 'NotoSans_500Medium',
-    fontSize: 12,
-    color: C.primary,
-  },
-
-  checkpointThumbs: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 2,
-  },
-
-  checkpointThumb: {
-    width: CHECKPOINT_THUMB_SIZE,
-    height: CHECKPOINT_THUMB_SIZE,
-    borderRadius: radius.sm,
-    backgroundColor: C.borderOutline,
-  },
-
-  nextPhotoBlock: {
-    gap: 10,
-  },
-
-  nextPhotoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-
-  nextPhotoLabel: {
-    fontFamily: 'NotoSans_500Medium',
-    fontSize: 16,
-    color: C.textPrimary,
-  },
-
-  nextPhotoTime: {
-    fontFamily: 'IBMPlexSans_600SemiBold',
-    fontSize: 16,
-    color: C.primary,
-  },
-
-  progressTrack: {
-    height: 4,
-    borderRadius: radius.full,
-    backgroundColor: C.borderOutline,
-    overflow: 'hidden',
-  },
-
-  progressFill: {
-    height: 4,
-    borderRadius: radius.full,
-    backgroundColor: C.statusPending,
-  },
-
-  actions: {
-    gap: 10,
-  },
-});
+function createStyles(_chrome: TrackerChromeColors) {
+  return StyleSheet.create({
+    root: {
+      flex: 1,
+      overflow: 'hidden',
+    },
+    mapLayer: {
+      ...StyleSheet.absoluteFillObject,
+    },
+    map: {
+      flex: 1,
+      borderRadius: 0,
+    },
+    overlay: {
+      flex: 1,
+    },
+    main: {
+      flex: 1,
+      paddingHorizontal: 16,
+      gap: 10,
+    },
+    navbar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 34,
+      marginTop: 8,
+    },
+    backBtn: {
+      width: 44,
+      height: 44,
+      borderRadius: 30,
+      borderWidth: 1,
+      overflow: 'hidden',
+    },
+    backBtnIconWrap: {
+      ...StyleSheet.absoluteFillObject,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    locationPill: {
+      width: 203,
+      height: 44,
+      borderRadius: radius.full,
+      borderWidth: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 15,
+      paddingHorizontal: 16,
+    },
+    locationRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+    },
+    temperatureRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+    },
+    locationText: {
+      fontFamily: 'NotoSans_500Medium',
+      fontSize: 12,
+      lineHeight: 16,
+    },
+    pillDivider: {
+      width: 1,
+      height: 13,
+    },
+    inProgressSection: {
+      flex: 1,
+      gap: 16,
+    },
+    timerBlock: {
+      alignItems: 'center',
+      gap: 10,
+    },
+    timerCard: {
+      width: '100%',
+      borderWidth: 3,
+      borderColor: '#c2d832',
+      borderRadius: radius.md,
+      paddingHorizontal: 24,
+      paddingVertical: 14,
+      alignItems: 'center',
+      gap: 4,
+    },
+    timerText: {
+      fontFamily: 'NotoSans_600SemiBold',
+      fontSize: 38,
+      lineHeight: 50,
+      letterSpacing: 4,
+      textAlign: 'center',
+    },
+    freeHourText: {
+      fontFamily: 'NotoSans_600SemiBold',
+      fontSize: 14,
+      lineHeight: 18,
+      letterSpacing: 1.5,
+      textAlign: 'center',
+    },
+    distanceRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+    },
+    distanceLabel: {
+      fontFamily: 'IBMPlexSans_500Medium',
+      fontSize: 16,
+    },
+    distanceValue: {
+      fontFamily: 'IBMPlexSans_500Medium',
+      fontSize: 16,
+    },
+    bottomSection: {
+      flex: 1,
+      justifyContent: 'flex-end',
+      gap: 30,
+      paddingBottom: 8,
+    },
+    checkpointSection: {
+      gap: 25,
+    },
+    mapTools: {
+      alignSelf: 'flex-end',
+      gap: 10,
+      width: 44,
+    },
+    mapLayerControl: {
+      position: 'relative',
+      width: 44,
+    },
+    mapToolBtn: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      borderWidth: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    checkpointCard: {
+      borderWidth: 1,
+      borderRadius: radius.md,
+      paddingHorizontal: 23,
+      paddingVertical: 14,
+      gap: 12,
+      minHeight: 0,
+    },
+    checkpointHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 12,
+    },
+    checkpointTitle: {
+      fontFamily: 'NotoSans_400Regular',
+      fontSize: 12,
+    },
+    checkpointSubmittedCount: {
+      fontFamily: 'NotoSans_500Medium',
+      fontSize: 12,
+    },
+    checkpointThumbs: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 2,
+    },
+    checkpointThumb: {
+      width: CHECKPOINT_THUMB_SIZE,
+      height: CHECKPOINT_THUMB_SIZE,
+      borderRadius: radius.sm,
+    },
+    nextPhotoBlock: {
+      gap: 10,
+    },
+    nextPhotoRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    nextPhotoLabel: {
+      fontFamily: 'NotoSans_500Medium',
+      fontSize: 16,
+    },
+    nextPhotoTime: {
+      fontFamily: 'IBMPlexSans_600SemiBold',
+      fontSize: 16,
+    },
+    progressTrack: {
+      height: 4,
+      borderRadius: radius.full,
+      overflow: 'hidden',
+    },
+    progressFill: {
+      height: 4,
+      borderRadius: radius.full,
+    },
+    actions: {
+      gap: 10,
+    },
+  });
+}
