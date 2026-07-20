@@ -4,6 +4,37 @@ Session-by-session progress tracker. Distinct from `notes/journey.md` (correctio
 
 ---
 
+## [2026-07-20 Session 205] — UI polish: Did-you-know icon swap and session-setup chevron exit fix
+
+**Session goal:** Replace the question-mark icon on the creating-account screen with the info-circle asset, improve "Did you know" label visibility, and fix the top-left chevron on all session-setup guide screens to exit back to the originating screen rather than stepping backward through the guide.
+**Workflow used:** Chat
+
+### Skills Invoked
+
+_None this session — direct inline edits._
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Add `InfoCircleIcon` from `assets/figma/session-setup/info-circle.svg` | `OnboardingIcons.tsx` | ✅ New export alongside existing `QuestionIcon` |
+| Swap `QuestionIcon` → `InfoCircleIcon` on creating-account screen | `CreatingAccountScreen.tsx` | ✅ |
+| Bump "Did you know" label color `borderOutline` → `textNavInactive` | `CreatingAccountScreen.tsx` | ✅ |
+| Fix chevron on session-setup guide screen to call `exitSessionSetupGuideToTrackEntry` | `SessionSetupGuideScreen.tsx` | ✅ |
+| Fix chevron on steps 2–5 to call `exitSessionSetupGuideToTrackEntry` | `SessionSetupStep2–5Screen.tsx` | ✅ |
+
+### Key Decisions
+
+- **Chevron vs Previous:** Top-left chevron now consistently exits the entire guide flow (via `router.dismissTo(returnHref)`) on all 5 coachmark screens; the footer "Previous" button still navigates backward through steps. This matches the pattern already used by `session-free-hour` and `session-free-kit`.
+- **InfoCircleIcon** is a standalone export — `QuestionIcon` is kept for backward compatibility.
+
+### Learnings
+
+- `session-free-hour` and `session-free-kit` already had the correct `onBack` / `onPrevious` split; the coachmark screens were inconsistently using `goBackInSessionSetupGuide` for both.
+- `exitSessionSetupGuideToTrackEntry` uses `router.dismissTo(returnHref)` which bypasses any stale stack entries from prior onboarding flows; `router.back()` does not.
+
+---
+
 ## [2026-07-20] — Account: Personal Details section (edit name/phone/birthday/service type)
 
 **Session goal:** Add a Personal Details section to the Account tab where the user can edit the fields collected during onboarding: name, phone number, birthday, and service type (Court Ordered, Volunteering, School, Other).
@@ -4224,3 +4255,87 @@ const auto& [runtime, value] = (std::pair<jsi::Runtime*, jsi::Value>)*rawValue; 
 **Resolution:** `DualCapture` is kept in the file but never rendered. `PhotoCaptureScreen` now always uses `SequentialCapture` (back camera photo → front selfie prompt). The `multiCamResult` / `forceSequential` state and `checkMultiCamSupport` import have been removed from the root component.
 
 **To revisit:** The `hybridRef` imperative approach in `DualCapture` is architecturally correct. If VisionCamera v5 releases a fix for Fabric/Nitro prop serialization, or if `react-native-nitro-modules` exposes a stable JSI ref API, re-enable by restoring the condition in `PhotoCaptureScreen`.
+
+---
+
+## [2026-07-20 Session 132] — Fix "maximum update depth exceeded" in LiveSessionScreen
+
+**Session goal:** Identify and fix the React "maximum update depth exceeded" console error on the live session screen.
+**Workflow used:** Chat / direct implementation
+
+### Skills Invoked
+
+None.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Fix maximum update depth exceeded error | `frontend/src/screens/LiveSessionScreen.tsx` | ✅ Derived booleans replace elapsedSeconds-dep effects |
+
+### Root Cause
+
+Two `useEffect` hooks depended on `elapsedSeconds` (increments every second from the ticker). After `transparentModal` was introduced for `photo-checkpoint`, `missed-checkpoint`, and `free-trial-done`, `LiveSessionScreen` stays mounted underneath these overlays. Once `isFreeTrialExpired(elapsedSeconds)` became true, the effect fired `router.push('/free-trial-done')` every second indefinitely — rapid navigation state mutations triggered React's maximum update depth limit.
+
+### Fix
+
+Derived two boolean flags during render so effects only fire on the boolean transition (false → true), not every tick:
+
+```tsx
+const checkpointMissed = isCheckpointMissed();
+const freeTrialExpired = !getTrackerHasPaid() && isFreeTrialExpired(elapsedSeconds);
+
+useEffect(() => {
+  if (checkpointMissed) { /* ... */ }
+}, [checkpointMissed, router]);
+
+useEffect(() => {
+  if (freeTrialExpired) { /* ... */ }
+}, [freeTrialExpired, router]);
+```
+
+### Key Decisions
+
+- Pattern: when a `useEffect` triggers navigation and the source data is an always-changing counter (like `elapsedSeconds`), derive a stable boolean from the condition and use that as the dep.
+- The `checkpointSecondsRemaining === 0` effect was already correct and left unchanged (that dep only changes once per 30-min interval).
+
+### Learnings
+
+- `transparentModal` screens keep the parent mounted — any effect with a frequently-changing dep (ticker, elapsed time) that triggers navigation will loop.
+- `isCheckpointMissed()` and `isFreeTrialExpired()` are stable boolean-returning pure functions safe to call during render; the derived boolean approach is idiomatic and needs no ref guards.
+
+---
+
+## [2026-07-20 Session 206] — Map type drawer, feedback flow, splash font, and SDK restore
+
+**Session goal:** Fix map layer picker (restore image drawer), ensure feedback screen appears after session end, fix splash screen font, fix compass prop name, fix map theme icon, restore Expo Go SDK 54 compatibility.
+**Workflow used:** Chat / inline edits
+
+### Skills Invoked
+
+| Skill | Purpose | Outcome |
+|---|---|---|
+| none | Direct inline fixes | All changes applied |
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Restore MapTypesSheet drawer for layers button | `LiveSessionScreen.tsx` | ✅ Replaced MapLayerPicker with MapTypesSheet (animated bottom sheet with image thumbnails) |
+| Fix map theme icon mapping | `LiveSessionScreen.tsx` | ✅ Icon now shows current mode (light→light icon, dark→dark icon) |
+| Wire feedback screen after End Session | `LiveSessionScreen.tsx` | ✅ End Session → `/session-feedback` → submit/skip → `/submission-confirmation` |
+| Fix splash screen Sanchez font | `AppSplashScreen.tsx` | ✅ Fill animation now waits for fontsLoaded before starting |
+| Fix Compass prop name | `LiveSessionScreen.tsx` | ✅ `heading` → `headingDegrees` to match Compass component API |
+| Install react-native-worklets | `package.json` | ✅ Added v0.5.1 (Reanimated v4 peer dep for babel plugin) |
+| Restore Expo Go SDK 54 compatibility | `package.json`, `package-lock.json` | ✅ Reverted npm audit upgrades; app runs in App Store Expo Go |
+
+### Key Decisions
+
+- `MapTypesSheet` (Modal-based bottom drawer) must be rendered at the root `<View>` level, not nested inside map tool controls — Modals must not be deeply nested.
+- Do not run `npm audit fix` on this project — it upgrades Expo SDK breaking Expo Go compatibility.
+- `react-native-worklets@0.5.1` is the correct version for `react-native-reanimated@~4.1.1` (peer dep range 0.5–0.8).
+
+### Learnings
+
+- Expo Go App Store version supports SDK 54; SDK 57 requires TestFlight beta. Do not upgrade SDK without planning a dev build.
+- `npm audit fix` silently upgrades react-native and expo to incompatible major versions — treat it as a breaking operation on this project.
