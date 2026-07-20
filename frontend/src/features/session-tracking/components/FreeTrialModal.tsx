@@ -82,13 +82,14 @@ export function FreeTrialModal({ onContinue, onPayLater }: Props) {
 const s = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.primary,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
   },
   center: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacing.md,
   },
   card: {
     width: '100%',

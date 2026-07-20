@@ -131,7 +131,8 @@ export function MissedCheckpointScreen() {
 const s = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: C.bgApp,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'flex-end',
   },
 
   background: {

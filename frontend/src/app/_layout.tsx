@@ -55,11 +55,11 @@ export default function RootLayout() {
       <Stack.Screen name="session-feedback" />
       <Stack.Screen name="give-feedback" />
       <Stack.Screen name="feedback-thank-you" />
-      <Stack.Screen name="photo-checkpoint" />
+      <Stack.Screen name="photo-checkpoint" options={{ presentation: 'transparentModal', headerShown: false, animation: 'fade' }} />
       <Stack.Screen name="photo-capture" />
-      <Stack.Screen name="photo-submitted" />
+      <Stack.Screen name="photo-submitted" options={{ presentation: 'transparentModal', headerShown: false, animation: 'fade' }} />
       <Stack.Screen name="submission-confirmation" />
-      <Stack.Screen name="missed-checkpoint" />
+      <Stack.Screen name="missed-checkpoint" options={{ presentation: 'transparentModal', headerShown: false, animation: 'fade' }} />
       <Stack.Screen name="notifications" />
       <Stack.Screen name="shop" options={tabRootScreenOptions} />
       <Stack.Screen name="donate" />
@@ -105,6 +105,7 @@ export default function RootLayout() {
       <Stack.Screen name="session-tour" />
       <Stack.Screen name="set-tour" />
       <Stack.Screen name="prototype/[screen]" />
+      <Stack.Screen name="free-trial-done" options={{ presentation: 'transparentModal', headerShown: false, animation: 'fade' }} />
     </Stack>
     </AuthProvider>
   );
