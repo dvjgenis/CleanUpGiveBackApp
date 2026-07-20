@@ -15,20 +15,36 @@ export const TOUR_GRAPHICS = {
   homeStatsCards: require('@/assets/figma/tour/home-stats-cards.png') as number,
 } as const;
 
-/** Warm memory-disk cache so shop/track tour graphics paint immediately. */
+let prefetchStarted = false;
+
+/**
+ * Warm expo-image's memory-disk cache for all tour graphics.
+ * Safe to call multiple times — only runs once per app session.
+ * Use Asset.fromModule().uri (sync) instead of downloadAsync() because
+ * bundled assets already have a local URI and don't need a network fetch.
+ */
+export function prefetchAllTourGraphics(): void {
+  if (prefetchStarted) return;
+  prefetchStarted = true;
+
+  const uris = Object.values(TOUR_GRAPHICS).flatMap((module) => {
+    try {
+      const uri = Asset.fromModule(module).uri;
+      return uri ? [uri] : [];
+    } catch {
+      return [];
+    }
+  });
+
+  if (uris.length > 0) {
+    void ExpoImage.prefetch(uris, 'memory-disk');
+  }
+}
+
+/** @deprecated Use prefetchAllTourGraphics() at app boot instead. */
 export async function prefetchTourGraphics(
   keys: (keyof typeof TOUR_GRAPHICS)[] = ['shopShowcase', 'trackMap'],
 ): Promise<void> {
-  await Promise.allSettled(
-    keys.map(async (key) => {
-      try {
-        const asset = Asset.fromModule(TOUR_GRAPHICS[key]);
-        await asset.downloadAsync();
-        if (!asset.localUri) return;
-        await ExpoImage.prefetch(asset.localUri, 'memory-disk');
-      } catch {
-        // Non-fatal — screen still loads from the module require.
-      }
-    }),
-  );
+  prefetchAllTourGraphics();
+  void keys;
 }
