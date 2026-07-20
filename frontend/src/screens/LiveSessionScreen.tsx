@@ -25,6 +25,7 @@ import { TrackerActionButton } from '@/features/session-tracking/components/Trac
 import { LocationPinIcon } from '@/features/session-tracking/components/icons/LocationPinIcon';
 import { TrackerEndSessionIcon } from '@/features/session-tracking/components/icons/TrackerEndSessionIcon';
 import { TrackerLayersIcon } from '@/features/session-tracking/components/icons/TrackerLayersIcon';
+import { TrackerMapDarkIcon, TrackerMapLightIcon } from '@/features/session-tracking/components/icons/TrackerMapThemeIcons';
 import { RouteIcon } from '@/features/session-tracking/components/icons/RouteIcon';
 import { TrackerMyLocationIcon } from '@/features/session-tracking/components/icons/TrackerMyLocationIcon';
 import { TrackerSubmitPhotoIcon } from '@/features/session-tracking/components/icons/TrackerSubmitPhotoIcon';
@@ -45,6 +46,10 @@ import {
   toggleLiveSessionMapFollow,
   useLiveSession,
 } from '@/features/session-tracking/liveSessionStore';
+import {
+  toggleManualMapTheme,
+  useEffectiveMapTheme,
+} from '@/features/session-tracking/mapThemeStore';
 import { useLiveWeather } from '@/features/session-tracking/hooks/useLiveWeather';
 import { useLiveSessionMapReveal } from '@/features/session-tracking/hooks/useLiveSessionMapReveal';
 import { colors, radius } from '@/features/session-tracking/tokens';
@@ -125,6 +130,7 @@ export function LiveSessionScreen() {
   const { elapsedSeconds, checkpointSecondsRemaining, distanceMiles, submittedCheckpoints, mapLayer, mapFollowEnabled, sessionSyncWarning, backgroundLocationEnabled } =
     useLiveSession();
   const [mapLayerPickerVisible, setMapLayerPickerVisible] = useState(false);
+  const mapTheme = useEffectiveMapTheme();
   const { mapRevealStyle, chromeStyle } = useLiveSessionMapReveal();
   const submittedCheckpointCount = submittedCheckpoints.length;
   const showSubmissionCount = shouldShowCheckpointSubmissionCount(submittedCheckpoints);
@@ -257,6 +263,14 @@ export function LiveSessionScreen() {
                     onPress={requestLiveSessionMapRecenter}
                   >
                     <TrackerMyLocationIcon color={C.textTertiary} />
+                  </MapToolButton>
+                  <MapToolButton
+                    accessibilityLabel={mapTheme === 'dark' ? 'Switch to light map' : 'Switch to dark map'}
+                    onPress={toggleManualMapTheme}
+                  >
+                    {mapTheme === 'dark'
+                      ? <TrackerMapLightIcon color={C.textTertiary} />
+                      : <TrackerMapDarkIcon color={C.textTertiary} />}
                   </MapToolButton>
                 </View>
 

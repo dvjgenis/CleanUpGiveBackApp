@@ -13,10 +13,7 @@ import { getNativeMapStyle } from '../utils/mapStyles';
 import { simplifyRouteForDisplay } from '../utils/routeFiltering';
 import { LiveSessionMapCamera } from './LiveSessionMapCamera';
 import { MapInteractionContainer } from './MapInteractionContainer';
-import {
-  SessionCurrentArrowMarker,
-  SessionStartMarker,
-} from './SessionMapMarkers';
+import { SessionCurrentArrowMarker } from './SessionMapMarkers';
 
 type Props = {
   style?: object;
@@ -36,7 +33,6 @@ export function LiveSessionMapNative({ style }: Props) {
   const mapTheme = useEffectiveMapTheme();
   const hasFix = displayCoordinate !== null;
   const mapCenter = getLiveSessionMapCenter();
-  const routeStart = routeCoordinates[0] ?? null;
   const mapStyle = getNativeMapStyle(mapLayer, mapTheme);
   const displayRoute =
     displayRouteCoordinates.length >= 2
@@ -55,12 +51,6 @@ export function LiveSessionMapNative({ style }: Props) {
       >
         {displayRoute.length >= 2 && (
           <MapRoute coordinates={displayRoute} color={colors.primary} width={4} />
-        )}
-
-        {routeStart && (
-          <MapMarker longitude={routeStart[0]} latitude={routeStart[1]}>
-            <SessionStartMarker />
-          </MapMarker>
         )}
 
         {displayCoordinate && (
