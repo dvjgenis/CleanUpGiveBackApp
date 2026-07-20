@@ -3,9 +3,10 @@ import {
   NotoSans_600SemiBold,
 } from '@expo-google-fonts/noto-sans';
 import { Sanchez_400Regular } from '@expo-google-fonts/sanchez';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useFonts } from 'expo-font';
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -18,17 +19,6 @@ import {
 } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import {
-  Camera,
-  NativePreviewView,
-  VisionCamera,
-  useCameraDevice,
-  usePhotoOutput,
-  type CameraDevice,
-  type CapturePhotoCallbacks,
-  CommonResolutions,
-} from 'react-native-vision-camera';
-import { callback } from 'react-native-nitro-modules';
 
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { CoachmarkEnter } from '@/components/motion/CoachmarkEnter';
@@ -50,8 +40,6 @@ const C = {
 const PIP_SIZE = 170;
 const PIP_RIGHT = 17;
 const PIP_TOP = 14;
-
-const EMPTY_CALLBACKS: CapturePhotoCallbacks = {};
 
 // ─── Shutter button ───────────────────────────────────────────────────────────
 
@@ -148,226 +136,7 @@ function BeRealPreview({
   );
 }
 
-// ─── Option A: simultaneous dual-camera via VisionCamera v5 session API ───────
-
-
-const PHOTO_OUTPUT_OPTIONS = {
-  targetResolution: CommonResolutions.FHD_4_3,
-  containerFormat: 'native' as const,
-  quality: 0.9,
-  qualityPrioritization: 'balanced' as const,
-};
-
-function DualCapture({
-  onDone,
-  onCancel,
-  onFallbackSequential,
-}: {
-  onDone: (progressUri: string, selfieUri: string) => void;
-  onCancel: () => void;
-  /** Called when the dual session fails to start or capture (device limitation). */
-  onFallbackSequential: () => void;
-}) {
-  // Create outputs synchronously via useMemo — same pattern as usePreviewOutput()
-  // and usePhotoOutput(). This ensures NativePreviewView always receives a stable
-  // JSI reference from its very first render, never triggering the folly::dynamic
-  // prop serialization path that crashes on HybridObject values.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const backPreviewOutput = useMemo<any>(() => VisionCamera.createPreviewOutput(), []);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const frontPreviewOutput = useMemo<any>(() => VisionCamera.createPreviewOutput(), []);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const backPhotoOutput = useMemo<any>(() => VisionCamera.createPhotoOutput(PHOTO_OUTPUT_OPTIONS), []);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const frontPhotoOutput = useMemo<any>(() => VisionCamera.createPhotoOutput(PHOTO_OUTPUT_OPTIONS), []);
-
-  const [ready, setReady] = useState(false);
-  const [capturing, setCapturing] = useState(false);
-  const sessionRef = useRef<any>(null);
-  const fellBackRef = useRef(false);
-  const insets = useSafeAreaInsets();
-
-  // hybridRef callbacks — set previewOutput imperatively via JSI after mount.
-  // Passing previewOutput as a React prop goes through Fabric's folly::dynamic
-  // serialization (UIManager::createNode → HybridPreviewViewProps(folly::dynamic))
-  // which cannot represent a Nitro HybridObject → RawValue::castValue → SIGABRT.
-  // Mounting WITHOUT the prop leaves rawProps.at("previewOutput") == nullptr (safe),
-  // then setting ref.previewOutput = output calls setPreviewOutput() directly via JSI.
-  const onBackRef = useMemo(
-    () =>
-      callback((ref: any) => {
-        if (ref) ref.previewOutput = backPreviewOutput;
-      }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
-  );
-  const onFrontRef = useMemo(
-    () =>
-      callback((ref: any) => {
-        if (ref) ref.previewOutput = frontPreviewOutput;
-      }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
-  );
-
-  const fallback = (reason: unknown) => {
-    if (fellBackRef.current) return;
-    fellBackRef.current = true;
-    console.warn('[DualCapture] Falling back to sequential capture:', reason);
-    onFallbackSequential();
-  };
-
-  useEffect(() => {
-    let cancelled = false;
-    const readyTimeout = setTimeout(() => {
-      if (!cancelled && !fellBackRef.current) {
-        fallback('Dual camera readiness timeout');
-      }
-    }, 8000);
-
-    (async () => {
-      try {
-        const deviceFactory = await VisionCamera.createDeviceFactory();
-        const combination = (
-          deviceFactory.supportedMultiCamDeviceCombinations as CameraDevice[][]
-        ).find(
-          (devices) =>
-            devices.some((d) => d.position === 'front') &&
-            devices.some((d) => d.position === 'back')
-        );
-
-        if (!combination) {
-          fallback('No compatible front+back camera combination');
-          return;
-        }
-
-        // Safe: combination is guaranteed to contain both positions above
-        const frontDevice = combination.find((d) => d.position === 'front')!;
-        const backDevice = combination.find((d) => d.position === 'back')!;
-
-        const session = await VisionCamera.createCameraSession(true);
-        await session.configure([
-          {
-            input: frontDevice,
-            outputs: [
-              { output: frontPreviewOutput, mirrorMode: 'on' },
-              { output: frontPhotoOutput, mirrorMode: 'off' },
-            ],
-            constraints: [],
-          },
-          {
-            input: backDevice,
-            outputs: [
-              { output: backPreviewOutput, mirrorMode: 'off' },
-              { output: backPhotoOutput, mirrorMode: 'off' },
-            ],
-            constraints: [],
-          },
-        ]);
-
-        await session.start();
-
-        if (!cancelled) {
-          sessionRef.current = session;
-          setReady(true);
-          clearTimeout(readyTimeout);
-        }
-      } catch (err) {
-        if (!cancelled) fallback(err);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-      clearTimeout(readyTimeout);
-      void sessionRef.current?.stop?.();
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const captureSimultaneous = async () => {
-    if (!ready || capturing) return;
-    setCapturing(true);
-    try {
-      const [backFile, frontFile] = await Promise.all([
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-        backPhotoOutput.capturePhotoToFile({}, EMPTY_CALLBACKS),
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-        frontPhotoOutput.capturePhotoToFile({}, EMPTY_CALLBACKS),
-      ]);
-      onDone(
-        (backFile as { filePath: string }).filePath,
-        (frontFile as { filePath: string }).filePath
-      );
-    } catch (err) {
-      fallback(err);
-    } finally {
-      setCapturing(false);
-    }
-  };
-
-  return (
-    <View style={s.root}>
-      {/* Mount WITHOUT previewOutput prop — Fabric's createNode serializes props
-          through folly::dynamic which cannot carry a Nitro HybridObject.
-          previewOutput is set imperatively via hybridRef → JSI setPreviewOutput(). */}
-      <NativePreviewView
-        style={StyleSheet.absoluteFillObject}
-        hybridRef={onBackRef}
-      />
-
-      {!ready && (
-        <View style={[StyleSheet.absoluteFillObject, s.center]}>
-          <ActivityIndicator color={C.primary} />
-        </View>
-      )}
-
-      <View
-        style={[s.pip, { top: insets.top + PIP_TOP, right: PIP_RIGHT }]}
-        pointerEvents="none"
-      >
-        <NativePreviewView
-          style={StyleSheet.absoluteFillObject}
-          hybridRef={onFrontRef}
-        />
-      </View>
-
-      <SafeAreaView style={s.overlay} edges={['top', 'bottom']} pointerEvents="box-none">
-        <View style={s.topBar}>
-          <Pressable
-            style={s.backBtn}
-            onPress={onCancel}
-            accessibilityRole="button"
-            accessibilityLabel="Cancel"
-          >
-            <Text style={s.backBtnText}>Cancel</Text>
-          </Pressable>
-        </View>
-
-        <View style={s.copyBlock}>
-          <Text style={s.copyTitle}>Ready to snap</Text>
-          <Text style={s.copySubtitle}>
-            Point at your cleanup area — one tap captures both cameras at once.
-          </Text>
-        </View>
-
-        <View style={s.controls}>
-          <Pressable
-            style={[s.shutterOuter, (capturing || !ready) && s.disabled]}
-            onPress={() => { void captureSimultaneous(); }}
-            disabled={capturing || !ready}
-            accessibilityRole="button"
-            accessibilityLabel="Take photo"
-          >
-            <View style={s.shutterInner} />
-          </Pressable>
-        </View>
-      </SafeAreaView>
-    </View>
-  );
-}
-
-// ─── Option B: sequential capture (fallback for older / unsupported devices) ──
+// ─── Sequential capture (front → back) using expo-camera ─────────────────────
 
 function SequentialCapture({
   onDone,
@@ -376,37 +145,67 @@ function SequentialCapture({
   onDone: (progressUri: string, selfieUri: string) => void;
   onCancel: () => void;
 }) {
+  const [permission, requestPermission] = useCameraPermissions();
   const [step, setStep] = useState<'front' | 'back'>('front');
   const [selfieUri, setSelfieUri] = useState<string | null>(null);
   const [capturing, setCapturing] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
   const [captureError, setCaptureError] = useState<string | null>(null);
-
-  const backDevice = useCameraDevice('back');
-  const frontDevice = useCameraDevice('front');
-  // Single photo output shared across both camera steps
-  const photoOutput = usePhotoOutput();
+  const cameraRef = useRef<CameraView>(null);
 
   useEffect(() => {
     setCameraReady(false);
     setCaptureError(null);
   }, [step]);
 
+  if (!permission) {
+    return (
+      <View style={[s.root, s.center]}>
+        <ActivityIndicator color={C.primary} />
+      </View>
+    );
+  }
+
+  if (!permission.granted) {
+    return (
+      <View style={[s.root, s.center]}>
+        <Text style={s.copyTitle}>Camera permission needed</Text>
+        <Text style={[s.copySubtitle, { marginTop: 8, color: C.textTertiary }]}>
+          Allow camera access to submit checkpoint photos.
+        </Text>
+        <AnimatedPressable
+          style={[s.submitBtn, { marginTop: 24, width: 220 }]}
+          onPress={() => { void requestPermission(); }}
+          accessibilityRole="button"
+          accessibilityLabel="Grant camera permission"
+        >
+          <Text style={s.submitBtnText}>Allow Camera</Text>
+        </AnimatedPressable>
+        <AnimatedPressable
+          style={[s.backBtn, { marginTop: 12 }]}
+          onPress={onCancel}
+          accessibilityRole="button"
+          accessibilityLabel="Cancel"
+        >
+          <Text style={s.backBtnText}>Cancel</Text>
+        </AnimatedPressable>
+      </View>
+    );
+  }
+
   const capture = async () => {
-    if (capturing || !cameraReady) return;
+    if (capturing || !cameraReady || !cameraRef.current) return;
     setCapturing(true);
     setCaptureError(null);
     try {
-      const file = await photoOutput.capturePhotoToFile({}, EMPTY_CALLBACKS);
-      const filePath = (file as { filePath?: string } | null)?.filePath;
-      if (!filePath) {
-        throw new Error('Capture returned no file path');
-      }
+      const photo = await cameraRef.current.takePictureAsync({ quality: 0.9 });
+      if (!photo?.uri) throw new Error('Capture returned no URI');
+
       if (step === 'front') {
-        setSelfieUri(filePath);
+        setSelfieUri(photo.uri);
         setStep('back');
       } else if (selfieUri) {
-        onDone(filePath, selfieUri);
+        onDone(photo.uri, selfieUri);
       }
     } catch (error) {
       console.warn('[SequentialCapture] capture failed:', error);
@@ -418,39 +217,14 @@ function SequentialCapture({
     }
   };
 
-  const activeDevice = step === 'front' ? frontDevice : backDevice;
-
-  if (!activeDevice) {
-    return (
-      <View style={[s.root, s.center]}>
-        <Text style={s.copyTitle}>Camera unavailable</Text>
-        <Text style={s.copySubtitle}>No {step === 'front' ? 'front' : 'back'} camera found.</Text>
-        <AnimatedPressable
-          style={s.backBtn}
-          onPress={onCancel}
-          accessibilityRole="button"
-          accessibilityLabel="Cancel"
-        >
-          <Text style={s.backBtnText}>Go Back</Text>
-        </AnimatedPressable>
-      </View>
-    );
-  }
-
   return (
     <View style={s.root}>
-      <Camera
+      <CameraView
+        key={step}
+        ref={cameraRef as unknown as React.Ref<CameraView>}
         style={StyleSheet.absoluteFillObject}
-        device={activeDevice}
-        isActive
-        outputs={[photoOutput]}
-        onStarted={() => setCameraReady(true)}
-        onPreviewStarted={() => setCameraReady(true)}
-        onError={(error) => {
-          console.warn('[SequentialCapture] camera error:', error);
-          setCameraReady(false);
-          setCaptureError('Camera error — try again or go back.');
-        }}
+        facing={step}
+        onCameraReady={() => setCameraReady(true)}
       />
 
       {!cameraReady && (
@@ -541,12 +315,10 @@ export function PhotoCaptureScreen() {
     );
   }
 
-  const normalizeUri = (path: string) =>
-    Platform.OS === 'android' && !path.startsWith('file://')
-      ? `file://${path}`
-      : path.startsWith('file://')
-        ? path
-        : `file://${path}`;
+  const normalizeUri = (uri: string) =>
+    Platform.OS === 'android' && !uri.startsWith('file://')
+      ? `file://${uri}`
+      : uri;
 
   const handleDone = (progress: string, selfie: string) => {
     setProgressUri(normalizeUri(progress));
@@ -583,9 +355,7 @@ export function PhotoCaptureScreen() {
       <BeRealPreview
         selfieUri={selfieUri}
         progressUri={progressUri}
-        onSubmit={() => {
-          void handleSubmit();
-        }}
+        onSubmit={() => { void handleSubmit(); }}
         onRetake={handleRetake}
         isSubmitting={isSubmitting}
         submitError={submitError}
@@ -593,9 +363,6 @@ export function PhotoCaptureScreen() {
     );
   }
 
-  // DualCapture (simultaneous front+back) is disabled — VisionCamera v5 HybridObject
-  // props cannot survive Fabric's folly::dynamic serialization at createNode time.
-  // Always use sequential capture until a viable workaround is found.
   return (
     <SequentialCapture
       onDone={handleDone}

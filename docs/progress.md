@@ -4,6 +4,267 @@ Session-by-session progress tracker. Distinct from `notes/journey.md` (correctio
 
 ---
 
+## [2026-07-20] — Map Types sheet dismiss animation on select
+
+**Session goal:** Close the Map Types drawer with its spring animation when switching basemap styles, not instantly.
+
+| Change | File | Status |
+|--------|------|--------|
+| `handleSelect` calls `dismiss()` after `onSelect` | `MapTypesSheet.tsx` | ✅ |
+| `onSelect` only updates store; visibility via `onClose` | `LiveSessionScreen.tsx` | ✅ |
+| Docs | `components.md`, `progress.md` | ✅ |
+
+**R:** Parent set `mapLayerPickerVisible` false inside `onSelect`, so `Modal visible={false}` unmounted the sheet before `dismiss()` could run.
+**A:** Sheet owns animated close on select; parent only flips visibility from `onClose` after the spring finishes.
+**L:** Animated sheets must not let callers set `visible=false` until the dismiss callback.
+**P:** Done; switch Standard/Satellite/Hybrid and confirm the sheet slides down.
+**H:** Never close `MapTypesSheet` from `onSelect` — only from `onClose`.
+
+---
+
+## [2026-07-20] — Photo enlarge modal chrome redesign + safe area
+
+**Session goal:** Fix safe-area clipping on the photo viewer and simplify overlay chrome.
+
+| Change | File | Status |
+|--------|------|--------|
+| Wrap Modal body in `SafeAreaProvider` + `initialWindowMetrics` | `PhotoEnlargeModal.tsx` | ✅ |
+| Round close button; date/time tag; bottom `1/N`; hide Selfie/Progress | `PhotoEnlargeModal.tsx` | ✅ |
+| Docs | `components.md`, `progress.md` | ✅ |
+
+**R:** RN `Modal` zeroed safe-area insets; chrome also mixed caption + counter + timestamp in one top card.
+**A:** Re-seed safe area; top = date/time pill + round X; bottom = counter tag; `caption` kept for a11y only.
+**L:** Full-screen `overFullScreen` modals need their own `SafeAreaProvider`.
+**P:** Done; verify Session Detail + live tracker thumb expand.
+**H:** Do not rely on parent safe-area context alone inside RN `Modal`; do not show Selfie/Progress in enlarge chrome.
+
+---
+
+## [2026-07-20] — Live map stuck on spinner after Start Session
+
+**Session goal:** Fix live tracker map not loading when starting a session.
+
+| Change | File | Status |
+|--------|------|--------|
+| Start `watchPositionAsync` + compass before Always / one-shot GPS; timeout `getCurrentPositionAsync` at 8s | `liveSessionStore.ts` | ✅ |
+| Docs | `components.md`, `maps.md`, `app.md`, `progress.md` | ✅ |
+
+**R:** Map mounts only after a GPS seed (anti-US-flash). `startLocationWatching` awaited Always permission then untimed `getCurrentPositionAsync` *before* the watch — a hang or slow dialog left the spinner forever.
+**A:** Watch + heading first; last-known + timed current fix and background enablement run in parallel afterward.
+**L:** `useLiveWeather` already raced `getCurrentPositionAsync` with 8s — live session must do the same (or better, not block the watch on it).
+**P:** Done; re-test Start Session in Expo Go — map should leave the spinner once last-known or first watch fix arrives.
+**H:** Never await untimed one-shot GPS or Always permission before `watchPositionAsync` while the map gates on a seed.
+
+---
+
+## [2026-07-20] — Session detail photo thumbs → full-screen viewer
+
+**Session goal:** Same edge-to-edge photo enlarge on Session Detail evidence thumbs as live tracker / submission confirmation.
+
+| Change | File | Status |
+|--------|------|--------|
+| Pass thumb `source` into modal; date/time from `capturedAt` | `SessionDetailScreen.tsx` | ✅ |
+| Modal accepts `source` via `expo-image` | `PhotoEnlargeModal.tsx` | ✅ |
+| Local cache emits selfie + progress evidence | `sessionDetail.ts` | ✅ |
+| API detail captions + `capturedAt` | `useSessionDetail.ts` | ✅ |
+| Docs | `app.md`, `components.md`, `progress.md` | ✅ |
+
+**R:** Detail already mounted the modal but resolved URIs separately — empty/failed resolve meant tap looked dead; snapshot path also omitted progress photos.
+**A:** Open with the same `source` as the thumbnail; include both checkpoint photos from cache; stamp timestamps when available.
+**L:** Prefer sharing the thumb `ImageSource` over a second URI resolve for enlarge.
+**P:** Done; verify Sessions list → detail → tap evidence thumb.
+**H:** Keep selfie + progress in evidence list; do not gate visibility on a separate URI resolve.
+
+---
+
+## [2026-07-20] — Photo thumbnail → true full-screen viewer
+
+**Session goal:** Tapping a checkpoint / evidence photo thumbnail opens an edge-to-edge full-screen photo.
+
+| Change | File | Status |
+|--------|------|--------|
+| Edge-to-edge image (`contain`), overlay chrome, `overFullScreen` | `PhotoEnlargeModal.tsx` | ✅ |
+| Docs | `components.md`, `progress.md` | ✅ |
+
+**R:** Prior viewer capped the photo at ~72% height with side padding — felt like a dialog, not full screen.
+**A:** Image fills the viewport; header/nav float as scrim overlays; tap photo dismisses.
+**L:** Image must use `pointerEvents="none"` so backdrop dismiss still works under overlay chrome.
+**P:** Done; verify on live tracker thumbs, session detail, submission confirmation.
+**H:** Keep `presentationStyle="overFullScreen"`; do not reintroduce inset maxHeight framing.
+
+---
+
+## [2026-07-20] — Compass latency + accuracy
+
+**Session goal:** Lower live compass lag and improve heading accuracy on the tracker dial + map beam.
+
+| Change | File | Status |
+|--------|------|--------|
+| Adaptive EMA + platform accuracy gates; reject interference readings | `routeFiltering.ts` (+ tests) | ✅ |
+| Publish throttle 100→33 ms; deadband 1→0.35° | `liveSessionStore.ts` | ✅ |
+| Skip second EMA when controlled; dial anim 180→70 ms | `Compass.tsx` | ✅ |
+| Docs: AC-25, components, maps | `session-tracking-expo-go.md`, `components.md`, `maps.md`, `project.md`, `current.md` | ✅ |
+
+**R:** Stacked EMA (store + Compass) + 100 ms throttle + 180 ms anim made turns feel late; Android calibration 0 was treated like iOS 0° excellence.
+**A:** One adaptive smooth in the store; Compass only animates; tighter true-north thresholds; drop unusable readings instead of flipping to bad mag.
+**L:** Controlled compass must not re-EMA — map arrow and dial share one filtered heading.
+**P:** Done; verify on device turn vs standstill.
+**H:** Keep adaptive alpha (slow when still, fast on turns); do not reintroduce fixed 0.22 + double pass.
+
+---
+
+## [2026-07-20] — Submission confirmation scroll gap
+
+**Session goal:** More scroll room between Court Ordered Status and the sticky Go Home footer.
+
+| Change | File | Status |
+|--------|------|--------|
+| `SCROLL_FOOTER_GAP` 24→96 under court-ordered row | `SubmissionConfirmationScreen.tsx` | ✅ |
+
+**R:** Content sat too tight against the fixed footer; needed padding to scroll clear.
+**A:** Raised bottom content inset via `SCROLL_FOOTER_GAP`.
+**L:** Sticky footer clearance lives in ScrollView `paddingBottom`, not gap on the court-ordered row.
+**P:** Done.
+**H:** Keep footer absolute; only adjust scroll padding for clearance.
+
+---
+
+## [2026-07-20] — Tracker return + checkpoint thumb + free-hour type
+
+**Session goal:** After photo submit, land on the original live map (not a nested replace); square checkpoint thumbs; smaller free-hour countdown.
+
+| Change | File | Status |
+|--------|------|--------|
+| Continue Tracking → `dismissTo('/live-session')` | `PhotoSubmittedScreen.tsx` | ✅ |
+| Checkpoint thumbs: rounded square (`radius.sm`) | `LiveSessionScreen.tsx` | ✅ |
+| Free-hour countdown font 18→14 | `LiveSessionScreen.tsx` | ✅ |
+
+**R:** `replace('/live-session')` stacked a second tracker over photo modals; Cancel already used `dismissTo`.
+**A:** Match Cancel navigation; thumb borderRadius circle→sm; free-hour type scale down.
+**L:** Photo flow must dismiss to the existing map route, same as capture Cancel.
+**P:** Done for these three UI fixes.
+**H:** Do not reintroduce `replace` for Continue Tracking after submit.
+
+---
+
+## [2026-07-20 Session 192] — Shop tour showcase image (transparent bg)
+
+**Session goal:** Replace shop tour “Get your gear” graphic — previous PNG had an opaque black matte that showed on the forest-green tour screen.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Swap `shop-showcase.png` for mint-kit PNG with transparent corners | `assets/figma/tour/shop-showcase.png` | ✅ |
+| Docs | `progress.md`, `assets.md` | ✅ |
+
+---
+
+## [2026-07-20 Session 191] — Service Hours chart Y-axis integers only (re-apply)
+
+**Session goal:** Y-axis tick labels on the Home Service Hours bar chart must be integers, never decimals (prior fix had not persisted).
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| `niceMax` ceilings to multiples of 4 so `/4` steps stay integers | `HomeScreen.tsx` | ✅ |
+| Docs sync | `progress.md`, `components.md` | ✅ |
+
+### Verified
+
+- Scale examples: max 45 → ticks 48/36/24/12/0; max 7 → 8/6/4/2/0; max 0 → 4/3/2/1/0
+
+---
+
+## [2026-07-20 Session 190] — Session detail: slightly more scroll room
+
+**Session goal:** Add a bit more bottom scroll padding on session detail so content isn’t cramped against the fixed New Session CTA.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Bump scroll bottom pad 64 → 96 | `SessionDetailScreen.tsx` | ✅ |
+| Docs | `app.md`, `progress.md` | ✅ |
+
+---
+
+## [2026-07-20 Session 189] — Tracker: drop device-only banner + instant map pin
+
+**Session goal:** Remove the "Session saved on device only" banner on the live tracker, and stop the map from opening on a continental US overview before jumping to the user.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Remove sync banner from tracker UI | `LiveSessionScreen.tsx` | ✅ |
+| Stop setting device-only create/sync warning copy | `liveSessionStore.ts` | ✅ |
+| Activate session + GPS before remote create; seed last-known | `liveSessionStore.ts` | ✅ |
+| Mount map only after a GPS center (native + WebView) | `LiveSessionMapNative.tsx`, `LiveSessionMapWebView.tsx` | ✅ |
+| Docs | `app.md`, `session-tracking-expo-go.md`, `progress.md` | ✅ |
+
+### Key Decisions
+
+- Tracker no longer surfaces sync-status banners; remote session create runs after local activate.
+- Map never uses `DEFAULT_MAP_CENTER` / US zoom — shows a brief spinner until last-known or current fix arrives, then mounts already centered at zoom 15.
+
+### Verified
+
+- `npx tsc --noEmit` — clean
+
+---
+
+## [2026-07-20 Session 188] — Tracker / shop tour / onboarding UI polish
+
+**Session goal:** Ship the attached tracker + shop-tour + onboarding polish batch (image swap, instant onboarding images, timer card pulse, free-hour countdown, map marker fixes, feedback bubble order, etc.).
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Replace shop-showcase + remove Trash Cleanup Kit overlay | `shop-showcase.png`, `ShopTourScreen.tsx` | ✅ |
+| Enlarge/raise session-tour graphic | `SessionTourScreen.tsx` | ✅ |
+| Boot-prefetch + expo-image for session-setup/onboarding | `onboardingGraphics.ts`, `_layout.tsx`, guide/step/free-kit/hour/welcome | ✅ |
+| Suppress route-tracks banners; pulsating border; free-hour countdown | `LiveSessionScreen.tsx`, `liveSessionStore.ts` | ✅ |
+| Remove park backgrounds; overlapping checkpoint thumbs | photo-checkpoint/submitted/missed + LiveSessionScreen | ✅ |
+| Instant markers on style switch + drop shadow; feedback small→big; session detail scroll pad | map native/webview/helpers, `FeedbackScreen`, `SessionDetailScreen` | ✅ |
+| Docs | `app.md`, `progress.md` | ✅ |
+
+### Key Decisions
+
+- Free-hour remaining countdown sits inside the timer card in forest green; elapsed timer stays primary.
+- Map style changes no longer remount the native map or tear down WebView markers mid-swap.
+- Photo modals use a solid dark scrim only (park assets unused).
+
+### Verified
+
+- `npx tsc --noEmit` — clean after Compass `headingDegrees` prop fix on tracker.
+
+---
+
+## [2026-07-20 Session 187] — Session-setup coachmark pills match free-hour compression
+
+**Session goal:** Fix progress-pill jump on session setup: "Now that the session is over" showed 5 filled / 5 empty, then the next screen (free-hour) jumped to 8 filled / 2 empty when location+camera were already granted.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Extend `getSessionSetupGuidePillProgress` to guide + steps 2–5 | `sessionSetupGuideNavigation.ts` | ✅ |
+| Wire coachmark screens to `useSessionSetupGuidePillProgress` | `SessionSetupGuideScreen`, `SessionSetupStep2–5Screen` | ✅ |
+| Docs | `app.md`, `progress.md` | ✅ |
+
+### Key Decisions
+
+- Same compression rule as free-hour/free-kit: when permission screens will auto-skip, earlier screens advance so the bar stays contiguous (both granted: step5=7 → free-hour=8 → free-kit=9 → complete=10).
+
+### Verified
+
+- Pill math: both perms granted → step5 active=7 (3 empty), free-hour active=8 (2 empty) — one-step advance, not a 3-pill jump.
+
+---
+
 ## [2026-07-18 Session 181] — Core tracking audit polish (post–main merge)
 
 **Session goal:** Reconcile local tracking-audit work with `origin/main` (VisionCamera, map theme, free-trial) and close remaining plan gaps.

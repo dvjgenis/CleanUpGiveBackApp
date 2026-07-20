@@ -1,3 +1,4 @@
+import { ONBOARDING_GRAPHICS } from '@/components/onboarding/onboardingGraphics';
 import { OnboardingInfoFooterActions } from '@/components/onboarding/OnboardingInfoFooterActions';
 import { OnboardingProgressPills } from '@/components/onboarding/OnboardingProgressPills';
 import { colors as C } from '@/features/figma-screens/tokens';
@@ -8,8 +9,9 @@ import {
   NotoSans_700Bold,
 } from '@expo-google-fonts/noto-sans';
 import { Sanchez_400Regular } from '@expo-google-fonts/sanchez';
+import { Image as ExpoImage } from 'expo-image';
 import { useFonts } from 'expo-font';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 type Props = {
@@ -48,10 +50,13 @@ export function FreeKitScreen({ totalPills, activePills, onContinue, onPrevious,
         </View>
 
         <View style={s.graphicContainer}>
-          <Image
-            source={require('../../assets/images/screens/onboarding/free-kit-graphic.png')}
+          <ExpoImage
+            source={ONBOARDING_GRAPHICS.freeKitGraphic}
             style={s.graphic}
-            resizeMode="contain"
+            contentFit="contain"
+            cachePolicy="memory-disk"
+            priority="high"
+            transition={0}
             accessibilityElementsHidden
             importantForAccessibility="no-hide-descendants"
           />

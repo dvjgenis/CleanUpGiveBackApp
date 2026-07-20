@@ -7,7 +7,6 @@ import { useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { useEffect, useRef, useState } from 'react';
 import {
-  ImageBackground,
   StyleSheet,
   Text,
   View,
@@ -87,16 +86,7 @@ export function PhotoCheckpointScreen() {
 
   return (
     <View style={s.root}>
-      <ImageBackground
-        source={require('../../assets/images/screens/photo-checkpoint/background.png')}
-        style={s.background}
-        imageStyle={s.backgroundImage}
-        resizeMode="cover"
-        accessibilityElementsHidden
-        importantForAccessibility="no-hide-descendants"
-      >
-        <Animated.View style={[s.scrim, scrimStyle]} />
-      </ImageBackground>
+      <Animated.View style={[s.scrim, scrimStyle]} />
 
       <SafeAreaView style={s.overlay} edges={['top', 'bottom']}>
         <Animated.View style={[s.card, cardStyle]}>
@@ -149,17 +139,9 @@ const s = StyleSheet.create({
     justifyContent: 'flex-end',
   },
 
-  background: {
-    ...StyleSheet.absoluteFillObject,
-  },
-
-  backgroundImage: {
-    opacity: 0.4,
-  },
-
   scrim: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.08)',
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
   },
 
   overlay: {

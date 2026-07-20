@@ -160,8 +160,10 @@ export function MapTypesSheet({
   const handleSelect = useCallback(
     (type: MapTypeOption) => {
       onSelect(type);
+      // Animate closed; parent should only flip `visible` via `onClose` after this.
+      dismiss();
     },
-    [onSelect],
+    [dismiss, onSelect],
   );
 
   return (

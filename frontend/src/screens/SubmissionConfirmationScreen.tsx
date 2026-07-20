@@ -63,6 +63,8 @@ const C = {
 const PHOTO_SIZE = 171;
 const PHOTO_GAP = 16;
 const FOOTER_HEIGHT = 168;
+/** Extra scroll room below Court Ordered Status so content can clear the sticky footer. */
+const SCROLL_FOOTER_GAP = 96;
 
 type Checkpoint = {
   time: string;
@@ -75,6 +77,7 @@ type SessionPhoto = {
   timeLabel: string;
   key: string;
   label: string;
+  capturedAt: number;
 };
 
 function ApprovalIcon({ size = 24 }: { size?: number }) {
@@ -148,12 +151,14 @@ export function SubmissionConfirmationScreen() {
           uri: checkpoint.selfieUri,
           timeLabel: formatPhotoTimeLabel(checkpoint.capturedAt),
           label: 'Selfie',
+          capturedAt: checkpoint.capturedAt,
         },
         {
           key: `${checkpoint.id}-progress`,
           uri: checkpoint.progressUri,
           timeLabel: formatPhotoTimeLabel(checkpoint.capturedAt),
           label: 'Progress',
+          capturedAt: checkpoint.capturedAt,
         },
       ]),
     [session],
@@ -235,7 +240,10 @@ export function SubmissionConfirmationScreen() {
 
       <ScrollView
         style={s.scroll}
-        contentContainerStyle={[s.scrollContent, { paddingBottom: FOOTER_HEIGHT + insets.bottom + 24 }]}
+        contentContainerStyle={[
+          s.scrollContent,
+          { paddingBottom: FOOTER_HEIGHT + insets.bottom + SCROLL_FOOTER_GAP },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         <Animated.View style={headerStyle}>
@@ -404,8 +412,15 @@ export function SubmissionConfirmationScreen() {
       <PhotoEnlargeModal
         visible={selectedPhotoIndex !== null}
         uri={selectedPhoto?.uri ?? null}
-        caption={
-          selectedPhoto ? `${selectedPhoto.label} · ${selectedPhoto.timeLabel}` : undefined
+        caption={selectedPhoto?.label}
+        dateLabel={
+          selectedPhoto ? formatSessionDateLabel(selectedPhoto.capturedAt) : undefined
+        }
+        timeLabel={selectedPhoto?.timeLabel}
+        counterLabel={
+          selectedPhotoIndex !== null && sessionPhotos.length > 0
+            ? `${selectedPhotoIndex + 1}/${sessionPhotos.length}`
+            : undefined
         }
         onClose={() => setSelectedPhotoIndex(null)}
         hasPrevious={selectedPhotoIndex !== null && selectedPhotoIndex > 0}
@@ -458,7 +473,7 @@ const s = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 30,
-    paddingBottom: FOOTER_HEIGHT + 24,
+    paddingBottom: FOOTER_HEIGHT + SCROLL_FOOTER_GAP,
     gap: 24,
   },
 

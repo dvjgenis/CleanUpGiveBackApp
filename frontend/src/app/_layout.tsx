@@ -3,14 +3,16 @@ import '@/global.css';
 import { Stack } from 'expo-router';
 
 import { AuthProvider } from '@/components/AuthProvider';
+import { prefetchAllOnboardingGraphics } from '@/components/onboarding/onboardingGraphics';
 import { prefetchAllTourGraphics } from '@/components/onboarding/tourAssets';
 
 import '@/features/session-tracking/backgroundLocationTask';
 
-// Kick off tour image prefetch immediately at module load — before any
-// navigation occurs — so images are in expo-image's memory-disk cache
-// by the time the onboarding screens are visited.
+// Kick off tour + session-setup image prefetch immediately at module load —
+// before any navigation occurs — so images are in expo-image's memory-disk
+// cache by the time the onboarding screens are visited.
 prefetchAllTourGraphics();
+prefetchAllOnboardingGraphics();
 
 const guideBackwardScreenOptions = {
   animationTypeForReplace: 'pop' as const,

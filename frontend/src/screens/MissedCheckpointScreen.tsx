@@ -6,7 +6,6 @@ import { Sanchez_400Regular } from '@expo-google-fonts/sanchez';
 import { useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
 import {
-  ImageBackground,
   StyleSheet,
   Text,
   View,
@@ -65,16 +64,7 @@ export function MissedCheckpointScreen() {
 
   return (
     <View style={s.root}>
-      <ImageBackground
-        source={require('../../assets/images/screens/missed-checkpoint/background.png')}
-        style={s.background}
-        imageStyle={s.backgroundImage}
-        resizeMode="cover"
-        accessibilityElementsHidden
-        importantForAccessibility="no-hide-descendants"
-      >
-        <View style={s.scrim} />
-      </ImageBackground>
+      <View style={s.scrim} />
 
       <SafeAreaView style={s.overlay} edges={['top', 'bottom']}>
         <Animated.View style={[s.card, heroStyle]}>
@@ -135,17 +125,9 @@ const s = StyleSheet.create({
     justifyContent: 'flex-end',
   },
 
-  background: {
-    ...StyleSheet.absoluteFillObject,
-  },
-
-  backgroundImage: {
-    opacity: 0.4,
-  },
-
   scrim: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.08)',
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
   },
 
   overlay: {

@@ -1,4 +1,4 @@
-import { StyleSheet } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { Map, MapMarker, MapRoute } from '@/components/ui/map';
 
@@ -31,22 +31,31 @@ export function LiveSessionMapNative({ style }: Props) {
     mapLayer,
   } = useLiveSession();
   const mapTheme = useEffectiveMapTheme();
-  const hasFix = displayCoordinate !== null;
   const mapCenter = getLiveSessionMapCenter();
   const mapStyle = getNativeMapStyle(mapLayer, mapTheme);
   const displayRoute =
     displayRouteCoordinates.length >= 2
       ? displayRouteCoordinates
       : simplifyRouteForDisplay(routeCoordinates);
-  const styleKey = `${mapLayer}-${mapTheme}`;
+
+  // Wait for a GPS seed before mounting the map so we never flash the
+  // continental US default center, then jump to the user.
+  if (!mapCenter) {
+    return (
+      <MapInteractionContainer style={[styles.container, style]}>
+        <View style={styles.waiting}>
+          <ActivityIndicator size="small" color={colors.primary} />
+        </View>
+      </MapInteractionContainer>
+    );
+  }
 
   return (
     <MapInteractionContainer style={[styles.container, style]}>
       <Map
-        key={styleKey}
         mapStyle={mapStyle}
         center={mapCenter}
-        zoom={getLiveSessionMapZoom(hasFix)}
+        zoom={getLiveSessionMapZoom()}
         showLoader
       >
         {displayRoute.length >= 2 && (
@@ -73,5 +82,11 @@ const styles = StyleSheet.create({
   container: {
     borderRadius: radius.md,
     overflow: 'hidden',
+  },
+  waiting: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.bgSurface,
   },
 });

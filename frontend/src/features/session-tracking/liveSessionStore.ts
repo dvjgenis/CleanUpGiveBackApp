@@ -1,5 +1,6 @@
 import * as Location from 'expo-location';
 import { useSyncExternalStore } from 'react';
+import { Platform } from 'react-native';
 
 import {
   addCheckpoint,
@@ -15,7 +16,6 @@ import { recordSessionStatFromSnapshot } from './sessionStatsStore';
 import { DEFAULT_MAP_LAYER, type MapLayerType } from './utils/mapStyles';
 import { computeSessionDurationSeconds } from './utils/sessionFormat';
 import {
-  DEFAULT_MAP_CENTER,
   haversineMiles,
   MIN_ROUTE_SAMPLE_METERS,
   toRouteCoordinate,
@@ -384,22 +384,29 @@ async function restartForegroundLocationWatch() {
   });
 }
 
+/** Min turn (deg) before notifying React; below this is magnetometer noise. */
+const HEADING_NOTIFY_MIN_DELTA_DEG = 0.35;
+/** Cap store publish rate (~30 Hz) so listeners stay responsive without thrashing. */
+const HEADING_NOTIFY_MIN_INTERVAL_MS = 33;
+
 function handleCompassUpdate(reading: Location.LocationHeadingObject) {
   const rawHeading = resolveCompassHeading({
     trueHeading: reading.trueHeading,
     magHeading: reading.magHeading,
     accuracy: reading.accuracy,
+    platform: Platform.OS,
   });
   if (rawHeading == null) {
     return;
   }
 
   compassAvailable = true;
+  // Adaptive EMA: snap on large turns, damp when nearly still.
   const newHeading = smoothHeadingEma(state.currentHeading, rawHeading);
   const now = Date.now();
   const prevHeading = state.currentHeading ?? 0;
   const delta = Math.abs(((newHeading - prevHeading + 180) % 360 + 360) % 360 - 180);
-  if (delta < 1 || now - lastHeadingNotifyMs < 100) {
+  if (delta < HEADING_NOTIFY_MIN_DELTA_DEG || now - lastHeadingNotifyMs < HEADING_NOTIFY_MIN_INTERVAL_MS) {
     return;
   }
   lastHeadingNotifyMs = now;
@@ -461,15 +468,49 @@ function stopLocationWatching() {
   resetLocationKalmanFilter(locationKalman);
 }
 
-async function startLocationWatching() {
-  stopLocationWatching();
+/** One-shot GPS can hang indefinitely on some devices — never await it untimed. */
+const INITIAL_FIX_TIMEOUT_MS = 8000;
 
-  const { status } = await Location.requestForegroundPermissionsAsync();
-  if (status !== 'granted') {
-    setSessionSyncWarning('Location permission denied — route tracking is unavailable.');
+async function getCurrentPositionWithTimeout(): Promise<Location.LocationObject | null> {
+  try {
+    return await Promise.race([
+      Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      }),
+      new Promise<null>((resolve) => {
+        setTimeout(() => resolve(null), INITIAL_FIX_TIMEOUT_MS);
+      }),
+    ]);
+  } catch {
+    return null;
+  }
+}
+
+/** Best-effort seed so the tracker map can mount centered on the user ASAP. */
+async function seedInitialLocation() {
+  try {
+    const lastKnown = await Location.getLastKnownPositionAsync({
+      maxAge: 15 * 60 * 1000,
+      requiredAccuracy: 1000,
+    });
+    if (lastKnown) {
+      recordLocationSample(lastKnown);
+    }
+  } catch {
+    // Fall through to a timed current fix.
+  }
+
+  if (state.currentCoordinate) {
     return;
   }
 
+  const position = await getCurrentPositionWithTimeout();
+  if (position) {
+    recordLocationSample(position);
+  }
+}
+
+async function enableBackgroundLocationIfPossible() {
   let backgroundEnabled = false;
   try {
     const backgroundPermission = await Location.requestBackgroundPermissionsAsync();
@@ -481,35 +522,41 @@ async function startLocationWatching() {
     backgroundEnabled = false;
   }
 
-  if (!backgroundEnabled) {
-    setSessionSyncWarning(
-      'Route tracks while the app is open. Allow Always location during sessions to continue when the screen is locked.',
-    );
-  } else {
+  if (backgroundEnabled) {
     setSessionSyncWarning(null);
   }
 
   setState({ backgroundLocationEnabled: backgroundEnabled });
-  void startHeadingWatching();
+}
 
-  try {
-    const position = await Location.getCurrentPositionAsync({
-      accuracy: Location.Accuracy.BestForNavigation,
-    });
-    recordLocationSample(position);
-  } catch {
-    // Continue with watch subscription even if the initial fix fails.
+async function startLocationWatching() {
+  stopLocationWatching();
+
+  const { status } = await Location.requestForegroundPermissionsAsync();
+  if (status !== 'granted') {
+    setSessionSyncWarning('Location permission denied — route tracking is unavailable.');
+    return;
   }
 
-  locationSubscription = await Location.watchPositionAsync(getForegroundWatchOptions(), (position) => {
-    recordLocationSample(position);
-  });
+  // Compass + continuous watch first. Never block them behind Always permission
+  // or getCurrentPositionAsync — both can stall and leave the map on a spinner
+  // (map mounts only after a GPS seed).
+  void startHeadingWatching();
+
+  locationSubscription = await Location.watchPositionAsync(
+    getForegroundWatchOptions(),
+    (position) => {
+      recordLocationSample(position);
+    },
+  );
+
+  void seedInitialLocation();
+  void enableBackgroundLocationIfPossible();
 }
 
 async function persistCheckpointToRemote(checkpoint: PhotoCheckpointSubmission): Promise<boolean> {
   const sessionId = state.remoteSessionId;
   if (!sessionId) {
-    setSessionSyncWarning('Session saved on device only — photos will not sync to the server.');
     return false;
   }
 
@@ -547,7 +594,6 @@ async function persistFinalizeToRemote(
 ): Promise<boolean> {
   const sessionId = snapshot.remoteSessionId;
   if (!sessionId) {
-    setSessionSyncWarning('Session saved on device only — it was not synced to the server.');
     return false;
   }
 
@@ -612,29 +658,13 @@ export async function startNewLiveSession(setup: LiveSessionSetup) {
   completedSessionSnapshot = null;
   locationKalman = createLocationKalmanFilter();
 
-  let remoteSessionId: string | null = null;
-  let sessionSyncWarning: string | null = null;
-
-  try {
-    const created = await createSession({
-      activity: setup.activity,
-      courtOrdered: setup.courtOrdered,
-      description: setup.description,
-      date: setup.date.toISOString().slice(0, 10),
-    });
-    remoteSessionId = created?.id ?? null;
-    if (!remoteSessionId) {
-      sessionSyncWarning = 'Session saved on device only — it was not synced to the server.';
-    }
-  } catch (error) {
-    console.warn('[sessions] create session failed:', error);
-    sessionSyncWarning = 'Session saved on device only — it was not synced to the server.';
-  }
-
+  // Activate locally first so the tracker map can seed from last-known GPS
+  // without waiting on the create-session network round-trip (and without
+  // flashing the continental US default center).
   const startedAt = Date.now();
   state = {
     isActive: true,
-    remoteSessionId,
+    remoteSessionId: null,
     startedAt,
     checkpointWindowStartedAt: startedAt,
     elapsedSeconds: 0,
@@ -651,12 +681,26 @@ export async function startNewLiveSession(setup: LiveSessionSetup) {
     mapFollowEnabled: false,
     mapLayer: DEFAULT_MAP_LAYER,
     submittedCheckpoints: [],
-    sessionSyncWarning,
+    sessionSyncWarning: null,
     backgroundLocationEnabled: false,
   };
   notify();
   startTicking();
   void startLocationWatching();
+
+  try {
+    const created = await createSession({
+      activity: setup.activity,
+      courtOrdered: setup.courtOrdered,
+      description: setup.description,
+      date: setup.date.toISOString().slice(0, 10),
+    });
+    if (created?.id) {
+      setState({ remoteSessionId: created.id });
+    }
+  } catch (error) {
+    console.warn('[sessions] create session failed:', error);
+  }
 }
 
 /** Records a submitted selfie + progress photo pair for the session detail screen. */
@@ -816,15 +860,10 @@ export function getCheckpointProgress(checkpointSecondsRemaining: number): numbe
   return elapsedInInterval / PHOTO_CHECKPOINT_INTERVAL_SECONDS;
 }
 
-export function getLiveSessionMapCenter(): RouteCoordinate {
-  return (
-    state.displayCoordinate ??
-    state.currentCoordinate ??
-    state.routeCoordinates[0] ??
-    DEFAULT_MAP_CENTER
-  );
+export function getLiveSessionMapCenter(): RouteCoordinate | null {
+  return state.displayCoordinate ?? state.currentCoordinate ?? state.routeCoordinates[0] ?? null;
 }
 
-export function getLiveSessionMapZoom(hasFix: boolean): number {
-  return hasFix ? 15 : 4;
+export function getLiveSessionMapZoom(): number {
+  return 15;
 }

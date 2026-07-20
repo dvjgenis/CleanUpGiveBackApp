@@ -1,29 +1,47 @@
+import { Image as ExpoImage, type ImageSource } from 'expo-image';
 import {
-  Image,
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
-  useWindowDimensions,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  SafeAreaProvider,
+  SafeAreaView,
+  initialWindowMetrics,
+} from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
-import { ChevronLeftIcon } from '@/features/session-tracking/components/icons/ChevronLeftIcon';
-import { ChevronRightIcon } from '@/features/session-tracking/components/icons/ChevronRightIcon';
 import { CloseIcon } from '@/features/session-tracking/components/icons/CloseIcon';
 
+const CHEVRON_RIGHT = require('@/assets/figma/account/chevron-right.svg');
+
 const C = {
-  overlay: 'rgba(0, 0, 0, 0.92)',
+  overlay: '#000000',
   textOnDark: '#ffffff',
   textMuted: 'rgba(255, 255, 255, 0.72)',
+  chromeScrim: 'rgba(0, 0, 0, 0.45)',
 } as const;
 
 type Props = {
   visible: boolean;
-  uri: string | null;
+  /** Remote / file URI — used when `source` is omitted. */
+  uri?: string | null;
+  /** Prefer this when available (session detail thumbs use the same source). */
+  source?: ImageSource | { uri: string } | null;
+  /**
+   * Optional a11y label only (e.g. "Selfie" / "Progress") — not shown in chrome.
+   */
   caption?: string;
+  /** Date line (e.g. "July 20, 2026"). */
+  dateLabel?: string;
+  /** Time line (e.g. "2:30 PM"). */
+  timeLabel?: string;
+  /** Position counter, e.g. "1/2". */
+  counterLabel?: string;
   onClose: () => void;
   onPrevious?: () => void;
   onNext?: () => void;
@@ -31,89 +49,126 @@ type Props = {
   hasNext?: boolean;
 };
 
-/** Full-screen photo viewer for session detail and other read-only galleries. */
+/** Full-screen photo viewer for session detail and live checkpoint thumbs. */
 export function PhotoEnlargeModal({
   visible,
-  uri,
+  uri = null,
+  source = null,
   caption,
+  dateLabel,
+  timeLabel,
+  counterLabel,
   onClose,
   onPrevious,
   onNext,
   hasPrevious = false,
   hasNext = false,
 }: Props) {
-  const { width, height } = useWindowDimensions();
-  const imageMaxHeight = height * 0.72;
-  const imageMaxWidth = width - 48;
+  const timestampLine = [dateLabel, timeLabel].filter(Boolean).join(' · ');
+  const imageSource: ImageSource | { uri: string } | null =
+    source ?? (uri ? { uri } : null);
 
   return (
     <Modal
       visible={visible}
       transparent
       animationType="fade"
+      presentationStyle="overFullScreen"
+      statusBarTranslucent={Platform.OS === 'android'}
       onRequestClose={onClose}
       accessibilityViewIsModal
     >
-      <View style={s.root}>
-        <Pressable
-          style={StyleSheet.absoluteFillObject}
-          onPress={onClose}
-          accessibilityRole="button"
-          accessibilityLabel="Close enlarged photo"
-        />
+      {/* Modal hosts a separate native window — re-seed safe-area so chrome clears status bar / home indicator. */}
+      <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+        <View style={s.root}>
+          {visible ? <StatusBar style="light" /> : null}
 
-        <SafeAreaView style={s.safeArea} pointerEvents="box-none">
-          <View style={s.header}>
-            <Text style={s.caption} numberOfLines={2}>
-              {caption ?? 'Photo'}
-            </Text>
-            <AnimatedPressable
-              style={s.closeBtn}
-              onPress={onClose}
-              accessibilityRole="button"
-              accessibilityLabel="Close photo viewer"
-            >
-              <CloseIcon color={C.textOnDark} size={24} />
-            </AnimatedPressable>
-          </View>
+          <Pressable
+            style={StyleSheet.absoluteFillObject}
+            onPress={onClose}
+            accessibilityRole="button"
+            accessibilityLabel="Close enlarged photo"
+          />
 
-          <View style={s.imageRow}>
-            <AnimatedPressable
-              style={[s.navBtn, !hasPrevious && s.navBtnHidden]}
-              onPress={onPrevious}
-              disabled={!hasPrevious}
-              accessibilityRole="button"
-              accessibilityLabel="Previous photo"
-            >
-              <ChevronLeftIcon color={C.textOnDark} size={28} />
-            </AnimatedPressable>
+          {imageSource ? (
+            <View style={s.fullScreenImage} pointerEvents="none">
+              <ExpoImage
+                source={imageSource}
+                style={StyleSheet.absoluteFillObject}
+                contentFit="cover"
+                cachePolicy="memory-disk"
+                accessibilityIgnoresInvertColors
+                accessibilityLabel={caption ?? 'Enlarged session photo'}
+              />
+            </View>
+          ) : null}
 
-            <View style={[s.imageFrame, { maxWidth: imageMaxWidth, maxHeight: imageMaxHeight }]}>
-              {uri ? (
-                <Image
-                  source={{ uri }}
-                  style={s.image}
-                  resizeMode="contain"
-                  accessibilityIgnoresInvertColors
-                  accessibilityLabel={caption ?? 'Enlarged session photo'}
-                />
-              ) : null}
+          <SafeAreaView style={s.chrome} pointerEvents="box-none" edges={['top', 'bottom']}>
+            <View style={s.topRow} pointerEvents="box-none">
+              {timestampLine ? (
+                <View style={[s.tag, s.chromeScrim]} pointerEvents="none">
+                  <Text style={s.tagText} numberOfLines={1}>
+                    {timestampLine}
+                  </Text>
+                </View>
+              ) : (
+                <View style={s.topSpacer} />
+              )}
+              <AnimatedPressable
+                style={[s.roundBtn, s.chromeScrim]}
+                onPress={onClose}
+                accessibilityRole="button"
+                accessibilityLabel="Close photo viewer"
+              >
+                <CloseIcon color={C.textOnDark} size={22} />
+              </AnimatedPressable>
             </View>
 
-            <AnimatedPressable
-              style={[s.navBtn, !hasNext && s.navBtnHidden]}
-              onPress={onNext}
-              disabled={!hasNext}
-              accessibilityRole="button"
-              accessibilityLabel="Next photo"
-            >
-              <ChevronRightIcon color={C.textOnDark} size={28} />
-            </AnimatedPressable>
-          </View>
+            <View style={s.navRow} pointerEvents="box-none">
+              <AnimatedPressable
+                style={[s.roundBtn, s.chromeScrim, !hasPrevious && s.roundBtnHidden]}
+                onPress={onPrevious}
+                disabled={!hasPrevious}
+                accessibilityRole="button"
+                accessibilityLabel="Previous photo"
+              >
+                <ExpoImage
+                  source={CHEVRON_RIGHT}
+                  style={[s.chevron, s.chevronLeft]}
+                  contentFit="contain"
+                  accessibilityIgnoresInvertColors
+                />
+              </AnimatedPressable>
 
-          <Text style={s.hint}>Tap outside the photo to close</Text>
-        </SafeAreaView>
-      </View>
+              <AnimatedPressable
+                style={[s.roundBtn, s.chromeScrim, !hasNext && s.roundBtnHidden]}
+                onPress={onNext}
+                disabled={!hasNext}
+                accessibilityRole="button"
+                accessibilityLabel="Next photo"
+              >
+                <ExpoImage
+                  source={CHEVRON_RIGHT}
+                  style={s.chevron}
+                  contentFit="contain"
+                  accessibilityIgnoresInvertColors
+                />
+              </AnimatedPressable>
+            </View>
+
+            <View style={s.bottomStack} pointerEvents="none">
+              {counterLabel ? (
+                <View style={[s.tag, s.chromeScrim]}>
+                  <Text style={s.counterText} accessibilityLabel={`Photo ${counterLabel}`}>
+                    {counterLabel}
+                  </Text>
+                </View>
+              ) : null}
+              <Text style={s.hint}>Tap photo to close</Text>
+            </View>
+          </SafeAreaView>
+        </View>
+      </SafeAreaProvider>
     </Modal>
   );
 }
@@ -124,64 +179,90 @@ const s = StyleSheet.create({
     backgroundColor: C.overlay,
   },
 
-  safeArea: {
-    flex: 1,
-    justifyContent: 'center',
-    gap: 20,
+  fullScreenImage: {
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
   },
 
-  header: {
+  chrome: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'space-between',
+  },
+
+  chromeScrim: {
+    backgroundColor: C.chromeScrim,
+  },
+
+  topRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     paddingTop: 8,
-    gap: 16,
+    gap: 12,
   },
 
-  caption: {
+  topSpacer: {
     flex: 1,
-    fontFamily: 'NotoSans_600SemiBold',
-    fontSize: 16,
+  },
+
+  tag: {
+    maxWidth: '78%',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 22,
+  },
+
+  tagText: {
+    fontFamily: 'NotoSans_400Regular',
+    fontSize: 14,
     color: C.textOnDark,
   },
 
-  closeBtn: {
+  counterText: {
+    fontFamily: 'IBMPlexSans_600SemiBold',
+    fontSize: 14,
+    letterSpacing: 1,
+    color: C.textOnDark,
+    textAlign: 'center',
+  },
+
+  roundBtn: {
     width: 44,
     height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },
 
-  imageRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 8,
-    gap: 4,
-  },
-
-  navBtn: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  navBtnHidden: {
+  roundBtnHidden: {
     opacity: 0,
   },
 
-  imageFrame: {
-    flex: 1,
-    minHeight: 280,
+  navRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    flex: 1,
   },
 
-  image: {
-    width: '100%',
-    height: '100%',
+  chevron: {
+    width: 28,
+    height: 28,
+    tintColor: C.textOnDark,
+  },
+
+  chevronLeft: {
+    transform: [{ scaleX: -1 }],
+  },
+
+  bottomStack: {
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 24,
+    paddingBottom: 12,
   },
 
   hint: {
@@ -189,7 +270,5 @@ const s = StyleSheet.create({
     fontSize: 13,
     color: C.textMuted,
     textAlign: 'center',
-    paddingHorizontal: 24,
-    paddingBottom: 12,
   },
 });

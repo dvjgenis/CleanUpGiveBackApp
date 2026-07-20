@@ -1,12 +1,14 @@
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
+import { ONBOARDING_GRAPHICS } from '@/components/onboarding/onboardingGraphics';
 import { OnboardingInfoFooterActions } from '@/components/onboarding/OnboardingInfoFooterActions';
 import { OnboardingProgressPills } from '@/components/onboarding/OnboardingProgressPills';
 import { colors as C } from '@/features/figma-screens/tokens';
 import { IBMPlexSans_600SemiBold } from '@expo-google-fonts/ibm-plex-sans';
 import { NotoSans_400Regular, NotoSans_600SemiBold } from '@expo-google-fonts/noto-sans';
 import { Sanchez_400Regular } from '@expo-google-fonts/sanchez';
+import { Image as ExpoImage } from 'expo-image';
 import { useFonts } from 'expo-font';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 type Props = {
@@ -32,10 +34,13 @@ export function FreeHourScreen({ totalPills, activePills, onContinue, onPrevious
     <SafeAreaView style={s.root} edges={['top', 'bottom']}>
       {/* Absolute graphic sits behind title + footer, matching camera/location permission screens. */}
       <View style={s.illustration} pointerEvents="none">
-        <Image
-          source={require('../../assets/images/screens/onboarding/free-hour-graphic.png')}
+        <ExpoImage
+          source={ONBOARDING_GRAPHICS.freeHourGraphic}
           style={s.graphic}
-          resizeMode="contain"
+          contentFit="contain"
+          cachePolicy="memory-disk"
+          priority="high"
+          transition={0}
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
         />

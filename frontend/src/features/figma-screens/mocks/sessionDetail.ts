@@ -19,6 +19,8 @@ export type SessionEvidencePhoto = {
   id: string;
   source: ImageSource | { uri: string };
   caption?: string;
+  /** Epoch ms when the checkpoint was captured — drives full-screen viewer timestamp. */
+  capturedAt?: number;
 };
 
 export type SessionDetailData = {
@@ -97,12 +99,27 @@ export function detailFromCompletedSnapshot(
     elapsedSeconds: snapshot.elapsedSeconds,
   });
 
-  const evidencePhotos: SessionEvidencePhoto[] = snapshot.submittedCheckpoints.map(
-    (checkpoint, index) => ({
-      id: checkpoint.id,
-      source: { uri: checkpoint.selfieUri },
-      caption: `Checkpoint photo ${index + 1} of ${snapshot.submittedCheckpoints.length}`,
-    }),
+  const evidencePhotos: SessionEvidencePhoto[] = snapshot.submittedCheckpoints.flatMap(
+    (checkpoint) => {
+      const photos: SessionEvidencePhoto[] = [];
+      if (checkpoint.selfieUri) {
+        photos.push({
+          id: `${checkpoint.id}-selfie`,
+          source: { uri: checkpoint.selfieUri },
+          caption: 'Selfie',
+          capturedAt: checkpoint.capturedAt,
+        });
+      }
+      if (checkpoint.progressUri) {
+        photos.push({
+          id: `${checkpoint.id}-progress`,
+          source: { uri: checkpoint.progressUri },
+          caption: 'Progress',
+          capturedAt: checkpoint.capturedAt,
+        });
+      }
+      return photos;
+    },
   );
 
   return {
@@ -113,7 +130,7 @@ export function detailFromCompletedSnapshot(
     locationAddress: snapshot.setup.description?.trim() || EMPTY_LOCATION,
     hoursLabel: (durationSeconds / 3600).toFixed(1),
     milesLabel: snapshot.distanceMiles.toFixed(1),
-    photosCountLabel: String(snapshot.submittedCheckpoints.length),
+    photosCountLabel: String(evidencePhotos.length),
     routeCoordinates: snapshot.routeCoordinates,
     evidencePhotos,
     mapLayer: snapshot.mapLayer ?? DEFAULT_MAP_LAYER,

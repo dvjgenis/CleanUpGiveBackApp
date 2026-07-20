@@ -1,7 +1,9 @@
 import {
   computeBearingDegrees,
   getMinMovementMeters,
+  headingEmaAlpha,
   isAcceptableAccuracy,
+  isCompassReadingUsable,
   isPlausibleMovement,
   isSharpReversal,
   isStationary,
@@ -14,6 +16,8 @@ import {
   smoothHeadingEma,
   smoothRouteForDisplay,
   DISPLAY_COORDINATE_EMA_ALPHA,
+  HEADING_EMA_ALPHA_MAX,
+  HEADING_EMA_ALPHA_MIN,
 } from './routeFiltering';
 import type { RouteCoordinate } from './geo';
 
@@ -198,10 +202,16 @@ describe('resolveCompassHeading', () => {
     expect(resolveCompassHeading({ trueHeading: -1, magHeading: 200 })).toBe(200);
   });
 
-  it('falls back to magnetic when true-heading accuracy is poor', () => {
+  it('falls back to magnetic when true-heading accuracy is poor but usable', () => {
+    expect(
+      resolveCompassHeading({ trueHeading: 90, magHeading: 100, accuracy: 22 }),
+    ).toBe(100);
+  });
+
+  it('returns null when sensor accuracy indicates interference', () => {
     expect(
       resolveCompassHeading({ trueHeading: 90, magHeading: 100, accuracy: 45 }),
-    ).toBe(100);
+    ).toBeNull();
   });
 
   it('returns null when neither reading is valid', () => {
@@ -221,7 +231,52 @@ describe('isTrueHeadingReliable', () => {
   });
 
   it('rejects large deviation values', () => {
+    expect(isTrueHeadingReliable(20)).toBe(false);
     expect(isTrueHeadingReliable(45)).toBe(false);
+  });
+
+  it('requires medium+ Android calibration for true-north', () => {
+    expect(isTrueHeadingReliable(0, 'android')).toBe(false);
+    expect(isTrueHeadingReliable(1, 'android')).toBe(false);
+    expect(isTrueHeadingReliable(2, 'android')).toBe(true);
+    expect(isTrueHeadingReliable(3, 'android')).toBe(true);
+  });
+});
+
+describe('isCompassReadingUsable', () => {
+  it('allows unknown accuracy', () => {
+    expect(isCompassReadingUsable(null)).toBe(true);
+    expect(isCompassReadingUsable(undefined)).toBe(true);
+  });
+
+  it('rejects negative accuracy', () => {
+    expect(isCompassReadingUsable(-1)).toBe(false);
+  });
+
+  it('rejects severe iOS deviation', () => {
+    expect(isCompassReadingUsable(45)).toBe(false);
+    expect(isCompassReadingUsable(30)).toBe(true);
+  });
+
+  it('rejects Android uncalibrated (0) readings', () => {
+    expect(isCompassReadingUsable(0, 'android')).toBe(false);
+    expect(isCompassReadingUsable(1, 'android')).toBe(true);
+  });
+});
+
+describe('headingEmaAlpha', () => {
+  it('uses the slow alpha for tiny turns', () => {
+    expect(headingEmaAlpha(1)).toBe(HEADING_EMA_ALPHA_MIN);
+  });
+
+  it('uses the fast alpha for large turns', () => {
+    expect(headingEmaAlpha(50)).toBe(HEADING_EMA_ALPHA_MAX);
+  });
+
+  it('interpolates mid-size turns', () => {
+    const mid = headingEmaAlpha(20);
+    expect(mid).toBeGreaterThan(HEADING_EMA_ALPHA_MIN);
+    expect(mid).toBeLessThan(HEADING_EMA_ALPHA_MAX);
   });
 });
 
@@ -238,6 +293,13 @@ describe('smoothHeadingEma', () => {
   it('takes the shortest path across the 0°/360° wrap-around', () => {
     const smoothed = smoothHeadingEma(359, 2, 0.5);
     expect(smoothed).toBeCloseTo(0.5, 1);
+  });
+
+  it('adapts alpha so large turns catch up faster than tiny noise', () => {
+    const afterNoise = smoothHeadingEma(0, 2);
+    const afterTurn = smoothHeadingEma(0, 90);
+    expect(afterNoise).toBeLessThan(2);
+    expect(afterTurn).toBeGreaterThan(afterNoise * 10);
   });
 });
 

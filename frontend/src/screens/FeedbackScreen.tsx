@@ -149,7 +149,7 @@ export function FeedbackScreen({
   const inputStyle = useFadeUpEnter(staggerDelay(3));
   const actionsStyle = useFadeUpEnter(staggerDelay(4));
 
-  // Bubble progressive fade-in along the arc, big → medium → small
+  // Bubble progressive fade-in along the arc, small → medium → big
   // (PRD: Figma "Feedback Icons Group" 1126:1554 typing dots).
   const bigOpacity = useSharedValue(0);
   const mediumOpacity = useSharedValue(0);
@@ -167,9 +167,9 @@ export function FeedbackScreen({
 
   useEffect(() => {
     if (!fontsLoaded) return;
-    bigOpacity.value = withDelay(BUBBLE_START_MS, withTiming(1, BUBBLE_TIMING));
+    smallOpacity.value = withDelay(BUBBLE_START_MS, withTiming(1, BUBBLE_TIMING));
     mediumOpacity.value = withDelay(BUBBLE_START_MS + BUBBLE_STAGGER_MS, withTiming(1, BUBBLE_TIMING));
-    smallOpacity.value = withDelay(BUBBLE_START_MS + BUBBLE_STAGGER_MS * 2, withTiming(1, BUBBLE_TIMING));
+    bigOpacity.value = withDelay(BUBBLE_START_MS + BUBBLE_STAGGER_MS * 2, withTiming(1, BUBBLE_TIMING));
   }, [fontsLoaded, bigOpacity, mediumOpacity, smallOpacity]);
 
   if (!fontsLoaded) {

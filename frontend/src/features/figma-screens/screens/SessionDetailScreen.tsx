@@ -1,6 +1,5 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
-  Image as RNImage,
   ScrollView,
   Share,
   StyleSheet,
@@ -17,6 +16,10 @@ import { PhotoEnlargeModal } from '@/components/ui/PhotoEnlargeModal';
 import { SessionRouteMapPanel } from '@/features/session-tracking/components/SessionRouteMapPanel';
 import { useSessionDetail } from '@/features/session-tracking/hooks/useSessionDetail';
 import { useSessionRouteCoordinates } from '@/features/session-tracking/hooks/useSessionRouteCoordinates';
+import {
+  formatPhotoTimeLabel,
+  formatSessionDateLabel,
+} from '@/features/session-tracking/utils/sessionFormat';
 
 import {
   SessionDetailBackIcon,
@@ -51,17 +54,6 @@ function statusBadgeColors(status: SessionApprovalStatus) {
       return _exhaustive;
     }
   }
-}
-
-function resolvePhotoUri(photo: SessionEvidencePhoto): string | null {
-  const { source } = photo;
-  if (typeof source === 'number') {
-    return RNImage.resolveAssetSource(source)?.uri ?? null;
-  }
-  if (source && typeof source === 'object' && 'uri' in source && typeof source.uri === 'string') {
-    return source.uri;
-  }
-  return null;
 }
 
 function SessionDetailTopBar({
@@ -177,16 +169,9 @@ export function SessionDetailScreen() {
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
 
   const footerBottom = Math.max(insets.bottom, 12);
-  const scrollBottomPad = FOOTER_PAD_TOP + CTA_HEIGHT + FOOTER_PAD_BOTTOM + footerBottom + 16;
+  const scrollBottomPad = FOOTER_PAD_TOP + CTA_HEIGHT + FOOTER_PAD_BOTTOM + footerBottom + 96;
   const contentWidth = Math.min(windowWidth - 32, 358);
 
-  const photoUris = useMemo(
-    () => detail.evidencePhotos.map(resolvePhotoUri),
-    [detail.evidencePhotos],
-  );
-
-  const selectedUri =
-    selectedPhotoIndex !== null ? photoUris[selectedPhotoIndex] ?? null : null;
   const selectedPhoto =
     selectedPhotoIndex !== null ? detail.evidencePhotos[selectedPhotoIndex] ?? null : null;
 
@@ -287,13 +272,28 @@ export function SessionDetailScreen() {
       </View>
 
       <PhotoEnlargeModal
-        visible={selectedPhotoIndex !== null && selectedUri !== null}
-        uri={selectedUri}
+        visible={selectedPhotoIndex !== null && selectedPhoto !== null}
+        source={selectedPhoto?.source ?? null}
         caption={
           selectedPhoto?.caption ??
           (selectedPhotoIndex !== null
-            ? `Photo Evidence ${selectedPhotoIndex + 1} of ${detail.evidencePhotos.length}`
+            ? `Photo Evidence ${selectedPhotoIndex + 1}`
             : undefined)
+        }
+        dateLabel={
+          selectedPhoto?.capturedAt
+            ? formatSessionDateLabel(selectedPhoto.capturedAt)
+            : undefined
+        }
+        timeLabel={
+          selectedPhoto?.capturedAt
+            ? formatPhotoTimeLabel(selectedPhoto.capturedAt)
+            : undefined
+        }
+        counterLabel={
+          selectedPhotoIndex !== null && detail.evidencePhotos.length > 0
+            ? `${selectedPhotoIndex + 1}/${detail.evidencePhotos.length}`
+            : undefined
         }
         onClose={() => setSelectedPhotoIndex(null)}
         hasPrevious={selectedPhotoIndex !== null && selectedPhotoIndex > 0}

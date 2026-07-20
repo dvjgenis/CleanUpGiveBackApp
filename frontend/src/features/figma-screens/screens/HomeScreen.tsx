@@ -44,16 +44,19 @@ import { layout, colors, fontFamilies, radius as R, shadows } from '../tokens';
 const CHART_H = 168;
 const LIVE_BAR_HEIGHT = LIVE_SESSION_PILL_MIN_HEIGHT + 16;
 
-/** Round up to the nearest "nice" ceiling for Y-axis labeling. */
+/**
+ * Round up to an integer ceiling with 4 equal integer Y-axis steps
+ * (avoids decimal ticks like 37.5 / 7.5 when max is not divisible by 4).
+ */
 function niceMax(max: number): number {
-  if (max <= 0) return 10;
-  const step = Math.pow(10, Math.floor(Math.log10(max)));
-  return Math.ceil(max / step) * step;
+  if (max <= 0) return 4;
+  const step = Math.max(1, Math.ceil(max / 4));
+  return step * 4;
 }
 
 function buildYLabels(chartMax: number): number[] {
   const step = chartMax / 4;
-  return [chartMax, step * 3, step * 2, step, 0];
+  return [chartMax, step * 3, step * 2, step, 0].map((v) => Math.round(v));
 }
 
 function yLabelTop(index: number, labelCount: number): number {

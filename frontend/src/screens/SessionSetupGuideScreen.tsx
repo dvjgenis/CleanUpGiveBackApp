@@ -1,17 +1,20 @@
 import { CoachmarkEnter } from '@/components/motion/CoachmarkEnter';
+import { ONBOARDING_GRAPHICS } from '@/components/onboarding/onboardingGraphics';
 import { OnboardingProgressPills } from '@/components/onboarding/OnboardingProgressPills';
 import { SessionSetupGuideFooterActions } from '@/components/session-setup/SessionSetupGuideFooterActions';
-import { staggerDelay } from '@/motion';
+import { useSessionSetupGuidePillProgress } from '@/utils/sessionSetupGuideNavigation';
 import { IBMPlexSans_600SemiBold } from '@expo-google-fonts/ibm-plex-sans';
 import { Sanchez_400Regular } from '@expo-google-fonts/sanchez';
+import { Image as ExpoImage } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors as C } from '@/constants/tokens';
 
 export function SessionSetupGuideScreen() {
   const router = useRouter();
+  const { total, active } = useSessionSetupGuidePillProgress('guide');
 
   const [fontsLoaded] = useFonts({
     Sanchez_400Regular,
@@ -28,7 +31,7 @@ export function SessionSetupGuideScreen() {
       {/* Header — gap 30 between top section and headline, gap 20 within top section */}
       <View style={s.header}>
         <View style={s.topSection}>
-          <OnboardingProgressPills total={10} active={1} />
+          <OnboardingProgressPills total={total} active={active} />
         </View>
 
         <CoachmarkEnter>
@@ -39,11 +42,14 @@ export function SessionSetupGuideScreen() {
         </CoachmarkEnter>
       </View>
 
-      <CoachmarkEnter delayMs={staggerDelay(1)} style={s.illustrationZone}>
-        <Image
-          source={require('../../assets/images/screens/session-setup/guide-illustration.png')}
+      <CoachmarkEnter delayMs={0} style={s.illustrationZone}>
+        <ExpoImage
+          source={ONBOARDING_GRAPHICS.guideIllustration}
           style={s.illustration}
-          resizeMode="contain"
+          contentFit="contain"
+          cachePolicy="memory-disk"
+          priority="high"
+          transition={0}
         />
       </CoachmarkEnter>
 

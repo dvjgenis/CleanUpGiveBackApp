@@ -8,7 +8,6 @@ import { useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { useEffect, useState } from 'react';
 import {
-  ImageBackground,
   StyleSheet,
   Text,
   View,
@@ -100,16 +99,7 @@ export function PhotoSubmittedScreen() {
 
   return (
     <View style={s.root}>
-      <ImageBackground
-        source={require('../../assets/images/screens/photo-submitted/background.png')}
-        style={s.background}
-        imageStyle={s.backgroundImage}
-        resizeMode="cover"
-        accessibilityElementsHidden
-        importantForAccessibility="no-hide-descendants"
-      >
-        <View style={s.scrim} />
-      </ImageBackground>
+      <View style={s.scrim} />
 
       <SafeAreaView style={s.overlay} edges={['top', 'bottom']}>
         <Animated.View style={s.modal}>
@@ -146,7 +136,7 @@ export function PhotoSubmittedScreen() {
                 <Animated.View style={ctaStyle}>
                   <AnimatedPressable
                     style={s.continueBtn}
-                    onPress={() => router.replace('/live-session')}
+                    onPress={() => router.dismissTo('/live-session')}
                     accessibilityRole="button"
                     accessibilityLabel="Continue tracking"
                   >
@@ -169,17 +159,9 @@ const s = StyleSheet.create({
     justifyContent: 'flex-end',
   },
 
-  background: {
-    ...StyleSheet.absoluteFillObject,
-  },
-
-  backgroundImage: {
-    opacity: 0.5,
-  },
-
   scrim: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.08)',
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
   },
 
   overlay: {

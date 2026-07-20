@@ -1,22 +1,27 @@
 import { CoachmarkEnter } from '@/components/motion/CoachmarkEnter';
+import { ONBOARDING_GRAPHICS } from '@/components/onboarding/onboardingGraphics';
 import { OnboardingProgressPills } from '@/components/onboarding/OnboardingProgressPills';
 import { SessionSetupGuideFooterActions } from '@/components/session-setup/SessionSetupGuideFooterActions';
-import { staggerDelay } from '@/motion';
-import { goBackInSessionSetupGuide } from '@/utils/sessionSetupGuideNavigation';
+import {
+  goBackInSessionSetupGuide,
+  useSessionSetupGuidePillProgress,
+} from '@/utils/sessionSetupGuideNavigation';
 import { IBMPlexSans_600SemiBold } from '@expo-google-fonts/ibm-plex-sans';
 import {
   NotoSans_400Regular,
   NotoSans_700Bold,
 } from '@expo-google-fonts/noto-sans';
 import { Sanchez_400Regular } from '@expo-google-fonts/sanchez';
+import { Image as ExpoImage } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors as C } from '@/constants/tokens';
 
 export function SessionSetupStep5Screen() {
   const router = useRouter();
+  const { total, active } = useSessionSetupGuidePillProgress('step5');
 
   const [fontsLoaded] = useFonts({
     Sanchez_400Regular,
@@ -35,7 +40,7 @@ export function SessionSetupStep5Screen() {
       {/* Header */}
       <View style={s.header}>
         <View style={s.navContainer}>
-          <OnboardingProgressPills total={10} active={5} />
+          <OnboardingProgressPills total={total} active={active} />
         </View>
 
         <CoachmarkEnter style={s.guideTextContainer}>
@@ -48,11 +53,14 @@ export function SessionSetupStep5Screen() {
         </CoachmarkEnter>
       </View>
 
-      <CoachmarkEnter delayMs={staggerDelay(1)} style={s.illustrationZone}>
-        <Image
-          source={require('../../assets/images/screens/session-setup/step5-illustration.png')}
+      <CoachmarkEnter delayMs={0} style={s.illustrationZone}>
+        <ExpoImage
+          source={ONBOARDING_GRAPHICS.step5Illustration}
           style={s.illustration}
-          resizeMode="contain"
+          contentFit="contain"
+          cachePolicy="memory-disk"
+          priority="high"
+          transition={0}
           accessibilityLabel="Completed session summary with under review status, duration, date, and time"
         />
       </CoachmarkEnter>

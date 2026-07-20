@@ -59,7 +59,7 @@ const s = StyleSheet.create({
   },
   body: {
     flex: 1,
-    gap: 25,
+    gap: 16,
     paddingTop: 12,
   },
   title: {
@@ -71,11 +71,12 @@ const s = StyleSheet.create({
   showcaseWrap: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: 8,
   },
   showcase: {
-    width: '85%',
+    width: '95%',
     height: '100%',
-    maxHeight: 420,
+    maxHeight: 460,
   },
 });

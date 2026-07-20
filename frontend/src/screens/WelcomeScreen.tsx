@@ -4,6 +4,7 @@ import {
   WelcomeLogoMark,
   WelcomeUnderline,
 } from '@/components/onboarding/OnboardingIcons';
+import { ONBOARDING_GRAPHICS } from '@/components/onboarding/onboardingGraphics';
 import { markOnboardingComplete } from '@/features/onboarding/onboardingStore';
 import { colors as C, radius } from '@/features/figma-screens/tokens';
 import { Ionicons } from '@expo/vector-icons';
@@ -49,7 +50,7 @@ export function WelcomeScreen() {
     <View style={s.root}>
       <View style={s.hero}>
         <ExpoImage
-          source={require('@/assets/figma/onboarding/welcome-hero.png')}
+          source={ONBOARDING_GRAPHICS.welcomeHero}
           style={s.heroImage}
           contentFit="cover"
           cachePolicy="memory-disk"

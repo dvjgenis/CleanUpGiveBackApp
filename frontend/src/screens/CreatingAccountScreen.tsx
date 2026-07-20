@@ -1,4 +1,4 @@
-import { QuestionIcon } from '@/components/onboarding/OnboardingIcons';
+import { InfoCircleIcon } from '@/components/onboarding/OnboardingIcons';
 import { colors as C } from '@/features/figma-screens/tokens';
 import { durations, easing } from '@/motion';
 import { useCallback, useEffect, useState } from 'react';
@@ -120,7 +120,7 @@ export function CreatingAccountScreen() {
 
         <View style={s.didYouKnowBlock}>
           <View style={s.didYouKnowRow}>
-            <QuestionIcon width={18} height={18} />
+            <InfoCircleIcon width={18} height={18} />
             <Text style={s.didYouKnowLabel}>Did you know</Text>
           </View>
 
@@ -179,7 +179,7 @@ const s = StyleSheet.create({
   didYouKnowLabel: {
     fontFamily: 'NotoSans_400Regular',
     fontSize: 14,
-    color: C.borderOutline,
+    color: C.textNavInactive,
   },
   fact: {
     fontFamily: 'NotoSans_400Regular',

@@ -122,7 +122,7 @@ export function useSessionDetail(sessionId?: string): SessionDetailState {
         );
         const signedUrls = await createSignedStorageUrls(storagePaths);
 
-        const evidencePhotos = checkpoints.flatMap((checkpoint, index) => {
+        const evidencePhotos = checkpoints.flatMap((checkpoint) => {
           const photos: SessionDetailData['evidencePhotos'] = [];
           const selfieUrl = checkpoint.selfiePath
             ? signedUrls.get(checkpoint.selfiePath)
@@ -131,11 +131,16 @@ export function useSessionDetail(sessionId?: string): SessionDetailState {
             ? signedUrls.get(checkpoint.progressPath)
             : null;
 
+          const capturedAt = checkpoint.capturedAt
+            ? new Date(checkpoint.capturedAt).getTime()
+            : undefined;
+
           if (selfieUrl) {
             photos.push({
               id: `${checkpoint.id}-selfie`,
               source: { uri: selfieUrl },
-              caption: `Checkpoint ${index + 1} selfie`,
+              caption: 'Selfie',
+              capturedAt,
             });
           }
 
@@ -143,7 +148,8 @@ export function useSessionDetail(sessionId?: string): SessionDetailState {
             photos.push({
               id: `${checkpoint.id}-progress`,
               source: { uri: progressUrl },
-              caption: `Checkpoint ${index + 1} progress`,
+              caption: 'Progress',
+              capturedAt,
             });
           }
 

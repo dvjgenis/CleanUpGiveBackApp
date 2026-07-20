@@ -8,7 +8,7 @@ Static media and bundled prototype HTML.
 |------|----------|
 | `frontend/assets/figma/` | **Per-screen Figma assets** — see [`figma/README.md`](../../../frontend/assets/figma/README.md) inventory |
 | `frontend/assets/figma/onboarding/` | Onboarding — `welcome-hero.png`, decorative SVGs (logo/burst/underline), social + notification glyph SVGs, `question-icon.svg` (ported to `QuestionIcon`), `success-check.svg` (Figma `137:36`, ported to `AccountCreatedCheck`), `location-permission-illustration.svg` / `camera-permission-illustration.svg` (ported to `LocationPermissionIllustration` / `CameraPermissionIllustration`) |
-| `frontend/assets/figma/tour/` | Tour illustrations — `home-stats.png`, `shop-showcase.png` (kit product PNG), `track-map.png` (live map screenshot), `session-list.png` (session list screenshot); star/replay SVGs ported to `TourIcons.tsx` |
+| `frontend/assets/figma/tour/` | Tour illustrations — `home-stats.png`, `shop-showcase.png` (Trash Cleanup Kit product PNG, mint blob + transparent corners for forest-green tour bg), `track-map.png` (live map screenshot), `session-list.png` (session list screenshot); star/replay SVGs ported to `TourIcons.tsx` |
 | `frontend/assets/figma/home-screen/` | Home dashboard glyphs + `nav/` SVGs (sources for `navigation/icons/*.tsx`) |
 | `frontend/assets/figma/event-detail/` | Event detail icons + header/organizer/map media |
 | `frontend/assets/figma/shop/` | Shop home product PNGs; flow subfolders `cart/`, `checkout/`, `confirmation/`, `donate/`, `product-detail/`; ported glyph originals in `_source/` |

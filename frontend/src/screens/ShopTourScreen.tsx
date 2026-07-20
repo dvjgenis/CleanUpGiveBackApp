@@ -1,4 +1,3 @@
-import { IBMPlexSans_600SemiBold, IBMPlexSans_700Bold } from '@expo-google-fonts/ibm-plex-sans';
 import { Sanchez_400Regular } from '@expo-google-fonts/sanchez';
 import { Image as ExpoImage } from 'expo-image';
 import { useFonts } from 'expo-font';
@@ -20,8 +19,6 @@ export function ShopTourScreen() {
 
   const [fontsLoaded] = useFonts({
     Sanchez_400Regular,
-    IBMPlexSans_600SemiBold,
-    IBMPlexSans_700Bold,
   });
 
   useEffect(() => {
@@ -46,9 +43,6 @@ export function ShopTourScreen() {
               transition={0}
               accessibilityLabel="Trash Cleanup Kit product showcase"
             />
-            <View style={s.productTag}>
-              <Text style={s.productTagText}>Trash Cleanup Kit</Text>
-            </View>
           </View>
         </View>
 
@@ -93,22 +87,5 @@ const s = StyleSheet.create({
     width: '100%',
     height: '100%',
     maxHeight: 420,
-  },
-  productTag: {
-    position: 'absolute',
-    top: '18%',
-    alignSelf: 'center',
-    backgroundColor: C.textNavInactive,
-    borderWidth: 1,
-    borderColor: C.bgApp,
-    borderRadius: 31,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    transform: [{ rotate: '10deg' }],
-  },
-  productTagText: {
-    fontFamily: 'IBMPlexSans_700Bold',
-    fontSize: 17,
-    color: C.bgApp,
   },
 });

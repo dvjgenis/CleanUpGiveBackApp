@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { StyleSheet } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 
 import { useLiveSession } from '../liveSessionStore';
@@ -19,9 +19,9 @@ const OTHER_PREFETCHABLE_LAYERS: MapLayerType[] = ['satellite', 'hybrid'];
  * kicking off background tile prefetching for other layers. */
 const PREFETCH_DELAY_MS = 2500;
 
-function buildHtml(initialCenter: [number, number] | null, theme: MapBasemapTheme) {
-  const center = initialCenter ? JSON.stringify(initialCenter) : '[-98,39]';
-  const zoom = initialCenter ? 15 : 3;
+function buildHtml(initialCenter: [number, number], theme: MapBasemapTheme) {
+  const center = JSON.stringify(initialCenter);
+  const zoom = 15;
   const initialStyle = getMapStylePayload('standard', theme);
   const initialStyleJs =
     initialStyle.type === 'url'
@@ -59,9 +59,8 @@ function buildHtml(initialCenter: [number, number] | null, theme: MapBasemapThem
   let startMarker = null;
   let currentMarker = null;
   let currentMarkerElement = null;
-  // Pre-seeded to true when the HTML itself already starts at the user's location,
-  // so the first updateRoute call doesn't double-snap the viewport.
-  let hasInitialCentered = ${initialCenter ? 'true' : 'false'};
+  // Pre-seeded — HTML always starts at the user's location.
+  let hasInitialCentered = true;
   let lastRecenterToken = 0;
   let pendingCoords = [];
   let pendingCurrent = null;
@@ -169,8 +168,10 @@ function buildHtml(initialCenter: [number, number] | null, theme: MapBasemapThem
 
   window.setMapStyle = function(stylePayload) {
     routeAdded = false;
-    if (startMarker) { startMarker.remove(); startMarker = null; }
-    if (currentMarker) { currentMarker.remove(); currentMarker = null; currentMarkerElement = null; }
+    // Keep existing marker DOM elements attached during the style swap so the
+    // pin never disappears. MapLibre may detach custom layers on setStyle, but
+    // Marker DOM nodes survive — we only re-sync overlays once the new style
+    // finishes loading.
     const style = stylePayload.type === 'url' ? stylePayload.value : stylePayload.value;
     map.setStyle(style);
     map.once('style.load', () => {
@@ -224,12 +225,15 @@ export function LiveSessionMapWebView({ style }: Props) {
   const routeForMap =
     displayRouteCoordinates.length >= 2 ? displayRouteCoordinates : routeCoordinates;
 
-  // Capture the best available position at mount time so the HTML itself starts
-  // centered on the user — prevents the USA-map flash on first open.
+  // Only bake HTML once we have a real fix — never start at the US overview.
+  const seedCenter =
+    (displayCoordinate as [number, number] | null) ??
+    (currentCoordinate as [number, number] | null) ??
+    (routeCoordinates[0] as [number, number] | undefined) ??
+    null;
   const htmlRef = useRef<string | null>(null);
-  if (htmlRef.current === null) {
-    const center = displayCoordinate ?? currentCoordinate ?? routeCoordinates[0] ?? null;
-    htmlRef.current = buildHtml(center as [number, number] | null, mapTheme);
+  if (htmlRef.current === null && seedCenter) {
+    htmlRef.current = buildHtml(seedCenter, mapTheme);
   }
 
   const pushRouteUpdate = () => {
@@ -281,6 +285,16 @@ export function LiveSessionMapWebView({ style }: Props) {
     pushStyleUpdate();
   }, [mapLayer, mapTheme]);
 
+  if (!htmlRef.current) {
+    return (
+      <MapInteractionContainer style={[styles.container, style]}>
+        <View style={styles.waiting}>
+          <ActivityIndicator size="small" color={colors.primary} />
+        </View>
+      </MapInteractionContainer>
+    );
+  }
+
   return (
     <MapInteractionContainer style={[styles.container, style]}>
       <WebView
@@ -291,7 +305,7 @@ export function LiveSessionMapWebView({ style }: Props) {
         domStorageEnabled
         scrollEnabled={false}
         nestedScrollEnabled
-        source={{ html: htmlRef.current! }}
+        source={{ html: htmlRef.current }}
         onMessage={(event) => {
           if (event.nativeEvent.data === 'ready') {
             readyRef.current = true;
@@ -317,6 +331,12 @@ const styles = StyleSheet.create({
   },
   webview: {
     flex: 1,
+    backgroundColor: colors.bgSurface,
+  },
+  waiting: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: colors.bgSurface,
   },
 });

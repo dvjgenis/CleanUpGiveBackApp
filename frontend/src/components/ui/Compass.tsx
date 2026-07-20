@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -10,7 +10,6 @@ import Svg, { G, Polygon } from 'react-native-svg';
 import * as Location from 'expo-location';
 
 import {
-  HEADING_EMA_ALPHA,
   resolveCompassHeading,
   smoothHeadingEma,
 } from '@/features/session-tracking/utils/routeFiltering';
@@ -32,8 +31,10 @@ const TICK_COLOR = '#3E4A3D';
 
 const DIRECTIONS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'] as const;
 
-const HEADING_ANIM_MS = 180;
+/** Keep short — store already adaptive-EMA-smoothes; long timing stacks lag. */
+const HEADING_ANIM_MS = 70;
 const HEADING_EASING = Easing.out(Easing.cubic);
+const HEADING_DISPLAY_DEADBAND_DEG = 0.4;
 
 function bearingToLabel(deg: number): string {
   const normalized = ((deg % 360) + 360) % 360;
@@ -50,9 +51,10 @@ function shortestDeltaDegrees(from: number, to: number): number {
 }
 
 /**
- * Device heading subscription with accuracy gating + EMA.
+ * Device heading subscription with accuracy gating + adaptive EMA.
  * When `headingDegrees` is provided (e.g. live-session store), uses that
- * instead of opening a second magnetometer watch.
+ * instead of opening a second magnetometer watch — and skips a second EMA
+ * pass so dial + map arrow stay in sync without stacked lag.
  */
 function useCompassHeading(headingDegrees?: number | null) {
   const angle = useSharedValue(0);
@@ -60,13 +62,15 @@ function useCompassHeading(headingDegrees?: number | null) {
   const smoothedRef = useRef<number | null>(null);
   const displayRef = useRef(0);
 
-  const applyHeading = (raw: number) => {
-    const smoothed = smoothHeadingEma(smoothedRef.current, raw, HEADING_EMA_ALPHA);
+  const applyHeading = (raw: number, alreadySmoothed: boolean) => {
+    const smoothed = alreadySmoothed
+      ? raw
+      : smoothHeadingEma(smoothedRef.current, raw);
     smoothedRef.current = smoothed;
 
     const delta = shortestDeltaDegrees(displayRef.current, smoothed);
     // Ignore sub-degree noise after EMA — avoids micro-jitters.
-    if (Math.abs(delta) < 0.75 && smoothedRef.current != null) {
+    if (Math.abs(delta) < HEADING_DISPLAY_DEADBAND_DEG) {
       setLabel(bearingToLabel(smoothed));
       return;
     }
@@ -85,7 +89,7 @@ function useCompassHeading(headingDegrees?: number | null) {
     if (headingDegrees == null || !Number.isFinite(headingDegrees)) {
       return;
     }
-    applyHeading(normalizeDegrees(headingDegrees));
+    applyHeading(normalizeDegrees(headingDegrees), true);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- applyHeading closes over refs/shared values
   }, [headingDegrees, angle]);
 
@@ -107,9 +111,10 @@ function useCompassHeading(headingDegrees?: number | null) {
           trueHeading: data.trueHeading,
           magHeading: data.magHeading,
           accuracy: data.accuracy,
+          platform: Platform.OS,
         });
         if (raw == null) return;
-        applyHeading(raw);
+        applyHeading(raw, false);
       });
     })();
 

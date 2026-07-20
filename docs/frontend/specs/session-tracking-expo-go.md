@@ -38,7 +38,7 @@ Wire the existing native session tracking flow (`frontend/src/app/` routes + `li
 - [x] **AC-32:** Position samples pass through a **2D constant-velocity Kalman** filter (`locationKalman.ts`) before append gates; min-move is `max(3m, accuracy×0.35)` with gap recovery after 30s of rejected appends
 - [x] **AC-33:** Adaptive motion state: walking → BestForNavigation 1s / ~3 m; stationary → longer interval / larger distance interval
 - [x] **AC-34:** **Background GPS while session active only** via `expo-task-manager` (`backgroundLocationTask.ts`) when Always permission granted; Expo Go is foreground-only; deny Always → soft banner, session still starts
-- [x] **AC-35:** Create / checkpoint / finalize sync failures surface a non-blocking `sessionSyncWarning` banner on `/live-session` (local success UX preserved)
+- [x] **AC-35:** Create / checkpoint / finalize sync failures no longer show a tracker banner (local success UX preserved; remote create is best-effort in the background)
 
 ### Map (Expo Go WebView — to implement)
 
@@ -52,7 +52,7 @@ Wire the existing native session tracking flow (`frontend/src/app/` routes + `li
 - [x] **AC-29:** Standard basemap light/dark theme (Voyager / Dark Matter) via `mapThemeStore` — auto by local time (19:00–05:59 dark), Account Preferences toggle to follow time of day, live sun/moon tool to override; pressed/active map-tool states use brand mint + primary; see [map-theme-and-weather-icons.md](./map-theme-and-weather-icons.md)
 - [x] **AC-30:** Live location pill weather glyph reflects Open-Meteo `weather_code` (+ `is_day` for clear) via `WeatherConditionIcon`
 - [x] **AC-24:** GPS uses `BestForNavigation` at 1s (walking) with Kalman + hardened gates (≤15m accuracy or null after Kalman, adaptive min-move, stationary detection, sharp-reversal rejection, 8s warm-up, gap recovery); maps consume precomputed `displayRouteCoordinates` (Douglas-Peucker); stored route unchanged by display simplification
-- [x] **AC-25:** Live map shows gray start marker and a primary-green heading-beam dot (white halo, fading directional beam) on EMA-smoothed `displayCoordinate`; beam heading is driven by the device compass (`watchHeadingAsync`, EMA-smoothed) so it tracks which way the phone is facing in real time, falling back to GPS course-over-ground while the compass is unavailable; preview maps show start + end markers on simplified route polyline
+- [x] **AC-25:** Live map shows gray start marker and a primary-green heading-beam dot (white halo, fading directional beam) on EMA-smoothed `displayCoordinate`; beam heading is driven by the device compass (`watchHeadingAsync`, adaptive EMA + platform accuracy gating, ~33 ms store publish) so it tracks which way the phone is facing in real time, falling back to GPS course-over-ground while the compass is unavailable; preview maps show start + end markers on simplified route polyline
 - [x] **AC-26:** Live tracker includes optional **Follow** toggle (default off); when on, map eases to smoothed position (~450ms) on each GPS update; Recenter still flies to current position independently
 - [x] **AC-27:** Session detail / submission confirmation route maps support **Play / Pause / Replay** via `SessionRouteMapPanel` (single RAF owner); auto-replay once on load where enabled; respects `useReducedMotion`; basemap opens on session-end layer (`CompletedSessionSnapshot.mapLayer`)
 

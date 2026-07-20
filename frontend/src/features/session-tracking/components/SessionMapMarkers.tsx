@@ -76,6 +76,7 @@ export function SessionCurrentArrowMarker({ heading }: ArrowProps) {
         hasHeading && { transform: [{ rotate: `${heading}deg` }] },
       ]}
     >
+      <View style={styles.headingDotShadow} pointerEvents="none" />
       <Svg width={HEADING_MARKER_SIZE} height={HEADING_MARKER_SIZE}>
         {hasHeading && (
           <Path
@@ -128,6 +129,18 @@ const styles = StyleSheet.create({
     height: HEADING_MARKER_SIZE,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  headingDotShadow: {
+    position: 'absolute',
+    width: HEADING_DOT_OUTER_RADIUS * 2,
+    height: HEADING_DOT_OUTER_RADIUS * 2,
+    borderRadius: HEADING_DOT_OUTER_RADIUS,
+    backgroundColor: colors.textOnPrimary,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35,
+    shadowRadius: 3,
+    elevation: 4,
   },
   endMarker: {
     width: 22,

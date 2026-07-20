@@ -244,30 +244,53 @@ type CompassHeadingInput = {
   magHeading?: number | null;
   /** Platform-specific compass accuracy from `Location.watchHeadingAsync`. */
   accuracy?: number | null;
+  /**
+   * OS for interpreting `accuracy` (iOS = degrees of deviation; Android = 0–3
+   * calibration). Defaults to iOS semantics when omitted (unit-test friendly).
+   */
+  platform?: string | null;
 };
 
-/** iOS reports accuracy as degrees of deviation (lower is better). */
-const IOS_TRUE_HEADING_MAX_DEVIATION_DEG = 25;
+/** iOS: max degrees of deviation still trusted for true-north. */
+const IOS_TRUE_HEADING_MAX_DEVIATION_DEG = 15;
+
+/** iOS: reject the whole reading when deviation is this bad (interference). */
+const IOS_COMPASS_UNUSABLE_DEVIATION_DEG = 40;
+
+/** Android: minimum calibration tier (0–3) for trusting true-north. */
+const ANDROID_TRUE_HEADING_MIN_CALIBRATION = 2;
+
+/** Android: reject readings at or below this calibration tier. */
+const ANDROID_COMPASS_UNUSABLE_CALIBRATION = 0;
+
+function isAndroidPlatform(platform: string | null | undefined): boolean {
+  return platform === 'android';
+}
 
 /**
  * Resolves a compass reading (from `Location.watchHeadingAsync`) to a single
  * heading in degrees.
  *
  * Prefers true-north when available and sufficiently calibrated; otherwise
- * uses magnetic-north. Returns null when neither reading is usable (avoids
+ * uses magnetic-north. Returns null when the sensor looks unusable (avoids
  * locking onto `-1` / uncalibrated spikes that make the UI spin).
  */
 export function resolveCompassHeading({
   trueHeading,
   magHeading,
   accuracy = null,
+  platform = null,
 }: CompassHeadingInput): number | null {
+  if (!isCompassReadingUsable(accuracy, platform)) {
+    return null;
+  }
+
   const trueOk =
     trueHeading != null && Number.isFinite(trueHeading) && trueHeading >= 0;
   const magOk =
     magHeading != null && Number.isFinite(magHeading) && magHeading >= 0;
 
-  if (trueOk && isTrueHeadingReliable(accuracy)) {
+  if (trueOk && isTrueHeadingReliable(accuracy, platform)) {
     return trueHeading;
   }
 
@@ -284,32 +307,98 @@ export function resolveCompassHeading({
 }
 
 /**
+ * Whether the magnetometer reading is trustworthy enough to update UI.
+ *
  * expo-location heading `accuracy`:
  * - iOS: degrees of deviation (lower is better); negative = unreliable
  * - Android: calibration level 0–3 (higher is better); negative = uncalibrated
- *
- * Accept 0–25 so excellent iOS readings (including 0°) and Android tiers 1–3
- * pass, while large iOS deviation values are rejected.
  */
-export function isTrueHeadingReliable(accuracy: number | null | undefined): boolean {
+export function isCompassReadingUsable(
+  accuracy: number | null | undefined,
+  platform?: string | null,
+): boolean {
+  if (accuracy == null || !Number.isFinite(accuracy)) {
+    return true;
+  }
+
+  if (accuracy < 0) {
+    return false;
+  }
+
+  if (isAndroidPlatform(platform)) {
+    return accuracy > ANDROID_COMPASS_UNUSABLE_CALIBRATION;
+  }
+
+  return accuracy <= IOS_COMPASS_UNUSABLE_DEVIATION_DEG;
+}
+
+/**
+ * Whether true-north (vs magnetic) should be preferred for this reading.
+ *
+ * Accept excellent iOS deviation (including 0°) and Android medium/high
+ * calibration (2–3). Large iOS deviation and Android low/uncalibrated tiers
+ * fall through to magnetic north.
+ */
+export function isTrueHeadingReliable(
+  accuracy: number | null | undefined,
+  platform?: string | null,
+): boolean {
   if (accuracy == null || !Number.isFinite(accuracy) || accuracy < 0) {
     return false;
+  }
+
+  if (isAndroidPlatform(platform)) {
+    return accuracy >= ANDROID_TRUE_HEADING_MIN_CALIBRATION;
   }
 
   return accuracy <= IOS_TRUE_HEADING_MAX_DEVIATION_DEG;
 }
 
-/** EMA weight for compass heading smoothing (display only). */
-export const HEADING_EMA_ALPHA = 0.22;
+/**
+ * Baseline EMA weight when callers pass an explicit alpha.
+ * Prefer {@link headingEmaAlpha} / adaptive {@link smoothHeadingEma} for live UI.
+ */
+export const HEADING_EMA_ALPHA = 0.45;
+
+/** Slow EMA when the phone is nearly still (suppress magnetometer noise). */
+export const HEADING_EMA_ALPHA_MIN = 0.35;
+
+/** Fast EMA on intentional turns (cut perceived lag). */
+export const HEADING_EMA_ALPHA_MAX = 0.8;
+
+const HEADING_EMA_DEADBAND_DEG = 3;
+const HEADING_EMA_SNAP_DEG = 40;
+
+/**
+ * Adaptive EMA weight from the shortest-path turn size: low for jitter,
+ * high for quick direction changes.
+ */
+export function headingEmaAlpha(deltaDegrees: number): number {
+  const abs = Math.abs(deltaDegrees);
+  if (abs <= HEADING_EMA_DEADBAND_DEG) {
+    return HEADING_EMA_ALPHA_MIN;
+  }
+  if (abs >= HEADING_EMA_SNAP_DEG) {
+    return HEADING_EMA_ALPHA_MAX;
+  }
+
+  const t =
+    (abs - HEADING_EMA_DEADBAND_DEG) /
+    (HEADING_EMA_SNAP_DEG - HEADING_EMA_DEADBAND_DEG);
+  return HEADING_EMA_ALPHA_MIN + t * (HEADING_EMA_ALPHA_MAX - HEADING_EMA_ALPHA_MIN);
+}
 
 /**
  * EMA-smooths a compass heading to reduce magnetometer jitter, correctly
  * handling the 0°/360° wrap-around (e.g. 359° → 2° is a +3° turn, not -357°).
+ *
+ * When `alpha` is omitted, uses {@link headingEmaAlpha} so large turns track
+ * quickly while small noise stays damped.
  */
 export function smoothHeadingEma(
   previous: number | null,
   next: number,
-  alpha = HEADING_EMA_ALPHA,
+  alpha?: number,
 ): number {
   if (previous == null) {
     return next;
@@ -317,7 +406,8 @@ export function smoothHeadingEma(
 
   const rawDelta = next - previous;
   const shortestDelta = ((rawDelta + 180) % 360 + 360) % 360 - 180;
-  return (previous + shortestDelta * alpha + 360) % 360;
+  const resolvedAlpha = alpha ?? headingEmaAlpha(shortestDelta);
+  return (previous + shortestDelta * resolvedAlpha + 360) % 360;
 }
 
 /** EMA smooth a coordinate for live map display only. */

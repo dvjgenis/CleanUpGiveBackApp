@@ -1,19 +1,24 @@
 import { CoachmarkEnter } from '@/components/motion/CoachmarkEnter';
+import { ONBOARDING_GRAPHICS } from '@/components/onboarding/onboardingGraphics';
 import { OnboardingProgressPills } from '@/components/onboarding/OnboardingProgressPills';
 import { SessionSetupGuideFooterActions } from '@/components/session-setup/SessionSetupGuideFooterActions';
-import { staggerDelay } from '@/motion';
-import { goBackInSessionSetupGuide } from '@/utils/sessionSetupGuideNavigation';
+import {
+  goBackInSessionSetupGuide,
+  useSessionSetupGuidePillProgress,
+} from '@/utils/sessionSetupGuideNavigation';
 import { IBMPlexSans_600SemiBold } from '@expo-google-fonts/ibm-plex-sans';
 import { NotoSans_400Regular } from '@expo-google-fonts/noto-sans';
 import { Sanchez_400Regular } from '@expo-google-fonts/sanchez';
+import { Image as ExpoImage } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors as C } from '@/constants/tokens';
 
 export function SessionSetupStep3Screen() {
   const router = useRouter();
+  const { total, active } = useSessionSetupGuidePillProgress('step3');
 
   const [fontsLoaded] = useFonts({
     Sanchez_400Regular,
@@ -31,7 +36,7 @@ export function SessionSetupStep3Screen() {
       {/* Header — gap 20 between all three sections */}
       <View style={s.header}>
         <View style={s.navContainer}>
-          <OnboardingProgressPills total={10} active={3} />
+          <OnboardingProgressPills total={total} active={active} />
         </View>
 
         <CoachmarkEnter>
@@ -43,11 +48,14 @@ export function SessionSetupStep3Screen() {
         </CoachmarkEnter>
       </View>
 
-      <CoachmarkEnter delayMs={staggerDelay(1)} style={s.illustrationZone}>
-        <Image
-          source={require('../../assets/images/screens/session-setup/step3-illustration.png')}
+      <CoachmarkEnter delayMs={0} style={s.illustrationZone}>
+        <ExpoImage
+          source={ONBOARDING_GRAPHICS.step3Illustration}
           style={s.illustration}
-          resizeMode="contain"
+          contentFit="contain"
+          cachePolicy="memory-disk"
+          priority="high"
+          transition={0}
           accessibilityLabel="Live session tracker showing in-progress status, timer, distance, and walking path map"
         />
       </CoachmarkEnter>

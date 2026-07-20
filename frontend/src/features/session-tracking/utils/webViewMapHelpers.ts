@@ -233,6 +233,7 @@ export function buildWebViewMapHelpers(
     var rotator = document.createElement('div');
     rotator.style.width = HEADING_MARKER_SIZE + 'px';
     rotator.style.height = HEADING_MARKER_SIZE + 'px';
+    rotator.style.filter = 'drop-shadow(0 2px 3px rgba(0,0,0,0.35))';
     var hasHeading = heading != null && Number.isFinite(heading);
     el.dataset.heading = hasHeading ? String(heading) : '';
     if (hasHeading) {

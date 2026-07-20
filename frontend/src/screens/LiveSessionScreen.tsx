@@ -1,23 +1,30 @@
 import { IBMPlexSans_500Medium, IBMPlexSans_600SemiBold } from '@expo-google-fonts/ibm-plex-sans';
 
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
-import { PulsingDot } from '@/components/motion/PulsingDot';
 import {
   NotoSans_400Regular,
   NotoSans_500Medium,
   NotoSans_600SemiBold,
 } from '@expo-google-fonts/noto-sans';
+import { Image as ExpoImage } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   StyleSheet,
   Text,
   View,
 } from 'react-native';
-import Animated from 'react-native-reanimated';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Compass } from '@/components/ui/Compass';
+import { PhotoEnlargeModal } from '@/components/ui/PhotoEnlargeModal';
 import { SessionSetupBackChevronIcon } from '@/components/session-setup/icons/SessionSetupBackChevronIcon';
 import { LiveSessionMap } from '@/features/session-tracking/components/LiveSessionMap';
 import { MapTypesSheet } from '@/features/session-tracking/components/MapTypesSheet';
@@ -31,10 +38,10 @@ import { TrackerMyLocationIcon } from '@/features/session-tracking/components/ic
 import { TrackerSubmitPhotoIcon } from '@/features/session-tracking/components/icons/TrackerSubmitPhotoIcon';
 import { TrackerWeatherIcon } from '@/features/session-tracking/components/icons/TrackerWeatherIcon';
 import {
-  formatCheckpointDue,
   formatElapsed,
+  formatCheckpointDue,
 } from '@/features/session-tracking/mocks/session';
-import { formatSubmittedCheckpointCount, shouldShowCheckpointSubmissionCount } from '@/features/session-tracking/utils/sessionFormat';
+import type { PhotoCheckpointSubmission } from '@/features/session-tracking/liveSessionStore';
 import {
   finalizeLiveSession,
   ensureLocationWatching,
@@ -52,7 +59,18 @@ import {
 } from '@/features/session-tracking/mapThemeStore';
 import { useLiveWeather } from '@/features/session-tracking/hooks/useLiveWeather';
 import { useLiveSessionMapReveal } from '@/features/session-tracking/hooks/useLiveSessionMapReveal';
+import {
+  getFreeTrialSecondsRemaining,
+  getTrackerHasPaid,
+  isFreeTrialExpired,
+} from '@/features/session-tracking/trackerPaymentStore';
 import { colors, radius } from '@/features/session-tracking/tokens';
+import {
+  formatPhotoTimeLabel,
+  formatSessionDateLabel,
+  formatSubmittedCheckpointCount,
+  shouldShowCheckpointSubmissionCount,
+} from '@/features/session-tracking/utils/sessionFormat';
 
 const C = {
   bgApp: colors.bgApp,
@@ -66,11 +84,72 @@ const C = {
   statusPending: colors.status.pending.border,
 } as const;
 
+const TIMER_BORDER_PULSE_MS = 2400;
+const CHECKPOINT_THUMB_SIZE = 44;
+const CHECKPOINT_THUMB_OVERLAP = 16;
+
+type CheckpointViewerPhoto = {
+  key: string;
+  uri: string;
+  label: string;
+  capturedAt: number;
+};
+
+function buildCheckpointViewerPhotos(
+  checkpoints: PhotoCheckpointSubmission[],
+): CheckpointViewerPhoto[] {
+  const photos: CheckpointViewerPhoto[] = [];
+  for (const checkpoint of checkpoints) {
+    if (checkpoint.selfieUri) {
+      photos.push({
+        key: `${checkpoint.id}-selfie`,
+        uri: checkpoint.selfieUri,
+        label: 'Selfie',
+        capturedAt: checkpoint.capturedAt,
+      });
+    }
+    if (checkpoint.progressUri) {
+      photos.push({
+        key: `${checkpoint.id}-progress`,
+        uri: checkpoint.progressUri,
+        label: 'Progress',
+        capturedAt: checkpoint.capturedAt,
+      });
+    }
+  }
+  return photos;
+}
+
 function formatDistanceMiles(miles: number): string {
   if (miles === 0) {
     return '0';
   }
   return miles.toFixed(1);
+}
+
+function PulsingTimerCard({ children }: { children: React.ReactNode }) {
+  const borderOpacity = useSharedValue(1);
+
+  useEffect(() => {
+    borderOpacity.value = withRepeat(
+      withTiming(0.4, {
+        duration: TIMER_BORDER_PULSE_MS,
+        easing: Easing.inOut(Easing.ease),
+      }),
+      -1,
+      true,
+    );
+  }, [borderOpacity]);
+
+  const borderStyle = useAnimatedStyle(() => ({
+    borderColor: `rgba(194, 216, 50, ${borderOpacity.value})`,
+  }));
+
+  return (
+    <Animated.View style={[s.timerCard, borderStyle]}>
+      {children}
+    </Animated.View>
+  );
 }
 
 function TrackerBackButton({ onPress }: { onPress: () => void }) {
@@ -97,7 +176,7 @@ function TrackerCompassControl() {
       size={48}
       borderColor={C.borderOutline}
       backgroundColor={C.textOnPrimary}
-      heading={currentHeading}
+      headingDegrees={currentHeading}
     />
   );
 }
@@ -127,15 +206,33 @@ function MapToolButton({
 /** PRD §6.11 · Figma `session_setup_guide` live tracker (`251:439`). */
 export function LiveSessionScreen() {
   const router = useRouter();
-  const { elapsedSeconds, checkpointSecondsRemaining, distanceMiles, submittedCheckpoints, mapLayer, mapFollowEnabled, sessionSyncWarning, backgroundLocationEnabled } =
+  const { elapsedSeconds, checkpointSecondsRemaining, distanceMiles, submittedCheckpoints, mapLayer, mapFollowEnabled } =
     useLiveSession();
   const [mapLayerPickerVisible, setMapLayerPickerVisible] = useState(false);
+  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
   const mapTheme = useEffectiveMapTheme();
   const { mapRevealStyle, chromeStyle } = useLiveSessionMapReveal();
   const submittedCheckpointCount = submittedCheckpoints.length;
   const showSubmissionCount = shouldShowCheckpointSubmissionCount(submittedCheckpoints);
   const submittedCheckpointLabel = formatSubmittedCheckpointCount(submittedCheckpointCount);
+  const viewerPhotos = useMemo(
+    () => buildCheckpointViewerPhotos(submittedCheckpoints),
+    [submittedCheckpoints],
+  );
+  const selectedPhoto =
+    selectedPhotoIndex !== null ? viewerPhotos[selectedPhotoIndex] ?? null : null;
   const { placeLabel, temperatureLabel, isLoading: isWeatherLoading } = useLiveWeather();
+  const freeTrialRemaining = getFreeTrialSecondsRemaining(elapsedSeconds);
+  const showFreeTrialCountdown = !getTrackerHasPaid();
+
+  const openCheckpointPhotos = (checkpointId: string) => {
+    const startIndex = viewerPhotos.findIndex(
+      (photo) => photo.key.startsWith(`${checkpointId}-`),
+    );
+    if (startIndex >= 0) {
+      setSelectedPhotoIndex(startIndex);
+    }
+  };
 
   const [fontsLoaded] = useFonts({
     NotoSans_400Regular,
@@ -166,7 +263,7 @@ export function LiveSessionScreen() {
   }, [elapsedSeconds, router]);
 
   useEffect(() => {
-    if (elapsedSeconds >= 3600) {
+    if (!getTrackerHasPaid() && isFreeTrialExpired(elapsedSeconds)) {
       router.push('/free-trial-done');
     }
   }, [elapsedSeconds, router]);
@@ -205,39 +302,28 @@ export function LiveSessionScreen() {
             <TrackerCompassControl />
           </View>
 
-          {sessionSyncWarning ? (
-            <View style={s.syncBanner} accessibilityRole="alert">
-              <Text style={s.syncBannerText}>{sessionSyncWarning}</Text>
-            </View>
-          ) : null}
-
-          {!backgroundLocationEnabled && !sessionSyncWarning ? (
-            <View style={s.syncBanner}>
-              <Text style={s.syncBannerText}>
-                Route tracks while the app is open. Allow Always location to continue when locked.
-              </Text>
-            </View>
-          ) : null}
-
           <View style={s.inProgressSection} pointerEvents="box-none">
             <View style={s.timerBlock} pointerEvents="box-none">
-              <View style={s.statusBadge}>
-                <PulsingDot color={C.textTertiary} size={8} />
-                <Text style={s.statusText}>IN PROGRESS</Text>
-              </View>
-
-              <View style={s.timerCard}>
+              <PulsingTimerCard>
                 <Text
                   style={s.timerText}
                   accessibilityLabel={`Elapsed time ${formatElapsed(elapsedSeconds)}`}
                 >
                   {formatElapsed(elapsedSeconds)}
                 </Text>
+                {showFreeTrialCountdown ? (
+                  <Text
+                    style={s.freeHourText}
+                    accessibilityLabel={`Free hour remaining ${formatElapsed(freeTrialRemaining)}`}
+                  >
+                    {formatElapsed(freeTrialRemaining)}
+                  </Text>
+                ) : null}
                 <View style={s.distanceRow}>
                   <Text style={s.distanceLabel}>Distance:</Text>
                   <Text style={s.distanceValue}>{formatDistanceMiles(distanceMiles)} miles</Text>
                 </View>
-              </View>
+              </PulsingTimerCard>
             </View>
 
             <View style={s.bottomSection} pointerEvents="box-none">
@@ -282,11 +368,29 @@ export function LiveSessionScreen() {
                   </View>
                   {showSubmissionCount && (
                     <View
-                      style={s.checkpointDots}
+                      style={s.checkpointThumbs}
                       accessibilityLabel={`${submittedCheckpointCount} checkpoint photos submitted`}
                     >
-                      {submittedCheckpoints.map((checkpoint) => (
-                        <View key={checkpoint.id} style={s.checkpointDot} />
+                      {submittedCheckpoints.map((checkpoint, index) => (
+                        <AnimatedPressable
+                          key={checkpoint.id}
+                          scaleTo={0.98}
+                          onPress={() => openCheckpointPhotos(checkpoint.id)}
+                          accessibilityRole="imagebutton"
+                          accessibilityLabel={`View checkpoint ${index + 1} photos`}
+                          style={[
+                            index > 0 ? { marginLeft: -CHECKPOINT_THUMB_OVERLAP } : null,
+                            { zIndex: index + 1 },
+                          ]}
+                        >
+                          <ExpoImage
+                            source={{ uri: checkpoint.selfieUri || checkpoint.progressUri }}
+                            style={s.checkpointThumb}
+                            contentFit="cover"
+                            cachePolicy="memory-disk"
+                            transition={0}
+                          />
+                        </AnimatedPressable>
                       ))}
                     </View>
                   )}
@@ -329,11 +433,40 @@ export function LiveSessionScreen() {
       <MapTypesSheet
         visible={mapLayerPickerVisible}
         selectedType={mapLayer}
-        onSelect={(type) => {
-          setLiveSessionMapLayer(type);
-          setMapLayerPickerVisible(false);
-        }}
+        onSelect={setLiveSessionMapLayer}
         onClose={() => setMapLayerPickerVisible(false)}
+      />
+
+      <PhotoEnlargeModal
+        visible={selectedPhotoIndex !== null && selectedPhoto !== null}
+        uri={selectedPhoto?.uri ?? null}
+        caption={selectedPhoto?.label}
+        dateLabel={
+          selectedPhoto ? formatSessionDateLabel(selectedPhoto.capturedAt) : undefined
+        }
+        timeLabel={
+          selectedPhoto ? formatPhotoTimeLabel(selectedPhoto.capturedAt) : undefined
+        }
+        counterLabel={
+          selectedPhotoIndex !== null && viewerPhotos.length > 0
+            ? `${selectedPhotoIndex + 1}/${viewerPhotos.length}`
+            : undefined
+        }
+        onClose={() => setSelectedPhotoIndex(null)}
+        hasPrevious={selectedPhotoIndex !== null && selectedPhotoIndex > 0}
+        hasNext={
+          selectedPhotoIndex !== null && selectedPhotoIndex < viewerPhotos.length - 1
+        }
+        onPrevious={() =>
+          setSelectedPhotoIndex((index) =>
+            index !== null && index > 0 ? index - 1 : index,
+          )
+        }
+        onNext={() =>
+          setSelectedPhotoIndex((index) =>
+            index !== null && index < viewerPhotos.length - 1 ? index + 1 : index,
+          )
+        }
       />
     </View>
   );
@@ -371,22 +504,6 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: 34,
     marginTop: 8,
-  },
-
-  syncBanner: {
-    backgroundColor: C.textOnPrimary,
-    borderWidth: 1,
-    borderColor: C.borderOutline,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-
-  syncBannerText: {
-    fontFamily: 'NotoSans_400Regular',
-    fontSize: 12,
-    lineHeight: 18,
-    color: C.textTertiary,
   },
 
   backBtn: {
@@ -454,24 +571,6 @@ const s = StyleSheet.create({
     gap: 10,
   },
 
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: C.accentLime,
-    borderWidth: 1,
-    borderColor: C.accentLime,
-    borderRadius: radius.full,
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-  },
-
-  statusText: {
-    fontFamily: 'NotoSans_500Medium',
-    fontSize: 12,
-    color: C.textTertiary,
-  },
-
   timerCard: {
     width: '100%',
     backgroundColor: C.textOnPrimary,
@@ -481,7 +580,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 14,
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
   },
 
   timerText: {
@@ -490,6 +589,15 @@ const s = StyleSheet.create({
     lineHeight: 50,
     letterSpacing: 4,
     color: C.textPrimary,
+    textAlign: 'center',
+  },
+
+  freeHourText: {
+    fontFamily: 'NotoSans_600SemiBold',
+    fontSize: 14,
+    lineHeight: 18,
+    letterSpacing: 1.5,
+    color: C.primary,
     textAlign: 'center',
   },
 
@@ -550,9 +658,9 @@ const s = StyleSheet.create({
     borderColor: C.borderOutline,
     borderRadius: radius.md,
     paddingHorizontal: 23,
-    paddingVertical: 20,
-    gap: 25,
-    minHeight: 127,
+    paddingVertical: 14,
+    gap: 12,
+    minHeight: 0,
   },
 
   checkpointHeader: {
@@ -574,21 +682,21 @@ const s = StyleSheet.create({
     color: C.primary,
   },
 
-  checkpointDots: {
+  checkpointThumbs: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    paddingVertical: 2,
   },
 
-  checkpointDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: C.primary,
+  checkpointThumb: {
+    width: CHECKPOINT_THUMB_SIZE,
+    height: CHECKPOINT_THUMB_SIZE,
+    borderRadius: radius.sm,
+    backgroundColor: C.borderOutline,
   },
 
   nextPhotoBlock: {
-    gap: 15,
+    gap: 10,
   },
 
   nextPhotoRow: {
