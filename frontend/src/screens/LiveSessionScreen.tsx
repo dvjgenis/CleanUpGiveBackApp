@@ -20,7 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Compass } from '@/components/ui/Compass';
 import { SessionSetupBackChevronIcon } from '@/components/session-setup/icons/SessionSetupBackChevronIcon';
 import { LiveSessionMap } from '@/features/session-tracking/components/LiveSessionMap';
-import { MapLayerPicker } from '@/features/session-tracking/components/MapLayerPicker';
+import { MapTypesSheet } from '@/features/session-tracking/components/MapTypesSheet';
 import { TrackerActionButton } from '@/features/session-tracking/components/TrackerActionButton';
 import { LocationPinIcon } from '@/features/session-tracking/components/icons/LocationPinIcon';
 import { TrackerEndSessionIcon } from '@/features/session-tracking/components/icons/TrackerEndSessionIcon';
@@ -165,6 +165,12 @@ export function LiveSessionScreen() {
     }
   }, [elapsedSeconds, router]);
 
+  useEffect(() => {
+    if (elapsedSeconds >= 3600) {
+      router.push('/free-trial-done');
+    }
+  }, [elapsedSeconds, router]);
+
   if (!fontsLoaded) {
     return <View style={s.root} />;
   }
@@ -238,13 +244,6 @@ export function LiveSessionScreen() {
               <View style={s.checkpointSection} pointerEvents="box-none">
                 <View style={s.mapTools}>
                   <View style={s.mapLayerControl}>
-                    {mapLayerPickerVisible && (
-                      <MapLayerPicker
-                        currentLayer={mapLayer}
-                        onSelect={setLiveSessionMapLayer}
-                        onClose={() => setMapLayerPickerVisible(false)}
-                      />
-                    )}
                     <MapToolButton
                       accessibilityLabel="Map layers"
                       onPress={() => setMapLayerPickerVisible((visible) => !visible)}
@@ -269,8 +268,8 @@ export function LiveSessionScreen() {
                     onPress={toggleManualMapTheme}
                   >
                     {mapTheme === 'dark'
-                      ? <TrackerMapLightIcon color={C.textTertiary} />
-                      : <TrackerMapDarkIcon color={C.textTertiary} />}
+                      ? <TrackerMapDarkIcon color={C.textTertiary} />
+                      : <TrackerMapLightIcon color={C.textTertiary} />}
                   </MapToolButton>
                 </View>
 
@@ -317,7 +316,7 @@ export function LiveSessionScreen() {
                   variant="secondary"
                   onPress={() => {
                     finalizeLiveSession();
-                    router.push('/submission-confirmation');
+                    router.push('/session-feedback');
                   }}
                   icon={<TrackerEndSessionIcon color={C.textTertiary} size={24} />}
                 />
@@ -326,6 +325,16 @@ export function LiveSessionScreen() {
           </View>
         </Animated.View>
       </SafeAreaView>
+
+      <MapTypesSheet
+        visible={mapLayerPickerVisible}
+        selectedType={mapLayer}
+        onSelect={(type) => {
+          setLiveSessionMapLayer(type);
+          setMapLayerPickerVisible(false);
+        }}
+        onClose={() => setMapLayerPickerVisible(false)}
+      />
     </View>
   );
 }
@@ -354,7 +363,7 @@ const s = StyleSheet.create({
   main: {
     flex: 1,
     paddingHorizontal: 16,
-    gap: 33,
+    gap: 10,
   },
 
   navbar: {
@@ -437,7 +446,7 @@ const s = StyleSheet.create({
 
   inProgressSection: {
     flex: 1,
-    gap: 74,
+    gap: 16,
   },
 
   timerBlock: {
@@ -469,17 +478,17 @@ const s = StyleSheet.create({
     borderWidth: 3,
     borderColor: C.accentLime,
     borderRadius: radius.md,
-    paddingHorizontal: 35,
-    paddingVertical: 22,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
     alignItems: 'center',
-    gap: 10,
+    gap: 6,
   },
 
   timerText: {
     fontFamily: 'NotoSans_600SemiBold',
-    fontSize: 50,
-    lineHeight: 68,
-    letterSpacing: 5,
+    fontSize: 38,
+    lineHeight: 50,
+    letterSpacing: 4,
     color: C.textPrimary,
     textAlign: 'center',
   },
