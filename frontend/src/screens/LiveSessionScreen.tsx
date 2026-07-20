@@ -243,6 +243,8 @@ export function LiveSessionScreen() {
   });
 
   const checkpointProgress = getCheckpointProgress(checkpointSecondsRemaining);
+  const checkpointMissed = isCheckpointMissed();
+  const freeTrialExpired = !getTrackerHasPaid() && isFreeTrialExpired(elapsedSeconds);
 
   useEffect(() => {
     void ensureLocationWatching();
@@ -256,17 +258,17 @@ export function LiveSessionScreen() {
   }, [checkpointSecondsRemaining, router]);
 
   useEffect(() => {
-    if (isCheckpointMissed()) {
+    if (checkpointMissed) {
       finalizeLiveSession({ status: 'invalid' });
       router.replace('/missed-checkpoint');
     }
-  }, [elapsedSeconds, router]);
+  }, [checkpointMissed, router]);
 
   useEffect(() => {
-    if (!getTrackerHasPaid() && isFreeTrialExpired(elapsedSeconds)) {
+    if (freeTrialExpired) {
       router.push('/free-trial-done');
     }
-  }, [elapsedSeconds, router]);
+  }, [freeTrialExpired, router]);
 
   if (!fontsLoaded) {
     return <View style={s.root} />;

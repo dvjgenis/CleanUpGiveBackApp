@@ -1,5 +1,6 @@
 import { FreeKitScreen } from '@/screens/FreeKitScreen';
 import {
+  exitSessionSetupGuideToTrackEntry,
   goBackInSessionSetupGuide,
   useSessionSetupGuidePillProgress,
 } from '@/utils/sessionSetupGuideNavigation';
@@ -18,6 +19,7 @@ export default function SessionFreeKitRoute() {
         onContinue={() => router.push('/session-setup-step6')}
         onPrevious={() => goBackInSessionSetupGuide(router)}
         onSkip={() => router.push('/session-setup-step6')}
+        onBack={() => exitSessionSetupGuideToTrackEntry(router)}
       />
     </SafeAreaProvider>
   );

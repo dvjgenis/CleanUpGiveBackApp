@@ -1,5 +1,6 @@
 import { FreeHourScreen } from '@/screens/FreeHourScreen';
 import {
+  exitSessionSetupGuideToTrackEntry,
   goBackInSessionSetupGuide,
   useSessionSetupGuidePillProgress,
 } from '@/utils/sessionSetupGuideNavigation';
@@ -18,6 +19,7 @@ export default function SessionFreeHourRoute() {
         onContinue={() => router.push('/session-free-kit')}
         onPrevious={() => goBackInSessionSetupGuide(router)}
         onSkip={() => router.push('/session-setup-step6')}
+        onBack={() => exitSessionSetupGuideToTrackEntry(router)}
       />
     </SafeAreaProvider>
   );

@@ -1,11 +1,24 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { OnboardingInfoFooterActions } from '@/components/onboarding/OnboardingInfoFooterActions';
 import { OnboardingProgressPills } from '@/components/onboarding/OnboardingProgressPills';
 import { SessionSetupCalendarIcon } from '@/components/session-setup/icons/SessionSetupCalendarIcon';
-import { DateWheelPicker } from '@/features/figma-screens/components/DateWheelPicker';
+import { SERVICE_TYPES, type ServiceType } from '@/constants/serviceTypes';
+import {
+  ageFromBirthday,
+  BirthdayPickerModal,
+  DEFAULT_BIRTHDAY_PICKER_DATE,
+  formatBirthdayDraft,
+  formatBirthdayLabel,
+  parseBirthdayDraft,
+} from '@/features/figma-screens/components/BirthdayPickerModal';
 import { colors as C } from '@/features/figma-screens/tokens';
-import { durations, easing, modalSpring } from '@/motion';
+import {
+  getBirthday,
+  getServiceType,
+  setBirthday as persistBirthday,
+  setServiceType as persistServiceType,
+} from '@/features/onboarding/onboardingStore';
 import { IBMPlexSans_600SemiBold } from '@expo-google-fonts/ibm-plex-sans';
 import {
   NotoSans_400Regular,
@@ -18,29 +31,15 @@ import { useFonts } from 'expo-font';
 import {
   Keyboard,
   KeyboardAvoidingView,
-  Modal,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
-  useWindowDimensions,
   View,
 } from 'react-native';
-import Animated, {
-  runOnJS,
-  useAnimatedStyle,
-  useReducedMotion,
-  useSharedValue,
-  withSpring,
-  withTiming,
-} from 'react-native-reanimated';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-
-
-const SERVICE_TYPES = ['Court Ordered', 'Volunteering', 'School', 'Other'] as const;
-type ServiceType = (typeof SERVICE_TYPES)[number];
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 function validate(birthday: Date | null, birthdayText: string, serviceType: ServiceType | null) {
   const errors: { birthday?: string; serviceType?: string } = {};
@@ -53,164 +52,21 @@ function validate(birthday: Date | null, birthdayText: string, serviceType: Serv
   return errors;
 }
 
-const SHEET_BOTTOM_BLEED = 48;
-const DEFAULT_PICKER_DATE = new Date(2000, 0, 1);
-
-function ageFromMonthYear(birthday: Date): number {
-  const now = new Date();
-  let age = now.getFullYear() - birthday.getFullYear();
-  const monthDiff = now.getMonth() - birthday.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < birthday.getDate())) {
-    age -= 1;
-  }
-  return age;
-}
-
-/** Format as MM/YYYY while typing (digits only, max 6). */
-function formatBirthdayDraft(raw: string): string {
-  const digits = raw.replace(/\D/g, '').slice(0, 6);
-  if (digits.length <= 2) return digits;
-  return `${digits.slice(0, 2)}/${digits.slice(2)}`;
-}
-
-function formatBirthdayLabel(date: Date): string {
-  const mm = String(date.getMonth() + 1).padStart(2, '0');
-  return `${mm}/${date.getFullYear()}`;
-}
-
-/** Parse MM/YYYY (or M/YYYY) into the 1st of that month. */
-function parseBirthdayDraft(text: string): Date | null {
-  const match = text.trim().match(/^(\d{1,2})\s*\/\s*(\d{4})$/);
-  if (!match) return null;
-  const month = Number(match[1]);
-  const year = Number(match[2]);
-  if (month < 1 || month > 12) return null;
-  const now = new Date();
-  if (year < 1900 || year > now.getFullYear()) return null;
-  const date = new Date(year, month - 1, 1);
-  if (date > now) return null;
-  return date;
-}
-
 function CalendarIcon({ color = C.textTertiary }: { color?: string }) {
   return <SessionSetupCalendarIcon color={color} size={18} />;
-}
-
-type BirthdayPickerProps = {
-  visible: boolean;
-  value: Date;
-  onChange: (date: Date) => void;
-  onConfirm: (date: Date) => void;
-  onClose: () => void;
-};
-
-/** Scrim fades with the sheet; Modal unmounts when exit finishes. */
-function BirthdayPickerModal({
-  visible,
-  value,
-  onChange,
-  onConfirm,
-  onClose,
-}: BirthdayPickerProps) {
-  const { height: windowHeight } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
-  const reducedMotion = useReducedMotion();
-  const sheetHeight = 280 + insets.bottom;
-  const dismissTravel = Math.min(windowHeight * 0.55, sheetHeight) + SHEET_BOTTOM_BLEED;
-  const translateY = useSharedValue(dismissTravel);
-  const backdropOpacity = useSharedValue(0);
-
-  const dismiss = useCallback(() => {
-    if (reducedMotion) {
-      onClose();
-      return;
-    }
-    // Fade scrim immediately so the dimmed screen does not linger while the
-    // sheet spring settles (sheetDismissSpring can take >1s to finish).
-    backdropOpacity.value = withTiming(0, {
-      duration: durations.sheetDismiss,
-      easing: easing.drawer,
-    });
-    translateY.value = withTiming(
-      dismissTravel,
-      { duration: durations.sheetDismiss, easing: easing.drawer },
-      (finished) => {
-        if (finished) {
-          runOnJS(onClose)();
-        }
-      },
-    );
-  }, [backdropOpacity, dismissTravel, onClose, reducedMotion, translateY]);
-
-  const confirm = useCallback(() => {
-    onConfirm(value);
-    dismiss();
-  }, [dismiss, onConfirm, value]);
-
-  useEffect(() => {
-    if (!visible) {
-      return;
-    }
-    translateY.value = dismissTravel;
-    translateY.value = reducedMotion
-      ? 0
-      : withSpring(0, { ...modalSpring, overshootClamping: true });
-    backdropOpacity.value = reducedMotion
-      ? 1
-      : withTiming(1, { duration: durations.modalEnter, easing: easing.easeOut });
-  }, [backdropOpacity, dismissTravel, reducedMotion, translateY, visible]);
-
-  const sheetStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }],
-  }));
-
-  const backdropStyle = useAnimatedStyle(() => ({
-    opacity: backdropOpacity.value,
-  }));
-
-  return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="none"
-      statusBarTranslucent
-      onRequestClose={dismiss}
-    >
-      <View style={s.modalRoot}>
-        <Animated.View style={[s.modalScrim, backdropStyle]} pointerEvents="none" />
-        <Pressable
-          style={StyleSheet.absoluteFillObject}
-          onPress={dismiss}
-          accessibilityLabel="Close birthday picker"
-        />
-        <Animated.View style={[s.modalSheetWrap, sheetStyle]}>
-          <View style={[s.modalSheet, { paddingBottom: 24 + insets.bottom }]}>
-            <View style={s.modalHeader}>
-              <Text style={s.modalTitle}>Birthday</Text>
-              <AnimatedPressable
-                onPress={confirm}
-                accessibilityRole="button"
-                accessibilityLabel="Confirm birthday"
-              >
-                <Text style={s.modalDone}>Done</Text>
-              </AnimatedPressable>
-            </View>
-            <DateWheelPicker value={value} onChange={onChange} includeDay={false} />
-          </View>
-        </Animated.View>
-      </View>
-    </Modal>
-  );
 }
 
 /** Figma `details_account` (112:6882) — account onboarding step 3 of 5. */
 export function AccountDetailsScreen() {
   const router = useRouter();
-  const [birthday, setBirthday] = useState<Date | null>(null);
-  const [birthdayText, setBirthdayText] = useState('');
-  const [pickerDate, setPickerDate] = useState(DEFAULT_PICKER_DATE);
+  const [birthday, setBirthday] = useState<Date | null>(() => getBirthday());
+  const [birthdayText, setBirthdayText] = useState(() => {
+    const existing = getBirthday();
+    return existing ? formatBirthdayLabel(existing) : '';
+  });
+  const [pickerDate, setPickerDate] = useState(() => getBirthday() ?? DEFAULT_BIRTHDAY_PICKER_DATE);
   const [showPicker, setShowPicker] = useState(false);
-  const [serviceType, setServiceType] = useState<ServiceType | null>(null);
+  const [serviceType, setServiceType] = useState<ServiceType | null>(() => getServiceType());
   const [touched, setTouched] = useState<{ birthday?: boolean; serviceType?: boolean }>({});
   const [submitted, setSubmitted] = useState(false);
 
@@ -245,7 +101,7 @@ export function AccountDetailsScreen() {
 
   const openPicker = () => {
     Keyboard.dismiss();
-    setPickerDate(birthday ?? DEFAULT_PICKER_DATE);
+    setPickerDate(birthday ?? DEFAULT_BIRTHDAY_PICKER_DATE);
     setShowPicker(true);
   };
 
@@ -362,7 +218,9 @@ export function AccountDetailsScreen() {
             const resolved = parseBirthdayDraft(birthdayText) ?? birthday;
             const currentErrors = validate(resolved, birthdayText, serviceType);
             if (Object.keys(currentErrors).length > 0) return;
-            if (resolved && ageFromMonthYear(resolved) < 18) {
+            persistBirthday(resolved);
+            persistServiceType(serviceType);
+            if (resolved && ageFromBirthday(resolved) <= 13) {
               router.push('/under-age');
               return;
             }
@@ -516,43 +374,6 @@ const s = StyleSheet.create({
     textAlign: 'center',
   },
   serviceBtnTextActive: {
-    color: C.primary,
-  },
-  modalRoot: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  modalScrim: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: C.overlayScrim,
-  },
-  modalSheetWrap: {
-    width: '100%',
-  },
-  modalSheet: {
-    backgroundColor: C.white,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    width: '100%',
-    overflow: 'hidden',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: C.borderOutline,
-  },
-  modalTitle: {
-    fontFamily: 'Sanchez_400Regular',
-    fontSize: 18,
-    color: C.textPrimary,
-  },
-  modalDone: {
-    fontFamily: 'NotoSans_600SemiBold',
-    fontSize: 16,
     color: C.primary,
   },
 });

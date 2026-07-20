@@ -21,7 +21,7 @@ Powers route display, GPS sampling, and distance stats during cleanup sessions. 
   - Pipeline: **2D Kalman** (`locationKalman.ts`) → hardened gates (≤15 m accuracy or null after Kalman, adaptive min-move `max(3m, accuracy×0.35)`, stationary, sharp-reversal, 8s warm-up, 30s gap recovery)
 - Rich in-memory samples `{lng, lat, accuracy, speed, heading, t}`; API finalize still sends `[[lng, lat], …]`
 - Route display: precomputed `displayRouteCoordinates` via `simplifyRouteForDisplay()` (outlier removal + Douglas-Peucker + light smooth); stored distance uses capture-filtered points
-- Live map markers: gray start point, primary-green heading-beam on EMA-smoothed `displayCoordinate`; heading from device compass (`watchHeadingAsync`, adaptive EMA + platform accuracy gate, ~33 ms publish), GPS course fallback; optional Follow (~450 ms ease)
+- Live map markers: primary-green heading-beam on EMA-smoothed `displayCoordinate` only (no start pin — it stacked on the tip for short walks); heading from device compass (`watchHeadingAsync`, adaptive EMA + platform accuracy gate, ~33 ms publish), GPS course fallback; optional Follow (~450 ms ease)
 - Soft banner when Always/background unavailable — session still starts foreground-only
 - Live weather + reverse geocoding via [Open-Meteo](https://open-meteo.com/) — `useLiveWeather.ts`
 - Location plugins in `app.json`: when-in-use + Always strings; `isIosBackgroundLocationEnabled` / `isAndroidBackgroundLocationEnabled`

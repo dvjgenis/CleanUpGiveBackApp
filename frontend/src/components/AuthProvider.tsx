@@ -2,7 +2,8 @@ import { createContext, use, useEffect, useState, type ReactNode } from 'react';
 
 import { hydrateMapThemeSettings } from '@/features/session-tracking/mapThemeStore';
 import { hydrateRecentSessionsFromApi } from '@/features/session-tracking/recentSessionsStore';
-import { hydrateSessionStatsFromApi } from '@/features/session-tracking/sessionStatsStore';
+import { hydrateSessionNotesFromStorage } from '@/features/session-tracking/sessionNotesStore';
+import { hydrateSessionStatsFromApi, hydrateSessionStatsFromStorage } from '@/features/session-tracking/sessionStatsStore';
 import { ensureAnonymousAuth, isSupabaseConfigured } from '@/lib/supabase';
 
 type AuthContextValue = {
@@ -24,6 +25,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     void hydrateMapThemeSettings();
+  }, []);
+
+  useEffect(() => {
+    void hydrateSessionStatsFromStorage();
+    void hydrateSessionNotesFromStorage();
   }, []);
 
   useEffect(() => {

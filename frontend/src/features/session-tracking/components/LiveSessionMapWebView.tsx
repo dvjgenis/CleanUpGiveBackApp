@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { WebView } from 'react-native-webview';
 
 import { useLiveSession } from '../liveSessionStore';
@@ -10,8 +10,9 @@ import { buildWebViewMapHelpers } from '../utils/webViewMapHelpers';
 import { MapInteractionContainer } from './MapInteractionContainer';
 
 const PRIMARY = colors.primary;
-const START_COLOR = colors.textTertiary;
-const MAP_HELPERS = buildWebViewMapHelpers(PRIMARY, START_COLOR);
+/** Start-pin color unused on the live tracker (no start marker — matches native).
+ * Still required by `buildWebViewMapHelpers` for shared preview helpers. */
+const MAP_HELPERS = buildWebViewMapHelpers(PRIMARY, colors.textTertiary);
 /** Raster layers worth prefetching in the background — 'standard' is a
  * vector style URL (not raster tiles), so it's not a prefetch candidate. */
 const OTHER_PREFETCHABLE_LAYERS: MapLayerType[] = ['satellite', 'hybrid'];
@@ -19,9 +20,9 @@ const OTHER_PREFETCHABLE_LAYERS: MapLayerType[] = ['satellite', 'hybrid'];
  * kicking off background tile prefetching for other layers. */
 const PREFETCH_DELAY_MS = 2500;
 
-function buildHtml(initialCenter: [number, number], theme: MapBasemapTheme) {
-  const center = JSON.stringify(initialCenter);
-  const zoom = 15;
+function buildHtml(initialCenter: [number, number] | null, theme: MapBasemapTheme) {
+  const center = initialCenter ? JSON.stringify(initialCenter) : '[-98.5795,39.8283]';
+  const zoom = initialCenter ? 15 : 3;
   const initialStyle = getMapStylePayload('standard', theme);
   const initialStyleJs =
     initialStyle.type === 'url'
@@ -56,11 +57,11 @@ function buildHtml(initialCenter: [number, number], theme: MapBasemapTheme) {
   mapResizeObserver.observe(document.getElementById('map'));
   window.addEventListener('orientationchange', () => { setTimeout(() => map.resize(), 100); });
   let routeAdded = false;
-  let startMarker = null;
   let currentMarker = null;
   let currentMarkerElement = null;
-  // Pre-seeded — HTML always starts at the user's location.
-  let hasInitialCentered = true;
+  // Pre-seeded when we have a real GPS fix at HTML-bake time; false means the
+  // first updateRoute call will snap the viewport to the user's actual location.
+  let hasInitialCentered = ${initialCenter ? 'true' : 'false'};
   let lastRecenterToken = 0;
   let pendingCoords = [];
   let pendingCurrent = null;
@@ -70,21 +71,11 @@ function buildHtml(initialCenter: [number, number], theme: MapBasemapTheme) {
 
   ${MAP_HELPERS}
 
-  function syncMarkers(coords, current, heading) {
-    const start = coords && coords.length >= 2 ? coords[0] : null;
-    if (start) {
-      if (!startMarker) {
-        startMarker = new maplibregl.Marker({ element: createStartMarkerElement(), anchor: 'center' })
-          .setLngLat(start)
-          .addTo(map);
-      } else {
-        startMarker.setLngLat(start);
-      }
-    } else if (startMarker) {
-      startMarker.remove();
-      startMarker = null;
-    }
-
+  // Live tracker shows only the current-position pin (matches native —
+  // LiveSessionMapNative). A gray start pin at coords[0] sits on top of /
+  // beside the green tip whenever the walk is short, which reads as the
+  // marker "turning black" after a style swap re-syncs overlays.
+  function syncMarkers(current, heading) {
     if (current && current.length === 2) {
       if (!currentMarker) {
         currentMarkerElement = createArrowMarkerElement(heading);
@@ -115,9 +106,9 @@ function buildHtml(initialCenter: [number, number], theme: MapBasemapTheme) {
     // style document has been parsed and applied — isStyleLoaded() can still
     // read false for a beat afterward while sources/tiles catch up. Gating
     // on it there would skip syncMarkers() and leave the just-removed
-    // start/current markers permanently gone until the next GPS fix. The
-    // caller passes forceApply=true once it already knows from the event
-    // that re-syncing is safe; the regular GPS-driven update path still uses
+    // current marker permanently gone until the next GPS fix. The caller
+    // passes forceApply=true once it already knows from the event that
+    // re-syncing is safe; the regular GPS-driven update path still uses
     // this guard to avoid touching the map before it's ready at all.
     if (!forceApply && !map.isStyleLoaded()) return;
 
@@ -136,7 +127,7 @@ function buildHtml(initialCenter: [number, number], theme: MapBasemapTheme) {
       map.getSource('route').setData(data);
     }
 
-    syncMarkers(pendingCoords, pendingCurrent, pendingHeading);
+    syncMarkers(pendingCurrent, pendingHeading);
 
     if (pendingCurrent && pendingCurrent.length === 2) {
       const recenterRequested = recenterToken !== lastRecenterToken;
@@ -232,7 +223,7 @@ export function LiveSessionMapWebView({ style }: Props) {
     (routeCoordinates[0] as [number, number] | undefined) ??
     null;
   const htmlRef = useRef<string | null>(null);
-  if (htmlRef.current === null && seedCenter) {
+  if (htmlRef.current === null) {
     htmlRef.current = buildHtml(seedCenter, mapTheme);
   }
 
@@ -285,16 +276,6 @@ export function LiveSessionMapWebView({ style }: Props) {
     pushStyleUpdate();
   }, [mapLayer, mapTheme]);
 
-  if (!htmlRef.current) {
-    return (
-      <MapInteractionContainer style={[styles.container, style]}>
-        <View style={styles.waiting}>
-          <ActivityIndicator size="small" color={colors.primary} />
-        </View>
-      </MapInteractionContainer>
-    );
-  }
-
   return (
     <MapInteractionContainer style={[styles.container, style]}>
       <WebView
@@ -331,12 +312,6 @@ const styles = StyleSheet.create({
   },
   webview: {
     flex: 1,
-    backgroundColor: colors.bgSurface,
-  },
-  waiting: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
     backgroundColor: colors.bgSurface,
   },
 });

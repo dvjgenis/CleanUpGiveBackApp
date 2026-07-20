@@ -10,7 +10,7 @@ import {
 import type { RouteCoordinate } from '@/features/session-tracking/utils/geo';
 import { DEFAULT_MAP_LAYER, type MapLayerType } from '@/features/session-tracking/utils/mapStyles';
 
-import type { SessionApprovalStatus } from './sessions';
+import { mockSessionsList, type SessionApprovalStatus } from './sessions';
 
 /**
  * Photo evidence entry shape for session detail.
@@ -29,6 +29,8 @@ export type SessionDetailData = {
   status: SessionApprovalStatus;
   dateTimeLabel: string;
   locationAddress: string;
+  /** Session setup description (read-only on detail). */
+  description: string;
   hoursLabel: string;
   milesLabel: string;
   photosCountLabel: string;
@@ -45,6 +47,7 @@ const DEFAULT_DETAIL: SessionDetailData = {
   status: 'approved',
   dateTimeLabel: 'July 15 at 5PM',
   locationAddress: '600 E Algonquin Rd, Des Plaines, IL, 60018',
+  description: 'Cleaned litter along the riverfront trail and surrounding park area.',
   hoursLabel: '2.5',
   milesLabel: '3.4',
   photosCountLabel: '4',
@@ -61,6 +64,7 @@ export function emptySessionDetail(id = ''): SessionDetailData {
     status: 'pending',
     dateTimeLabel: '—',
     locationAddress: EMPTY_LOCATION,
+    description: '',
     hoursLabel: '0.0',
     milesLabel: '0.0',
     photosCountLabel: '0',
@@ -75,7 +79,7 @@ function statusLabel(status: SessionApprovalStatus): string {
     case 'approved':
       return 'Approved';
     case 'pending':
-      return 'Pending';
+      return 'Under Review';
     case 'declined':
       return 'Declined';
     default: {
@@ -128,6 +132,7 @@ export function detailFromCompletedSnapshot(
     status: 'pending',
     dateTimeLabel: `${formatSessionDateLabel(snapshot.startedAt)} · ${formatSessionTimeRange(snapshot.startedAt, snapshot.endedAt)}`,
     locationAddress: snapshot.setup.description?.trim() || EMPTY_LOCATION,
+    description: snapshot.setup.description?.trim() || '',
     hoursLabel: (durationSeconds / 3600).toFixed(1),
     milesLabel: snapshot.distanceMiles.toFixed(1),
     photosCountLabel: String(evidencePhotos.length),
@@ -137,19 +142,35 @@ export function detailFromCompletedSnapshot(
   };
 }
 
+function detailFromMockListItem(id: string): SessionDetailData | null {
+  const listItem = mockSessionsList.find((session) => session.id === id);
+  if (!listItem) {
+    return null;
+  }
+
+  return {
+    ...DEFAULT_DETAIL,
+    id: listItem.id,
+    title: listItem.title,
+    status: listItem.status,
+    dateTimeLabel: `${listItem.dateLabel} · ${listItem.timeLabel}`,
+  };
+}
+
 /**
- * Resolves session detail from the local completed-session cache only.
- *
- * `mockSessionsList` (figma-screens/mocks/sessions.ts) was emptied when
- * placeholder session rows were removed from production (docs/progress.md
- * Session 124) — there is no longer a mock-list fallback here, just the
- * completed-session cache and the static default/empty shapes below.
+ * Resolves session detail from completed-session cache, mock list fallback, or
+ * static default/empty shapes.
  */
 export function getSessionDetail(id?: string): SessionDetailData {
   if (id) {
     const cached = getCachedCompletedSession(id);
     if (cached) {
       return detailFromCompletedSnapshot(cached, id);
+    }
+
+    const mockDetail = detailFromMockListItem(id);
+    if (mockDetail) {
+      return mockDetail;
     }
   }
 

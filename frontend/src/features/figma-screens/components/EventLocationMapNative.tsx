@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { Map, MapMarker } from '@/components/ui/map';
 
+import { EventLocationPinIcon } from './EventIcons';
 import { colors } from '../tokens';
 import type { MapCoordinate } from '../utils/openLocationInMaps';
 
@@ -17,9 +18,10 @@ export function EventLocationMapNative({ address, coordinate, onPress }: Props) 
   return (
     <View style={s.mapWrap}>
       <Map center={[coordinate.longitude, coordinate.latitude]} zoom={14} showLoader>
-        <MapMarker longitude={coordinate.longitude} latitude={coordinate.latitude}>
-          <View style={s.marker}>
-            <View style={s.markerDot} />
+        {/* Anchor at the pin's tip (bottom-center) so it points at the coordinate. */}
+        <MapMarker longitude={coordinate.longitude} latitude={coordinate.latitude} anchor={{ x: 0.5, y: 1 }}>
+          <View style={s.markerShadow}>
+            <EventLocationPinIcon size={32} />
           </View>
         </MapMarker>
       </Map>
@@ -43,20 +45,11 @@ const s = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: colors.chipSelectedBg,
   },
-  marker: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: colors.white,
-  },
-  markerDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.white,
+  markerShadow: {
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35,
+    shadowRadius: 3,
+    elevation: 4,
   },
 });

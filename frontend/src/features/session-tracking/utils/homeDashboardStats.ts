@@ -27,6 +27,15 @@ function dayIndexMondayBased(date: Date): number {
   return weekday === 0 ? 6 : weekday - 1;
 }
 
+/** Converts session duration to chart hours (one decimal place). */
+function secondsToChartHours(seconds: number): number {
+  return Math.round((seconds / 3600) * 10) / 10;
+}
+
+function addChartHours(current: number, seconds: number): number {
+  return Math.round((current + secondsToChartHours(seconds)) * 10) / 10;
+}
+
 function sessionDurationFromApi(session: ApiSession): number {
   if (session.durationSeconds != null) {
     return session.durationSeconds;
@@ -68,7 +77,11 @@ export function sessionStatFromSnapshot(snapshot: CompletedSessionSnapshot): Ses
   return {
     id,
     startedAtMs: snapshot.startedAt,
-    durationSeconds: snapshot.elapsedSeconds,
+    durationSeconds: resolveSessionDurationSeconds({
+      startedAt: snapshot.startedAt,
+      endedAt: snapshot.endedAt,
+      elapsedSeconds: snapshot.elapsedSeconds,
+    }),
     distanceMiles: snapshot.distanceMiles,
     photoCount,
     locationLabel: snapshot.setup.description?.trim() || snapshot.setup.activity?.trim() || 'Unknown',
@@ -105,7 +118,6 @@ export function buildWeeklyHoursChart(
   weekStartIso: string,
 ): WeeklyHoursDatum[] {
   const chart = emptyWeekChart();
-  const weekStart = startOfWeekMonday(new Date(`${weekStartIso}T12:00:00`));
 
   for (const stat of stats) {
     if (stat.status === 'declined') {
@@ -119,10 +131,9 @@ export function buildWeeklyHoursChart(
     }
 
     const dayIndex = dayIndexMondayBased(new Date(stat.startedAtMs));
-    const minutes = Math.round(stat.durationSeconds / 60);
     chart[dayIndex] = {
       day: chart[dayIndex].day,
-      value: chart[dayIndex].value + minutes,
+      value: addChartHours(chart[dayIndex].value, stat.durationSeconds),
     };
   }
 
@@ -134,21 +145,30 @@ export function formatWeekServiceHoursTotal(
   weekStartIso: string,
 ): string {
   const chart = buildWeeklyHoursChart(stats, weekStartIso);
-  const totalMinutes = chart.reduce((sum, day) => sum + day.value, 0);
-  if (totalMinutes <= 0) {
+  const totalHours = chart.reduce((sum, day) => sum + day.value, 0);
+  if (totalHours <= 0) {
     return '0.0 hrs';
   }
 
-  return `${(totalMinutes / 60).toFixed(1)} hrs`;
+  return `${totalHours.toFixed(1)} hrs`;
 }
 
 export function computeWeeklyStreakHours(stats: readonly SessionStatRecord[]): number {
   const weekStartIso = toIsoDate(startOfWeekMonday(new Date()));
-  const totalMinutes = buildWeeklyHoursChart(stats, weekStartIso).reduce(
+  const totalHours = buildWeeklyHoursChart(stats, weekStartIso).reduce(
     (sum, day) => sum + day.value,
     0,
   );
-  return Math.round(totalMinutes / 60);
+  return Math.round(totalHours);
+}
+
+/** Formats a chart bucket value (hours) for bar labels. */
+export function formatChartHourLabel(value: number): string {
+  if (value <= 0) {
+    return '0';
+  }
+
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
 }
 
 export function buildImpactStats(stats: readonly SessionStatRecord[]): ImpactStat[] {

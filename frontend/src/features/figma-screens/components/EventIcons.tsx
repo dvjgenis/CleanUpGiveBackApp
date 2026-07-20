@@ -1,5 +1,8 @@
 import { Image, type ImageStyle } from 'expo-image';
 import type { DimensionValue, StyleProp } from 'react-native';
+import Svg, { Circle, Path } from 'react-native-svg';
+
+import { colors } from '../tokens';
 
 type AssetIconProps = {
   width: number;
@@ -130,5 +133,28 @@ export function EventSuccessCheckIcon({ width = 79, height = 79, style }: Partia
       height={height ?? 79}
       style={style}
     />
+  );
+}
+
+/**
+ * Teardrop map pin for the event location card — tip anchors to the exact
+ * coordinate, so callers should pin it with a bottom-center anchor.
+ */
+export function EventLocationPinIcon({
+  size = 32,
+  color = colors.primary,
+}: {
+  size?: number;
+  color?: string;
+}) {
+  const width = (size * 32) / 40;
+  return (
+    <Svg width={width} height={size} viewBox="0 0 32 40" fill="none">
+      <Path
+        d="M16 0C7.163 0 0 7.163 0 16c0 11 16 24 16 24s16-13 16-24C32 7.163 24.837 0 16 0z"
+        fill={color}
+      />
+      <Circle cx={16} cy={16} r={6} fill={colors.white} />
+    </Svg>
   );
 }

@@ -1,8 +1,9 @@
 import { CoachmarkEnter } from '@/components/motion/CoachmarkEnter';
 import { ONBOARDING_GRAPHICS } from '@/components/onboarding/onboardingGraphics';
-import { OnboardingProgressPills } from '@/components/onboarding/OnboardingProgressPills';
 import { SessionSetupGuideFooterActions } from '@/components/session-setup/SessionSetupGuideFooterActions';
+import { SessionSetupGuideNavRow } from '@/components/session-setup/SessionSetupGuideNavRow';
 import {
+  exitSessionSetupGuideToTrackEntry,
   goBackInSessionSetupGuide,
   useSessionSetupGuidePillProgress,
 } from '@/utils/sessionSetupGuideNavigation';
@@ -36,7 +37,11 @@ export function SessionSetupStep2Screen() {
       {/* Header */}
       <View style={s.header}>
         <View style={s.navContainer}>
-          <OnboardingProgressPills total={total} active={active} />
+          <SessionSetupGuideNavRow
+            total={total}
+            active={active}
+            onBack={() => exitSessionSetupGuideToTrackEntry(router)}
+          />
         </View>
 
         <CoachmarkEnter style={s.guideTextContainer}>

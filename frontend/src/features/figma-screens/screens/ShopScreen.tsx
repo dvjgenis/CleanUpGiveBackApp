@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Asset } from 'expo-asset';
 import { Image as ExpoImage } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, type Href } from 'expo-router';
@@ -23,19 +22,9 @@ import {
   ShopStreakIcon,
 } from '../components/ShopIcons';
 import { CART_ASSETS } from '../mocks/cart';
-import { DONATE_ASSETS } from '../mocks/donate';
-import { PRODUCT_DETAIL_ASSETS, SHOP_PRODUCT_TO_DETAIL_ID } from '../mocks/productDetail';
+import { SHOP_PRODUCT_TO_DETAIL_ID } from '../mocks/productDetail';
+import { SHOP_HOME_ASSETS } from '../shopAssets';
 import { layout, colors, fontFamilies, radius as R, shadows } from '../tokens';
-
-// ─── Local asset registry ─────────────────────────────────────────────────────
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const assets = {
-  featuredKit: require('@/assets/figma/shop/featured-kit.png') as number,
-  productToteBags: require('@/assets/figma/shop/product-tote-bags.png') as number,
-  productTrashGrabber: require('@/assets/figma/shop/product-trash-grabber.png') as number,
-  productChildVest: require('@/assets/figma/shop/product-child-vest.png') as number,
-  productAdultVest: require('@/assets/figma/shop/product-adult-vest.png') as number,
-};
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type DonationAmount = '$5' | '$10' | '$15' | 'Custom';
@@ -64,14 +53,14 @@ const PRODUCTS: Product[] = [
     id: 'kit',
     name: 'Trash Clean Up Kit',
     price: '$29.99',
-    image: assets.featuredKit,
+    image: SHOP_HOME_ASSETS.featuredKit,
     inStock: true,
     category: 'Kits',
   },
-  { id: '1', name: 'Reusable Tote Bags', price: '$3.00', image: assets.productToteBags, inStock: true, category: 'Bags' },
-  { id: '2', name: 'Trash Grabber', price: '$23.99', image: assets.productTrashGrabber, inStock: true, category: 'Tools' },
-  { id: '3', name: 'Child Safety Vest', price: '$9.99', image: assets.productChildVest, inStock: true, category: 'Safety' },
-  { id: '4', name: 'Adult Safety Vest', price: '$12.99', image: assets.productAdultVest, inStock: true, category: 'Safety' },
+  { id: '1', name: 'Reusable Tote Bags', price: '$3.00', image: SHOP_HOME_ASSETS.productToteBags, inStock: true, category: 'Bags' },
+  { id: '2', name: 'Trash Grabber', price: '$23.99', image: SHOP_HOME_ASSETS.productTrashGrabber, inStock: true, category: 'Tools' },
+  { id: '3', name: 'Child Safety Vest', price: '$9.99', image: SHOP_HOME_ASSETS.productChildVest, inStock: true, category: 'Safety' },
+  { id: '4', name: 'Adult Safety Vest', price: '$12.99', image: SHOP_HOME_ASSETS.productAdultVest, inStock: true, category: 'Safety' },
 ];
 
 
@@ -196,7 +185,7 @@ function FeaturedItem({
         accessibilityLabel="View Trash Clean Up Kit"
       >
         <View style={s.featuredImageWrap}>
-          <ExpoImage source={assets.featuredKit} style={s.featuredImage} contentFit="contain" cachePolicy="memory-disk" priority="high" />
+          <ExpoImage source={SHOP_HOME_ASSETS.featuredKit} style={s.featuredImage} contentFit="contain" cachePolicy="memory-disk" priority="high" transition={0} />
         </View>
 
         <View style={s.featuredDetails}>
@@ -290,7 +279,7 @@ function ProductCard({
       accessibilityLabel={`View ${product.name}`}
     >
       <View style={s.productImageWrap}>
-        <ExpoImage source={product.image} style={s.productImage} contentFit="contain" cachePolicy="memory-disk" />
+        <ExpoImage source={product.image} style={s.productImage} contentFit="contain" cachePolicy="memory-disk" priority="high" transition={0} />
       </View>
       <View style={s.productBody}>
         <View style={s.productInfo}>
@@ -372,33 +361,6 @@ export function ShopScreen() {
   const { cartCount, onCartPress, toastVisible, toastKey } = useCartIconPress();
   const [activeCategory, setActiveCategory] = useState<CategoryTab>('All');
   const bottomInset = Math.max(insets.bottom, 0);
-
-  // Prefetch all shop + product-detail images on mount so every screen in the
-  // shop flow opens without any loading delay.
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      const modules = [
-        DONATE_ASSETS.hero,
-        ...Object.values(PRODUCT_DETAIL_ASSETS),
-      ];
-      await Promise.allSettled(
-        modules.map(async (mod) => {
-          try {
-            const asset = Asset.fromModule(mod);
-            await asset.downloadAsync();
-            if (cancelled || !asset.localUri) return;
-            await ExpoImage.prefetch(asset.localUri, 'memory-disk');
-          } catch {
-            // Non-fatal.
-          }
-        }),
-      );
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const filteredProducts = useMemo(() => {
     if (activeCategory === 'All') return PRODUCTS;

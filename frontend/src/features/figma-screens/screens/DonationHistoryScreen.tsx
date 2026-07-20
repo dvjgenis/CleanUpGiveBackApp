@@ -7,7 +7,8 @@ import { BottomNavBar } from '@/components/navigation/BottomNavBar';
 import { SessionSetupTopAppBar } from '@/components/session-setup/SessionSetupTopAppBar';
 import { useLiveSession } from '@/features/session-tracking/liveSessionStore';
 
-import { DonateCardIcon, EmailReceiptIcon } from '../components/AccountIcons';
+import { DonateCardIcon } from '../components/AccountIcons';
+import { EmailReceiptChip } from '../components/EmailReceiptChip';
 import { defaultDonationHistory, type DonationHistoryItem } from '../mocks/donationHistory';
 import { layout, colors, fontFamilies, radius } from '../tokens';
 
@@ -27,10 +28,7 @@ function DonationCard({ donation }: { donation: DonationHistoryItem }) {
         <Text style={s.amount}>{donation.amountLabel}</Text>
       </View>
 
-      <View style={s.receiptChip}>
-        <EmailReceiptIcon width={16} height={16} />
-        <Text style={s.receiptText}>Confirmation sent to email</Text>
-      </View>
+      <EmailReceiptChip label="Confirmation sent to email" />
     </View>
   );
 }
@@ -149,23 +147,6 @@ const s = StyleSheet.create({
     fontFamily: fontFamilies.ibmPlexSansMedium,
     fontSize: 28,
     color: colors.primary,
-  },
-  receiptChip: {
-    alignSelf: 'flex-start',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: colors.bgApp,
-    borderWidth: 1,
-    borderColor: colors.borderOutline,
-    borderRadius: radius.sm,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  receiptText: {
-    fontFamily: fontFamilies.notoSansRegular,
-    fontSize: 12,
-    color: colors.textNavInactive,
   },
   bottomStack: {
     position: 'absolute',

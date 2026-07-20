@@ -8,6 +8,7 @@ import { BottomNavBar } from '@/components/navigation/BottomNavBar';
 import { SessionSetupToggle } from '@/components/session-setup/SessionSetupToggle';
 import { TrackerMapDarkIcon } from '@/features/session-tracking/components/icons/TrackerMapThemeIcons';
 import { useLiveSession } from '@/features/session-tracking/liveSessionStore';
+import { usePreferredName } from '@/features/onboarding/onboardingStore';
 import {
   isSessionNotificationPermissionGranted,
   requestSessionNotificationPermission,
@@ -41,8 +42,18 @@ import {
   RequestDataIcon,
   ShopBagIcon,
 } from '../components/AccountIcons';
+import { PersonalDetailsIcon } from '../components/PersonalDetailsIcon';
 import { defaultAccountProfile, type AccountProfile } from '../mocks/account';
+import { firstTimeHomeDashboard } from '../mocks/home';
 import { layout, colors, fontFamilies, radius, shadows } from '../tokens';
+
+/** Derives 1-2 letter avatar initials from a display name. */
+function getInitials(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return '';
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return (words[0][0] + words[1][0]).toUpperCase();
+}
 
 
 type NavRowProps = {
@@ -143,7 +154,6 @@ function ProfileHero({ profile }: { profile: AccountProfile }) {
         </View>
         <View style={s.profileNameCol}>
           <Text style={s.profileName}>{profile.displayName}</Text>
-          <Text style={s.profileEmail}>{profile.email}</Text>
         </View>
       </View>
 
@@ -176,6 +186,15 @@ export function AccountScreen({ profile = defaultAccountProfile }: { profile?: A
   const [cameraAccess, setCameraAccess] = useState(false);
   const [locationAccess, setLocationAccess] = useState(false);
   const [notificationsAccess, setNotificationsAccess] = useState(false);
+  const preferredName = usePreferredName();
+
+  // Same name shown in the Home greeting, so Account stays in sync with it.
+  const displayName = preferredName || firstTimeHomeDashboard.homeUser.firstName;
+  const heroProfile: AccountProfile = {
+    ...profile,
+    displayName,
+    initials: getInitials(displayName),
+  };
 
   const bottomInset = Math.max(insets.bottom, 0);
   const scrollBottomPad = bottomInset + layout.bottomNavHeight + 48;
@@ -275,9 +294,17 @@ export function AccountScreen({ profile = defaultAccountProfile }: { profile?: A
         contentContainerStyle={[s.scrollContent, { paddingBottom: scrollBottomPad }]}
         showsVerticalScrollIndicator={false}
       >
-        <ProfileHero profile={profile} />
+        <ProfileHero profile={heroProfile} />
 
         <View style={s.sections}>
+          <SectionCard title="Personal Details" headerIcon={<PersonalDetailsIcon width={15} height={15} />}>
+            <AccountNavRow
+              label="Edit Personal Details"
+              icon={<PersonalDetailsIcon width={16} height={16} />}
+              onPress={() => router.push('/personal-details' as Href)}
+            />
+          </SectionCard>
+
           <SectionCard title="Records" headerIcon={<RecordsFolderIcon width={17} height={14} />}>
             <AccountNavRow
               label="Export Service Record"
@@ -473,7 +500,7 @@ const s = StyleSheet.create({
   profileTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 56,
+    gap: 16,
   },
   avatar: {
     width: 64,

@@ -16,7 +16,7 @@ The Home dashboard Service Hours chart, total hours label, weekly streak badge, 
 
 ## Acceptance criteria
 
-- [x] **AC-1:** After **End Session** → **Go Home**, the current week’s bar chart and total hours reflect the completed session duration (minutes bucketed by session start day, Monday-based week).
+- [x] **AC-1:** After **End Session** → **Go Home**, the current week’s bar chart and total hours reflect the completed session duration (hours bucketed by session start day, Monday-based week).
 - [x] **AC-2:** `AuthProvider` hydrates stats from `GET /sessions` when the API is configured.
 - [x] **AC-3:** Declined sessions are excluded from service hours; pending and approved count toward hours.
 - [x] **AC-4:** Impact stats (miles, locations, sessions, photos) derive from the same `sessionStatsStore`; **Photos Submitted** uses API `photoCount` / `checkpointCount * 2` on cold start (merge prefers higher `photoCount` when IDs collide).
@@ -32,7 +32,7 @@ The Home dashboard Service Hours chart, total hours label, weekly streak badge, 
 
 | Dependency | Purpose |
 |------------|---------|
-| `sessionStatsStore` | In-memory stats + API hydration |
+| `sessionStatsStore` | In-memory stats + AsyncStorage persistence + API hydration |
 | `homeDashboardStats.ts` | Aggregation helpers |
 | `liveSessionStore.finalizeLiveSession` | Records local snapshot on session end |
 | `recentSessionsStore` | Recent sessions list (separate from chart) |

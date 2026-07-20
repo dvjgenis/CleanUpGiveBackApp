@@ -18,6 +18,7 @@ import {
 } from '../components/SessionsIcons';
 import {
   filterMatchesStatus,
+  mockSessionsList,
   SESSION_FILTER_CHIPS,
   SESSION_SORT_OPTIONS,
   sortSessions,
@@ -29,6 +30,7 @@ import {
 import { layout, colors, fontFamilies, radius as R, shadows } from '../tokens';
 
 const TOP_BAR_BOTTOM_PAD = 8.5;
+const SESSIONS_PAGE_SIZE = 10;
 
 const STATUS_LABEL: Record<SessionApprovalStatus, string> = {
   approved: 'Approved',
@@ -197,6 +199,7 @@ export function SessionsScreen() {
   const [sort, setSort] = useState<SessionSortOption>('most-recent');
   const [sortOpen, setSortOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const [visibleCount, setVisibleCount] = useState(SESSIONS_PAGE_SIZE);
   const [apiSessions, setApiSessions] = useState<SessionListItem[] | null>(null);
   const [loadState, setLoadState] = useState<'idle' | 'loading' | 'error' | 'ready'>(
     isApiConfigured ? 'loading' : 'ready',
@@ -231,7 +234,7 @@ export function SessionsScreen() {
     loadSessions();
   }, [loadSessions]);
 
-  const sessionSource = isApiConfigured ? (apiSessions ?? []) : [];
+  const sessionSource = isApiConfigured ? (apiSessions ?? []) : mockSessionsList;
 
   const filteredSessions = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -244,12 +247,26 @@ export function SessionsScreen() {
     return sortSessions(filtered, sort);
   }, [filter, query, sort, sessionSource]);
 
+  useEffect(() => {
+    setVisibleCount(SESSIONS_PAGE_SIZE);
+  }, [filter, sort, query]);
+
+  const visibleSessions = useMemo(
+    () => filteredSessions.slice(0, visibleCount),
+    [filteredSessions, visibleCount],
+  );
+  const showViewMore = filteredSessions.length > visibleCount;
+
   const bottomInset = Math.max(insets.bottom, 0);
   const scrollBottomPad = bottomInset + layout.bottomNavHeight + 24;
 
   function handleSelectSort(next: SessionSortOption) {
     setSort(next);
     setSortOpen(false);
+  }
+
+  function handleViewMore() {
+    setVisibleCount((current) => current + SESSIONS_PAGE_SIZE);
   }
   return (
     <View style={s.root}>
@@ -334,7 +351,7 @@ export function SessionsScreen() {
           </Text>
         ) : (
           <View style={s.rows}>
-            {filteredSessions.map((session) => (
+            {visibleSessions.map((session) => (
               <SessionRow
                 key={session.id}
                 session={session}
@@ -346,9 +363,10 @@ export function SessionsScreen() {
           </View>
         )}
 
-        {filteredSessions.length > 0 && (
+        {showViewMore && (
           <AnimatedPressable
             scaleTo={0.98}
+            onPress={handleViewMore}
             accessibilityRole="button"
             accessibilityLabel="View more sessions"
             style={s.viewMore}

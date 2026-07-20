@@ -16,32 +16,88 @@ const HEADING_MARKER_CENTER = HEADING_MARKER_SIZE / 2;
 const HEADING_DOT_OUTER_RADIUS = 11;
 const HEADING_DOT_INNER_RADIUS = 7;
 /**
- * Google Maps-style "location beam": a soft circular sector (pie slice)
- * fanning out from the dot toward the heading direction, rather than a
- * sharp-edged triangle. A true sector's chord widens with radius, so it
- * naturally reads as a cone even though the sector's point sits at the
- * center — the dot itself masks that point. Built from a flat-opacity
- * sector (rather than a `LinearGradient`/`feGaussianBlur` `url()` fill)
- * because anything referenced via `url(#id)` can paint one frame late
- * inside a native map `Marker` — the marker gets snapshotted into a
- * static bitmap before the fill resolves, so it renders solid black until
- * something forces a re-snapshot (e.g. a zoom change). Flat fills paint
- * synchronously and avoid that class of bug entirely.
+ * Google Maps-style location beam: flared cone-cylinder — wider at the dot,
+ * sides diverge outward (never converge to a point), rounded inner cap on the
+ * dot, semicircular far arc. Opacity falls off with distance and reaches 0 at
+ * the tip via stacked length slices (no gradient refs — native Marker safety).
  */
-const HEADING_BEAM_OUTER_RADIUS = 48;
-const HEADING_BEAM_OUTER_HALF_ANGLE_DEG = 34;
-const HEADING_BEAM_OUTER_OPACITY = 0.16;
+const HEADING_BEAM_LENGTH = 66;
+const HEADING_BEAM_INNER_HALF_WIDTH = 11;
+const HEADING_BEAM_OUTER_HALF_WIDTH = 30;
+const HEADING_BEAM_LAYER_COUNT = 14;
+const HEADING_BEAM_MAX_OPACITY = 0.24;
 
-/** Builds an SVG path `d` string for a circular sector ("pie slice") pointing
- * straight up from `(cx, cy)`, spanning `halfAngleDeg` on either side of due
- * north, out to `radius`. */
-function buildBeamSectorPath(cx: number, cy: number, radius: number, halfAngleDeg: number) {
-  const halfAngleRad = (halfAngleDeg * Math.PI) / 180;
-  const leftX = cx - radius * Math.sin(halfAngleRad);
-  const leftY = cy - radius * Math.cos(halfAngleRad);
-  const rightX = cx + radius * Math.sin(halfAngleRad);
-  const rightY = cy - radius * Math.cos(halfAngleRad);
-  return `M ${cx} ${cy} L ${leftX} ${leftY} A ${radius} ${radius} 0 0 1 ${rightX} ${rightY} Z`;
+function beamHalfWidthAt(progress: number): number {
+  return (
+    HEADING_BEAM_INNER_HALF_WIDTH +
+    (HEADING_BEAM_OUTER_HALF_WIDTH - HEADING_BEAM_INNER_HALF_WIDTH) * progress
+  );
+}
+
+/** Opacity at the outer edge of a slice; 0 when progress reaches 1. */
+function beamOpacityAt(progress: number): number {
+  return HEADING_BEAM_MAX_OPACITY * (1 - progress);
+}
+
+/** One band of the beam from progress t0 → t1 along its length. */
+function buildBeamSlicePath(
+  cx: number,
+  cy: number,
+  t0: number,
+  t1: number,
+  innerCapRadius: number,
+): string {
+  const length0 = HEADING_BEAM_LENGTH * t0;
+  const length1 = HEADING_BEAM_LENGTH * t1;
+  const w0 = beamHalfWidthAt(t0);
+  const w1 = beamHalfWidthAt(t1);
+  const atTip = t1 >= 1;
+
+  if (t0 === 0) {
+    const innerCapOffsetY = Math.sqrt(Math.max(0, innerCapRadius * innerCapRadius - w0 * w0));
+    const innerLeft = { x: cx - w0, y: cy - innerCapOffsetY };
+    const innerRight = { x: cx + w0, y: cy - innerCapOffsetY };
+    const outerLeft = { x: cx - w1, y: cy - length1 };
+    const outerRight = { x: cx + w1, y: cy - length1 };
+    return [
+      `M ${innerLeft.x} ${innerLeft.y}`,
+      `A ${innerCapRadius} ${innerCapRadius} 0 0 1 ${innerRight.x} ${innerRight.y}`,
+      `L ${outerRight.x} ${outerRight.y}`,
+      atTip
+        ? `A ${w1} ${w1} 0 0 0 ${outerLeft.x} ${outerLeft.y}`
+        : `L ${outerLeft.x} ${outerLeft.y}`,
+      `L ${innerLeft.x} ${innerLeft.y}`,
+      'Z',
+    ].join(' ');
+  }
+
+  const innerLeft = { x: cx - w0, y: cy - length0 };
+  const innerRight = { x: cx + w0, y: cy - length0 };
+  const outerLeft = { x: cx - w1, y: cy - length1 };
+  const outerRight = { x: cx + w1, y: cy - length1 };
+  return [
+    `M ${innerLeft.x} ${innerLeft.y}`,
+    `L ${innerRight.x} ${innerRight.y}`,
+    `L ${outerRight.x} ${outerRight.y}`,
+    atTip ? `A ${w1} ${w1} 0 0 0 ${outerLeft.x} ${outerLeft.y}` : `L ${outerLeft.x} ${outerLeft.y}`,
+    `L ${innerLeft.x} ${innerLeft.y}`,
+    'Z',
+  ].join(' ');
+}
+
+function buildBeamLayers(cx: number, cy: number, innerCapRadius: number) {
+  const layers: { path: string; opacity: number }[] = [];
+  for (let i = 0; i < HEADING_BEAM_LAYER_COUNT; i++) {
+    const t0 = i / HEADING_BEAM_LAYER_COUNT;
+    const t1 = (i + 1) / HEADING_BEAM_LAYER_COUNT;
+    const opacity = beamOpacityAt(t1);
+    if (opacity <= 0) continue;
+    layers.push({
+      path: buildBeamSlicePath(cx, cy, t0, t1, innerCapRadius),
+      opacity,
+    });
+  }
+  return layers;
 }
 
 /** Circle at the session start point. Live tracker uses gray; route
@@ -59,8 +115,9 @@ export function SessionStartMarker({
 
 /**
  * Live current-position marker: a primary-green dot with a white halo and,
- * once a GPS heading is available, a soft directional cone (narrow at the
- * dot, widening and fading as it extends outward, like a flashlight beam)
+ * once a GPS heading is available, a soft directional beam (flared
+ * cone-cylinder: rounded inner cap on the dot, sides widen toward the tip,
+ * opacity fading to zero at the far arc)
  * pointing the way the user is heading. The beam only appears when
  * `heading` is a valid number; otherwise a plain dot is shown. The whole
  * SVG rotates around its own center (which is also the dot's center), so
@@ -78,18 +135,17 @@ export function SessionCurrentArrowMarker({ heading }: ArrowProps) {
     >
       <View style={styles.headingDotShadow} pointerEvents="none" />
       <Svg width={HEADING_MARKER_SIZE} height={HEADING_MARKER_SIZE}>
-        {hasHeading && (
-          <Path
-            d={buildBeamSectorPath(
-              HEADING_MARKER_CENTER,
-              HEADING_MARKER_CENTER,
-              HEADING_BEAM_OUTER_RADIUS,
-              HEADING_BEAM_OUTER_HALF_ANGLE_DEG
-            )}
-            fill={colors.primary}
-            fillOpacity={HEADING_BEAM_OUTER_OPACITY}
-          />
-        )}
+        {hasHeading &&
+          buildBeamLayers(HEADING_MARKER_CENTER, HEADING_MARKER_CENTER, HEADING_DOT_OUTER_RADIUS).map(
+            (layer, index) => (
+              <Path
+                key={index}
+                d={layer.path}
+                fill={colors.primary}
+                fillOpacity={layer.opacity}
+              />
+            ),
+          )}
         <Circle
           cx={HEADING_MARKER_CENTER}
           cy={HEADING_MARKER_CENTER}

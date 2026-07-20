@@ -176,41 +176,93 @@ export function buildWebViewMapHelpers(
   var HEADING_MARKER_CENTER = HEADING_MARKER_SIZE / 2;
   var HEADING_DOT_OUTER_RADIUS = 11;
   var HEADING_DOT_INNER_RADIUS = 7;
-  // Google Maps-style "location beam": a soft circular sector (pie slice)
-  // fanning out from the dot toward the heading direction (matching the
-  // native marker in SessionMapMarkers.tsx), built from a flat-opacity
-  // sector rather than a gradient/blur fill for visual parity with the
-  // native path.
-  var HEADING_BEAM_OUTER_RADIUS = 48;
-  var HEADING_BEAM_OUTER_HALF_ANGLE_DEG = 34;
-  var HEADING_BEAM_OUTER_OPACITY = 0.16;
+  // Flared cone-cylinder beam (matches SessionMapMarkers).
+  var HEADING_BEAM_LENGTH = 66;
+  var HEADING_BEAM_INNER_HALF_WIDTH = 11;
+  var HEADING_BEAM_OUTER_HALF_WIDTH = 30;
+  var HEADING_BEAM_LAYER_COUNT = 14;
+  var HEADING_BEAM_MAX_OPACITY = 0.24;
 
-  // Builds an SVG path "d" string for a circular sector ("pie slice")
-  // pointing straight up from (cx, cy), spanning halfAngleDeg on either
-  // side of due north, out to radius.
-  function buildBeamSectorPath(cx, cy, radius, halfAngleDeg) {
-    var halfAngleRad = (halfAngleDeg * Math.PI) / 180;
-    var leftX = cx - radius * Math.sin(halfAngleRad);
-    var leftY = cy - radius * Math.cos(halfAngleRad);
-    var rightX = cx + radius * Math.sin(halfAngleRad);
-    var rightY = cy - radius * Math.cos(halfAngleRad);
+  function beamHalfWidthAt(progress) {
+    return HEADING_BEAM_INNER_HALF_WIDTH +
+      (HEADING_BEAM_OUTER_HALF_WIDTH - HEADING_BEAM_INNER_HALF_WIDTH) * progress;
+  }
+
+  function beamOpacityAt(progress) {
+    return HEADING_BEAM_MAX_OPACITY * (1 - progress);
+  }
+
+  function buildBeamSlicePath(cx, cy, t0, t1, innerCapRadius) {
+    var length0 = HEADING_BEAM_LENGTH * t0;
+    var length1 = HEADING_BEAM_LENGTH * t1;
+    var w0 = beamHalfWidthAt(t0);
+    var w1 = beamHalfWidthAt(t1);
+    var atTip = t1 >= 1;
+
+    if (t0 === 0) {
+      var innerCapOffsetY = Math.sqrt(Math.max(0, innerCapRadius * innerCapRadius - w0 * w0));
+      var innerLeft = { x: cx - w0, y: cy - innerCapOffsetY };
+      var innerRight = { x: cx + w0, y: cy - innerCapOffsetY };
+      var outerLeft = { x: cx - w1, y: cy - length1 };
+      var outerRight = { x: cx + w1, y: cy - length1 };
+      return (
+        'M ' + innerLeft.x + ' ' + innerLeft.y +
+        ' A ' + innerCapRadius + ' ' + innerCapRadius + ' 0 0 1 ' + innerRight.x + ' ' + innerRight.y +
+        ' L ' + outerRight.x + ' ' + outerRight.y +
+        (atTip
+          ? ' A ' + w1 + ' ' + w1 + ' 0 0 0 ' + outerLeft.x + ' ' + outerLeft.y
+          : ' L ' + outerLeft.x + ' ' + outerLeft.y) +
+        ' L ' + innerLeft.x + ' ' + innerLeft.y +
+        ' Z'
+      );
+    }
+
+    var innerLeft2 = { x: cx - w0, y: cy - length0 };
+    var innerRight2 = { x: cx + w0, y: cy - length0 };
+    var outerLeft2 = { x: cx - w1, y: cy - length1 };
+    var outerRight2 = { x: cx + w1, y: cy - length1 };
     return (
-      'M ' + cx + ' ' + cy +
-      ' L ' + leftX + ' ' + leftY +
-      ' A ' + radius + ' ' + radius + ' 0 0 1 ' + rightX + ' ' + rightY +
+      'M ' + innerLeft2.x + ' ' + innerLeft2.y +
+      ' L ' + innerRight2.x + ' ' + innerRight2.y +
+      ' L ' + outerRight2.x + ' ' + outerRight2.y +
+      (atTip
+        ? ' A ' + w1 + ' ' + w1 + ' 0 0 0 ' + outerLeft2.x + ' ' + outerLeft2.y
+        : ' L ' + outerLeft2.x + ' ' + outerLeft2.y) +
+      ' L ' + innerLeft2.x + ' ' + innerLeft2.y +
       ' Z'
     );
   }
 
+  function buildBeamLayers(cx, cy, innerCapRadius) {
+    var layers = [];
+    for (var i = 0; i < HEADING_BEAM_LAYER_COUNT; i++) {
+      var t0 = i / HEADING_BEAM_LAYER_COUNT;
+      var t1 = (i + 1) / HEADING_BEAM_LAYER_COUNT;
+      var opacity = beamOpacityAt(t1);
+      if (opacity <= 0) continue;
+      layers.push({
+        path: buildBeamSlicePath(cx, cy, t0, t1, innerCapRadius),
+        opacity: opacity,
+      });
+    }
+    return layers;
+  }
+
   function buildHeadingMarkerSvg(hasHeading) {
-    var beam = hasHeading
-      ? '<path d="' + buildBeamSectorPath(
-          HEADING_MARKER_CENTER,
-          HEADING_MARKER_CENTER,
-          HEADING_BEAM_OUTER_RADIUS,
-          HEADING_BEAM_OUTER_HALF_ANGLE_DEG
-        ) + '" fill="${primaryColor}" fill-opacity="' + HEADING_BEAM_OUTER_OPACITY + '"></path>'
-      : '';
+    var beam = '';
+    if (hasHeading) {
+      var paths = buildBeamLayers(
+        HEADING_MARKER_CENTER,
+        HEADING_MARKER_CENTER,
+        HEADING_DOT_OUTER_RADIUS
+      ).map(function(layer) {
+        return '<path d="' + layer.path + '" fill="${primaryColor}" fill-opacity="' + layer.opacity + '"></path>';
+      }).join('');
+      beam =
+        '<defs><filter id="heading-beam-blur" x="-20%" y="-20%" width="140%" height="140%">' +
+        '<feGaussianBlur stdDeviation="1.4"></feGaussianBlur></filter></defs>' +
+        '<g filter="url(#heading-beam-blur)">' + paths + '</g>';
+    }
     return (
       '<svg width="' + HEADING_MARKER_SIZE + '" height="' + HEADING_MARKER_SIZE + '" viewBox="0 0 ' + HEADING_MARKER_SIZE + ' ' + HEADING_MARKER_SIZE + '">' +
       beam +

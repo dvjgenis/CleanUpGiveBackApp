@@ -10,7 +10,7 @@ import {
   getRouteMapZoom,
   type RouteCoordinate,
 } from '../utils/geo';
-import { simplifyRouteForDisplay } from '../utils/routeFiltering';
+import { simplifyRouteForDisplay, computeBearingDegrees } from '../utils/routeFiltering';
 import { MapInteractionContainer } from './MapInteractionContainer';
 import { SessionCurrentArrowMarker, SessionEndMarker, SessionStartMarker } from './SessionMapMarkers';
 
@@ -55,6 +55,10 @@ export function SessionRouteMapPreviewNative({
   const mapZoom = getRouteMapZoom(displayRoute);
   const routeStart = visibleRoute[0] ?? null;
   const routeHead = visibleRoute[visibleRoute.length - 1] ?? null;
+  const replayHeading =
+    visibleRoute.length >= 2
+      ? computeBearingDegrees(visibleRoute[visibleRoute.length - 2], routeHead!)
+      : null;
   const showFinalEnd = replayProgress >= 1;
   const mapStyle = getNativeMapStyle(mapLayer);
 
@@ -85,7 +89,7 @@ export function SessionRouteMapPreviewNative({
 
         {routeHead && routeHead !== routeStart && !showFinalEnd && (
           <MapMarker longitude={routeHead[0]} latitude={routeHead[1]}>
-            <SessionCurrentArrowMarker heading={null} />
+            <SessionCurrentArrowMarker heading={replayHeading} />
           </MapMarker>
         )}
       </Map>

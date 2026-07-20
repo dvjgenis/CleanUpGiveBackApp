@@ -1,8 +1,9 @@
 import Constants, { ExecutionEnvironment } from 'expo-constants';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text } from 'react-native';
 
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 
+import { EventLocationPinIcon } from './EventIcons';
 import { colors, fontFamilies } from '../tokens';
 import type { MapCoordinate } from '../utils/openLocationInMaps';
 
@@ -24,7 +25,7 @@ function EventLocationMapFallback({ address, onPress }: { address: string; onPre
       accessibilityLabel={`Open ${address} in Maps`}
       style={s.fallback}
     >
-      <View style={s.pin} />
+      <EventLocationPinIcon size={32} />
       <Text style={s.fallbackTitle}>Open in Maps</Text>
       <Text style={s.fallbackAddress} numberOfLines={2}>
         {address}
@@ -71,14 +72,6 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     paddingHorizontal: 24,
-  },
-  pin: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: colors.primary,
-    borderWidth: 2,
-    borderColor: colors.white,
   },
   fallbackTitle: {
     fontFamily: fontFamilies.notoSansSemiBold,

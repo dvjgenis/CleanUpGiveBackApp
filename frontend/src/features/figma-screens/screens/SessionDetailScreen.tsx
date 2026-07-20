@@ -13,7 +13,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { PhotoEnlargeModal } from '@/components/ui/PhotoEnlargeModal';
+import { StatusPill } from '@/features/session-tracking/components/StatusPill';
 import { SessionRouteMapPanel } from '@/features/session-tracking/components/SessionRouteMapPanel';
+import { SessionNotesField } from '@/features/session-tracking/components/SessionNotesField';
 import { useSessionDetail } from '@/features/session-tracking/hooks/useSessionDetail';
 import { useSessionRouteCoordinates } from '@/features/session-tracking/hooks/useSessionRouteCoordinates';
 import {
@@ -28,33 +30,16 @@ import {
   SessionDetailPhotosIcon,
   SessionDetailShareIcon,
 } from '../components/SessionDetailIcons';
-import { SessionsMetaDot } from '../components/SessionsIcons';
 import {
   sessionStatusBadgeLabel,
   type SessionEvidencePhoto,
 } from '../mocks/sessionDetail';
-import type { SessionApprovalStatus } from '../mocks/sessions';
 import { layout, colors, fontFamilies, radius as R, shadows } from '../tokens';
 
 const MAP_HEIGHT = 190;
 const CTA_HEIGHT = 50;
 const FOOTER_PAD_TOP = 16;
 const FOOTER_PAD_BOTTOM = 24;
-
-function statusBadgeColors(status: SessionApprovalStatus) {
-  switch (status) {
-    case 'approved':
-      return { backgroundColor: colors.primary, color: colors.textOnPrimary };
-    case 'pending':
-      return { backgroundColor: colors.statusPendingBg, color: colors.statusPendingText };
-    case 'declined':
-      return { backgroundColor: colors.statusDeclinedBg, color: colors.statusDeclinedText };
-    default: {
-      const _exhaustive: never = status;
-      return _exhaustive;
-    }
-  }
-}
 
 function SessionDetailTopBar({
   onBack,
@@ -66,7 +51,7 @@ function SessionDetailTopBar({
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={[s.topBar, shadows.barTop, { paddingTop: insets.top, paddingBottom: layout.topBarPaddingBottom }]}>
+    <View style={[s.topBar, { paddingTop: insets.top, paddingBottom: layout.topBarPaddingBottom }]}>
       <View style={s.topBarRow}>
         <AnimatedPressable
           scaleTo={0.98}
@@ -118,10 +103,6 @@ function StatCard({
   );
 }
 
-/**
- * Figma `PhotoEvidenceCard` (`555:2380`) — thumbnail row for checkpoint photos.
- * Hidden only when `evidencePhotos` is empty (no session photos yet).
- */
 function SessionPhotoEvidenceCard({
   photos,
   onPressPhoto,
@@ -153,6 +134,17 @@ function SessionPhotoEvidenceCard({
   );
 }
 
+function SessionDescriptionSection({ description }: { description: string }) {
+  const body = description.trim() || '—';
+
+  return (
+    <View style={s.infoCard}>
+      <Text style={s.infoCardTitle}>Description</Text>
+      <Text style={s.infoCardBody}>{body}</Text>
+    </View>
+  );
+}
+
 /**
  * Session detail (Figma `session_detail`, node `515:1848`).
  * Map resolves the completed walking path from local cache or the sessions API.
@@ -175,7 +167,6 @@ export function SessionDetailScreen() {
   const selectedPhoto =
     selectedPhotoIndex !== null ? detail.evidencePhotos[selectedPhotoIndex] ?? null : null;
 
-  const badge = statusBadgeColors(detail.status);
   const statusLabel = sessionStatusBadgeLabel(detail.status);
   const photosStatLabel =
     detail.evidencePhotos.length > 0
@@ -194,7 +185,9 @@ export function SessionDetailScreen() {
 
   return (
     <View style={s.root}>
-      <SessionDetailTopBar onBack={() => router.back()} onShare={handleShare} />
+      <View style={s.topSection}>
+        <SessionDetailTopBar onBack={() => router.back()} onShare={handleShare} />
+      </View>
 
       <ScrollView
         style={s.scroll}
@@ -208,7 +201,6 @@ export function SessionDetailScreen() {
           <SessionRouteMapPanel
             routeCoordinates={routeCoordinates}
             replayOnce
-            showLayerControl={false}
             initialMapLayer={detail.mapLayer}
             style={s.mapPreview}
           />
@@ -223,19 +215,11 @@ export function SessionDetailScreen() {
             <>
               <View style={s.eventDetails}>
                 <View style={s.statusAndInfo}>
-                  <View style={[s.statusBadge, { backgroundColor: badge.backgroundColor }]}>
-                    <Text style={[s.statusBadgeLabel, { color: badge.color }]}>{statusLabel}</Text>
-                  </View>
+                  <StatusPill status={detail.status} label={statusLabel} />
 
                   <View style={s.eventInfo}>
                     <Text style={s.title}>{detail.title}</Text>
-                    <View style={s.metaRow}>
-                      <Text style={s.metaText}>{detail.dateTimeLabel}</Text>
-                      <SessionsMetaDot width={6} height={6} />
-                      <Text style={[s.metaText, s.metaAddress]} numberOfLines={2}>
-                        {detail.locationAddress}
-                      </Text>
-                    </View>
+                    <Text style={s.metaText}>{detail.dateTimeLabel}</Text>
                   </View>
                 </View>
 
@@ -254,8 +238,12 @@ export function SessionDetailScreen() {
                 photos={detail.evidencePhotos}
                 onPressPhoto={setSelectedPhotoIndex}
               />
+
+              <SessionDescriptionSection description={detail.description} />
             </>
           )}
+
+          <SessionNotesField sessionId={sessionId} />
         </View>
       </ScrollView>
 
@@ -318,9 +306,14 @@ const s = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.bgApp,
   },
+  topSection: {
+    zIndex: 20,
+    backgroundColor: colors.white,
+  },
   topBar: {
     backgroundColor: colors.white,
-    zIndex: 2,
+    ...shadows.barTop,
+    zIndex: 11,
   },
   topBarRow: {
     height: layout.topBarTitleRow,
@@ -377,16 +370,6 @@ const s = StyleSheet.create({
   statusAndInfo: {
     gap: 15,
   },
-  statusBadge: {
-    alignSelf: 'flex-start',
-    borderRadius: R.full,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-  },
-  statusBadgeLabel: {
-    fontFamily: fontFamilies.notoSansSemiBold,
-    fontSize: 11,
-  },
   eventInfo: {
     gap: 7,
   },
@@ -396,19 +379,10 @@ const s = StyleSheet.create({
     lineHeight: 28,
     color: colors.textPrimary,
   },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-    flexWrap: 'wrap',
-  },
   metaText: {
     fontFamily: fontFamilies.notoSansRegular,
     fontSize: 12,
     color: colors.textNavInactive,
-  },
-  metaAddress: {
-    flexShrink: 1,
   },
   statsRow: {
     flexDirection: 'row',
@@ -467,6 +441,25 @@ const s = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: R.sm,
+  },
+  infoCard: {
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.borderOutline,
+    borderRadius: 12,
+    padding: 16,
+    gap: 12,
+  },
+  infoCardTitle: {
+    fontFamily: fontFamilies.notoSansMedium,
+    fontSize: 16,
+    color: colors.textPrimary,
+  },
+  infoCardBody: {
+    fontFamily: fontFamilies.notoSansRegular,
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.textNavInactive,
   },
   footer: {
     position: 'absolute',

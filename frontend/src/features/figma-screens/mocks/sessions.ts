@@ -14,8 +14,17 @@ export type SessionListItem = {
   status: SessionApprovalStatus;
 };
 
-/** Production sessions list — populated from the Fly API when configured. */
-export const mockSessionsList: SessionListItem[] = [];
+/** Local fallback when `EXPO_PUBLIC_API_URL` is unset — one Figma-aligned demo row. */
+export const mockSessionsList: SessionListItem[] = [
+  {
+    id: 'downtown-riverfront',
+    title: 'Downtown Riverfront Clean-up',
+    dateLabel: 'Jul 15, 2026',
+    timeLabel: '5:00–7:30 PM',
+    sortDate: '2026-07-15',
+    status: 'approved',
+  },
+];
 
 export const SESSION_FILTER_CHIPS: { id: SessionListFilter; label: string }[] = [
   { id: 'all', label: 'All' },

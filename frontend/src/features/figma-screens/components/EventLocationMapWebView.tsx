@@ -26,21 +26,9 @@ function buildHtml(coordinate: MapCoordinate): string {
 <style>
   html,body,#map{margin:0;padding:0;height:100%;width:100%;overflow:hidden;}
   .pin {
-    width: 22px;
-    height: 22px;
-    border-radius: 11px;
-    background: ${PRIMARY};
-    border: 2px solid #ffffff;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.35);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .pin-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 4px;
-    background: #ffffff;
+    width: 32px;
+    height: 40px;
+    filter: drop-shadow(0 2px 3px rgba(0,0,0,0.35));
   }
 </style>
 </head>
@@ -60,10 +48,12 @@ function buildHtml(coordinate: MapCoordinate): string {
 
   const el = document.createElement('div');
   el.className = 'pin';
-  const dot = document.createElement('div');
-  dot.className = 'pin-dot';
-  el.appendChild(dot);
-  new maplibregl.Marker({ element: el, anchor: 'center' })
+  el.innerHTML = '<svg width="32" height="40" viewBox="0 0 32 40" fill="none">' +
+    '<path d="M16 0C7.163 0 0 7.163 0 16c0 11 16 24 16 24s16-13 16-24C32 7.163 24.837 0 16 0z" fill="${PRIMARY}"/>' +
+    '<circle cx="16" cy="16" r="6" fill="#ffffff"/>' +
+    '</svg>';
+  // Anchor at the pin's tip (bottom-center) so it points at the coordinate.
+  new maplibregl.Marker({ element: el, anchor: 'bottom' })
     .setLngLat([${longitude}, ${latitude}])
     .addTo(map);
 

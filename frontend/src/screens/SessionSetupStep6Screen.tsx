@@ -1,8 +1,8 @@
 import { CoachmarkEnter } from '@/components/motion/CoachmarkEnter';
-import { OnboardingProgressPills } from '@/components/onboarding/OnboardingProgressPills';
 import { SessionSetupGuideFooterActions } from '@/components/session-setup/SessionSetupGuideFooterActions';
+import { SessionSetupGuideNavRow } from '@/components/session-setup/SessionSetupGuideNavRow';
 import { staggerDelay } from '@/motion';
-import { goToSessionSetupStep5 } from '@/utils/sessionSetupGuideNavigation';
+import { goToSessionSetupStep5, useSessionSetupGuidePillProgress } from '@/utils/sessionSetupGuideNavigation';
 import { IBMPlexSans_600SemiBold } from '@expo-google-fonts/ibm-plex-sans';
 import { NotoSans_400Regular } from '@expo-google-fonts/noto-sans';
 import { Sanchez_400Regular } from '@expo-google-fonts/sanchez';
@@ -13,7 +13,6 @@ import { Image, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
-  isSessionCameraPermissionGranted,
   isSessionLocationPermissionGranted,
   requestSessionLocationPermission,
 } from '@/utils/sessionPermissions';
@@ -22,10 +21,9 @@ import { colors as C } from '@/constants/tokens';
 /** PRD §6.10 · Figma `location_permission` (728:639) — session setup guide step 6. */
 export function SessionSetupStep6Screen() {
   const router = useRouter();
+  const { total, active } = useSessionSetupGuidePillProgress('location');
   const [isRequesting, setIsRequesting] = useState(false);
   const [isCheckingPermission, setIsCheckingPermission] = useState(true);
-  /** 8 when camera is still ahead; 9 when camera will auto-skip (finale next). */
-  const [activePills, setActivePills] = useState(8);
 
   const [fontsLoaded] = useFonts({
     Sanchez_400Regular,
@@ -42,11 +40,8 @@ export function SessionSetupStep6Screen() {
   useEffect(() => {
     let isMounted = true;
 
-    void Promise.all([
-      isSessionLocationPermissionGranted(),
-      isSessionCameraPermissionGranted(),
-    ])
-      .then(([locationGranted, cameraGranted]) => {
+    void isSessionLocationPermissionGranted()
+      .then((locationGranted) => {
         if (!isMounted) {
           return;
         }
@@ -54,7 +49,6 @@ export function SessionSetupStep6Screen() {
           router.replace('/session-setup-step7');
           return;
         }
-        setActivePills(cameraGranted ? 9 : 8);
         setIsCheckingPermission(false);
       })
       .catch(() => {
@@ -90,7 +84,11 @@ export function SessionSetupStep6Screen() {
     <SafeAreaView style={s.root} edges={['top', 'bottom']}>
 
       <View style={s.navSection}>
-        <OnboardingProgressPills total={10} active={activePills} />
+        <SessionSetupGuideNavRow
+          total={total}
+          active={active}
+          onBack={() => goToSessionSetupStep5(router)}
+        />
       </View>
 
       <CoachmarkEnter style={s.main}>

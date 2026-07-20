@@ -7,21 +7,25 @@ import { BottomNavBar } from '@/components/navigation/BottomNavBar';
 import { SessionSetupTopAppBar } from '@/components/session-setup/SessionSetupTopAppBar';
 import { useLiveSession } from '@/features/session-tracking/liveSessionStore';
 
-import { EmailReceiptIcon } from '../components/AccountIcons';
+import { EmailReceiptChip } from '../components/EmailReceiptChip';
 import { defaultOrderHistory, type OrderHistoryItem } from '../mocks/orderHistory';
 import { layout, colors, fontFamilies, radius } from '../tokens';
 
 
 function OrderCard({ order }: { order: OrderHistoryItem }) {
+  const muted = order.muted ?? false;
+
   return (
-    <View style={[s.card, order.muted ? s.cardMuted : null]}>
+    <View style={s.card}>
       <View style={s.cardHeader}>
         <View style={s.cardHeaderLeft}>
           <Text style={s.orderNumber}>{order.orderNumber}</Text>
           <Text style={s.orderDate}>{order.dateLabel}</Text>
         </View>
         <View style={s.statusTag}>
-          <Text style={s.statusLabel}>{order.statusLabel}</Text>
+          <Text style={[s.statusLabel, muted ? s.statusLabelMuted : null]}>
+            {order.statusLabel}
+          </Text>
         </View>
       </View>
 
@@ -29,13 +33,10 @@ function OrderCard({ order }: { order: OrderHistoryItem }) {
 
       <View style={s.productRow}>
         <Text style={s.productName}>{order.productName}</Text>
-        <Text style={s.price}>{order.priceLabel}</Text>
+        <Text style={[s.price, muted ? s.priceMuted : null]}>{order.priceLabel}</Text>
       </View>
 
-      <View style={s.receiptChip}>
-        <EmailReceiptIcon width={16} height={16} />
-        <Text style={s.receiptText}>Confirmation receipt sent to email</Text>
-      </View>
+      <EmailReceiptChip />
     </View>
   );
 }
@@ -119,9 +120,6 @@ const s = StyleSheet.create({
     padding: 24,
     gap: 16,
   },
-  cardMuted: {
-    opacity: 0.85,
-  },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -155,6 +153,9 @@ const s = StyleSheet.create({
     fontSize: 11,
     color: colors.statusApprovedText,
   },
+  statusLabelMuted: {
+    color: colors.textNavInactive,
+  },
   divider: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: colors.borderOutline,
@@ -176,21 +177,7 @@ const s = StyleSheet.create({
     fontSize: 28,
     color: colors.primary,
   },
-  receiptChip: {
-    alignSelf: 'flex-start',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: colors.bgApp,
-    borderWidth: 1,
-    borderColor: colors.borderOutline,
-    borderRadius: radius.sm,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  receiptText: {
-    fontFamily: fontFamilies.notoSansRegular,
-    fontSize: 12,
+  priceMuted: {
     color: colors.textNavInactive,
   },
   bottomStack: {

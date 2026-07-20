@@ -5,6 +5,7 @@ import { Stack } from 'expo-router';
 import { AuthProvider } from '@/components/AuthProvider';
 import { prefetchAllOnboardingGraphics } from '@/components/onboarding/onboardingGraphics';
 import { prefetchAllTourGraphics } from '@/components/onboarding/tourAssets';
+import { prefetchAllShopGraphics } from '@/features/figma-screens/shopAssets';
 
 import '@/features/session-tracking/backgroundLocationTask';
 
@@ -13,6 +14,7 @@ import '@/features/session-tracking/backgroundLocationTask';
 // cache by the time the onboarding screens are visited.
 prefetchAllTourGraphics();
 prefetchAllOnboardingGraphics();
+prefetchAllShopGraphics();
 
 const guideBackwardScreenOptions = {
   animationTypeForReplace: 'pop' as const,

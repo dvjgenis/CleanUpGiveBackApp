@@ -1,20 +1,40 @@
 import { CoachmarkEnter } from '@/components/motion/CoachmarkEnter';
 import { ONBOARDING_GRAPHICS } from '@/components/onboarding/onboardingGraphics';
-import { OnboardingProgressPills } from '@/components/onboarding/OnboardingProgressPills';
 import { SessionSetupGuideFooterActions } from '@/components/session-setup/SessionSetupGuideFooterActions';
-import { useSessionSetupGuidePillProgress } from '@/utils/sessionSetupGuideNavigation';
+import { SessionSetupGuideNavRow } from '@/components/session-setup/SessionSetupGuideNavRow';
+import {
+  captureSessionSetupGuideReturnHref,
+  exitSessionSetupGuideToTrackEntry,
+  resetSessionSetupGuideReturnHref,
+  useSessionSetupGuidePillProgress,
+} from '@/utils/sessionSetupGuideNavigation';
 import { IBMPlexSans_600SemiBold } from '@expo-google-fonts/ibm-plex-sans';
 import { Sanchez_400Regular } from '@expo-google-fonts/sanchez';
 import { Image as ExpoImage } from 'expo-image';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
+import { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors as C } from '@/constants/tokens';
 
 export function SessionSetupGuideScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
+  const { entry } = useLocalSearchParams<{ entry?: string }>();
   const { total, active } = useSessionSetupGuidePillProgress('guide');
+
+  useEffect(() => {
+    if (entry === 'onboarding') {
+      resetSessionSetupGuideReturnHref();
+      return;
+    }
+
+    const state = navigation.getState();
+    if (state) {
+      captureSessionSetupGuideReturnHref(state);
+    }
+  }, [entry, navigation]);
 
   const [fontsLoaded] = useFonts({
     Sanchez_400Regular,
@@ -31,7 +51,11 @@ export function SessionSetupGuideScreen() {
       {/* Header — gap 30 between top section and headline, gap 20 within top section */}
       <View style={s.header}>
         <View style={s.topSection}>
-          <OnboardingProgressPills total={total} active={active} />
+          <SessionSetupGuideNavRow
+            total={total}
+            active={active}
+            onBack={() => exitSessionSetupGuideToTrackEntry(router)}
+          />
         </View>
 
         <CoachmarkEnter>

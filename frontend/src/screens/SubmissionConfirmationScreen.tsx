@@ -32,7 +32,10 @@ import { CheckCircleIcon } from '@/features/session-tracking/components/icons/Ch
 import { ChevronLeftIcon } from '@/features/session-tracking/components/icons/ChevronLeftIcon';
 import { ChevronRightIcon } from '@/features/session-tracking/components/icons/ChevronRightIcon';
 import { SessionRouteMapPanel } from '@/features/session-tracking/components/SessionRouteMapPanel';
+import { StatusPill } from '@/features/session-tracking/components/StatusPill';
+import { SessionNotesField } from '@/features/session-tracking/components/SessionNotesField';
 import { getCompletedSessionSnapshot } from '@/features/session-tracking/liveSessionStore';
+import { resolveCompletedSessionId } from '@/features/session-tracking/utils/resolveCompletedSessionId';
 import {
   formatPhotoTimeLabel,
   formatSessionDateLabel,
@@ -142,6 +145,7 @@ export function SubmissionConfirmationScreen() {
   const timelineStyle = useFadeUpEnter(staggerDelay(3));
   const footerStyle = useFadeUpEnter(staggerDelay(4));
   const session = useMemo(() => getCompletedSessionSnapshot(), []);
+  const sessionId = session ? resolveCompletedSessionId(session) : undefined;
 
   const sessionPhotos: SessionPhoto[] = useMemo(
     () =>
@@ -249,10 +253,7 @@ export function SubmissionConfirmationScreen() {
         <Animated.View style={headerStyle}>
         <View style={s.detailsBlock}>
           <View style={s.titleBlock}>
-            <View style={s.statusPill}>
-              <View style={s.statusDot} />
-              <Text style={s.statusPillText}>Under Review</Text>
-            </View>
+            <StatusPill status="pending" label="Under Review" />
             <Text style={s.sessionTitle}>{sessionTitle}</Text>
           </View>
 
@@ -375,6 +376,14 @@ export function SubmissionConfirmationScreen() {
           <Text style={s.descriptionText}>{sessionDescription}</Text>
         </View>
 
+        <SessionNotesField
+          sessionId={sessionId}
+          containerStyle={s.notesCard}
+          titleStyle={s.sectionHeading}
+          inputStyle={s.notesInput}
+          counterStyle={s.notesCharCount}
+        />
+
         <View style={s.courtOrderedRow}>
           <Text style={s.courtOrderedLabel}>Court Ordered Status</Text>
           <Text style={s.courtOrderedValue}>{courtOrderedValue}</Text>
@@ -483,32 +492,6 @@ const s = StyleSheet.create({
 
   titleBlock: {
     gap: 15,
-  },
-
-  statusPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: 6,
-    backgroundColor: C.statusPendingBg,
-    borderColor: C.statusPendingBg,
-    borderWidth: 1,
-    borderRadius: 9999,
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-  },
-
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: C.statusPendingDot,
-  },
-
-  statusPillText: {
-    fontFamily: 'NotoSans_600SemiBold',
-    fontSize: 13,
-    color: C.statusPendingText,
   },
 
   sessionTitle: {
@@ -737,6 +720,26 @@ const s = StyleSheet.create({
     fontFamily: 'NotoSans_400Regular',
     fontSize: 14,
     lineHeight: 20,
+    color: C.textTertiary,
+    includeFontPadding: false,
+  },
+
+  notesCard: {
+    backgroundColor: C.bgSurfaceWhite,
+    borderColor: C.borderOutline,
+  },
+
+  notesInput: {
+    fontFamily: 'NotoSans_400Regular',
+    fontSize: 14,
+    lineHeight: 20,
+    color: C.textPrimary,
+    includeFontPadding: false,
+  },
+
+  notesCharCount: {
+    fontFamily: 'NotoSans_400Regular',
+    fontSize: 12,
     color: C.textTertiary,
     includeFontPadding: false,
   },

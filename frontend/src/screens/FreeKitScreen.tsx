@@ -1,6 +1,7 @@
 import { ONBOARDING_GRAPHICS } from '@/components/onboarding/onboardingGraphics';
 import { OnboardingInfoFooterActions } from '@/components/onboarding/OnboardingInfoFooterActions';
 import { OnboardingProgressPills } from '@/components/onboarding/OnboardingProgressPills';
+import { SessionSetupGuideNavRow } from '@/components/session-setup/SessionSetupGuideNavRow';
 import { colors as C } from '@/features/figma-screens/tokens';
 import { IBMPlexSans_600SemiBold } from '@expo-google-fonts/ibm-plex-sans';
 import {
@@ -20,10 +21,19 @@ type Props = {
   onContinue: () => void;
   onPrevious: () => void;
   onSkip: () => void;
+  /** Session-setup guide only — shows the top-left back chevron. Omit in main onboarding. */
+  onBack?: () => void;
 };
 
 /** Figma `free_kit` (1126:451) — "$49.99 free cleanup kit" screen used in onboarding and session setup. */
-export function FreeKitScreen({ totalPills, activePills, onContinue, onPrevious, onSkip }: Props) {
+export function FreeKitScreen({
+  totalPills,
+  activePills,
+  onContinue,
+  onPrevious,
+  onSkip,
+  onBack,
+}: Props) {
   const [fontsLoaded] = useFonts({
     Sanchez_400Regular,
     NotoSans_400Regular,
@@ -38,7 +48,15 @@ export function FreeKitScreen({ totalPills, activePills, onContinue, onPrevious,
     <SafeAreaView style={s.root} edges={['top', 'bottom']}>
       <View style={s.main}>
         <View style={s.navSection}>
-          <OnboardingProgressPills active={activePills} total={totalPills} />
+          {onBack ? (
+            <SessionSetupGuideNavRow
+              total={totalPills}
+              active={activePills}
+              onBack={onBack}
+            />
+          ) : (
+            <OnboardingProgressPills active={activePills} total={totalPills} />
+          )}
         </View>
 
         <View style={s.titleSection}>

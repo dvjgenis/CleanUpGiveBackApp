@@ -14,11 +14,15 @@ import {
   useLiveSession,
 } from '@/features/session-tracking/liveSessionStore';
 import { useRecentSessions } from '@/features/session-tracking/recentSessionsStore';
-import { useSessionStats } from '@/features/session-tracking/sessionStatsStore';
+import {
+  hydrateSessionStatsFromApi,
+  useSessionStats,
+} from '@/features/session-tracking/sessionStatsStore';
 import {
   buildImpactStats,
   buildWeeklyHoursChart,
   computeWeeklyStreakHours,
+  formatChartHourLabel,
   formatWeekServiceHoursTotal,
 } from '@/features/session-tracking/utils/homeDashboardStats';
 
@@ -38,7 +42,12 @@ import { firstTimeHomeDashboard } from '../mocks/home';
 import type { HomeDashboardData, ImpactStat } from '../mocks/home.types';
 import { getTimeOfDayGreeting } from '../utils/getTimeOfDayGreeting';
 import { formatEventMonthLabel } from '../utils/eventFormat';
-import { getCurrentWeekMeta } from '../utils/weekCalendar';
+import {
+  formatWeekNumberLabel,
+  formatWeekRangeLabel,
+  getCurrentWeekMeta,
+  parseIsoDate,
+} from '../utils/weekCalendar';
 import { layout, colors, fontFamilies, radius as R, shadows } from '../tokens';
 
 const CHART_H = 168;
@@ -90,16 +99,17 @@ function BarChart({ weeklyHoursChart }: { weeklyHoursChart: HomeDashboardData['w
           })}
           {weeklyHoursChart.map(({ day, value }) => {
             const barH = Math.round((value / chartMax) * CHART_H);
+            const label = formatChartHourLabel(value);
             const labelAbove = value > 0 && barH <= 20;
             const labelInside = value > 0 && barH > 20;
             return (
               <View key={day} style={chart.barColumn}>
                 {labelAbove && (
-                  <Text style={chart.barValueAbove}>{value}</Text>
+                  <Text style={chart.barValueAbove}>{label}</Text>
                 )}
                 {value > 0 && (
                   <View style={[chart.bar, { height: Math.max(barH, 4) }]}>
-                    {labelInside && <Text style={chart.barValue}>{value}</Text>}
+                    {labelInside && <Text style={chart.barValue}>{label}</Text>}
                   </View>
                 )}
               </View>
@@ -458,13 +468,20 @@ export function HomeScreen() {
     () => getCurrentWeekMeta().weekStartIso,
   );
 
+  useFocusEffect(
+    useCallback(() => {
+      void hydrateSessionStatsFromApi();
+    }, []),
+  );
+
   const data = useMemo(() => {
-    const weekMeta = getCurrentWeekMeta();
+    const selectedWeekStart = parseIsoDate(selectedWeekStartIso);
 
     return {
       ...firstTimeHomeDashboard,
-      ...weekMeta,
       weekStartIso: selectedWeekStartIso,
+      weekRangeLabel: formatWeekRangeLabel(selectedWeekStart),
+      weekNumberLabel: formatWeekNumberLabel(selectedWeekStart),
       weeklyHoursChart: buildWeeklyHoursChart(sessionStats, selectedWeekStartIso),
       serviceHoursTotalLabel: formatWeekServiceHoursTotal(sessionStats, selectedWeekStartIso),
       weeklyStreakHours: computeWeeklyStreakHours(sessionStats),

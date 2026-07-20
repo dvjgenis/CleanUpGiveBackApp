@@ -1,8 +1,8 @@
 import { CoachmarkEnter } from '@/components/motion/CoachmarkEnter';
-import { OnboardingProgressPills } from '@/components/onboarding/OnboardingProgressPills';
 import { SessionSetupGuideFooterActions } from '@/components/session-setup/SessionSetupGuideFooterActions';
+import { SessionSetupGuideNavRow } from '@/components/session-setup/SessionSetupGuideNavRow';
 import { staggerDelay } from '@/motion';
-import { goBackInSessionSetupGuide } from '@/utils/sessionSetupGuideNavigation';
+import { goToSessionSetupStep6, useSessionSetupGuidePillProgress } from '@/utils/sessionSetupGuideNavigation';
 import { IBMPlexSans_600SemiBold } from '@expo-google-fonts/ibm-plex-sans';
 import { NotoSans_400Regular } from '@expo-google-fonts/noto-sans';
 import { Sanchez_400Regular } from '@expo-google-fonts/sanchez';
@@ -21,6 +21,7 @@ import { colors as C } from '@/constants/tokens';
 /** PRD §6.10 · Figma `camera_permission` (728:658) — session setup guide step 7. */
 export function SessionSetupStep7Screen() {
   const router = useRouter();
+  const { total, active } = useSessionSetupGuidePillProgress('camera');
   const [isRequesting, setIsRequesting] = useState(false);
   const [isCheckingPermission, setIsCheckingPermission] = useState(true);
 
@@ -83,7 +84,11 @@ export function SessionSetupStep7Screen() {
     <SafeAreaView style={s.root} edges={['top', 'bottom']}>
 
       <View style={s.navSection}>
-        <OnboardingProgressPills total={10} active={9} />
+        <SessionSetupGuideNavRow
+          total={total}
+          active={active}
+          onBack={() => goToSessionSetupStep6(router)}
+        />
       </View>
 
       <CoachmarkEnter style={s.main}>
@@ -110,7 +115,7 @@ export function SessionSetupStep7Screen() {
         onContinuePress={() => {
           void handleEnableCamera();
         }}
-        onPreviousPress={() => goBackInSessionSetupGuide(router)}
+        onPreviousPress={() => goToSessionSetupStep6(router)}
         onSkipPress={goToComplete}
       />
 

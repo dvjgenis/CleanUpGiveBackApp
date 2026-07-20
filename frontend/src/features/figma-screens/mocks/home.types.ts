@@ -28,6 +28,7 @@ export type UpcomingEventSummary = {
 
 export type WeeklyHoursDatum = {
   day: string;
+  /** Hours of service logged that day (one decimal place). */
   value: number;
 };
 

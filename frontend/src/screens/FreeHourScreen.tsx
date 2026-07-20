@@ -2,6 +2,7 @@ import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { ONBOARDING_GRAPHICS } from '@/components/onboarding/onboardingGraphics';
 import { OnboardingInfoFooterActions } from '@/components/onboarding/OnboardingInfoFooterActions';
 import { OnboardingProgressPills } from '@/components/onboarding/OnboardingProgressPills';
+import { SessionSetupGuideNavRow } from '@/components/session-setup/SessionSetupGuideNavRow';
 import { colors as C } from '@/features/figma-screens/tokens';
 import { IBMPlexSans_600SemiBold } from '@expo-google-fonts/ibm-plex-sans';
 import { NotoSans_400Regular, NotoSans_600SemiBold } from '@expo-google-fonts/noto-sans';
@@ -17,10 +18,19 @@ type Props = {
   onContinue: () => void;
   onPrevious: () => void;
   onSkip: () => void;
+  /** Session-setup guide only — shows the top-left back chevron. Omit in main onboarding. */
+  onBack?: () => void;
 };
 
 /** Figma `disclaimer` (1125:360) — "One free hour!" info screen used in onboarding and session setup. */
-export function FreeHourScreen({ totalPills, activePills, onContinue, onPrevious, onSkip }: Props) {
+export function FreeHourScreen({
+  totalPills,
+  activePills,
+  onContinue,
+  onPrevious,
+  onSkip,
+  onBack,
+}: Props) {
   const [fontsLoaded] = useFonts({
     Sanchez_400Regular,
     NotoSans_400Regular,
@@ -48,7 +58,15 @@ export function FreeHourScreen({ totalPills, activePills, onContinue, onPrevious
 
       <View style={s.main}>
         <View style={s.navSection}>
-          <OnboardingProgressPills active={activePills} total={totalPills} />
+          {onBack ? (
+            <SessionSetupGuideNavRow
+              total={totalPills}
+              active={activePills}
+              onBack={onBack}
+            />
+          ) : (
+            <OnboardingProgressPills active={activePills} total={totalPills} />
+          )}
         </View>
 
         <View style={s.titleSection}>

@@ -609,6 +609,7 @@ const s = StyleSheet.create({
     backgroundColor: colors.white,
     paddingTop: FOOTER_PAD_TOP,
     paddingHorizontal: 16,
+    ...shadows.navBottom,
   },
   footerActions: {
     gap: 15,

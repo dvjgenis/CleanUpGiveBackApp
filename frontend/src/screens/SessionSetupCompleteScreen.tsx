@@ -6,16 +6,17 @@ import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CoachmarkEnter } from '@/components/motion/CoachmarkEnter';
-import { goBackInSessionSetupGuide } from '@/utils/sessionSetupGuideNavigation';
-import { OnboardingProgressPills } from '@/components/onboarding/OnboardingProgressPills';
+import { goToPreviousFromSessionSetupComplete, useSessionSetupGuidePillProgress } from '@/utils/sessionSetupGuideNavigation';
 import { SessionSetupCelebration } from '@/components/session-setup/SessionSetupCelebration';
 import { SessionSetupGuideFooterActions } from '@/components/session-setup/SessionSetupGuideFooterActions';
+import { SessionSetupGuideNavRow } from '@/components/session-setup/SessionSetupGuideNavRow';
 import { staggerDelay } from '@/motion';
 import { colors as C } from '@/constants/tokens';
 
 /** Figma `session_setup_guide` finale (251:405) — "That's it! Let's get tracking!" */
 export function SessionSetupCompleteScreen() {
   const router = useRouter();
+  const { total, active } = useSessionSetupGuidePillProgress('complete');
 
   const [fontsLoaded] = useFonts({
     Sanchez_400Regular,
@@ -31,7 +32,7 @@ export function SessionSetupCompleteScreen() {
 
       <CoachmarkEnter style={s.header}>
         <View style={s.navContainer}>
-          <OnboardingProgressPills total={10} active={10} />
+          <SessionSetupGuideNavRow total={total} active={active} />
         </View>
 
         <Text style={s.headline}>
@@ -49,7 +50,9 @@ export function SessionSetupCompleteScreen() {
           continueLabel="Start Tracking"
           hideSkip
           onContinuePress={() => router.push('/session-setup')}
-          onPreviousPress={() => goBackInSessionSetupGuide(router)}
+          onPreviousPress={() => {
+            void goToPreviousFromSessionSetupComplete(router);
+          }}
         />
       </CoachmarkEnter>
 

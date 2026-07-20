@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react';
 
 import type { SessionDetailData } from '@/features/figma-screens/mocks/sessionDetail';
-import { detailFromCompletedSnapshot, emptySessionDetail } from '@/features/figma-screens/mocks/sessionDetail';
+import {
+  detailFromCompletedSnapshot,
+  emptySessionDetail,
+  getSessionDetail,
+} from '@/features/figma-screens/mocks/sessionDetail';
 import { mapApiStatusToApproval } from '@/lib/mapApiSessions';
 import { isApiConfigured } from '@/lib/api';
 import { getSession } from '@/lib/sessionsApi';
@@ -46,7 +50,7 @@ export function useSessionDetail(sessionId?: string): SessionDetailState {
     }
 
     return {
-      detail: emptySessionDetail(sessionId),
+      detail: getSessionDetail(sessionId),
       loading: Boolean(sessionId && isApiConfigured),
       error: null,
     };
@@ -74,7 +78,7 @@ export function useSessionDetail(sessionId?: string): SessionDetailState {
 
     if (!isApiConfigured) {
       setState({
-        detail: emptySessionDetail(sessionId),
+        detail: getSessionDetail(sessionId),
         loading: false,
         error: null,
       });
@@ -165,6 +169,7 @@ export function useSessionDetail(sessionId?: string): SessionDetailState {
             status: mapApiStatusToApproval(session.status),
             dateTimeLabel: formatDateTimeLabel(session.startedAt, session.endedAt),
             locationAddress: session.description?.trim() || '—',
+            description: session.description?.trim() || '',
             hoursLabel: (durationSeconds / 3600).toFixed(1),
             milesLabel:
               session.distanceMiles != null ? Number(session.distanceMiles).toFixed(1) : '0.0',

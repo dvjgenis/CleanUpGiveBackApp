@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSyncExternalStore } from 'react';
 
 import { listSessions } from '@/lib/sessionsApi';
@@ -11,11 +12,27 @@ import {
   type SessionStatRecord,
 } from './utils/homeDashboardStats';
 
+const STORAGE_KEY = '@cugb/sessionStats';
+
 let sessionStats: SessionStatRecord[] = [];
 const listeners = new Set<() => void>();
 
 function notify() {
   listeners.forEach((listener) => listener());
+}
+
+function setSessionStats(next: SessionStatRecord[]) {
+  sessionStats = next;
+  notify();
+  void persistSessionStats();
+}
+
+async function persistSessionStats() {
+  try {
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(sessionStats));
+  } catch (error) {
+    console.warn('[sessions] persist stats failed:', error);
+  }
 }
 
 export function getSessionStats(): SessionStatRecord[] {
@@ -32,8 +49,25 @@ export function useSessionStats() {
 }
 
 export function recordSessionStatFromSnapshot(snapshot: CompletedSessionSnapshot) {
-  sessionStats = mergeSessionStats(sessionStats, [sessionStatFromSnapshot(snapshot)]);
-  notify();
+  setSessionStats(mergeSessionStats(sessionStats, [sessionStatFromSnapshot(snapshot)]));
+}
+
+export async function hydrateSessionStatsFromStorage() {
+  try {
+    const raw = await AsyncStorage.getItem(STORAGE_KEY);
+    if (!raw) {
+      return;
+    }
+
+    const parsed = JSON.parse(raw) as SessionStatRecord[];
+    if (!Array.isArray(parsed)) {
+      return;
+    }
+
+    setSessionStats(mergeSessionStats(sessionStats, parsed));
+  } catch (error) {
+    console.warn('[sessions] hydrate stats from storage failed:', error);
+  }
 }
 
 export async function hydrateSessionStatsFromApi() {
@@ -46,14 +80,12 @@ export async function hydrateSessionStatsFromApi() {
     const fromApi = sessions
       .map(sessionStatFromApi)
       .filter((record): record is SessionStatRecord => record != null);
-    sessionStats = mergeSessionStats(sessionStats, fromApi);
-    notify();
+    setSessionStats(mergeSessionStats(sessionStats, fromApi));
   } catch (error) {
     console.warn('[sessions] hydrate stats failed:', error);
   }
 }
 
 export function resetSessionStats() {
-  sessionStats = [];
-  notify();
+  setSessionStats([]);
 }

@@ -4,6 +4,131 @@ Session-by-session progress tracker. Distinct from `notes/journey.md` (correctio
 
 ---
 
+## [2026-07-20] — Account: Personal Details section (edit name/phone/birthday/service type)
+
+**Session goal:** Add a Personal Details section to the Account tab where the user can edit the fields collected during onboarding: name, phone number, birthday, and service type (Court Ordered, Volunteering, School, Other).
+
+| Change | File | Status |
+|--------|------|--------|
+| `onboardingStore` now persists phone, birthday, service type (not just preferred name); adds `usePersonalDetails()` snapshot hook | `onboardingStore.ts` | ✅ |
+| Shared service-type constant (`SERVICE_TYPES`/`ServiceType`), replacing the copy local to `AccountDetailsScreen` | `constants/serviceTypes.ts` | ✅ |
+| Extracted birthday sheet modal + helpers out of `AccountDetailsScreen` for reuse | `figma-screens/components/BirthdayPickerModal.tsx` | ✅ |
+| Extracted country-code sheet modal + phone helpers out of `AccountPhoneScreen` for reuse | `figma-screens/components/CountryPickerModal.tsx` | ✅ |
+| `AccountPhoneScreen`/`AccountDetailsScreen` now persist to `onboardingStore` on Continue and prefill from it; refactored to use the shared modal components | `AccountPhoneScreen.tsx`, `AccountDetailsScreen.tsx` | ✅ |
+| New Personal Details editor screen (name/phone/birthday/service-type form + Save) | `figma-screens/screens/PersonalDetailsScreen.tsx` | ✅ |
+| New `/personal-details` route | `app/personal-details.tsx` | ✅ |
+| New "Personal Details" section/row on Account tab → `/personal-details` | `figma-screens/screens/AccountScreen.tsx` | ✅ |
+| Simple person glyph for the new section (no Figma node) | `figma-screens/components/PersonalDetailsIcon.tsx` | ✅ |
+| Docs: components inventory, routes table, onboarding-flow pattern note, current.md capability note | `docs/frontend/context/components.md`, `docs/frontend/context/app.md`, `docs/current.md` | ✅ |
+
+**Verified:** `npx tsc --noEmit` clean.
+
+---
+
+## [2026-07-20] — Back chevron on session setup guide screens
+
+**Session goal:** Add a leftward back chevron above the progress pills (top-left) on every session-setup onboarding/guide screen, wired to whatever screen the user was previously on, persisting across the whole flow.
+
+| Change | File | Status |
+|--------|------|--------|
+| New shared `SessionSetupGuideNavRow` (back chevron + `OnboardingProgressPills` row); `onBack` optional — omitting it hides the chevron | `frontend/src/components/session-setup/SessionSetupGuideNavRow.tsx` | ✅ |
+| Wired into guide intro, steps 2–7, and finale — `onBack` reuses each screen's existing Previous handler (`goBackInSessionSetupGuide` / `goToSessionSetupStep5`); finale omits `onBack` (no chevron on last session-setup page) | `SessionSetupGuideScreen.tsx`, `SessionSetupStep2-7Screen.tsx`, `SessionSetupCompleteScreen.tsx` | ✅ |
+| Docs: component inventory + current-state note | `docs/frontend/context/components.md`, `docs/current.md` | ✅ |
+
+**Verified:** `npx tsc --noEmit` clean.
+
+---
+
+## [2026-07-20] — Onboarding age gate lowered to 13
+
+**Session goal:** Minimum age policy is 13, not 18 — the parent/admin permission screens (`/under-age`, `/under-age-learn-why`) must only appear for users 13 and younger; users 14+ proceed straight through onboarding.
+
+| Change | File | Status |
+|--------|------|--------|
+| Age-gate threshold `< 18` → `<= 13` | `AccountDetailsScreen.tsx` | ✅ |
+| Docs: routes table + onboarding flow pattern + new Policy note | `docs/frontend/context/app.md` | ✅ |
+
+**Verified:** `npx tsc --noEmit` clean.
+
+---
+
+## [2026-07-20] — Session detail Notes field
+
+**Session goal:** Add editable per-session notes under Description; persist locally for later edits from Sessions list **and** immediately after each session ends.
+
+| Change | File | Status |
+|--------|------|--------|
+| `sessionNotesStore` (AsyncStorage, 500-char limit) | `sessionNotesStore.ts`, `AuthProvider.tsx` | ✅ |
+| Shared `SessionNotesField` component | `SessionNotesField.tsx` | ✅ |
+| Notes on Session Detail (`/session-detail`) | `SessionDetailScreen.tsx` | ✅ |
+| Notes on post-session screen (`/submission-confirmation`) | `SubmissionConfirmationScreen.tsx` | ✅ |
+| `description` on `SessionDetailData` | `sessionDetail.ts`, `useSessionDetail.ts` | ✅ |
+
+**Verified:** `npx tsc --noEmit` clean.
+
+---
+
+## [2026-07-20] — Service Hours chart tracks real session hours
+
+**Session goal:** Home bar graph must reflect completed session durations in hours, not static Figma mock values.
+
+| Change | File | Status |
+|--------|------|--------|
+| Chart buckets aggregate hours (1 decimal) from `sessionStatsStore` | `homeDashboardStats.ts`, `HomeScreen.tsx` | ✅ |
+| Persist stats to AsyncStorage; hydrate on boot | `sessionStatsStore.ts`, `AuthProvider.tsx` | ✅ |
+| Re-hydrate from API on Home focus | `HomeScreen.tsx` | ✅ |
+| Week picker labels follow selected week | `HomeScreen.tsx` | ✅ |
+| `HomeScreenReturningUser` alias → live `HomeScreen` | `HomeScreenReturningUser.tsx` | ✅ |
+| Tests | `homeDashboardStats.test.ts` | ✅ |
+
+**Verified:** `homeDashboardStats.test.ts` pass; `npx tsc --noEmit` clean.
+
+---
+
+## [2026-07-20] — Home greeting uses onboarding name
+
+**Session goal:** Fix home greeting so the name entered during onboarding appears instead of the mock fallback.
+
+| Change | File | Status |
+|--------|------|--------|
+| Fix shadowed `setPreferredName` (local state setter never wrote to store) | `AccountPhoneScreen.tsx` | ✅ `persistPreferredName` |
+| Pre-fill preferred name from create-account; save name on step 1 Continue | `CreateAccountScreen.tsx`, `AccountPhoneScreen.tsx` | ✅ |
+
+**P:** Home greeting reads `usePreferredName()` → `homeUser.firstName` after onboarding.
+
+---
+
+## [2026-07-20] — Session detail live replay controls
+
+**Session goal:** Replace text replay buttons with icon Play/Pause/Replay, add synced timer, remove layers picker from replay maps.
+
+| Change | File | Status |
+|--------|------|--------|
+| Icon play/pause/replay + `MM:SS / MM:SS` timer synced to replay progress | `SessionRouteMapPanel.tsx`, `PlayIcon.tsx`, `PauseIcon.tsx`, `ReplayIcon.tsx` | ✅ |
+| Remove basemap layer picker from replay panel (`showLayerControl` removed) | `SessionRouteMapPanel.tsx`, `SessionDetailScreen.tsx` | ✅ |
+| Living docs | `components.md`, `session-tracking-expo-go.md`, `session-route-replay.md`, `current.md` | ✅ |
+
+**P:** Replay bar shows timer + play/pause + replay only; map opens on session-end basemap via `initialMapLayer`.
+
+---
+
+## [2026-07-20] — Live WebView drop start pin (black duplicate)
+
+**Session goal:** Fix the dark pin that appears beside the green tip when switching map styles.
+
+| Change | File | Status |
+|--------|------|--------|
+| Remove live-tracker start-marker sync (match native) | `LiveSessionMapWebView.tsx` | ✅ |
+| Docs AC-25 / maps | `session-tracking-expo-go.md`, `maps.md`, `progress.md` | ✅ |
+
+**R:** Expo Go WebView still drew a gray `coords[0]` start pin; native already dropped it. On short walks / after style re-sync it sits next to the green tip and reads as the marker “turning black.”
+**A:** Live WebView now syncs only the current-position arrow marker (route polyline unchanged).
+**L:** Screenshot: green tip + dark 14px start pin with line ending at the dark pin.
+**P:** Done; switch Standard/Satellite/Hybrid — only the green pin should remain.
+**H:** Live tracker must not render a start pin; keep start pins on replay/preview only.
+
+---
+
 ## [2026-07-20] — Map Types sheet dismiss animation on select
 
 **Session goal:** Close the Map Types drawer with its spring animation when switching basemap styles, not instantly.
@@ -240,6 +365,30 @@ Session-by-session progress tracker. Distinct from `notes/journey.md` (correctio
 ### Verified
 
 - `npx tsc --noEmit` — clean after Compass `headingDegrees` prop fix on tracker.
+
+---
+
+## [2026-07-20 Session 188] — Session-setup guide starts on pill 1
+
+**Session goal:** Fix "How does this work?" showing on the third progress pill instead of the first when location/camera were already granted during onboarding.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Shrink pill `total` instead of advancing coachmark `active` when perms auto-skip | `sessionSetupGuideNavigation.ts` | ✅ |
+| Wire location/camera/complete screens to shared pill hook | `SessionSetupStep6/7Screen`, `SessionSetupCompleteScreen` | ✅ |
+| Unit tests for pill math | `sessionSetupGuideNavigation.test.ts` | ✅ |
+| Docs | `app.md`, `progress.md` | ✅ |
+
+### Key Decisions
+
+- Coachmarks always use linear active indices (guide=1 … free-kit=7); skipped permission screens reduce `total` (8 vs 10) so step5→free-hour still advances by one pill without jumping the intro to pill 3.
+
+### Verified
+
+- `npx tsc --noEmit` — clean
+- `sessionSetupGuideNavigation.test.ts` — 6 passed
 
 ---
 

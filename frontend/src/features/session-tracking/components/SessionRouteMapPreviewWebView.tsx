@@ -81,7 +81,14 @@ function buildHtml() {
           .setLngLat(end)
           .addTo(map);
       } else if (!showFinalEnd) {
-        replayMarker = new maplibregl.Marker({ element: createArrowMarkerElement(null), anchor: 'center' })
+        var replayHeading = null;
+        if (coords.length >= 2) {
+          replayHeading = computeBearingDegrees(
+            coords[coords.length - 2],
+            coords[coords.length - 1]
+          );
+        }
+        replayMarker = new maplibregl.Marker({ element: createArrowMarkerElement(replayHeading), anchor: 'center' })
           .setLngLat(end)
           .addTo(map);
       }
