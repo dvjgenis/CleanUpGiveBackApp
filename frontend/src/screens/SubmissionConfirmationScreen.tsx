@@ -8,8 +8,9 @@ import {
 import { Sanchez_400Regular } from '@expo-google-fonts/sanchez';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -129,6 +130,7 @@ export function SubmissionConfirmationScreen() {
   const timelineStyle = useFadeUpEnter(staggerDelay(3));
   const footerStyle = useFadeUpEnter(staggerDelay(4));
   const [session, setSession] = useState(() => getCompletedSessionSnapshot());
+  const scrollRef = useRef<ScrollView>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -213,12 +215,16 @@ export function SubmissionConfirmationScreen() {
       </SafeAreaView>
 
       <ScrollView
+        ref={scrollRef}
         style={s.scroll}
         contentContainerStyle={[
           s.scrollContent,
           { paddingBottom: FOOTER_HEIGHT + insets.bottom + SCROLL_FOOTER_GAP },
         ]}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+        automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
       >
         <Animated.View style={headerStyle}>
         <View style={s.detailsBlock}>
@@ -281,6 +287,7 @@ export function SubmissionConfirmationScreen() {
 
         <SessionNotesField
           sessionId={sessionId}
+          scrollRef={scrollRef}
           containerStyle={s.notesCard}
           titleStyle={s.sectionHeading}
           inputStyle={s.notesInput}

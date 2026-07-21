@@ -10,7 +10,7 @@ Static media and bundled prototype HTML.
 | `frontend/assets/figma/onboarding/` | Onboarding — `welcome-hero.png`, decorative SVGs (logo/burst/underline), social + notification glyph SVGs, `question-icon.svg` (ported to `QuestionIcon`), `success-check.svg` (Figma `137:36`, ported to `AccountCreatedCheck`), `location-permission-illustration.svg` / `camera-permission-illustration.svg` (ported to `LocationPermissionIllustration` / `CameraPermissionIllustration`) |
 | `frontend/assets/figma/tour/` | Tour illustrations — `home-stats.png`, `shop-showcase.png` (Trash Cleanup Kit product PNG, mint blob + transparent corners for forest-green tour bg), `track-map.png` (live map screenshot), `session-list.png` (session list screenshot); star/replay SVGs ported to `TourIcons.tsx` |
 | `frontend/assets/figma/home-screen/` | Home dashboard glyphs + `nav/` SVGs (sources for `navigation/icons/*.tsx`) |
-| `frontend/assets/figma/event-detail/` | Event detail icons + header/organizer/map media |
+| `frontend/assets/figma/event-detail/` | Event detail icons + header/organizer/map media; `header.png` also used as Upcoming Events card thumb for matching mock events |
 | `frontend/assets/figma/shop/` | Shop home product PNGs; flow subfolders `cart/`, `checkout/`, `confirmation/`, `donate/`, `product-detail/`; ported glyph originals in `_source/` |
 | `frontend/assets/figma/session-setup/` | Session setup form SVGs (`calendar`, `info-circle`, `back-chevron`) |
 | `frontend/assets/figma/live-session/` | Live tracker map controls + CTA SVGs; temporary Map Types thumbnails (`map-type-standard.png`, `map-type-satellite.png`, `map-type-hybrid.png`); `map-theme-light.svg` / `map-theme-dark.svg`; `weather/` subset from Figma Weather Icons (wi) |
@@ -21,7 +21,7 @@ Static media and bundled prototype HTML.
 | `frontend/assets/figma/feedback-screen/` | `FeedbackScreen` assets (Figma `1126:1516`) — rating glyphs `excited`/`happy`/`neutral`/`sad`/`very-sad.svg` (`fill="#BDCABA"`; `very-sad` hand-authored); header `chat.svg` + typing dots `big-bubble`/`medium-bubble`/`small-bubble.svg`; unused PNG exports (`chat-bubble.png`, `sparkle-*.png`) also live here |
 | `frontend/assets/figma/shared/` | Cross-screen brand mark / leftover vectors |
 | `frontend/assets/figma/{photo-checkpoint,photo-submitted,missed-checkpoint,submission-confirmation,permissions}/` | Pointers to raster/animation companions |
-| `frontend/assets/images/` | App icons, logos, product/scene images |
+| `frontend/assets/images/` | App icons, logos, product/scene images (`scenes/volunteers.png` + `screens/session-detail/photo-*.png` reused as Upcoming Events card thumbs) |
 | `frontend/assets/images/screens/<screen>/` | Per-flow rasters — `session-setup/`, `permissions/`, `photo-checkpoint/`, `photo-submitted/`, `missed-checkpoint/`, `submission-confirmation/`, `session-detail/` |
 | `frontend/assets/animations/` | Motion exports — `photo-submitted.lottie` (Camera Pop-Up, repeater-baked for RN; Metro `assetExts` includes `lottie`), `missed-checkpoint.json`, `hourglass.json` (free-trial paywall), plus alt JSON/GIF sources |
 | `frontend/assets/sounds/` | Short UI alert clips — `photo-checkpoint-alert.wav` (played when the 30-min checkpoint popup appears) |

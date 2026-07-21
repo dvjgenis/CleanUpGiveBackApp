@@ -42,7 +42,7 @@ import {
   RequestDataIcon,
   ShopBagIcon,
 } from '../components/AccountIcons';
-import { PersonalDetailsIcon } from '../components/PersonalDetailsIcon';
+import { PersonalDetailsIcon, PersonalDetailsRowIcon } from '../components/PersonalDetailsIcon';
 import { defaultAccountProfile, type AccountProfile } from '../mocks/account';
 import { firstTimeHomeDashboard } from '../mocks/home';
 import { layout, colors, fontFamilies, radius, shadows } from '../tokens';
@@ -297,10 +297,13 @@ export function AccountScreen({ profile = defaultAccountProfile }: { profile?: A
         <ProfileHero profile={heroProfile} />
 
         <View style={s.sections}>
-          <SectionCard title="Personal Details" headerIcon={<PersonalDetailsIcon width={15} height={15} />}>
+          <SectionCard
+            title="Personal Details"
+            headerIcon={<PersonalDetailsIcon width={15} height={15} color={colors.textPrimary} />}
+          >
             <AccountNavRow
               label="Edit Personal Details"
-              icon={<PersonalDetailsIcon width={16} height={16} />}
+              icon={<PersonalDetailsRowIcon width={16} height={16} />}
               onPress={() => router.push('/personal-details' as Href)}
             />
           </SectionCard>

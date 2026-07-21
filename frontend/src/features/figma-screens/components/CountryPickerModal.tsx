@@ -56,6 +56,14 @@ export function phonePlaceholder(country: Country): string {
   return 'Phone number';
 }
 
+/** Max TextInput length for formatted display (prevents extra digits flashing before slice). */
+export function phoneDisplayMaxLength(country: Country): number {
+  if (country.iso2 === 'US' || country.iso2 === 'CA') {
+    return formatPhoneDisplay('9'.repeat(country.maxDigits), country).length;
+  }
+  return country.maxDigits;
+}
+
 export function validatePhone(digits: string, country: Country): string | undefined {
   if (!digits) return 'Phone number is required';
   const minDigits = country.iso2 === 'US' || country.iso2 === 'CA' ? 10 : 4;

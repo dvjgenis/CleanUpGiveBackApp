@@ -17,6 +17,7 @@ export type RecentSessionSummary = {
 
 export type UpcomingEventSummary = {
   id: string;
+  title: string;
   day: string;
   month: string;
   weekday: string;
@@ -24,6 +25,8 @@ export type UpcomingEventSummary = {
   location: string;
   timeLabel: string;
   organization: string;
+  /** Local `require()` module for the card thumbnail (`expo-image` source). */
+  image: number;
 };
 
 export type WeeklyHoursDatum = {

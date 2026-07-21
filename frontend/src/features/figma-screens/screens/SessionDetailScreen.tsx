@@ -1,7 +1,8 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   ScrollView,
   Share,
   StyleSheet,
@@ -128,6 +129,7 @@ export function SessionDetailScreen() {
   const routeCoordinates = useSessionRouteCoordinates(sessionId);
 
   const [deleting, setDeleting] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
 
   const canDeleteSession =
     Boolean(sessionId) && !loading && !error && detail.status !== 'approved';
@@ -204,9 +206,13 @@ export function SessionDetailScreen() {
       </View>
 
       <ScrollView
+        ref={scrollRef}
         style={s.scroll}
         contentContainerStyle={{ paddingBottom: scrollBottomPad }}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+        automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
       >
         <View
           style={[s.mapHero, { width: windowWidth, height: MAP_HEIGHT }]}
@@ -254,7 +260,7 @@ export function SessionDetailScreen() {
             </>
           )}
 
-          <SessionNotesField sessionId={sessionId} />
+          <SessionNotesField sessionId={sessionId} scrollRef={scrollRef} />
         </View>
       </ScrollView>
 

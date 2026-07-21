@@ -12,6 +12,7 @@ import {
   prefetchTourGraphics,
   TOUR_GRAPHICS,
 } from '@/components/onboarding/tourAssets';
+import { TOUR_LAYOUT } from '@/components/onboarding/tourLayout';
 import { colors as C } from '@/features/figma-screens/tokens';
 
 /** Figma `home_tour` (137:527) — onboarding tour step 1. */
@@ -79,14 +80,14 @@ const s = StyleSheet.create({
   },
   safe: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingBottom: 24,
+    paddingHorizontal: TOUR_LAYOUT.horizontalPadding,
+    paddingBottom: TOUR_LAYOUT.bottomPadding,
     justifyContent: 'space-between',
   },
   body: {
     flex: 1,
-    gap: 15,
-    paddingTop: 12,
+    gap: TOUR_LAYOUT.graphicGapFromTitle,
+    paddingTop: TOUR_LAYOUT.bodyPaddingTop,
     alignItems: 'stretch',
   },
   title: {
@@ -101,6 +102,8 @@ const s = StyleSheet.create({
     color: C.primary,
   },
   illustrationStack: {
+    flex: 1,
+    justifyContent: 'flex-start',
     gap: 0,
   },
   chartImage: {

@@ -1,5 +1,11 @@
 import type { HomeDashboardData } from './home.types';
 
+const EVENT_IMAGE_HEADER = require('@/assets/figma/event-detail/header.png');
+const EVENT_IMAGE_VOLUNTEERS = require('@/assets/images/scenes/volunteers.png');
+const EVENT_IMAGE_PARK = require('@/assets/images/screens/session-detail/photo-2.png');
+const EVENT_IMAGE_TRAIL = require('@/assets/images/screens/session-detail/photo-4.png');
+const EVENT_IMAGE_FOUNTAIN = require('@/assets/images/screens/session-detail/photo-1.png');
+
 /**
  * Returning-user snapshot of the Home dashboard (Figma `406:291` with populated
  * mock data). Preserved when the live `home.ts` mock was switched to the
@@ -29,30 +35,17 @@ export const returningUserHomeDashboard: HomeDashboardData = {
   ],
   recentSessions: [
     {
-      id: 'rs-1',
-      title: 'City Park Trail Clean-up',
-      dateLabel: 'Oct 24',
-      timeLabel: '9:00-11:00 AM',
-      durationLabel: '2.5 hrs',
-    },
-    {
-      id: 'rs-2',
-      title: 'City Park Trail Clean-up',
-      dateLabel: 'Oct 24',
-      timeLabel: '9:00-11:00 AM',
-      durationLabel: '2.5 hrs',
-    },
-    {
-      id: 'rs-3',
-      title: 'City Park Trail Clean-up',
-      dateLabel: 'Oct 24',
-      timeLabel: '9:00-11:00 AM',
+      id: 'downtown-riverfront',
+      title: 'Downtown Riverfront Clean-up',
+      dateLabel: 'Jul 15',
+      timeLabel: '5:00–7:30 PM',
       durationLabel: '2.5 hrs',
     },
   ],
   recentEvents: [
     {
       id: 'ev-1',
+      title: 'Community Clean-Up Day',
       day: '15',
       month: 'June',
       weekday: 'Mon',
@@ -60,9 +53,11 @@ export const returningUserHomeDashboard: HomeDashboardData = {
       location: '600 E Algonquin Rd, Des Plaines, IL 60016, USA',
       timeLabel: '10:30 AM - 12:30 PM',
       organization: 'D214 Life Program',
+      image: EVENT_IMAGE_HEADER,
     },
     {
       id: 'ev-2',
+      title: 'Community Clean-Up Day',
       day: '15',
       month: 'June',
       weekday: 'Mon',
@@ -70,11 +65,13 @@ export const returningUserHomeDashboard: HomeDashboardData = {
       location: '600 E Algonquin Rd, Des Plaines, IL 60016, USA',
       timeLabel: '10:30 AM - 12:30 PM',
       organization: 'D214 Life Program',
+      image: EVENT_IMAGE_VOLUNTEERS,
     },
   ],
   allEvents: [
     {
       id: 'ev-1',
+      title: 'Community Clean-Up Day',
       day: '15',
       month: 'June',
       weekday: 'Mon',
@@ -82,9 +79,11 @@ export const returningUserHomeDashboard: HomeDashboardData = {
       location: '600 E Algonquin Rd, Des Plaines, IL 60016, USA',
       timeLabel: '10:30 AM - 12:30 PM',
       organization: 'D214 Life Program',
+      image: EVENT_IMAGE_HEADER,
     },
     {
       id: 'ev-2',
+      title: 'Community Clean-Up Day',
       day: '15',
       month: 'June',
       weekday: 'Mon',
@@ -92,9 +91,11 @@ export const returningUserHomeDashboard: HomeDashboardData = {
       location: '600 E Algonquin Rd, Des Plaines, IL 60016, USA',
       timeLabel: '10:30 AM - 12:30 PM',
       organization: 'D214 Life Program',
+      image: EVENT_IMAGE_VOLUNTEERS,
     },
     {
       id: 'ev-3',
+      title: 'McKinley Park Restoration',
       day: '22',
       month: 'June',
       weekday: 'Mon',
@@ -102,9 +103,11 @@ export const returningUserHomeDashboard: HomeDashboardData = {
       location: '1425 N McKinley Rd, Des Plaines, IL 60016, USA',
       timeLabel: '9:00 AM - 11:00 AM',
       organization: 'Park District Volunteer Corps',
+      image: EVENT_IMAGE_PARK,
     },
     {
       id: 'ev-4',
+      title: 'Mt Prospect Trail Clean-Up',
       day: '29',
       month: 'June',
       weekday: 'Mon',
@@ -112,9 +115,11 @@ export const returningUserHomeDashboard: HomeDashboardData = {
       location: '2200 E Algonquin Rd, Mt Prospect, IL 60056, USA',
       timeLabel: '1:00 PM - 3:30 PM',
       organization: 'Northwest Community Partners',
+      image: EVENT_IMAGE_TRAIL,
     },
     {
       id: 'ev-5',
+      title: 'Glenview Central Park Day',
       day: '6',
       month: 'July',
       weekday: 'Mon',
@@ -122,6 +127,7 @@ export const returningUserHomeDashboard: HomeDashboardData = {
       location: '800 Central Rd, Glenview, IL 60025, USA',
       timeLabel: '8:30 AM - 10:30 AM',
       organization: 'Glenview Green Team',
+      image: EVENT_IMAGE_FOUNTAIN,
     },
   ],
   notificationCount: 1,

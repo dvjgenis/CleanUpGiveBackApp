@@ -148,7 +148,7 @@ function ColorSwatches({
             <AnimatedPressable
               key={swatch.id}
               scaleTo={0.92}
-              style={[s.swatchOuter, active && s.swatchOuterActive]}
+              style={[s.swatchOuter, active && { borderColor: swatch.hex }]}
               onPress={() => onSelect(swatch.id)}
               accessibilityRole="button"
               accessibilityLabel={`${swatch.label} color`}
@@ -328,7 +328,6 @@ export function ProductDetailScreen() {
               accessibilityRole="button"
               accessibilityLabel={`Add ${quantity} ${product.name} to cart`}
             >
-              <ShopFeaturedCartIcon width={18} height={18} />
               <Text style={s.addToCartText}>Add to cart</Text>
             </AnimatedPressable>
           </View>
@@ -454,9 +453,6 @@ const s = StyleSheet.create({
     borderColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  swatchOuterActive: {
-    borderColor: colors.primary,
   },
   swatchFill: {
     width: 18,

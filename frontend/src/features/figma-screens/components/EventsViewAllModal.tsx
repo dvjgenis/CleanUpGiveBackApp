@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Modal,
   Pressable,
@@ -22,18 +22,30 @@ import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { durations, easing, modalSpring, sheetDismissSpring } from '@/motion';
 
 import type { UpcomingEventSummary } from '../mocks/home.types';
-import { formatEventMonthLabel } from '../utils/eventFormat';
 import { colors, fontFamilies, radius as R } from '../tokens';
 import {
-  CloseIcon,
-  EventCalendarDayBadge,
-  EventLocationIcon,
-  EventOrganizationIcon,
-  TimeIcon,
-} from './HomeIcons';
+  filterEventsByDateRange,
+} from '../utils/eventFormat';
+import { startOfDay } from '../utils/weekCalendar';
+import { CloseIcon } from './HomeIcons';
+import { ExportDateField } from './ExportDateField';
+import { UpcomingEventCard } from './UpcomingEventCard';
 
 /** Travel distance for slide — sheet height plus bleed so the panel starts fully off-screen. */
 const SHEET_BOTTOM_BLEED = 48;
+const HEADER_HEIGHT = 61;
+const FILTER_HEIGHT = 100;
+
+function startOfCurrentYear(reference = new Date()): Date {
+  return startOfDay(new Date(reference.getFullYear(), 0, 1));
+}
+
+function defaultEventFilterRange(reference = new Date()) {
+  return {
+    start: startOfCurrentYear(reference),
+    end: startOfDay(reference),
+  };
+}
 
 type Props = {
   visible: boolean;
@@ -42,89 +54,70 @@ type Props = {
   onSelectEvent?: (eventId: string) => void;
 };
 
-function EventCalendarBadge({
-  day,
-  month,
-  weekday,
-  year,
-}: {
-  day: string;
-  month: string;
-  weekday: string;
-  year: string;
-}) {
-  return (
-    <View style={s.calBadgeRow}>
-      <EventCalendarDayBadge day={day} />
-      <View style={s.calMonthCol}>
-        <Text style={s.calMonth}>{formatEventMonthLabel(month)}</Text>
-        <Text style={s.calWeekday}>{weekday}</Text>
-        <Text style={s.calYear}>{year}</Text>
-      </View>
-    </View>
-  );
-}
-
-function EventCard({
-  event,
-  onPress,
-}: {
-  event: UpcomingEventSummary;
-  onPress?: () => void;
-}) {
-  const content = (
-    <>
-      <EventCalendarBadge
-        day={event.day}
-        month={event.month}
-        weekday={event.weekday}
-        year={event.year}
-      />
-      <View style={s.eventDetails}>
-        <View style={s.eventDetailRow}>
-          <EventLocationIcon />
-          <Text style={s.eventDetailText} numberOfLines={2}>
-            {event.location}
-          </Text>
-        </View>
-        <View style={s.eventDetailRow}>
-          <TimeIcon />
-          <Text style={s.eventDetailText}>{event.timeLabel}</Text>
-        </View>
-        <View style={s.eventDetailRow}>
-          <EventOrganizationIcon />
-          <Text style={s.eventDetailText}>{event.organization}</Text>
-        </View>
-      </View>
-    </>
-  );
-
-  if (!onPress) {
-    return <View style={s.eventCard}>{content}</View>;
-  }
-
-  return (
-    <AnimatedPressable
-      scaleTo={0.98}
-      style={s.eventCard}
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={`Event on ${event.month} ${event.day} at ${event.location}`}
-    >
-      {content}
-    </AnimatedPressable>
-  );
-}
 
 export function EventsViewAllModal({ visible, events, onClose, onSelectEvent }: Props) {
   const { height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const sheetMaxHeight = windowHeight * 0.82;
-  const scrollMaxHeight = sheetMaxHeight - 61;
+  const scrollMaxHeight = Math.max(180, sheetMaxHeight - HEADER_HEIGHT - FILTER_HEIGHT);
   const reducedMotion = useReducedMotion();
   const dismissTravel = sheetMaxHeight + insets.bottom + SHEET_BOTTOM_BLEED;
   const translateY = useSharedValue(dismissTravel);
   const backdropOpacity = useSharedValue(0);
+
+  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [endDate, setEndDate] = useState<Date | null>(null);
+  const [filtersTouched, setFiltersTouched] = useState(false);
+
+  useEffect(() => {
+    if (!visible) {
+      setStartDate(null);
+      setEndDate(null);
+      setFiltersTouched(false);
+      return;
+    }
+
+    const { start, end } = defaultEventFilterRange();
+    setStartDate(start);
+    setEndDate(end);
+    setFiltersTouched(false);
+  }, [visible]);
+
+  const filteredEvents = useMemo(() => {
+    if (!filtersTouched) {
+      return events;
+    }
+
+    if (!startDate || !endDate) {
+      return events;
+    }
+
+    return filterEventsByDateRange(events, startDate, endDate);
+  }, [endDate, events, filtersTouched, startDate]);
+
+  function handleStartDateChange(next: Date) {
+    const day = startOfDay(next);
+    setFiltersTouched(true);
+    setStartDate(day);
+    setEndDate((current) => {
+      if (!current || day.getTime() > current.getTime()) {
+        return day;
+      }
+      return current;
+    });
+  }
+
+  function handleEndDateChange(next: Date) {
+    const day = startOfDay(next);
+    setFiltersTouched(true);
+    setEndDate(day);
+    setStartDate((current) => {
+      if (!current || day.getTime() < current.getTime()) {
+        return day;
+      }
+      return current;
+    });
+  }
 
   const dismiss = useCallback(() => {
     if (reducedMotion) {
@@ -191,6 +184,25 @@ export function EventsViewAllModal({ visible, events, onClose, onSelectEvent }: 
               </AnimatedPressable>
             </View>
 
+            <View style={s.filters}>
+              <View style={s.dateCol}>
+                <ExportDateField
+                  label="From"
+                  value={startDate ?? startOfCurrentYear()}
+                  onChange={handleStartDateChange}
+                  accessibilityLabel="Filter events from date"
+                />
+              </View>
+              <View style={s.dateCol}>
+                <ExportDateField
+                  label="To"
+                  value={endDate ?? startOfDay(new Date())}
+                  onChange={handleEndDateChange}
+                  accessibilityLabel="Filter events to date"
+                />
+              </View>
+            </View>
+
             <ScrollView
               style={[s.scroll, { maxHeight: scrollMaxHeight }]}
               contentContainerStyle={[s.scrollContent, { paddingBottom: 24 + insets.bottom }]}
@@ -199,13 +211,17 @@ export function EventsViewAllModal({ visible, events, onClose, onSelectEvent }: 
               nestedScrollEnabled
               keyboardShouldPersistTaps="handled"
             >
-              {events.map((event) => (
-                <EventCard
-                  key={event.id}
-                  event={event}
-                  onPress={onSelectEvent ? () => onSelectEvent(event.id) : undefined}
-                />
-              ))}
+              {filteredEvents.length === 0 ? (
+                <Text style={s.emptyText}>No events match your date range.</Text>
+              ) : (
+                filteredEvents.map((event) => (
+                  <UpcomingEventCard
+                    key={event.id}
+                    event={event}
+                    onPress={onSelectEvent ? () => onSelectEvent(event.id) : undefined}
+                  />
+                ))
+              )}
             </ScrollView>
           </View>
           <View style={[s.sheetBleed, { height: insets.bottom + SHEET_BOTTOM_BLEED }]} />
@@ -235,6 +251,7 @@ const s = StyleSheet.create({
     paddingTop: 16,
     overflow: 'hidden',
     flexDirection: 'column',
+    flexShrink: 1,
   },
   sheetBleed: {
     backgroundColor: colors.white,
@@ -260,6 +277,26 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: R.full,
   },
+  filters: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderOutline,
+  },
+  dateCol: {
+    flex: 1,
+  },
+  emptyText: {
+    fontFamily: fontFamilies.notoSansRegular,
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.textNavInactive,
+    textAlign: 'center',
+    paddingVertical: 24,
+  },
   scroll: {
     flexGrow: 0,
     flexShrink: 1,
@@ -269,57 +306,5 @@ const s = StyleSheet.create({
     paddingTop: 16,
     gap: 16,
     paddingBottom: 24,
-  },
-  eventCard: {
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.borderOutline,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 14,
-    minHeight: 111,
-    flexDirection: 'row',
-    gap: 10,
-  },
-  calBadgeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  calMonthCol: {
-    gap: 4,
-    minWidth: 34,
-    alignItems: 'center',
-  },
-  calMonth: {
-    fontFamily: fontFamilies.notoSansMedium,
-    fontSize: 14,
-    color: colors.primary,
-  },
-  calWeekday: {
-    fontFamily: fontFamilies.notoSansRegular,
-    fontSize: 12,
-    color: colors.primary,
-  },
-  calYear: {
-    fontFamily: fontFamilies.notoSansRegular,
-    fontSize: 11,
-    color: colors.primary,
-  },
-  eventDetails: {
-    flex: 1,
-    gap: 10,
-  },
-  eventDetailRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 9,
-  },
-  eventDetailText: {
-    flex: 1,
-    fontFamily: fontFamilies.ibmPlexSansRegular,
-    fontSize: 12,
-    color: colors.textTertiary,
-    lineHeight: 16,
   },
 });

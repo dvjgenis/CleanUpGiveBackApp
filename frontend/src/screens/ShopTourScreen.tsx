@@ -11,6 +11,7 @@ import {
   prefetchTourGraphics,
   TOUR_GRAPHICS,
 } from '@/components/onboarding/tourAssets';
+import { TOUR_LAYOUT } from '@/components/onboarding/tourLayout';
 import { colors as C } from '@/features/figma-screens/tokens';
 
 /** Figma `shop_tour` (137:115) — onboarding tour step 2. */
@@ -63,14 +64,14 @@ const s = StyleSheet.create({
   },
   safe: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingBottom: 24,
+    paddingHorizontal: TOUR_LAYOUT.horizontalPadding,
+    paddingBottom: TOUR_LAYOUT.bottomPadding,
     justifyContent: 'space-between',
   },
   body: {
     flex: 1,
-    gap: 24,
-    paddingTop: 12,
+    gap: TOUR_LAYOUT.graphicGapFromTitle,
+    paddingTop: TOUR_LAYOUT.bodyPaddingTop,
   },
   title: {
     fontFamily: 'Sanchez_400Regular',
@@ -81,7 +82,7 @@ const s = StyleSheet.create({
   showcaseWrap: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
   },
   showcase: {
     width: '100%',

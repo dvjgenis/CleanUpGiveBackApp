@@ -4,15 +4,16 @@ import { useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
-import { BottomNavBar } from '@/components/navigation/BottomNavBar';
 import { SessionSetupTopAppBar } from '@/components/session-setup/SessionSetupTopAppBar';
-import { useLiveSession } from '@/features/session-tracking/liveSessionStore';
 
 import { RadioCheckedIcon, RadioEmptyIcon } from '../components/AccountIcons';
 import { ExportDateField } from '../components/ExportDateField';
-import { layout, colors, fontFamilies, radius } from '../tokens';
+import { colors, fontFamilies, radius, shadows } from '../tokens';
 import { toExportDate } from '../utils/exportDate';
 import { startOfDay } from '../utils/weekCalendar';
+
+const FOOTER_PAD_TOP = 18;
+const PRIMARY_FOOTER_BTN_HEIGHT = 52;
 
 
 type ExportStatus = 'approved' | 'underReview' | 'notApproved';
@@ -34,7 +35,6 @@ const STATUS_ROWS: {
 export function ExportServiceRecordScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { isActive } = useLiveSession();
 
   const [startDate, setStartDate] = useState(() => toExportDate(new Date(2026, 0, 1)));
   const [endDate, setEndDate] = useState(() => toExportDate(new Date(2026, 6, 10)));
@@ -54,8 +54,8 @@ export function ExportServiceRecordScreen() {
   const startDay = toExportDate(startDate);
   const endDay = toExportDate(endDate);
 
-  const bottomInset = Math.max(insets.bottom, 0);
-  const scrollBottomPad = bottomInset + layout.bottomNavHeight + 32;
+  const footerBottom = Math.max(insets.bottom, 12);
+  const scrollBottomPad = FOOTER_PAD_TOP + PRIMARY_FOOTER_BTN_HEIGHT + footerBottom + 16;
 
   function toggleStatus(id: ExportStatus) {
     setStatuses((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -173,7 +173,9 @@ export function ExportServiceRecordScreen() {
             </AnimatedPressable>
           </View>
         </View>
+      </ScrollView>
 
+      <View style={[s.footer, { paddingBottom: footerBottom }]}>
         <AnimatedPressable
           scaleTo={0.98}
           onPress={handleExport}
@@ -183,23 +185,6 @@ export function ExportServiceRecordScreen() {
         >
           <Text style={s.exportLabel}>Export Record</Text>
         </AnimatedPressable>
-      </ScrollView>
-
-      <View style={[s.bottomStack, { paddingBottom: bottomInset }]}>
-        <BottomNavBar
-          activeTab="profile"
-          onHomePress={() => router.replace('/')}
-          onShopPress={() => {}}
-          onTrackPress={() => {
-            if (isActive) {
-              router.push('/live-session');
-            } else {
-              router.push('/session-setup-guide');
-            }
-          }}
-          onSessionsPress={() => router.push('/sessions-list' as Href)}
-          onProfilePress={() => router.replace('/account' as Href)}
-        />
       </View>
     </View>
   );
@@ -216,7 +201,6 @@ const s = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 16,
-    paddingBottom: 32,
     gap: 24,
   },
   intro: {
@@ -302,22 +286,25 @@ const s = StyleSheet.create({
     textAlign: 'center',
   },
   exportBtn: {
-    height: 56,
+    height: PRIMARY_FOOTER_BTN_HEIGHT,
     backgroundColor: colors.primary,
     borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
   exportLabel: {
-    fontFamily: fontFamilies.ibmPlexSansSemiBold,
-    fontSize: 16,
-    color: colors.textOnPrimary,
+    fontFamily: fontFamilies.notoSansSemiBold,
+    fontSize: 14,
+    color: colors.white,
   },
-  bottomStack: {
+  footer: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
     backgroundColor: colors.white,
+    paddingTop: FOOTER_PAD_TOP,
+    paddingHorizontal: 16,
+    ...shadows.navBottom,
   },
 });

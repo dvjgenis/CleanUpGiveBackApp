@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { TourNavButtons } from '@/components/onboarding/TourNavButtons';
 import { TOUR_GRAPHICS } from '@/components/onboarding/tourAssets';
+import { TOUR_LAYOUT } from '@/components/onboarding/tourLayout';
 import { colors as C } from '@/features/figma-screens/tokens';
 
 /** Figma `track_tour` (137:431) — onboarding tour step 3. */
@@ -60,14 +61,14 @@ const s = StyleSheet.create({
   },
   safe: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingBottom: 24,
+    paddingHorizontal: TOUR_LAYOUT.horizontalPadding,
+    paddingBottom: TOUR_LAYOUT.bottomPadding,
     justifyContent: 'space-between',
   },
   body: {
     flex: 1,
-    gap: 44,
-    paddingTop: 12,
+    gap: TOUR_LAYOUT.graphicGapFromTitle,
+    paddingTop: TOUR_LAYOUT.bodyPaddingTop,
   },
   title: {
     fontFamily: 'Sanchez_400Regular',

@@ -7,6 +7,7 @@ import {
   CountryPickerModal,
   digitsOnly,
   formatPhoneDisplay,
+  phoneDisplayMaxLength,
   phonePlaceholder,
   validatePhone,
 } from '@/features/figma-screens/components/CountryPickerModal';
@@ -160,6 +161,7 @@ export function AccountPhoneScreen() {
                         }
                         onBlur={() => setTouched((t) => ({ ...t, phone: true }))}
                         keyboardType="phone-pad"
+                        maxLength={phoneDisplayMaxLength(country)}
                         placeholder={phonePlaceholder(country)}
                         placeholderTextColor={C.textNavInactive}
                         accessibilityLabel="Phone number"
