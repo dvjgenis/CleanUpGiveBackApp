@@ -28,6 +28,7 @@ import {
 
 import { EventsViewAllModal } from '../components/EventsViewAllModal';
 import { RecentSessionCard } from '../components/RecentSessionCard';
+import { UpcomingEventCard } from '../components/UpcomingEventCard';
 import { ServiceHoursWeekPicker } from '../components/ServiceHoursWeekPicker';
 import {
   EventCalendarDayBadge,
@@ -218,7 +219,7 @@ function RecentSessionsSection({
         )}
       </View>
       {recentSessions.length > 0 ? (
-        <View style={s.listGap}>
+        <View style={s.sessionListGap}>
           {recentSessions.map((session) => (
             <RecentSessionCard
               key={session.id}
@@ -238,6 +239,7 @@ function RecentSessionsSection({
   );
 }
 
+// ─── Legacy event card (preserved for easy revert) ───────────────────────────
 function EventCalendarBadge({ day, month, weekday }: { day: string; month: string; weekday: string }) {
   return (
     <View style={s.calBadgeRow}>
@@ -249,6 +251,43 @@ function EventCalendarBadge({ day, month, weekday }: { day: string; month: strin
     </View>
   );
 }
+
+/** @deprecated Use EventCard instead. Kept as revert fallback. */
+function EventCardLegacy({
+  event,
+  onPress,
+}: {
+  event: HomeDashboardData['recentEvents'][number];
+  onPress: () => void;
+}) {
+  return (
+    <AnimatedPressable
+      scaleTo={0.98}
+      style={s.eventCard}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`Event on ${event.month} ${event.day} at ${event.location}`}
+    >
+      <EventCalendarBadge day={event.day} month={event.month} weekday={event.weekday} />
+      <View style={s.eventDetails}>
+        <View style={s.eventDetailRow}>
+          <EventLocationIcon />
+          <Text style={s.eventDetailText} numberOfLines={2}>{event.location}</Text>
+        </View>
+        <View style={s.eventDetailRow}>
+          <TimeIcon />
+          <Text style={s.eventDetailText}>{event.timeLabel}</Text>
+        </View>
+        <View style={s.eventDetailRow}>
+          <EventOrganizationIcon />
+          <Text style={s.eventDetailText}>{event.organization}</Text>
+        </View>
+      </View>
+    </AnimatedPressable>
+  );
+}
+// ─── New event card ───────────────────────────────────────────────────────────
+
 
 function RecentEventsSection({
   recentEvents,
@@ -284,32 +323,11 @@ function RecentEventsSection({
       </View>
       <View style={s.listGap}>
         {recentEvents.map((event) => (
-          <AnimatedPressable
+          <UpcomingEventCard
             key={event.id}
-            scaleTo={0.98}
-            style={s.eventCard}
+            event={event}
             onPress={() => openEventDetail(event.id)}
-            accessibilityRole="button"
-            accessibilityLabel={`Event on ${event.month} ${event.day} at ${event.location}`}
-          >
-            <EventCalendarBadge day={event.day} month={event.month} weekday={event.weekday} />
-            <View style={s.eventDetails}>
-              <View style={s.eventDetailRow}>
-                <EventLocationIcon />
-                <Text style={s.eventDetailText} numberOfLines={2}>
-                  {event.location}
-                </Text>
-              </View>
-              <View style={s.eventDetailRow}>
-                <TimeIcon />
-                <Text style={s.eventDetailText}>{event.timeLabel}</Text>
-              </View>
-              <View style={s.eventDetailRow}>
-                <EventOrganizationIcon />
-                <Text style={s.eventDetailText}>{event.organization}</Text>
-              </View>
-            </View>
-          </AnimatedPressable>
+          />
         ))}
       </View>
       <EventsViewAllModal
@@ -659,7 +677,7 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: colors.chipBg,
+    backgroundColor: colors.accentLime,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: R.full,
@@ -713,7 +731,7 @@ const s = StyleSheet.create({
   },
   rowBetween: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
   },
   hoursValue: {
@@ -764,6 +782,10 @@ const s = StyleSheet.create({
   listGap: {
     gap: 20,
   },
+  sessionListGap: {
+    gap: 10,
+  },
+  // Legacy event card (revert fallback)
   eventCard: {
     backgroundColor: colors.white,
     borderWidth: 1,

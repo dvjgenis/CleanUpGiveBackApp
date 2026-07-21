@@ -25,7 +25,7 @@ export function EmptyCartToast({ visible }: EmptyCartToastProps) {
       accessibilityLiveRegion="polite"
     >
       <Text style={s.toastTitle}>Your cart is empty</Text>
-      <Text style={s.toastLine}>Add an item from the shop first</Text>
+      <Text style={s.toastLine}>Add an item from the shop first.</Text>
     </Animated.View>
   );
 }

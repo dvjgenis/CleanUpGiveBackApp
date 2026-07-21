@@ -4,6 +4,115 @@ Session-by-session progress tracker. Distinct from `notes/journey.md` (correctio
 
 ---
 
+---
+
+## [2026-07-21] — Tour graphic header spacing
+
+**Session goal:** Align graphic-to-title distance across all onboarding tour slides.
+
+| Task | File(s) | Status |
+|---|---|---|
+| Shared `TOUR_LAYOUT.graphicGapFromTitle` (24px) | `tourLayout.ts` | ✅ |
+| Home/Shop/Track/Session tours use fixed gap + `flex-start` graphic anchor | `HomeTourScreen.tsx`, `ShopTourScreen.tsx`, `TrackTourScreen.tsx`, `SessionTourScreen.tsx` | ✅ |
+| Docs | `components.md`, `progress.md` | ✅ |
+
+---
+
+## [2026-07-21] — Home tour graphic position
+
+**Session goal:** Move the home tour dashboard graphic closer to the Continue button.
+
+| Task | File(s) | Status |
+|---|---|---|
+| Illustration stack anchored to bottom of body flex area | `HomeTourScreen.tsx` | ✅ |
+
+---
+
+## [2026-07-21] — Phone field max-length flash fix
+
+**Session goal:** Prevent an 11th digit from briefly appearing in US/CA formatted phone inputs.
+
+| Task | File(s) | Status |
+|---|---|---|
+| `phoneDisplayMaxLength` helper + `maxLength` on phone `TextInput` | `CountryPickerModal.tsx`, `PersonalDetailsScreen.tsx`, `AccountPhoneScreen.tsx` | ✅ |
+| Docs | `components.md`, `progress.md` | ✅ |
+
+---
+
+## [2026-07-21] — All Events date filters
+
+**Session goal:** Add From/To date filters in the All Events modal (home → View All).
+
+| Task | File(s) | Status |
+|---|---|---|
+| Date parse/filter helpers | `utils/eventFormat.ts` | ✅ |
+| From/To fields + filtered list + empty state | `EventsViewAllModal.tsx` | ✅ |
+| Docs | `components.md`, `progress.md` | ✅ |
+
+---
+
+## [2026-07-21] — Personal Details + Export footer matches session detail
+
+**Session goal:** Align Save Changes and Export Record footers with session detail sticky footer (white bar, navBottom shadow, 52px primary CTA).
+
+| Task | File(s) | Status |
+|---|---|---|
+| Absolute white footer + scroll bottom pad | `PersonalDetailsScreen.tsx`, `ExportServiceRecordScreen.tsx` | ✅ |
+| Docs | `components.md`, `progress.md` | ✅ |
+
+---
+
+## [2026-07-21] — Export Service Record footer (no navbar)
+
+**Session goal:** Remove bottom nav from Export Service Record; match Personal Details sticky footer only.
+
+| Task | File(s) | Status |
+|---|---|---|
+| Drop `BottomNavBar`; `SafeAreaView` bottom + footer `paddingBottom: 16 + insets.bottom` | `ExportServiceRecordScreen.tsx` | ✅ |
+| Docs | `components.md`, `progress.md` | ✅ |
+
+---
+
+## [2026-07-21] — Export Service Record sticky footer
+
+**Session goal:** Match Personal Details sticky footer pattern on Export Service Record so Export Record CTA is fully visible above bottom nav.
+
+| Task | File(s) | Status |
+|---|---|---|
+| Move Export Record button out of ScrollView into footer; flex layout for nav (no absolute overlap) | `ExportServiceRecordScreen.tsx` | ✅ |
+| Docs | `components.md`, `progress.md` | ✅ |
+
+---
+
+## [2026-07-21] — Session detail footer matches event detail
+
+**Session goal:** Align session detail sticky footer with event detail (upcoming event tap-through).
+
+| Task | File(s) | Status |
+|---|---|---|
+| White footer bar + `navBottom` shadow; outlined delete + `RegisterButton` New Session | `SessionDetailScreen.tsx` | ✅ |
+| Docs | `components.md`, `progress.md` | ✅ |
+
+**A:** Replaced plain text delete link + green CTA on `bgApp` with the same two-row footer pattern as `EventDetailScreen` (secondary outlined action above full-width primary).
+**P:** Verify from Home recent session → session detail on device.
+
+---
+
+## [2026-07-21] — Upcoming Events card real photos
+
+**Session goal:** Replace colored-initials placeholders on Upcoming Events cards with real photos; enlarge thumb height.
+
+| Task | File(s) | Status |
+|---|---|---|
+| Add `image` to `UpcomingEventSummary` + mock assets | `home.types.ts`, `home.ts`, `home.returningUser.ts` | ✅ |
+| Render `expo-image` thumb 72×88 (was 56×56 initials) | `UpcomingEventCard.tsx` | ✅ |
+| Docs | `components.md`, `assets.md`, `progress.md` | ✅ |
+
+**A:** Wired header / volunteers / park / trail scene requires into event mocks; card uses `contentFit="cover"`.
+**P:** Verify on Home Upcoming Events + View All modal.
+
+---
+
 ## [2026-07-20 Session 215] — Remove tracker banner; photo → setup form
 
 **Session goal:** Drop the live-tracker route-tracking banner; reverse start order so first dual photo precedes the session setup form (activity / description / etc.).

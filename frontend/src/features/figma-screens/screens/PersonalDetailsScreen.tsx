@@ -11,7 +11,7 @@ import {
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { SessionSetupCalendarIcon } from '@/components/session-setup/icons/SessionSetupCalendarIcon';
@@ -31,6 +31,7 @@ import {
   CountryPickerModal,
   digitsOnly,
   formatPhoneDisplay,
+  phoneDisplayMaxLength,
   phonePlaceholder,
   validatePhone,
 } from '../components/CountryPickerModal';
@@ -50,6 +51,8 @@ import {
 } from '@/features/onboarding/onboardingStore';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const FOOTER_PAD_TOP = 18;
+const PRIMARY_FOOTER_BTN_HEIGHT = 52;
 
 function validateName(value: string): string | undefined {
   const trimmed = value.trim();
@@ -111,6 +114,9 @@ export function PersonalDetailsScreen() {
 
   const phoneDisplay = formatPhoneDisplay(digits, country);
 
+  const footerBottom = Math.max(insets.bottom, 12);
+  const scrollBottomPad = FOOTER_PAD_TOP + PRIMARY_FOOTER_BTN_HEIGHT + footerBottom + 16;
+
   const dismissKeyboard = () => Keyboard.dismiss();
 
   const commitTypedBirthday = () => {
@@ -163,7 +169,7 @@ export function PersonalDetailsScreen() {
   }
 
   return (
-    <SafeAreaView style={s.root} edges={['bottom']}>
+    <View style={s.root}>
       <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={[s.topBar, shadows.barTop, { paddingTop: insets.top + 14 }]}>
           <AnimatedPressable
@@ -182,7 +188,7 @@ export function PersonalDetailsScreen() {
         </View>
 
         <ScrollView
-          contentContainerStyle={s.scroll}
+          contentContainerStyle={[s.scroll, { paddingBottom: scrollBottomPad }]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
@@ -266,6 +272,7 @@ export function PersonalDetailsScreen() {
                         onChangeText={(text) => setDigits(digitsOnly(text, country.maxDigits))}
                         onBlur={() => setTouched((t) => ({ ...t, phone: true }))}
                         keyboardType="phone-pad"
+                        maxLength={phoneDisplayMaxLength(country)}
                         placeholder={phonePlaceholder(country)}
                         placeholderTextColor={colors.textNavInactive}
                         accessibilityLabel="Phone number"
@@ -356,18 +363,19 @@ export function PersonalDetailsScreen() {
             </View>
           </Pressable>
         </ScrollView>
-
-        <View style={[s.footer, { paddingBottom: 16 + insets.bottom }]}>
-          <AnimatedPressable
-            style={s.saveBtn}
-            onPress={handleSave}
-            accessibilityRole="button"
-            accessibilityLabel="Save personal details"
-          >
-            <Text style={s.saveBtnLabel}>Save Changes</Text>
-          </AnimatedPressable>
-        </View>
       </KeyboardAvoidingView>
+
+      <View style={[s.footer, { paddingBottom: footerBottom }]}>
+        <AnimatedPressable
+          scaleTo={0.98}
+          style={s.saveBtn}
+          onPress={handleSave}
+          accessibilityRole="button"
+          accessibilityLabel="Save personal details"
+        >
+          <Text style={s.saveBtnLabel}>Save Changes</Text>
+        </AnimatedPressable>
+      </View>
 
       <CountryPickerModal
         visible={countryPickerOpen}
@@ -396,7 +404,7 @@ export function PersonalDetailsScreen() {
         buttonLabel="Done"
         onPress={handleSaveSuccessDismiss}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -457,7 +465,6 @@ const s = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: 16,
     paddingTop: 20,
-    paddingBottom: 24,
   },
   content: {
     flexGrow: 1,
@@ -593,12 +600,17 @@ const s = StyleSheet.create({
     color: colors.primary,
   },
   footer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: colors.white,
+    paddingTop: FOOTER_PAD_TOP,
     paddingHorizontal: 16,
-    paddingTop: 24,
-    backgroundColor: colors.bgApp,
+    ...shadows.navBottom,
   },
   saveBtn: {
-    height: 56,
+    height: PRIMARY_FOOTER_BTN_HEIGHT,
     backgroundColor: colors.primary,
     borderRadius: radius.md,
     alignItems: 'center',
@@ -606,7 +618,7 @@ const s = StyleSheet.create({
   },
   saveBtnLabel: {
     fontFamily: fontFamilies.notoSansSemiBold,
-    fontSize: 16,
-    color: colors.textOnPrimary,
+    fontSize: 14,
+    color: colors.white,
   },
 });

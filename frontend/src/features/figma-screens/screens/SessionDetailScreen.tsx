@@ -33,12 +33,13 @@ import {
   SessionDetailShareIcon,
 } from '../components/SessionDetailIcons';
 import { sessionStatusBadgeLabel } from '../mocks/sessionDetail';
-import { layout, colors, fontFamilies, shadows } from '../tokens';
+import { layout, colors, fontFamilies, radius, shadows } from '../tokens';
 
 const MAP_HEIGHT = 190;
-const CTA_HEIGHT = 50;
-const FOOTER_PAD_TOP = 16;
-const FOOTER_PAD_BOTTOM = 24;
+const FOOTER_PAD_TOP = 18;
+const SECONDARY_FOOTER_BTN_HEIGHT = 52;
+const PRIMARY_FOOTER_BTN_HEIGHT = 52;
+const FOOTER_ACTIONS_GAP = 15;
 
 function SessionDetailTopBar({
   onBack,
@@ -132,9 +133,10 @@ export function SessionDetailScreen() {
     Boolean(sessionId) && !loading && !error && detail.status !== 'approved';
 
   const footerBottom = Math.max(insets.bottom, 12);
-  const footerExtra = canDeleteSession ? 44 : 0;
-  const scrollBottomPad =
-    FOOTER_PAD_TOP + CTA_HEIGHT + FOOTER_PAD_BOTTOM + footerBottom + footerExtra + 96;
+  const footerContentHeight = canDeleteSession
+    ? SECONDARY_FOOTER_BTN_HEIGHT + FOOTER_ACTIONS_GAP + PRIMARY_FOOTER_BTN_HEIGHT
+    : PRIMARY_FOOTER_BTN_HEIGHT;
+  const scrollBottomPad = FOOTER_PAD_TOP + footerContentHeight + footerBottom + 16;
   const contentWidth = Math.min(windowWidth - 32, 358);
 
   const sessionPhotos: SessionPhotosSectionItem[] = useMemo(
@@ -257,31 +259,33 @@ export function SessionDetailScreen() {
       </ScrollView>
 
       <View style={[s.footer, { paddingBottom: footerBottom }]}>
-        {canDeleteSession ? (
+        <View style={s.footerActions}>
+          {canDeleteSession ? (
+            <AnimatedPressable
+              scaleTo={0.98}
+              onPress={handleDeleteSession}
+              disabled={deleting}
+              accessibilityRole="button"
+              accessibilityLabel="Delete session"
+              style={s.deleteBtn}
+            >
+              {deleting ? (
+                <ActivityIndicator color={colors.statusDeclinedText} />
+              ) : (
+                <Text style={s.deleteLabel}>Delete session</Text>
+              )}
+            </AnimatedPressable>
+          ) : null}
           <AnimatedPressable
             scaleTo={0.98}
-            onPress={handleDeleteSession}
-            disabled={deleting}
+            style={s.newSessionBtn}
+            onPress={() => router.push('/session-setup-guide' as Href)}
             accessibilityRole="button"
-            accessibilityLabel="Delete session"
-            style={s.deleteBtn}
+            accessibilityLabel="Start a new session"
           >
-            {deleting ? (
-              <ActivityIndicator color={colors.statusDeclinedText} />
-            ) : (
-              <Text style={s.deleteLabel}>Delete session</Text>
-            )}
+            <Text style={s.newSessionLabel}>New Session</Text>
           </AnimatedPressable>
-        ) : null}
-        <AnimatedPressable
-          scaleTo={0.98}
-          onPress={() => router.push('/session-setup-guide' as Href)}
-          accessibilityRole="button"
-          accessibilityLabel="Start a new session"
-          style={s.cta}
-        >
-          <Text style={s.ctaLabel}>New Session</Text>
-        </AnimatedPressable>
+        </View>
       </View>
     </View>
   );
@@ -339,8 +343,8 @@ const s = StyleSheet.create({
     borderRadius: 0,
   },
   mainCard: {
-    marginTop: 16,
-    gap: 30,
+    marginTop: 12,
+    gap: 20,
     paddingHorizontal: 0,
   },
   loadingText: {
@@ -429,32 +433,38 @@ const s = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    paddingHorizontal: 16,
+    backgroundColor: colors.white,
     paddingTop: FOOTER_PAD_TOP,
-    backgroundColor: colors.bgApp,
-    gap: 12,
+    paddingHorizontal: 16,
+    ...shadows.navBottom,
+  },
+  footerActions: {
+    gap: FOOTER_ACTIONS_GAP,
+    alignItems: 'stretch',
   },
   deleteBtn: {
-    minHeight: 32,
+    height: SECONDARY_FOOTER_BTN_HEIGHT,
+    borderWidth: 1,
+    borderColor: colors.statusDeclinedBorder,
+    borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
   deleteLabel: {
     fontFamily: fontFamilies.notoSansSemiBold,
-    fontSize: 15,
+    fontSize: 14,
     color: colors.statusDeclinedText,
   },
-  cta: {
-    height: CTA_HEIGHT,
-    borderRadius: 12,
+  newSessionBtn: {
+    height: PRIMARY_FOOTER_BTN_HEIGHT,
     backgroundColor: colors.primary,
+    borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 24,
   },
-  ctaLabel: {
+  newSessionLabel: {
     fontFamily: fontFamilies.notoSansSemiBold,
-    fontSize: 16,
-    color: colors.textOnPrimary,
+    fontSize: 14,
+    color: colors.white,
   },
 });
