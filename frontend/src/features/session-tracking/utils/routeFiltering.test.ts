@@ -51,11 +51,11 @@ describe('isPlausibleMovement', () => {
 
 describe('getMinMovementMeters', () => {
   it('uses at least MIN_ROUTE_SAMPLE_METERS', () => {
-    expect(getMinMovementMeters(5)).toBe(3);
+    expect(getMinMovementMeters(5)).toBe(1.25);
   });
 
   it('scales with reported accuracy', () => {
-    expect(getMinMovementMeters(20)).toBe(7);
+    expect(getMinMovementMeters(20)).toBe(5);
   });
 });
 
@@ -116,7 +116,7 @@ describe('shouldAppendRoutePoint', () => {
         deltaMetersFromLastFix: 10,
         deltaMs: 2000,
         sessionStartedAt,
-        sampleTimestamp: sessionStartedAt + 3000,
+        sampleTimestamp: sessionStartedAt + 2000,
         lastRouteAppendTimestamp: sessionStartedAt + 1000,
       }),
     ).toBe(false);
@@ -130,8 +130,8 @@ describe('shouldAppendRoutePoint', () => {
         candidate: [-87.6299, 41.88],
         accuracyMeters: 8,
         speedMps: 1.5,
-        deltaMetersFromRoute: 2,
-        deltaMetersFromLastFix: 2,
+        deltaMetersFromRoute: 1,
+        deltaMetersFromLastFix: 1,
         deltaMs: 2000,
         sessionStartedAt,
         sampleTimestamp: sessionStartedAt + 10_000,
@@ -154,6 +154,24 @@ describe('shouldAppendRoutePoint', () => {
         sessionStartedAt,
         sampleTimestamp: sessionStartedAt + 10_000,
         lastRouteAppendTimestamp: sessionStartedAt + 9_000,
+      }),
+    ).toBe(true);
+  });
+
+  it('accepts slow cleanup walking speed after warm-up', () => {
+    expect(
+      shouldAppendRoutePoint({
+        lastRoutePoint: lastRoute,
+        prevRoutePoint: prevRoute,
+        candidate: [-87.62, 41.88],
+        accuracyMeters: 8,
+        speedMps: 0.15,
+        deltaMetersFromRoute: 4,
+        deltaMetersFromLastFix: 4,
+        deltaMs: 4000,
+        sessionStartedAt,
+        sampleTimestamp: sessionStartedAt + 10_000,
+        lastRouteAppendTimestamp: sessionStartedAt + 5_000,
       }),
     ).toBe(true);
   });

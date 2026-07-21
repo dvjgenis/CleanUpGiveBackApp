@@ -6,6 +6,79 @@ Session-by-session progress tracker. Distinct from `notes/journey.md` (correctio
 
 ---
 
+## [2026-07-21] — GPS trail precision and continuity
+
+### End goal
+
+Make live session geolocation feel **precise, granular, and smooth** — comparable to consumer apps like Google Maps / Strava — for **both**:
+
+1. **Expo Go (foreground)** — dense, continuous polyline and arrow motion while the app is open during cleanup walks (including slow litter-picking pace).
+2. **EAS dev build + Always location (background)** — same capture quality when the phone is locked or the app is backgrounded, using the existing `expo-task-manager` path.
+
+**User-reported symptoms driving this work:** the trail **stops updating** during slow walking or after returning from background, and when it does update it feels **chunky / laggy** versus athletic-grade trackers.
+
+**Out of scope (unchanged):** map-matching to roads, mid-session route PATCH, realtime GPS streaming to server, building the EAS binary in-repo (code path only).
+
+### Approach
+
+| Layer | Strategy |
+|---|---|
+| **Continuity** | Stop false stalls: slow walks were classified `stationary` → watch throttled to 3s/9m and append gates rejected points; every `AppState` → `active` resume called `stopLocationWatching()` and **wiped Kalman + append timestamps**. Fix: **soft** subscription teardown on mid-session restart; motion affects **append gates only**, not watch intervals. |
+| **Capture density** | Move from ~3m sparse appends to **~1m** sampling: `MIN_ROUTE_SAMPLE_METERS`, watch `distanceInterval`, `getMinMovementMeters` (`max(1m, accuracy×0.25)`), shorter warm-up (**3s**), lower slow-walk speed floor (**0.12 m/s**). |
+| **Display smoothness** | Faster EMA on live arrow (**α=0.5**), tighter live Douglas–Peucker (**1m + 10-point raw tail**), shorter Follow ease (**280ms**). Stored route / API polyline unchanged — display-only polish per AC-24. |
+| **EAS background** | Keep **1s / 1m** + `BestForNavigation`; on foreground resume, **re-assert** background task if Always granted but updates stopped. |
+| **Verification** | Unit tests for gates + Kalman; **`tsc --noEmit`**; manual outdoor checklist on device (Expo Go + EAS when available). |
+
+```mermaid
+flowchart LR
+  gps[expo-location fix] --> kalman[2D Kalman]
+  kalman --> pin[Update pin + EMA tip]
+  kalman --> gates[Append gates]
+  gates -->|pass| route[routeCoordinates + distance]
+  route --> display[Live simplify + tip segment]
+  display --> map[MapLibre WebView or Native]
+```
+
+### Steps done so far
+
+| Step | What shipped | Key files | Status |
+|---|---|---|---|
+| Soft resume | `stopLocationSubscriptions()` vs full `stopLocationWatching()`; `startLocationWatching` / `resumeLiveSessionTrackingAfterForeground` preserve Kalman + append state | `liveSessionStore.ts` | ✅ |
+| No watch throttle on motion | Removed `restartForegroundLocationWatch` and stationary **3s/9m** interval flip; fixed **1s / 1m** `BestForNavigation` while session active | `liveSessionStore.ts` | ✅ |
+| Denser capture | `MIN_ROUTE_SAMPLE_METERS` 3→**1**; min-move **×0.25**; `GPS_WARMUP_MS` 8s→**3s**; `MIN_SPEED_TO_RECORD_MPS` 0.4→**0.12** | `geo.ts`, `routeFiltering.ts` | ✅ |
+| Smoother display | `DISPLAY_COORDINATE_EMA_ALPHA` **0.5**; live simplify **1m + 10** raw tail; Follow **280ms** | `routeFiltering.ts`, `LiveSessionMapWebView.tsx`, `LiveSessionMapCamera.tsx` | ✅ |
+| Background re-assert | `ensureBackgroundLocationRunning()` after foreground resume when Always granted | `liveSessionStore.ts` | ✅ |
+| Tests | Updated min-move / warm-up expectations; slow-walk append case | `routeFiltering.test.ts` | ✅ |
+| Living docs | AC-24/32/33/26, maps context, project patterns, current capability, components tip copy | `docs/frontend/specs/session-tracking-expo-go.md`, `docs/backend/context/maps.md`, `docs/frontend/context/project.md`, `docs/current.md`, `docs/frontend/context/components.md` | ✅ |
+
+**Verified in CI/dev:** `cd frontend && ./node_modules/.bin/tsc --noEmit`; `npm test -- --testPathPattern='routeFiltering|locationKalman'` (**52** tests pass).
+
+### Failures encountered (and status)
+
+| Failure | Cause | Status |
+|---|---|---|
+| Trail stops on slow cleanup walking | `MIN_SPEED_TO_RECORD_MPS` 0.4 + stationary watch throttle + append gates | **Addressed in code** (0.12 m/s, fixed dense watch, gates-only motion) |
+| Trail stops after app switch / unlock | `startLocationWatching` → `stopLocationWatching` reset Kalman mid-session | **Fixed** (soft subscription stop) |
+| Chunky polyline vs Strava | ~3m appends + 8s warm-up + heavy EMA/Follow lag | **Addressed in code** (~1m capture + display tuning) |
+| Lock-screen GPS gaps in Expo Go | OS / Expo Go cannot run Always background updates | **Expected** — mitigated by resume + re-assert; **full fix requires EAS + Always** |
+
+### Current failure / open issue (working on)
+
+| Failure | Evidence | Notes |
+|---|---|---|
+| **Device QA not signed off for GPS precision work** | User reported trail stops + chunky/laggy **before** this session’s code landed; unit tests and `tsc` pass but **outdoor re-walk not yet confirmed** on a physical device | **Next:** Expo Go — slow walk with app open (continuous trail), brief app switch (no long blank / Kalman jump), lock/unlock (expect gap in Expo Go, resume on unlock). EAS + Always — lock-screen samples should append to the same polyline. Report any remaining WebView jank or stalls. |
+| **Checkpoint persist 404** during live session | Metro: `[sessions] checkpoint persist failed: API 404: {"error":"Active session not found"}` | **Separate from GPS trail work** — local checkpoint kept; remote create lag / draft id / env mismatch (see Session 213). Still tracked in [current.md](current.md). |
+
+Also still watching: Expo Go notification delivery limits; very short / indoor sessions may still show sparse or empty routes (≥2 accepted points needed for replay).
+
+### Specs touched
+
+- [session-tracking-expo-go.md](frontend/specs/session-tracking-expo-go.md) — AC-24, AC-32, AC-33, AC-26
+- [maps.md](backend/context/maps.md), [project.md](frontend/context/project.md), [components.md](frontend/context/components.md), [current.md](current.md)
+- Plan reference (not edited in-repo): GPS trail precision and continuity (2026-07-21)
+
+---
+
 ## [2026-07-21] — Tour graphic header spacing
 
 **Session goal:** Align graphic-to-title distance across all onboarding tour slides.

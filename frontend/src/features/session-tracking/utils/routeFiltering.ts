@@ -17,19 +17,19 @@ export const ROUTE_GAP_RECOVERY_MS = 30_000;
 export const MAX_PLAUSIBLE_SPEED_MPS = 6;
 
 /** Device-reported speed below this is treated as stationary (m/s). */
-export const MIN_SPEED_TO_RECORD_MPS = 0.4;
+export const MIN_SPEED_TO_RECORD_MPS = 0.12;
 
 /** Ignore route appends for this long after session start (ms). */
-export const GPS_WARMUP_MS = 8000;
+export const GPS_WARMUP_MS = 3000;
 
 /** EMA weight for live arrow smoothing (display only). */
-export const DISPLAY_COORDINATE_EMA_ALPHA = 0.35;
+export const DISPLAY_COORDINATE_EMA_ALPHA = 0.5;
 
 /** Douglas-Peucker tolerance for display simplification (meters). */
 export const DISPLAY_SIMPLIFY_TOLERANCE_METERS = 4;
 /** Tighter Douglas-Peucker tolerance for the live tracker trail only. */
-export const LIVE_DISPLAY_SIMPLIFY_TOLERANCE_METERS = 2;
-const LIVE_DISPLAY_TAIL_RAW_POINTS = 6;
+export const LIVE_DISPLAY_SIMPLIFY_TOLERANCE_METERS = 1;
+const LIVE_DISPLAY_TAIL_RAW_POINTS = 10;
 
 export type MotionState = 'walking' | 'stationary';
 
@@ -80,7 +80,7 @@ export function isPlausibleMovement(
 /** Movement must exceed GPS error radius before appending a route point. */
 export function getMinMovementMeters(accuracyMeters: number): number {
   const safeAccuracy = resolveAccuracyMeters(accuracyMeters);
-  return Math.max(MIN_ROUTE_SAMPLE_METERS, safeAccuracy * 0.35);
+  return Math.max(MIN_ROUTE_SAMPLE_METERS, safeAccuracy * 0.25);
 }
 
 export function detectMotionState(

@@ -31,6 +31,7 @@ Docs complete — see [ADR-004](adr/ADR-004-sessions-backend-supabase-fly.md), [
 - [x] API smoke test: create/finalize/list against production (Supabase Postgres)
 - [x] Remove placeholder session mocks from production UI (`SessionsScreen`, `SessionDetailScreen`)
 - [x] Live-session draft Resume/Discard (AC-37) + GPS harden + distance-scaled route replay (Session 214: live display smoothness + Expo Go foreground banner)
+- [x] GPS trail precision + continuity — denser ~1m capture, soft resume (preserve Kalman), slow-walk gates, EAS background re-assert (Session 2026-07-21; see [progress.md](progress.md))
 - [x] Volunteer `DELETE /sessions/:id` + session detail delete UI (AC-38)
 - [x] Delete 404 → local cleanup + tombstones so Sessions list stays in sync (AC-41)
 - [x] Sessions list multi-select bulk delete + AsyncStorage tombstones (AC-44, AC-41 persistence)

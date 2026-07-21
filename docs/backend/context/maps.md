@@ -15,13 +15,13 @@ Powers route display, GPS sampling, and distance stats during cleanup sessions. 
 ### Client (implemented)
 
 - GPS sampling during **active** sessions via `liveSessionStore`:
-  - Foreground: `expo-location` `watchPositionAsync` at `BestForNavigation` (walking ~1s / 3 m; stationary longer interval) — started immediately after When-In-Use grant so the live map (which waits for a GPS seed) cannot stall behind Always permission or a hanging one-shot fix
+  - Foreground: `expo-location` `watchPositionAsync` at `BestForNavigation` (**1 s / ~1 m** for active sessions) — started immediately after When-In-Use grant so the live map (which waits for a GPS seed) cannot stall behind Always permission or a hanging one-shot fix
   - Initial seed: `getLastKnownPositionAsync` + timed Balanced `getCurrentPositionAsync` (8s) in parallel with the watch; Always / background enablement is also non-blocking
-  - Background (EAS only): `expo-task-manager` task while session active + Always permission granted; stops on finalize/cancel
-  - Pipeline: **2D Kalman** (`locationKalman.ts`) → hardened gates (≤15 m accuracy or null after Kalman, adaptive min-move `max(3m, accuracy×0.35)`, stationary, sharp-reversal, 8s warm-up, 30s gap recovery); foreground/background sample dedupe
+  - Background (EAS only): `expo-task-manager` task while session active + Always permission granted (**1 s / ~1 m**); stops on finalize/cancel; re-asserted on foreground resume if updates stopped
+  - Pipeline: **2D Kalman** (`locationKalman.ts`) → hardened gates (≤15 m accuracy or null after Kalman, adaptive min-move `max(1m, accuracy×0.25)`, stationary, sharp-reversal, **3 s** warm-up, 30s gap recovery); foreground/background sample dedupe; soft subscription stop on mid-session watch restart (Kalman + append timestamps preserved)
 - Rich in-memory samples `{lng, lat, accuracy, speed, heading, t}`; API finalize still sends `[[lng, lat], …]`
-- Route display: live tracker uses `simplifyRouteForLiveDisplay()` (~2 m + raw tail); previews/replay use `simplifyRouteForDisplay()` (~4 m); maps may append EMA tip segment (`appendLiveTipToDisplayRoute`); stored distance/route uses capture-filtered points only
-- Live map markers: primary-green heading-beam on EMA-smoothed `displayCoordinate` only (no start pin — it stacked on the tip for short walks); heading from device compass (`watchHeadingAsync`, adaptive EMA + platform accuracy gate, ~33 ms publish), GPS course fallback; optional Follow (~450 ms ease)
+- Route display: live tracker uses `simplifyRouteForLiveDisplay()` (~**1 m** + raw tail); previews/replay use `simplifyRouteForDisplay()` (~4 m); maps may append EMA tip segment (`appendLiveTipToDisplayRoute`); stored distance/route uses capture-filtered points only
+- Live map markers: primary-green heading-beam on EMA-smoothed `displayCoordinate` only (no start pin — it stacked on the tip for short walks); heading from device compass (`watchHeadingAsync`, adaptive EMA + platform accuracy gate, ~33 ms publish), GPS course fallback; optional Follow (~**280 ms** ease)
 - Live maps wait for first GPS fix (“Getting precise location…”) before mounting the basemap (no US overview flash)
 - When Always/background unavailable (`backgroundLocationEnabled === false`), session still starts foreground-only; **`AppState` active** → `resumeLiveSessionTrackingAfterForeground()` restarts GPS watch
 - Completed-session replay: `sliceRouteByDistanceProgress` (distance-scaled ~3–10s animation on detail/confirmation maps)
@@ -63,6 +63,10 @@ Read-only route previews: `SessionRouteMapPreview` (+ WebView variant) with Play
 - GPS collected only during **active** sessions (foreground + optional background while session active; Always permission on iOS/Android)
 - Route data subject to retention policy in [privacy-and-data-rights.md](../specs/privacy-and-data-rights.md)
 - Esri raster sources (Satellite / Hybrid) are capped at `maxzoom: 19` in `mapStyles.ts`. Esri's tile service returns a "Map data not available" placeholder image (not a 404) for tiles past its real coverage, so MapLibre can't fall back on its own — the cap makes MapLibre stop fetching past that level and over-zoom (upscale) the last real tile instead.
+
+## Decisions
+
+- **2026-07-21 — GPS trail precision:** ~1 m capture, soft subscription stop on mid-session resume (preserve Kalman), motion gating in append filters only (not watch throttling). Rationale and open device QA: [progress.md](../../progress.md) (section “GPS trail precision and continuity”).
 
 ## Related
 

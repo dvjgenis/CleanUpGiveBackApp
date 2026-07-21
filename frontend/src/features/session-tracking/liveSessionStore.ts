@@ -34,7 +34,6 @@ import {
 } from './utils/locationKalman';
 import {
   deltaMetersBetween,
-  detectMotionState,
   isAcceptableAccuracy,
   resolveAccuracyMeters,
   resolveCompassHeading,
@@ -45,7 +44,6 @@ import {
   simplifyRouteForLiveDisplay,
   smoothCoordinateEma,
   smoothHeadingEma,
-  type MotionState,
   type RouteSample,
 } from './utils/routeFiltering';
 import {
@@ -150,7 +148,6 @@ let lastProcessedSampleTimestamp: number | null = null;
 let lastProcessedCoordinate: RouteCoordinate | null = null;
 let pendingResumeOffer: LiveSessionResumeOffer | null = null;
 let pendingMissedCheckpointNavigation = false;
-let motionState: MotionState = 'walking';
 let locationKalman: LocationKalmanFilter = createLocationKalmanFilter();
 let compassAvailable = false;
 let lastHeadingNotifyMs = 0;
@@ -327,12 +324,6 @@ function recordLocationSample(position: Location.LocationObject) {
     ? deltaMetersBetween(previousCoordinate, filteredCoordinate)
     : 0;
 
-  const nextMotion = detectMotionState(speedMps, deltaMetersFromLastFix, deltaMs);
-  if (nextMotion !== motionState) {
-    motionState = nextMotion;
-    void restartForegroundLocationWatch();
-  }
-
   const sample: RouteSample = {
     coordinate: filteredCoordinate,
     accuracyMeters: resolvedAccuracy,
@@ -416,12 +407,10 @@ export function ingestBackgroundLocationSample(position: Location.LocationObject
 }
 
 function getForegroundWatchOptions(): Location.LocationOptions {
-  const walking = motionState === 'walking';
-
   return {
     accuracy: Location.Accuracy.BestForNavigation,
-    timeInterval: walking ? 1000 : 3000,
-    distanceInterval: walking ? MIN_ROUTE_SAMPLE_METERS : MIN_ROUTE_SAMPLE_METERS * 3,
+    timeInterval: 1000,
+    distanceInterval: MIN_ROUTE_SAMPLE_METERS,
     mayShowUserSettingsDialog: true,
     ...(Location.ActivityType && {
       activityType: Location.ActivityType.Fitness,
@@ -446,17 +435,6 @@ function getBackgroundWatchOptions(): Location.LocationTaskOptions {
       pausesUpdatesAutomatically: false,
     }),
   };
-}
-
-async function restartForegroundLocationWatch() {
-  if (!state.isActive || !locationSubscription) {
-    return;
-  }
-
-  locationSubscription.remove();
-  locationSubscription = await Location.watchPositionAsync(getForegroundWatchOptions(), (position) => {
-    recordLocationSample(position);
-  });
 }
 
 /** Min turn (deg) before notifying React; below this is magnetometer noise. */
@@ -531,16 +509,21 @@ async function stopBackgroundLocationUpdates() {
   }
 }
 
-function stopLocationWatching() {
+/** Stops subscriptions only — preserves Kalman and append timestamps (mid-session resume). */
+function stopLocationSubscriptions() {
   locationSubscription?.remove();
   locationSubscription = null;
   stopHeadingWatching();
   void stopBackgroundLocationUpdates();
+}
+
+/** Full teardown when a session ends or before a fresh Kalman/route reset. */
+function stopLocationWatching() {
+  stopLocationSubscriptions();
   lastAcceptedTimestamp = null;
   lastRouteAppendTimestamp = null;
   lastProcessedSampleTimestamp = null;
   lastProcessedCoordinate = null;
-  motionState = 'walking';
   resetLocationKalmanFilter(locationKalman);
 }
 
@@ -606,7 +589,7 @@ async function enableBackgroundLocationIfPossible() {
 }
 
 async function startLocationWatching() {
-  stopLocationWatching();
+  stopLocationSubscriptions();
 
   const { status } = await Location.requestForegroundPermissionsAsync();
   if (status !== 'granted') {
@@ -619,15 +602,45 @@ async function startLocationWatching() {
   // (map mounts only after a GPS seed).
   void startHeadingWatching();
 
-  locationSubscription = await Location.watchPositionAsync(
-    getForegroundWatchOptions(),
-    (position) => {
-      recordLocationSample(position);
-    },
-  );
+  try {
+    locationSubscription = await Location.watchPositionAsync(
+      getForegroundWatchOptions(),
+      (position) => {
+        recordLocationSample(position);
+      },
+    );
+  } catch (error) {
+    console.warn('[location] foreground watch failed:', error);
+    locationSubscription = null;
+    return;
+  }
 
   void seedInitialLocation();
   void enableBackgroundLocationIfPossible();
+}
+
+async function ensureBackgroundLocationRunning() {
+  if (!state.isActive) {
+    return;
+  }
+
+  try {
+    const backgroundPermission = await Location.getBackgroundPermissionsAsync();
+    if (backgroundPermission.status !== 'granted') {
+      return;
+    }
+
+    const hasStarted = await Location.hasStartedLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
+    if (hasStarted) {
+      setState({ backgroundLocationEnabled: true });
+      return;
+    }
+
+    const started = await startBackgroundLocationUpdates();
+    setState({ backgroundLocationEnabled: started });
+  } catch {
+    setState({ backgroundLocationEnabled: false });
+  }
 }
 
 async function persistCheckpointToRemote(checkpoint: PhotoCheckpointSubmission): Promise<boolean> {
@@ -707,6 +720,7 @@ export async function resumeLiveSessionTrackingAfterForeground() {
   syncSessionClocks();
   ensureLiveSessionTicking();
   await startLocationWatching();
+  await ensureBackgroundLocationRunning();
 }
 
 let appStateSubscription: ReturnType<typeof AppState.addEventListener> | null = null;

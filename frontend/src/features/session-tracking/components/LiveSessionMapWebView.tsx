@@ -138,7 +138,7 @@ function buildHtml(initialCenter: [number, number] | null, theme: MapBasemapThem
         return;
       }
       if (pendingFollowEnabled) {
-        map.easeTo({ center: pendingCurrent, duration: 450 });
+        map.easeTo({ center: pendingCurrent, duration: 280 });
         return;
       }
       if (!hasInitialCentered) {
