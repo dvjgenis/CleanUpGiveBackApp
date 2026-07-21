@@ -491,7 +491,9 @@ export function AccountScreen({ profile = defaultAccountProfile }: { profile?: A
 
         <View style={s.copyrightRow}>
           <CopyrightIcon width={16} height={16} />
-          <Text style={s.copyrightText}>CleanUpGiveBack</Text>
+          <Text style={s.copyrightText}>
+            CleanUp Give Back is a 501(c)(3) nonprofit corporation.
+          </Text>
         </View>
       </ScrollView>
 
@@ -791,6 +793,7 @@ const s = StyleSheet.create({
     color: colors.statusDeclinedText,
   },
   copyrightRow: {
+    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -798,8 +801,11 @@ const s = StyleSheet.create({
     paddingTop: 8,
   },
   copyrightText: {
+    flexShrink: 1,
     fontFamily: fontFamilies.notoSansRegular,
     fontSize: 12,
+    lineHeight: 16,
+    textAlign: 'center',
     color: colors.textNavInactive,
   },
   bottomStack: {
