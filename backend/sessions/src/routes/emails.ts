@@ -1,3 +1,5 @@
+import { randomInt } from 'node:crypto';
+
 import type { FastifyInstance } from 'fastify';
 import { Resend } from 'resend';
 
@@ -22,9 +24,12 @@ type EmailChangeConfirmBody = {
 type PendingCode = {
   code: string;
   expiresAt: number;
+  attempts: number;
 };
 
 const CODE_TTL_MS = 10 * 60 * 1000;
+const MAX_ATTEMPTS = 5;
+/** Keyed by `userId:email` so only the requesting user can confirm. */
 const pendingEmailCodes = new Map<string, PendingCode>();
 
 function getResendClient(): Resend | null {
@@ -48,13 +53,13 @@ function isValidEmail(value: string): boolean {
 }
 
 function generateCode(): string {
-  return String(Math.floor(100000 + Math.random() * 900000));
+  return String(randomInt(0, 1_000_000)).padStart(6, '0');
 }
 
 function pruneExpiredCodes(now = Date.now()): void {
-  for (const [email, entry] of pendingEmailCodes) {
+  for (const [key, entry] of pendingEmailCodes) {
     if (entry.expiresAt <= now) {
-      pendingEmailCodes.delete(email);
+      pendingEmailCodes.delete(key);
     }
   }
 }
@@ -117,9 +122,10 @@ export async function registerEmailRoutes(app: FastifyInstance): Promise<void> {
         return reply.code(400).send({ error: 'Valid to email is required' });
       }
 
+      const userId = (request as AuthenticatedRequest).userId;
       pruneExpiredCodes();
       const code = generateCode();
-      pendingEmailCodes.set(to, { code, expiresAt: Date.now() + CODE_TTL_MS });
+      pendingEmailCodes.set(`${userId}:${to}`, { code, expiresAt: Date.now() + CODE_TTL_MS, attempts: 0 });
 
       const resend = getResendClient();
       if (!resend) {
@@ -148,7 +154,7 @@ export async function registerEmailRoutes(app: FastifyInstance): Promise<void> {
       });
 
       if (error) {
-        pendingEmailCodes.delete(to);
+        pendingEmailCodes.delete(`${userId}:${to}`);
         request.log.error({ err: error }, 'Failed to send email-change code');
         return reply.code(502).send({ error: 'Failed to send email' });
       }
@@ -161,7 +167,7 @@ export async function registerEmailRoutes(app: FastifyInstance): Promise<void> {
     '/emails/email-change/confirm',
     { preHandler: verifyAuth },
     async (request, reply) => {
-      void (request as AuthenticatedRequest).userId;
+      const userId = (request as AuthenticatedRequest).userId;
       const body = (request.body ?? {}) as EmailChangeConfirmBody;
       const to = typeof body.to === 'string' ? normalizeEmail(body.to) : '';
       const code = typeof body.code === 'string' ? body.code.trim() : '';
@@ -171,12 +177,23 @@ export async function registerEmailRoutes(app: FastifyInstance): Promise<void> {
       }
 
       pruneExpiredCodes();
-      const pending = pendingEmailCodes.get(to);
-      if (!pending || pending.code !== code) {
+      const mapKey = `${userId}:${to}`;
+      const pending = pendingEmailCodes.get(mapKey);
+      if (!pending) {
         return reply.code(400).send({ error: 'Invalid or expired code' });
       }
 
-      pendingEmailCodes.delete(to);
+      pending.attempts += 1;
+      if (pending.attempts > MAX_ATTEMPTS) {
+        pendingEmailCodes.delete(mapKey);
+        return reply.code(400).send({ error: 'Too many attempts; request a new code' });
+      }
+
+      if (pending.code !== code) {
+        return reply.code(400).send({ error: 'Invalid or expired code' });
+      }
+
+      pendingEmailCodes.delete(mapKey);
       return reply.send({ ok: true });
     },
   );
