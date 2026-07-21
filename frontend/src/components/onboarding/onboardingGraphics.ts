@@ -1,5 +1,6 @@
 import { Asset } from 'expo-asset';
 import { Image as ExpoImage } from 'expo-image';
+import { Platform } from 'react-native';
 
 /** Session-setup guide + related onboarding graphics for memory-disk prefetch. */
 export const ONBOARDING_GRAPHICS = {
@@ -26,6 +27,8 @@ let prefetchStarted = false;
 /** Warm expo-image cache for session-setup / onboarding illustrations. */
 export function prefetchAllOnboardingGraphics(): void {
   if (prefetchStarted) return;
+  // expo-image prefetch uses DOM `Image` on web; skip in SSR so Metro stays up.
+  if (Platform.OS === 'web') return;
   prefetchStarted = true;
 
   const uris = Object.values(ONBOARDING_GRAPHICS).flatMap((module) => {
@@ -38,6 +41,6 @@ export function prefetchAllOnboardingGraphics(): void {
   });
 
   if (uris.length > 0) {
-    void ExpoImage.prefetch(uris, 'memory-disk');
+    void ExpoImage.prefetch(uris, 'memory-disk').catch(() => undefined);
   }
 }

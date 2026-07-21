@@ -113,6 +113,23 @@ fly auth login
 
 Deploy from `backend/sessions/` when implemented (see [sessions-api.md](backend/specs/sessions-api.md)).
 
+### Transactional email (Resend)
+
+The sessions API also serves email routes (auth required):
+
+| Route | Purpose |
+|-------|---------|
+| `POST /emails/event-registration` | Event Register confirmation |
+| `POST /emails/email-change/request` | Send 6-digit code to new email |
+| `POST /emails/email-change/confirm` | Validate code |
+
+Fly secrets (do not commit):
+
+- `RESEND_API_KEY` — Resend API key
+- `EMAIL_FROM` — verified sender (default `noreply@cleanupgiveback.org`)
+
+When `RESEND_API_KEY` is unset, routes return `{ ok: true, skipped: true }` (dev-safe).
+
 ---
 
 ## 6. Secret rotation (required if keys were exposed)

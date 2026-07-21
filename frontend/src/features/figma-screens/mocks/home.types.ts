@@ -25,8 +25,8 @@ export type UpcomingEventSummary = {
   location: string;
   timeLabel: string;
   organization: string;
-  /** Local `require()` module for the card thumbnail (`expo-image` source). */
-  image: number;
+  /** Local `require()` id or remote URI mock mapped by location. */
+  image: number | { uri: string };
 };
 
 export type WeeklyHoursDatum = {

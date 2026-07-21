@@ -4,6 +4,22 @@ Session-by-session progress tracker. Distinct from `notes/journey.md` (correctio
 
 ---
 
+## [2026-07-21] — Product copy, account upgrades, and flow edits
+
+**R:** Ship onboarding/legal copy, court/nighttime notices, email confirmations, company-code upgrade, export court-mandated filter, form→selfie session start order, mock location event images, and sessions Select + mocks.
+
+**A:**
+- Welcome 501(c)(3); creating-account 2 facts / ~7.5s; legal name + accuracy copy; court acceptance + nighttime bans in onboarding/session setup
+- Event detail: removed REGISTERED badge; what-to-bring updated; Register → Resend via `backend/sessions` email routes
+- Personal details: email-only + OTP; Account company code → `markTrackerPaid` (persisted) + upgrade modal
+- Export: court mandated → approved-only; session flow form then photos then live; home event images location-mapped URIs; Sessions Select button + multi-status mocks
+
+**L:** Anonymous Supabase auth makes Resend OTP preferable to Auth `updateUser({ email })` for email change.
+
+**P:** Done for this batch; configure `RESEND_API_KEY` / `EMAIL_FROM` on Fly for real delivery.
+
+**H:** Session start order is now form → photo → live (not photo → form).
+
 ---
 
 ## [2026-07-21] — GPS trail precision and continuity

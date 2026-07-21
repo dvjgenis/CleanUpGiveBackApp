@@ -24,8 +24,11 @@ Fastify service in `backend/sessions/` on Fly.io (`https://cleanup-sessions.fly.
 | GET | `/sessions/:id` | Session detail + checkpoints |
 | PATCH | `/sessions/:id/approval` | Admin status change |
 | DELETE | `/sessions/:id` | Volunteer delete (not when `approved`) |
+| POST | `/emails/event-registration` | Event Register confirmation (Resend) |
+| POST | `/emails/email-change/request` | Send email-change OTP |
+| POST | `/emails/email-change/confirm` | Validate email-change OTP |
 
-Auth: Supabase JWT verified via JWKS (ES256). Requires `SUPABASE_URL` + `DATABASE_URL` (Supabase Postgres) on Fly.
+Auth: Supabase JWT verified via JWKS (ES256). Requires `SUPABASE_URL` + `DATABASE_URL` (Supabase Postgres) on Fly. Email routes also need `RESEND_API_KEY` (+ optional `EMAIL_FROM`); without Resend they return `{ skipped: true }`.
 
 ## Data model
 

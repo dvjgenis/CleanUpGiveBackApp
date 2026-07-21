@@ -10,6 +10,7 @@ import {
 } from '@/utils/sessionSetupGuideNavigation';
 import { IBMPlexSans_600SemiBold } from '@expo-google-fonts/ibm-plex-sans';
 import { Sanchez_400Regular } from '@expo-google-fonts/sanchez';
+import { NotoSans_400Regular } from '@expo-google-fonts/noto-sans';
 import { Image as ExpoImage } from 'expo-image';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
@@ -39,6 +40,7 @@ export function SessionSetupGuideScreen() {
   const [fontsLoaded] = useFonts({
     Sanchez_400Regular,
     IBMPlexSans_600SemiBold,
+    NotoSans_400Regular,
   });
 
   if (!fontsLoaded) {
@@ -62,6 +64,9 @@ export function SessionSetupGuideScreen() {
           <Text style={s.headline}>
             <Text style={s.headlineDark}>{'How does this work? '}</Text>
             <Text style={s.headlineGreen}>{"Let's walk through it."}</Text>
+          </Text>
+          <Text style={s.nightNote}>
+            Nighttime cleanings are not allowed.
           </Text>
         </CoachmarkEnter>
       </View>
@@ -118,6 +123,13 @@ const s = StyleSheet.create({
   headlineGreen: {
     fontFamily: 'Sanchez_400Regular',
     color: C.primary,
+  },
+  nightNote: {
+    marginTop: 12,
+    fontFamily: 'NotoSans_400Regular',
+    fontSize: 14,
+    lineHeight: 20,
+    color: C.textTertiary,
   },
 
   illustrationZone: {

@@ -1,5 +1,6 @@
 import { Asset } from 'expo-asset';
 import { Image as ExpoImage } from 'expo-image';
+import { Platform } from 'react-native';
 
 /** Tour middle-graphic modules — prefer small webp for fast first paint. */
 export const TOUR_GRAPHICS = {
@@ -25,6 +26,8 @@ let prefetchStarted = false;
  */
 export function prefetchAllTourGraphics(): void {
   if (prefetchStarted) return;
+  // expo-image prefetch uses DOM `Image` on web; skip in SSR so Metro stays up.
+  if (Platform.OS === 'web') return;
   prefetchStarted = true;
 
   const uris = Object.values(TOUR_GRAPHICS).flatMap((module) => {
@@ -37,7 +40,7 @@ export function prefetchAllTourGraphics(): void {
   });
 
   if (uris.length > 0) {
-    void ExpoImage.prefetch(uris, 'memory-disk');
+    void ExpoImage.prefetch(uris, 'memory-disk').catch(() => undefined);
   }
 }
 

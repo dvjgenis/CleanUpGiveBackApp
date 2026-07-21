@@ -35,16 +35,9 @@ import { SessionSetupTopAppBar } from '@/components/session-setup/SessionSetupTo
 import { CameraIcon } from '@/features/session-tracking/components/icons/CameraIcon';
 import { LocationPinIcon } from '@/features/session-tracking/components/icons/LocationPinIcon';
 import {
-  clearPendingSessionStartPhotos,
-  consumePendingSessionStartPhotos,
-  hasPendingSessionStartPhotos,
-  setPendingSessionStartPhotos,
+  clearPendingSessionSetup,
+  setPendingSessionSetupForm,
 } from '@/features/session-tracking/pendingSessionSetup';
-import {
-  addPhotoCheckpoint,
-  resetCheckpointCountdown,
-  startNewLiveSession,
-} from '@/features/session-tracking/liveSessionStore';
 import {
   isSessionCameraPermissionGranted,
   isSessionLocationPermissionGranted,
@@ -129,11 +122,6 @@ export function SessionSetupFormScreen() {
   // them (e.g. via the onboarding or session-setup-guide permission prompts),
   // so the user doesn't have to re-enable something iOS already allows.
   useEffect(() => {
-    if (!hasPendingSessionStartPhotos()) {
-      router.replace('/photo-capture?mode=session-start' as Href);
-      return;
-    }
-
     let isMounted = true;
 
     void isSessionLocationPermissionGranted().then((granted) => {
@@ -150,7 +138,7 @@ export function SessionSetupFormScreen() {
     return () => {
       isMounted = false;
     };
-  }, [router]);
+  }, []);
 
   const introStyle = useFadeUpEnter(0);
   const fieldsStyle = useFadeUpEnter(staggerDelay(1));
@@ -158,7 +146,7 @@ export function SessionSetupFormScreen() {
   const ctaStyle = useFadeUpEnter(staggerDelay(3));
 
   const handleBack = () => {
-    clearPendingSessionStartPhotos();
+    clearPendingSessionSetup();
     if (router.canGoBack()) {
       router.back();
       return;
@@ -228,7 +216,7 @@ export function SessionSetupFormScreen() {
     applyValidationState(nextActivity, dateValid, nextLocation, nextCamera);
   };
 
-  const handleStartSession = async () => {
+  const handleStartSession = () => {
     if (isStarting) {
       return;
     }
@@ -243,30 +231,17 @@ export function SessionSetupFormScreen() {
       return;
     }
 
-    const photos = consumePendingSessionStartPhotos();
-    if (!photos) {
-      router.replace('/photo-capture?mode=session-start' as Href);
-      return;
-    }
-
     setFieldErrors(EMPTY_FIELD_ERRORS);
     setShowValidationToast(false);
     setIsStarting(true);
 
-    try {
-      await startNewLiveSession({
-        activity: activity.trim(),
-        date: sessionDate,
-        courtOrdered,
-        description: description.trim(),
-      });
-      addPhotoCheckpoint(photos);
-      resetCheckpointCountdown();
-      router.replace('/live-session?from=onboarding' as Href);
-    } catch {
-      setPendingSessionStartPhotos(photos);
-      setIsStarting(false);
-    }
+    setPendingSessionSetupForm({
+      activity: activity.trim(),
+      dateIso: sessionDate.toISOString(),
+      courtOrdered,
+      description: description.trim(),
+    });
+    router.replace('/photo-capture?mode=session-start' as Href);
   };
 
   if (!fontsLoaded) {
@@ -294,7 +269,8 @@ export function SessionSetupFormScreen() {
           <View style={s.introCard}>
             <Text style={s.introTitle}>Ready to Make an Impact?</Text>
             <Text style={s.introSubtitle}>
-              Fill out the details to start tracking your clean-up session.
+              Fill out the details to start tracking your clean-up session. Nighttime cleanings are
+              not allowed.
             </Text>
           </View>
         </Animated.View>

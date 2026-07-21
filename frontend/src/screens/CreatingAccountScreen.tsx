@@ -18,15 +18,13 @@ import { useFonts } from 'expo-font';
 import { useRouter } from 'expo-router';
 
 
-/** Figma `creating_account` (137:85) fact + brand-matched rotating facts. */
+/** Figma `creating_account` (137:85) — two rotating Did-you-know facts. */
 export const CREATING_ACCOUNT_FACTS = [
   'One reusable bag can replace 600 plastic bags in its lifetime!',
   'A plastic bottle can take up to 450 years to break down in nature.',
-  'Cigarette butts are the most littered item worldwide — and they leach toxins into water.',
-  'Cleaning one mile of roadside can remove hundreds of pieces of plastic debris.',
 ] as const;
 
-const LOAD_DURATION_MS = 4200;
+const LOAD_DURATION_MS = 7500;
 const FACT_INTERVAL_MS = Math.floor(LOAD_DURATION_MS / CREATING_ACCOUNT_FACTS.length);
 const FACT_FADE_MS = durations.screenEnter;
 

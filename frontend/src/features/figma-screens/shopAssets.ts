@@ -1,5 +1,6 @@
 import { Asset } from 'expo-asset';
 import { Image as ExpoImage } from 'expo-image';
+import { Platform } from 'react-native';
 
 import { CART_ASSETS } from './mocks/cart';
 import { DONATE_ASSETS } from './mocks/donate';
@@ -35,6 +36,8 @@ let prefetchStarted = false;
  */
 export function prefetchAllShopGraphics(): void {
   if (prefetchStarted) return;
+  // expo-image prefetch uses DOM `Image` on web; skip in SSR so Metro stays up.
+  if (Platform.OS === 'web') return;
   prefetchStarted = true;
 
   const uris = SHOP_PREFETCH_MODULES.flatMap((module) => {
@@ -47,6 +50,6 @@ export function prefetchAllShopGraphics(): void {
   });
 
   if (uris.length > 0) {
-    void ExpoImage.prefetch(uris, 'memory-disk');
+    void ExpoImage.prefetch(uris, 'memory-disk').catch(() => undefined);
   }
 }

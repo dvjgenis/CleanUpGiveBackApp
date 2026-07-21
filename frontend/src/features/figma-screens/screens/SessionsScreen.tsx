@@ -146,7 +146,16 @@ function SessionsTopAppBar({
             </Text>
           </AnimatedPressable>
         ) : (
-          <View style={s.topBarSideRight} />
+          <AnimatedPressable
+            scaleTo={0.98}
+            onPress={onEnterSelection}
+            style={s.topBarSideRight}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            accessibilityRole="button"
+            accessibilityLabel="Select sessions"
+          >
+            <Text style={s.topBarActionLabel}>Select</Text>
+          </AnimatedPressable>
         )}
       </View>
     </View>

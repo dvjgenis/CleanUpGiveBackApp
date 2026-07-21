@@ -38,6 +38,8 @@ import { getEventDetail, type WhatToBringIcon } from '../mocks/eventDetail';
 import { layout, colors, fontFamilies, radius, shadows } from '../tokens';
 import { promptAddEventToCalendar } from '../utils/addEventToCalendar';
 import { mapsLinkForLocation, openLocationInMaps } from '../utils/openLocationInMaps';
+import { getEmail } from '@/features/onboarding/onboardingStore';
+import { sendEventRegistrationEmail } from '@/lib/emailsApi';
 
 const HERO_HEIGHT = 195;
 const FOOTER_PAD_TOP = 18;
@@ -179,7 +181,19 @@ export function EventDetailScreen() {
 
   const handleRegister = useCallback(() => {
     setRegistered(true);
-  }, []);
+    const email = getEmail().trim();
+    if (!email) {
+      console.warn('[event-detail] No account email; skipping registration confirmation email');
+      return;
+    }
+    void sendEventRegistrationEmail({
+      to: email,
+      eventTitle: event.title,
+      eventDateTime: event.dateTimeLabel,
+    }).catch((err) => {
+      console.warn('[event-detail] Failed to send registration email', err);
+    });
+  }, [event.dateTimeLabel, event.title]);
 
   const handleGoHome = useCallback(() => {
     setRegistered(false);
@@ -233,9 +247,6 @@ export function EventDetailScreen() {
             <View style={s.badgeRow}>
               <View style={s.badgeUpcoming}>
                 <Text style={s.badgeUpcomingText}>{event.statusLabel}</Text>
-              </View>
-              <View style={s.badgeRegistered}>
-                <Text style={s.badgeRegisteredText}>{event.registeredCount} REGISTERED</Text>
               </View>
             </View>
             <View style={s.titleBlock}>

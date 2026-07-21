@@ -1,10 +1,5 @@
 import type { HomeDashboardData } from './home.types';
-
-const EVENT_IMAGE_HEADER = require('@/assets/figma/event-detail/header.png');
-const EVENT_IMAGE_VOLUNTEERS = require('@/assets/images/scenes/volunteers.png');
-const EVENT_IMAGE_PARK = require('@/assets/images/screens/session-detail/photo-2.png');
-const EVENT_IMAGE_TRAIL = require('@/assets/images/screens/session-detail/photo-4.png');
-const EVENT_IMAGE_FOUNTAIN = require('@/assets/images/screens/session-detail/photo-1.png');
+import { eventImageForLocation } from './home';
 
 /**
  * Returning-user snapshot of the Home dashboard (Figma `406:291` with populated
@@ -53,7 +48,7 @@ export const returningUserHomeDashboard: HomeDashboardData = {
       location: '600 E Algonquin Rd, Des Plaines, IL 60016, USA',
       timeLabel: '10:30 AM - 12:30 PM',
       organization: 'D214 Life Program',
-      image: EVENT_IMAGE_HEADER,
+      image: eventImageForLocation('600 E Algonquin Rd, Des Plaines, IL 60016, USA'),
     },
     {
       id: 'ev-2',
@@ -65,7 +60,7 @@ export const returningUserHomeDashboard: HomeDashboardData = {
       location: '600 E Algonquin Rd, Des Plaines, IL 60016, USA',
       timeLabel: '10:30 AM - 12:30 PM',
       organization: 'D214 Life Program',
-      image: EVENT_IMAGE_VOLUNTEERS,
+      image: eventImageForLocation('1425 N McKinley Rd, Des Plaines, IL 60016, USA'),
     },
   ],
   allEvents: [
@@ -79,7 +74,7 @@ export const returningUserHomeDashboard: HomeDashboardData = {
       location: '600 E Algonquin Rd, Des Plaines, IL 60016, USA',
       timeLabel: '10:30 AM - 12:30 PM',
       organization: 'D214 Life Program',
-      image: EVENT_IMAGE_HEADER,
+      image: eventImageForLocation('600 E Algonquin Rd, Des Plaines, IL 60016, USA'),
     },
     {
       id: 'ev-2',
@@ -91,7 +86,7 @@ export const returningUserHomeDashboard: HomeDashboardData = {
       location: '600 E Algonquin Rd, Des Plaines, IL 60016, USA',
       timeLabel: '10:30 AM - 12:30 PM',
       organization: 'D214 Life Program',
-      image: EVENT_IMAGE_VOLUNTEERS,
+      image: eventImageForLocation('1425 N McKinley Rd, Des Plaines, IL 60016, USA'),
     },
     {
       id: 'ev-3',
@@ -103,7 +98,7 @@ export const returningUserHomeDashboard: HomeDashboardData = {
       location: '1425 N McKinley Rd, Des Plaines, IL 60016, USA',
       timeLabel: '9:00 AM - 11:00 AM',
       organization: 'Park District Volunteer Corps',
-      image: EVENT_IMAGE_PARK,
+      image: eventImageForLocation('2200 E Algonquin Rd, Mt Prospect, IL 60056, USA'),
     },
     {
       id: 'ev-4',
@@ -115,7 +110,7 @@ export const returningUserHomeDashboard: HomeDashboardData = {
       location: '2200 E Algonquin Rd, Mt Prospect, IL 60056, USA',
       timeLabel: '1:00 PM - 3:30 PM',
       organization: 'Northwest Community Partners',
-      image: EVENT_IMAGE_TRAIL,
+      image: eventImageForLocation('2200 E Algonquin Rd, Mt Prospect, IL 60056, USA'),
     },
     {
       id: 'ev-5',
@@ -127,7 +122,7 @@ export const returningUserHomeDashboard: HomeDashboardData = {
       location: '800 Central Rd, Glenview, IL 60025, USA',
       timeLabel: '8:30 AM - 10:30 AM',
       organization: 'Glenview Green Team',
-      image: EVENT_IMAGE_FOUNTAIN,
+      image: eventImageForLocation('800 Central Rd, Glenview, IL 60025, USA'),
     },
   ],
   notificationCount: 1,

@@ -44,10 +44,10 @@ import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { CoachmarkEnter } from '@/components/motion/CoachmarkEnter';
 import { useFadeUpEnter } from '@/components/motion/hooks';
 import { staggerDelay } from '@/motion';
-import { addPhotoCheckpoint, finalizeLiveSession, useLiveSession } from '@/features/session-tracking/liveSessionStore';
+import { addPhotoCheckpoint, finalizeLiveSession, resetCheckpointCountdown, startNewLiveSession, useLiveSession } from '@/features/session-tracking/liveSessionStore';
 import {
-  clearPendingSessionStartPhotos,
-  setPendingSessionStartPhotos,
+  clearPendingSessionSetup,
+  consumePendingSessionSetupForm,
 } from '@/features/session-tracking/pendingSessionSetup';
 import { persistCheckpointPhotos } from '@/features/session-tracking/utils/persistCheckpointPhotos';
 import { colors as tokens } from '@/constants/tokens';
@@ -900,8 +900,24 @@ export function PhotoCaptureScreen() {
       });
 
       if (isSessionStart) {
-        setPendingSessionStartPhotos(persisted);
-        router.replace('/session-setup' as Href);
+        const setup = consumePendingSessionSetupForm();
+        if (!setup) {
+          setSubmitError('Session details missing. Go back and fill out setup first.');
+          return;
+        }
+        try {
+          await startNewLiveSession({
+            activity: setup.activity,
+            date: new Date(setup.dateIso),
+            courtOrdered: setup.courtOrdered,
+            description: setup.description,
+          });
+          addPhotoCheckpoint(persisted);
+          resetCheckpointCountdown();
+          router.replace('/live-session?from=onboarding' as Href);
+        } catch {
+          setSubmitError('Could not start session. Please try again.');
+        }
         return;
       }
 
@@ -935,7 +951,7 @@ export function PhotoCaptureScreen() {
 
   const handleCancelCapture = () => {
     if (isSessionStart) {
-      clearPendingSessionStartPhotos();
+      clearPendingSessionSetup();
       router.back();
       return;
     }

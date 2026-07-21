@@ -3,11 +3,34 @@ import { getCurrentWeekMeta } from '../utils/weekCalendar';
 
 export type { HomeDashboardData, ImpactStat, RecentSessionSummary, UpcomingEventSummary };
 
-/** Event card thumbnails — real photos (shared with event-detail / session scenes). */
-const EVENT_IMAGE_HEADER = require('@/assets/figma/event-detail/header.png');
-const EVENT_IMAGE_VOLUNTEERS = require('@/assets/images/scenes/volunteers.png');
-const EVENT_IMAGE_PARK = require('@/assets/images/screens/session-detail/photo-2.png');
-const EVENT_IMAGE_TRAIL = require('@/assets/images/screens/session-detail/photo-4.png');
+/**
+ * Mock location-mapped remote thumbnails (stand-in for Google Places photos).
+ * Keys are stable Unsplash Source URLs keyed by Des Plaines / Mt Prospect venues.
+ */
+const EVENT_IMAGE_BY_LOCATION: Record<string, { uri: string }> = {
+  '600 E Algonquin Rd, Des Plaines, IL 60016, USA': {
+    uri: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800&q=80',
+  },
+  '1425 N McKinley Rd, Des Plaines, IL 60016, USA': {
+    uri: 'https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=800&q=80',
+  },
+  '2200 E Algonquin Rd, Mt Prospect, IL 60056, USA': {
+    uri: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=800&q=80',
+  },
+  '800 Central Rd, Glenview, IL 60025, USA': {
+    uri: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=800&q=80',
+  },
+};
+
+function eventImageForLocation(location: string): { uri: string } {
+  return (
+    EVENT_IMAGE_BY_LOCATION[location] ?? {
+      uri: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800&q=80',
+    }
+  );
+}
+
+export { eventImageForLocation };
 
 /** First-time user — empty stats; week fields are merged at render time in `HomeScreen`. */
 export const firstTimeHomeDashboard: HomeDashboardData = {
@@ -42,7 +65,7 @@ export const firstTimeHomeDashboard: HomeDashboardData = {
       location: '600 E Algonquin Rd, Des Plaines, IL 60016, USA',
       timeLabel: '10:30 AM - 12:30 PM',
       organization: 'D214 Life Program',
-      image: EVENT_IMAGE_HEADER,
+      image: eventImageForLocation('600 E Algonquin Rd, Des Plaines, IL 60016, USA'),
     },
     {
       id: 'ev-2',
@@ -54,7 +77,7 @@ export const firstTimeHomeDashboard: HomeDashboardData = {
       location: '1425 N McKinley Rd, Des Plaines, IL 60016, USA',
       timeLabel: '9:00 AM - 11:00 AM',
       organization: 'Park District Volunteer Corps',
-      image: EVENT_IMAGE_VOLUNTEERS,
+      image: eventImageForLocation('1425 N McKinley Rd, Des Plaines, IL 60016, USA'),
     },
     {
       id: 'ev-3',
@@ -66,7 +89,7 @@ export const firstTimeHomeDashboard: HomeDashboardData = {
       location: '2200 E Algonquin Rd, Mt Prospect, IL 60056, USA',
       timeLabel: '1:00 PM - 3:30 PM',
       organization: 'Northwest Community Partners',
-      image: EVENT_IMAGE_PARK,
+      image: eventImageForLocation('2200 E Algonquin Rd, Mt Prospect, IL 60056, USA'),
     },
   ],
   allEvents: [
@@ -80,7 +103,7 @@ export const firstTimeHomeDashboard: HomeDashboardData = {
       location: '600 E Algonquin Rd, Des Plaines, IL 60016, USA',
       timeLabel: '10:30 AM - 12:30 PM',
       organization: 'D214 Life Program',
-      image: EVENT_IMAGE_HEADER,
+      image: eventImageForLocation('600 E Algonquin Rd, Des Plaines, IL 60016, USA'),
     },
     {
       id: 'ev-2',
@@ -92,7 +115,7 @@ export const firstTimeHomeDashboard: HomeDashboardData = {
       location: '1425 N McKinley Rd, Des Plaines, IL 60016, USA',
       timeLabel: '9:00 AM - 11:00 AM',
       organization: 'Park District Volunteer Corps',
-      image: EVENT_IMAGE_VOLUNTEERS,
+      image: eventImageForLocation('1425 N McKinley Rd, Des Plaines, IL 60016, USA'),
     },
     {
       id: 'ev-3',
@@ -104,7 +127,7 @@ export const firstTimeHomeDashboard: HomeDashboardData = {
       location: '2200 E Algonquin Rd, Mt Prospect, IL 60056, USA',
       timeLabel: '1:00 PM - 3:30 PM',
       organization: 'Northwest Community Partners',
-      image: EVENT_IMAGE_PARK,
+      image: eventImageForLocation('2200 E Algonquin Rd, Mt Prospect, IL 60056, USA'),
     },
     {
       id: 'ev-4',
@@ -116,7 +139,7 @@ export const firstTimeHomeDashboard: HomeDashboardData = {
       location: '800 Central Rd, Glenview, IL 60025, USA',
       timeLabel: '8:30 AM - 10:30 AM',
       organization: 'Glenview Green Team',
-      image: EVENT_IMAGE_TRAIL,
+      image: eventImageForLocation('2200 E Algonquin Rd, Mt Prospect, IL 60056, USA'),
     },
   ],
   notificationCount: 0,

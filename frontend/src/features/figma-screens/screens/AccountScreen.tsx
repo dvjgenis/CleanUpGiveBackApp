@@ -1,5 +1,5 @@
 import React, { useCallback, useState, type ReactNode } from 'react';
-import { Alert, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -8,6 +8,11 @@ import { BottomNavBar } from '@/components/navigation/BottomNavBar';
 import { SessionSetupToggle } from '@/components/session-setup/SessionSetupToggle';
 import { TrackerMapDarkIcon } from '@/features/session-tracking/components/icons/TrackerMapThemeIcons';
 import { useLiveSession } from '@/features/session-tracking/liveSessionStore';
+import {
+  isValidCompanyCode,
+  markTrackerPaid,
+  useTrackerHasPaid,
+} from '@/features/session-tracking/trackerPaymentStore';
 import { usePreferredName } from '@/features/onboarding/onboardingStore';
 import {
   isSessionNotificationPermissionGranted,
@@ -42,6 +47,10 @@ import {
   RequestDataIcon,
   ShopBagIcon,
 } from '../components/AccountIcons';
+import {
+  CompanyCodeConfirmModal,
+  CompanyCodeUpgradeSuccessModal,
+} from '../components/CompanyCodeModals';
 import { PersonalDetailsIcon, PersonalDetailsRowIcon } from '../components/PersonalDetailsIcon';
 import { defaultAccountProfile, type AccountProfile } from '../mocks/account';
 import { firstTimeHomeDashboard } from '../mocks/home';
@@ -183,9 +192,14 @@ export function AccountScreen({ profile = defaultAccountProfile }: { profile?: A
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { isActive } = useLiveSession();
+  const hasPaid = useTrackerHasPaid();
   const [cameraAccess, setCameraAccess] = useState(false);
   const [locationAccess, setLocationAccess] = useState(false);
   const [notificationsAccess, setNotificationsAccess] = useState(false);
+  const [companyCode, setCompanyCode] = useState('');
+  const [companyCodeError, setCompanyCodeError] = useState<string | undefined>();
+  const [confirmCodeVisible, setConfirmCodeVisible] = useState(false);
+  const [upgradeSuccessVisible, setUpgradeSuccessVisible] = useState(false);
   const preferredName = usePreferredName();
 
   // Same name shown in the Home greeting, so Account stays in sync with it.
@@ -306,6 +320,63 @@ export function AccountScreen({ profile = defaultAccountProfile }: { profile?: A
               icon={<PersonalDetailsRowIcon width={16} height={16} />}
               onPress={() => router.push('/personal-details' as Href)}
             />
+            <View style={s.companyCodeBlock}>
+              <Text style={s.companyCodeLabel}>Company code</Text>
+              {hasPaid ? (
+                <Text style={s.companyCodeUpgraded}>
+                  Account upgraded — one-hour limit removed.
+                </Text>
+              ) : (
+                <>
+                  <View style={s.companyCodeRow}>
+                    <TextInput
+                      style={[
+                        s.companyCodeInput,
+                        companyCodeError ? s.companyCodeInputError : null,
+                      ]}
+                      value={companyCode}
+                      onChangeText={(text) => {
+                        setCompanyCode(text.replace(/\D/g, '').slice(0, 10));
+                        setCompanyCodeError(undefined);
+                      }}
+                      keyboardType="number-pad"
+                      maxLength={10}
+                      placeholder="10-digit code"
+                      placeholderTextColor={colors.textNavInactive}
+                      accessibilityLabel="Company code"
+                    />
+                    <AnimatedPressable
+                      scaleTo={0.98}
+                      style={[
+                        s.companyCodeApply,
+                        companyCode.length !== 10 && s.companyCodeApplyDisabled,
+                      ]}
+                      disabled={companyCode.length !== 10}
+                      onPress={() => {
+                        if (!isValidCompanyCode(companyCode)) {
+                          setCompanyCodeError('Invalid company code');
+                          return;
+                        }
+                        setCompanyCodeError(undefined);
+                        setConfirmCodeVisible(true);
+                      }}
+                      accessibilityRole="button"
+                      accessibilityLabel="Apply company code"
+                      accessibilityState={{ disabled: companyCode.length !== 10 }}
+                    >
+                      <Text style={s.companyCodeApplyLabel}>Apply</Text>
+                    </AnimatedPressable>
+                  </View>
+                  {companyCodeError ? (
+                    <Text style={s.companyCodeError}>{companyCodeError}</Text>
+                  ) : (
+                    <Text style={s.companyCodeHint}>
+                      Enter a 10-digit company code to upgrade your account.
+                    </Text>
+                  )}
+                </>
+              )}
+            </View>
           </SectionCard>
 
           <SectionCard title="Records" headerIcon={<RecordsFolderIcon width={17} height={14} />}>
@@ -433,6 +504,21 @@ export function AccountScreen({ profile = defaultAccountProfile }: { profile?: A
           onProfilePress={() => {}}
         />
       </View>
+
+      <CompanyCodeConfirmModal
+        visible={confirmCodeVisible}
+        onCancel={() => setConfirmCodeVisible(false)}
+        onConfirm={() => {
+          setConfirmCodeVisible(false);
+          markTrackerPaid();
+          setCompanyCode('');
+          setUpgradeSuccessVisible(true);
+        }}
+      />
+      <CompanyCodeUpgradeSuccessModal
+        visible={upgradeSuccessVisible}
+        onDone={() => setUpgradeSuccessVisible(false)}
+      />
     </View>
   );
 }
@@ -583,6 +669,67 @@ const s = StyleSheet.create({
   },
   sectionBody: {
     gap: 4,
+  },
+  companyCodeBlock: {
+    gap: 8,
+    paddingTop: 8,
+    paddingBottom: 8,
+  },
+  companyCodeLabel: {
+    fontFamily: fontFamilies.sanchezRegular,
+    fontSize: 16,
+    color: colors.textPrimary,
+  },
+  companyCodeRow: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+  },
+  companyCodeInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: colors.borderOutline,
+    borderRadius: radius.md,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontFamily: fontFamilies.notoSansRegular,
+    fontSize: 16,
+    color: colors.textPrimary,
+    letterSpacing: 2,
+  },
+  companyCodeInputError: {
+    borderColor: colors.statusDeclinedBorder,
+  },
+  companyCodeApply: {
+    backgroundColor: colors.primary,
+    borderRadius: radius.md,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  companyCodeApplyDisabled: {
+    opacity: 0.5,
+  },
+  companyCodeApplyLabel: {
+    fontFamily: fontFamilies.ibmPlexSansSemiBold,
+    fontSize: 14,
+    color: colors.white,
+  },
+  companyCodeError: {
+    fontFamily: fontFamilies.notoSansRegular,
+    fontSize: 12,
+    color: colors.statusDeclinedText,
+  },
+  companyCodeHint: {
+    fontFamily: fontFamilies.notoSansRegular,
+    fontSize: 12,
+    color: colors.textNavInactive,
+    lineHeight: 16,
+  },
+  companyCodeUpgraded: {
+    fontFamily: fontFamilies.notoSansRegular,
+    fontSize: 14,
+    color: colors.primary,
+    lineHeight: 20,
   },
   navRow: {
     flexDirection: 'row',

@@ -54,6 +54,7 @@ export function SessionSetupStep5Screen() {
             Once a session is completed, a summary of the session is visible.{' '}
             <Text style={s.subtitleEmphasis}>Sessions are not automatically approved.</Text>
             {' '}They are sent to Clean Up Give Back to be manually verified. You will be notified of your session status in app and through email confirmation.
+            {' '}You are responsible for making sure your court accepts this program.
           </Text>
         </CoachmarkEnter>
       </View>

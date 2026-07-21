@@ -90,6 +90,10 @@ export function WelcomeScreen() {
             </View>
           </View>
 
+          <Text style={s.orgBlurb}>
+            CleanUp Give Back is a 501(c)(3) nonprofit corporation.
+          </Text>
+
           <View style={s.fields}>
             <TextInput
               style={s.input}
@@ -247,6 +251,13 @@ const s = StyleSheet.create({
     marginTop: 2,
     width: 83,
     height: 7,
+  },
+  orgBlurb: {
+    fontFamily: 'NotoSans_400Regular',
+    fontSize: 13,
+    lineHeight: 18,
+    color: 'rgba(252,249,248,0.85)',
+    marginTop: -8,
   },
   fields: {
     gap: 15,

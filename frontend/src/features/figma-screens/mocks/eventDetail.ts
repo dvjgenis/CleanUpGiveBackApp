@@ -42,17 +42,12 @@ const DEFAULT_WHAT_TO_BRING: WhatToBringItem[] = [
   {
     id: 'clothing',
     icon: 'clothing',
-    label: 'Comfortable, weather-appropriate clothing',
+    label: 'Wear weather-appropriate clothing',
   },
   {
-    id: 'water',
+    id: 'provided',
     icon: 'water',
-    label: 'Water bottle',
-  },
-  {
-    id: 'shoes',
-    icon: 'shoes',
-    label: 'Closed-toe shoes',
+    label: 'CleanUp Give Back provides snacks, supplies, water, and music',
   },
 ];
 

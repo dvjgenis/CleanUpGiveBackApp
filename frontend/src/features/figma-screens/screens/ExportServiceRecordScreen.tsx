@@ -44,6 +44,7 @@ export function ExportServiceRecordScreen() {
     notApproved: false,
   });
   const [format, setFormat] = useState<ExportFormat>('pdf');
+  const [courtMandated, setCourtMandated] = useState(false);
 
   // Normalize leftover string state from earlier mock timeframe fields (Fast Refresh).
   useEffect(() => {
@@ -58,7 +59,21 @@ export function ExportServiceRecordScreen() {
   const scrollBottomPad = FOOTER_PAD_TOP + PRIMARY_FOOTER_BTN_HEIGHT + footerBottom + 16;
 
   function toggleStatus(id: ExportStatus) {
+    if (courtMandated && id !== 'approved') {
+      return;
+    }
     setStatuses((prev) => ({ ...prev, [id]: !prev[id] }));
+  }
+
+  function handleCourtMandatedChange(next: boolean) {
+    setCourtMandated(next);
+    if (next) {
+      setStatuses({
+        approved: true,
+        underReview: false,
+        notApproved: false,
+      });
+    }
   }
 
   function handleStartChange(next: Date) {
@@ -115,23 +130,53 @@ export function ExportServiceRecordScreen() {
         </View>
 
         <View style={s.card}>
+          <Text style={s.cardTitle}>Court Mandated</Text>
+          <Text style={s.cardHint}>
+            When enabled, only approved records are included by default.
+          </Text>
+          <AnimatedPressable
+            scaleTo={0.98}
+            onPress={() => handleCourtMandatedChange(!courtMandated)}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: courtMandated }}
+            accessibilityLabel="Court mandated export"
+            style={[s.statusRow, courtMandated ? s.statusRowSelected : null]}
+          >
+            <Text style={s.statusLabel}>Court mandated export</Text>
+            {courtMandated ? (
+              <RadioCheckedIcon width={24} height={24} />
+            ) : (
+              <RadioEmptyIcon width={24} height={24} />
+            )}
+          </AnimatedPressable>
+        </View>
+
+        <View style={s.card}>
           <Text style={s.cardTitle}>Include Statuses</Text>
           <Text style={s.cardHint}>
             Choose which session statuses to include in your exported record.
           </Text>
           {STATUS_ROWS.map((row) => {
             const selected = statuses[row.id];
+            const disabled = courtMandated && row.id !== 'approved';
             return (
               <AnimatedPressable
                 key={row.id}
                 scaleTo={0.98}
                 onPress={() => toggleStatus(row.id)}
+                disabled={disabled}
                 accessibilityRole="checkbox"
-                accessibilityState={{ checked: selected }}
+                accessibilityState={{ checked: selected, disabled }}
                 accessibilityLabel={row.label}
-                style={[s.statusRow, selected ? s.statusRowSelected : null]}
+                style={[
+                  s.statusRow,
+                  selected ? s.statusRowSelected : null,
+                  disabled ? s.statusRowDisabled : null,
+                ]}
               >
-                <Text style={[s.statusLabel, { color: row.color }]}>{row.label}</Text>
+                <Text style={[s.statusLabel, { color: row.color }, disabled ? s.statusLabelDisabled : null]}>
+                  {row.label}
+                </Text>
                 {selected ? (
                   <RadioCheckedIcon width={24} height={24} />
                 ) : (
@@ -247,9 +292,15 @@ const s = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: colors.primary,
   },
+  statusRowDisabled: {
+    opacity: 0.45,
+  },
   statusLabel: {
     fontFamily: fontFamilies.notoSansSemiBold,
     fontSize: 14,
+  },
+  statusLabelDisabled: {
+    color: colors.textNavInactive,
   },
   formatRow: {
     flexDirection: 'row',

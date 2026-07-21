@@ -43,9 +43,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-function validatePreferredName(value: string) {
+function validateLegalName(value: string) {
   const trimmed = value.trim();
-  if (!trimmed) return 'Please tell us what to call you';
+  if (!trimmed) return 'Full legal name is required';
   if (trimmed.length < 2) return 'Name must be at least 2 characters';
   return undefined;
 }
@@ -76,10 +76,10 @@ export function AccountPhoneScreen() {
 
   if (!fontsLoaded) return <View style={s.root} />;
 
-  const preferredNameError = validatePreferredName(preferredName);
+  const legalNameError = validateLegalName(preferredName);
   const phoneError = validatePhone(digits, country);
   const showPreferredNameError =
-    submitted || touched.preferredName ? preferredNameError : undefined;
+    submitted || touched.preferredName ? legalNameError : undefined;
   const showPhoneError = submitted || touched.phone ? phoneError : undefined;
 
   const dismissKeyboard = () => Keyboard.dismiss();
@@ -103,12 +103,13 @@ export function AccountPhoneScreen() {
               <View style={s.titleSection}>
                 <Text style={s.title}>A few details</Text>
                 <Text style={s.subtitle}>
-                  We need this information to help tailor your clean-up experience and verify your impact.
+                  We need this information to help tailor your clean-up experience and verify your
+                  impact. Please make sure all details are accurate.
                 </Text>
               </View>
 
               <View style={s.fieldSection}>
-                <Text style={s.fieldLabel}>What would you like to be called?</Text>
+                <Text style={s.fieldLabel}>Full legal name</Text>
                 <View>
                   <View style={[s.textField, showPreferredNameError ? s.fieldError : null]}>
                     <TextInput
@@ -116,18 +117,22 @@ export function AccountPhoneScreen() {
                       value={preferredName}
                       onChangeText={setPreferredName}
                       onBlur={() => setTouched((t) => ({ ...t, preferredName: true }))}
-                      placeholder="Preferred name"
+                      placeholder="Full legal name"
                       placeholderTextColor={C.textNavInactive}
                       autoCapitalize="words"
                       autoCorrect={false}
                       returnKeyType="next"
-                      textContentType="nickname"
-                      accessibilityLabel="What would you like to be called?"
+                      textContentType="name"
+                      accessibilityLabel="Full legal name"
                     />
                   </View>
                   {showPreferredNameError ? (
                     <Text style={s.errorText}>{showPreferredNameError}</Text>
-                  ) : null}
+                  ) : (
+                    <Text style={s.helperText}>
+                      This name cannot be changed after setup. To change it later, contact admin.
+                    </Text>
+                  )}
                 </View>
               </View>
 
@@ -180,7 +185,7 @@ export function AccountPhoneScreen() {
           onContinue={() => {
             dismissKeyboard();
             setSubmitted(true);
-            if (preferredNameError || phoneError) return;
+            if (legalNameError || phoneError) return;
             persistPreferredName(preferredName);
             persistPhone(country.iso2, digits);
             router.push('/account-details');
@@ -302,6 +307,14 @@ const s = StyleSheet.create({
     color: C.statusDeclinedText,
     marginTop: 2,
     marginLeft: 4,
+  },
+  helperText: {
+    fontFamily: 'NotoSans_400Regular',
+    fontSize: 12,
+    color: C.textNavInactive,
+    marginTop: 6,
+    marginLeft: 4,
+    lineHeight: 16,
   },
   dialCode: {
     fontFamily: 'NotoSans_400Regular',

@@ -17,24 +17,19 @@ import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { SessionSetupCalendarIcon } from '@/components/session-setup/icons/SessionSetupCalendarIcon';
 import { COUNTRIES, DEFAULT_COUNTRY, type Country } from '@/constants/countries';
 import { SERVICE_TYPES, type ServiceType } from '@/constants/serviceTypes';
+import {
+  confirmEmailChangeCode,
+  requestEmailChangeCode,
+} from '@/lib/emailsApi';
 import { AccountChevronIcon } from '../components/AccountIcons';
 import {
-  ageFromBirthday,
-  BirthdayPickerModal,
-  DEFAULT_BIRTHDAY_PICKER_DATE,
-  formatBirthdayDraft,
   formatBirthdayLabel,
-  parseBirthdayDraft,
 } from '../components/BirthdayPickerModal';
 import {
-  CountryChevronDownIcon,
-  CountryPickerModal,
-  digitsOnly,
   formatPhoneDisplay,
-  phoneDisplayMaxLength,
   phonePlaceholder,
-  validatePhone,
 } from '../components/CountryPickerModal';
+import { EmailVerificationModal } from '../components/EmailVerificationModal';
 import { SuccessConfirmationModal } from '../components/SuccessConfirmationModal';
 import { colors, fontFamilies, radius, shadows } from '../tokens';
 import {
@@ -43,23 +38,12 @@ import {
   getPhoneDigits,
   getPreferredName,
   usePersonalDetails,
-  setBirthday as persistBirthday,
   setEmail as persistEmail,
-  setPhone as persistPhone,
-  setPreferredName as persistPreferredName,
-  setServiceType as persistServiceType,
 } from '@/features/onboarding/onboardingStore';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const FOOTER_PAD_TOP = 18;
 const PRIMARY_FOOTER_BTN_HEIGHT = 52;
-
-function validateName(value: string): string | undefined {
-  const trimmed = value.trim();
-  if (!trimmed) return 'Name is required';
-  if (trimmed.length < 2) return 'Name must be at least 2 characters';
-  return undefined;
-}
 
 function validateEmail(value: string): string | undefined {
   const trimmed = value.trim();
@@ -68,49 +52,37 @@ function validateEmail(value: string): string | undefined {
   return undefined;
 }
 
-function validateBirthdayField(birthday: Date | null, birthdayText: string): string | undefined {
-  if (!birthdayText.trim()) return 'Birthday is required';
-  if (!birthday) return 'Enter a valid birthday (MM/YYYY)';
-  if (ageFromBirthday(birthday) < 13) return 'You must be at least 13 years old';
-  return undefined;
-}
-
 /**
- * Account → Personal Details editor. Lets the user update the name, phone
- * number, birthday, and service type (court ordered, volunteering, etc.)
- * collected during onboarding.
+ * Account → Personal Details. Only email is editable (verified via email code).
+ * Legal name, phone, birthday, and service type are read-only.
  */
 export function PersonalDetailsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const stored = usePersonalDetails();
 
-  const [name, setName] = useState(() => getPreferredName());
+  const [name] = useState(() => getPreferredName());
   const [email, setEmail] = useState(() => getEmail());
-  const [country, setCountry] = useState<Country>(
+  const [initialEmail] = useState(() => getEmail().trim().toLowerCase());
+  const [country] = useState<Country>(
     () => COUNTRIES.find((item) => item.iso2 === getPhoneCountryIso2()) ?? DEFAULT_COUNTRY,
   );
-  const [digits, setDigits] = useState(() => getPhoneDigits());
-  const [countryPickerOpen, setCountryPickerOpen] = useState(false);
-
-  const [birthday, setBirthday] = useState<Date | null>(stored.birthday);
-  const [birthdayText, setBirthdayText] = useState(() =>
+  const [digits] = useState(() => getPhoneDigits());
+  const [birthdayText] = useState(() =>
     stored.birthday ? formatBirthdayLabel(stored.birthday) : '',
   );
-  const [pickerDate, setPickerDate] = useState(() => stored.birthday ?? DEFAULT_BIRTHDAY_PICKER_DATE);
-  const [showBirthdayPicker, setShowBirthdayPicker] = useState(false);
-
-  const [serviceType, setServiceType] = useState<ServiceType | null>(stored.serviceType);
-  const [touched, setTouched] = useState<{ name?: boolean; email?: boolean; phone?: boolean; birthday?: boolean }>({});
+  const [serviceType] = useState<ServiceType | null>(stored.serviceType);
+  const [touched, setTouched] = useState<{ email?: boolean }>({});
   const [submitted, setSubmitted] = useState(false);
   const [saveSuccessVisible, setSaveSuccessVisible] = useState(false);
+  const [verifyVisible, setVerifyVisible] = useState(false);
+  const [verifySubmitting, setVerifySubmitting] = useState(false);
+  const [verifyError, setVerifyError] = useState<string | undefined>();
+  const [pendingEmail, setPendingEmail] = useState('');
+  const [requesting, setRequesting] = useState(false);
 
-  const nameError = validateName(name);
   const emailError = validateEmail(email);
-  const phoneError = validatePhone(digits, country);
-  const birthdayError = validateBirthdayField(birthday, birthdayText);
-  const showError = (field: keyof typeof touched, error: string | undefined) =>
-    (submitted || touched[field]) ? error : undefined;
+  const showEmailError = submitted || touched.email ? emailError : undefined;
 
   const phoneDisplay = formatPhoneDisplay(digits, country);
 
@@ -119,48 +91,49 @@ export function PersonalDetailsScreen() {
 
   const dismissKeyboard = () => Keyboard.dismiss();
 
-  const commitTypedBirthday = () => {
-    const parsed = parseBirthdayDraft(birthdayText);
-    if (parsed) {
-      setBirthday(parsed);
-      setPickerDate(parsed);
-      setBirthdayText(formatBirthdayLabel(parsed));
-      return;
-    }
-    if (birthday) {
-      setBirthdayText(formatBirthdayLabel(birthday));
-      return;
-    }
-    setBirthdayText(formatBirthdayDraft(birthdayText));
-  };
-
-  const openBirthdayPicker = () => {
+  async function handleSave() {
     dismissKeyboard();
-    setPickerDate(birthday ?? DEFAULT_BIRTHDAY_PICKER_DATE);
-    setShowBirthdayPicker(true);
-  };
-
-  function handleSave() {
-    dismissKeyboard();
-    commitTypedBirthday();
     setSubmitted(true);
 
-    const resolvedBirthday = parseBirthdayDraft(birthdayText) ?? birthday;
-    if (
-      validateName(name) ||
-      validateEmail(email) ||
-      validatePhone(digits, country) ||
-      validateBirthdayField(resolvedBirthday, birthdayText)
-    ) {
+    if (validateEmail(email)) {
       return;
     }
 
-    persistPreferredName(name);
-    persistEmail(email);
-    persistPhone(country.iso2, digits);
-    persistBirthday(resolvedBirthday);
-    persistServiceType(serviceType);
-    setSaveSuccessVisible(true);
+    const nextEmail = email.trim();
+    if (nextEmail.toLowerCase() === initialEmail) {
+      setSaveSuccessVisible(true);
+      return;
+    }
+
+    setRequesting(true);
+    setVerifyError(undefined);
+    try {
+      await requestEmailChangeCode({ to: nextEmail });
+      setPendingEmail(nextEmail);
+      setVerifyVisible(true);
+    } catch {
+      setVerifyError('Could not send verification code. Try again.');
+      setPendingEmail(nextEmail);
+      setVerifyVisible(true);
+    } finally {
+      setRequesting(false);
+    }
+  }
+
+  async function handleVerifyConfirm(code: string) {
+    setVerifySubmitting(true);
+    setVerifyError(undefined);
+    try {
+      await confirmEmailChangeCode({ to: pendingEmail, code });
+      persistEmail(pendingEmail);
+      setEmail(pendingEmail);
+      setVerifyVisible(false);
+      setSaveSuccessVisible(true);
+    } catch {
+      setVerifyError('Invalid or expired code');
+    } finally {
+      setVerifySubmitting(false);
+    }
   }
 
   function handleSaveSuccessDismiss() {
@@ -195,34 +168,34 @@ export function PersonalDetailsScreen() {
         >
           <Pressable style={s.content} onPress={dismissKeyboard}>
             <View style={s.form}>
+              <Text style={s.pageNotice}>
+                To change personal details other than email, contact admin.
+              </Text>
+
               <View style={s.fieldSection}>
-                <Text style={s.fieldLabel}>Name</Text>
+                <Text style={[s.fieldLabel, s.fieldLabelDisabled]}>Full legal name</Text>
                 <View>
-                  <View style={[s.textField, showError('name', nameError) ? s.fieldError : null]}>
+                  <View style={[s.textField, s.fieldDisabled]}>
                     <TextInput
-                      style={s.textInput}
+                      style={[s.textInput, s.textInputDisabled]}
                       value={name}
-                      onChangeText={setName}
-                      onBlur={() => setTouched((t) => ({ ...t, name: true }))}
-                      placeholder="Full name"
+                      editable={false}
+                      placeholder="Full legal name"
                       placeholderTextColor={colors.textNavInactive}
-                      autoCapitalize="words"
-                      autoCorrect={false}
-                      returnKeyType="next"
-                      textContentType="name"
-                      accessibilityLabel="Name"
+                      accessibilityLabel="Full legal name"
+                      accessibilityState={{ disabled: true }}
                     />
                   </View>
-                  {showError('name', nameError) ? (
-                    <Text style={s.errorText}>{showError('name', nameError)}</Text>
-                  ) : null}
+                  <Text style={s.helperText}>
+                    Contact admin to change legal name.
+                  </Text>
                 </View>
               </View>
 
               <View style={s.fieldSection}>
                 <Text style={s.fieldLabel}>Email</Text>
                 <View>
-                  <View style={[s.textField, showError('email', emailError) ? s.fieldError : null]}>
+                  <View style={[s.textField, showEmailError ? s.fieldError : null]}>
                     <TextInput
                       style={s.textInput}
                       value={email}
@@ -233,110 +206,70 @@ export function PersonalDetailsScreen() {
                       autoCapitalize="none"
                       autoCorrect={false}
                       keyboardType="email-address"
-                      returnKeyType="next"
+                      returnKeyType="done"
                       textContentType="emailAddress"
                       accessibilityLabel="Email"
                     />
                   </View>
-                  {showError('email', emailError) ? (
-                    <Text style={s.errorText}>{showError('email', emailError)}</Text>
-                  ) : null}
+                  {showEmailError ? (
+                    <Text style={s.errorText}>{showEmailError}</Text>
+                  ) : (
+                    <Text style={s.helperText}>
+                      Changing email requires a confirmation code sent to the new address.
+                    </Text>
+                  )}
                 </View>
               </View>
 
               <View style={s.fieldSection}>
-                <Text style={s.fieldLabel}>Phone Number</Text>
+                <Text style={[s.fieldLabel, s.fieldLabelDisabled]}>Phone Number</Text>
                 <View style={s.phoneRow}>
-                  <AnimatedPressable
-                    style={s.countryBtn}
-                    onPress={() => {
-                      dismissKeyboard();
-                      setCountryPickerOpen(true);
-                    }}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Country code ${country.name}`}
-                    accessibilityState={{ expanded: countryPickerOpen }}
+                  <View
+                    style={[s.countryBtn, s.fieldDisabled]}
+                    accessibilityState={{ disabled: true }}
                   >
                     <Text style={s.flagEmoji} accessibilityLabel={country.name}>
                       {country.flag}
                     </Text>
-                    <CountryChevronDownIcon />
-                  </AnimatedPressable>
+                  </View>
 
                   <View style={s.phoneFieldCol}>
-                    <View style={[s.phoneField, showError('phone', phoneError) ? s.fieldError : null]}>
-                      <Text style={s.dialCode}>+{country.dialCode}</Text>
+                    <View style={[s.phoneField, s.fieldDisabled]}>
+                      <Text style={[s.dialCode, s.textInputDisabled]}>+{country.dialCode}</Text>
                       <TextInput
-                        style={s.phoneInput}
+                        style={[s.phoneInput, s.textInputDisabled]}
                         value={phoneDisplay}
-                        onChangeText={(text) => setDigits(digitsOnly(text, country.maxDigits))}
-                        onBlur={() => setTouched((t) => ({ ...t, phone: true }))}
-                        keyboardType="phone-pad"
-                        maxLength={phoneDisplayMaxLength(country)}
+                        editable={false}
                         placeholder={phonePlaceholder(country)}
                         placeholderTextColor={colors.textNavInactive}
                         accessibilityLabel="Phone number"
-                        textContentType="telephoneNumber"
+                        accessibilityState={{ disabled: true }}
                       />
                     </View>
-                    {showError('phone', phoneError) ? (
-                      <Text style={s.errorText}>{showError('phone', phoneError)}</Text>
-                    ) : null}
                   </View>
                 </View>
               </View>
 
               <View style={s.fieldSection}>
-                <Text style={s.fieldLabel}>Birthday</Text>
-                <View>
-                  <View style={[s.dateField, showError('birthday', birthdayError) ? s.fieldError : null]}>
-                    <TextInput
-                      style={s.dateInput}
-                      value={birthdayText}
-                      onChangeText={(text) => {
-                        const next = formatBirthdayDraft(text);
-                        setBirthdayText(next);
-                        const parsed = parseBirthdayDraft(next);
-                        if (parsed) {
-                          setBirthday(parsed);
-                          setPickerDate(parsed);
-                        } else if (next.length === 0) {
-                          setBirthday(null);
-                        }
-                      }}
-                      onBlur={() => {
-                        commitTypedBirthday();
-                        setTouched((t) => ({ ...t, birthday: true }));
-                      }}
-                      onSubmitEditing={commitTypedBirthday}
-                      placeholder="MM/YYYY"
-                      placeholderTextColor={colors.textNavInactive}
-                      keyboardType="number-pad"
-                      returnKeyType="done"
-                      maxLength={7}
-                      accessibilityLabel="Birthday month and year"
-                    />
-                    <AnimatedPressable
-                      style={s.calendarBtn}
-                      onPress={openBirthdayPicker}
-                      accessibilityRole="button"
-                      accessibilityLabel="Open birthday picker"
-                      hitSlop={8}
-                    >
-                      <SessionSetupCalendarIcon
-                        color={showError('birthday', birthdayError) ? colors.statusDeclinedText : colors.textNavInactive}
-                        size={18}
-                      />
-                    </AnimatedPressable>
+                <Text style={[s.fieldLabel, s.fieldLabelDisabled]}>Birthday</Text>
+                <View style={[s.dateField, s.fieldDisabled]}>
+                  <TextInput
+                    style={[s.dateInput, s.textInputDisabled]}
+                    value={birthdayText}
+                    editable={false}
+                    placeholder="MM/YYYY"
+                    placeholderTextColor={colors.textNavInactive}
+                    accessibilityLabel="Birthday month and year"
+                    accessibilityState={{ disabled: true }}
+                  />
+                  <View style={s.calendarBtn}>
+                    <SessionSetupCalendarIcon color={colors.textNavInactive} size={18} />
                   </View>
-                  {showError('birthday', birthdayError) ? (
-                    <Text style={s.errorText}>{showError('birthday', birthdayError)}</Text>
-                  ) : null}
                 </View>
               </View>
 
               <View style={s.fieldSection}>
-                <Text style={s.fieldLabel}>Service Type</Text>
+                <Text style={[s.fieldLabel, s.fieldLabelDisabled]}>Service Type</Text>
                 <View style={s.serviceGrid}>
                   <View style={s.serviceRow}>
                     {SERVICE_TYPES.slice(0, 2).map((type) => (
@@ -344,7 +277,6 @@ export function PersonalDetailsScreen() {
                         key={type}
                         label={type}
                         selected={serviceType === type}
-                        onPress={() => setServiceType(type)}
                       />
                     ))}
                   </View>
@@ -354,7 +286,6 @@ export function PersonalDetailsScreen() {
                         key={type}
                         label={type}
                         selected={serviceType === type}
-                        onPress={() => setServiceType(type)}
                       />
                     ))}
                   </View>
@@ -368,34 +299,33 @@ export function PersonalDetailsScreen() {
       <View style={[s.footer, { paddingBottom: footerBottom }]}>
         <AnimatedPressable
           scaleTo={0.98}
-          style={s.saveBtn}
-          onPress={handleSave}
+          style={[s.saveBtn, requesting && s.saveBtnDisabled]}
+          onPress={() => {
+            void handleSave();
+          }}
+          disabled={requesting}
           accessibilityRole="button"
           accessibilityLabel="Save personal details"
+          accessibilityState={{ disabled: requesting }}
         >
-          <Text style={s.saveBtnLabel}>Save Changes</Text>
+          <Text style={s.saveBtnLabel}>
+            {requesting ? 'Sending code…' : 'Save Changes'}
+          </Text>
         </AnimatedPressable>
       </View>
 
-      <CountryPickerModal
-        visible={countryPickerOpen}
-        selectedIso2={country.iso2}
-        onSelect={(item) => {
-          setCountry(item);
-          setDigits((prev) => digitsOnly(prev, item.maxDigits));
+      <EmailVerificationModal
+        visible={verifyVisible}
+        email={pendingEmail}
+        submitting={verifySubmitting}
+        error={verifyError}
+        onConfirm={(code) => {
+          void handleVerifyConfirm(code);
         }}
-        onClose={() => setCountryPickerOpen(false)}
-      />
-
-      <BirthdayPickerModal
-        visible={showBirthdayPicker}
-        value={pickerDate}
-        onChange={setPickerDate}
-        onConfirm={(date) => {
-          setBirthday(date);
-          setBirthdayText(formatBirthdayLabel(date));
+        onCancel={() => {
+          setVerifyVisible(false);
+          setVerifyError(undefined);
         }}
-        onClose={() => setShowBirthdayPicker(false)}
       />
 
       <SuccessConfirmationModal
@@ -411,22 +341,21 @@ export function PersonalDetailsScreen() {
 function ServiceTypeButton({
   label,
   selected,
-  onPress,
 }: {
   label: string;
   selected: boolean;
-  onPress: () => void;
 }) {
   return (
-    <AnimatedPressable
-      style={[s.serviceBtn, selected && s.serviceBtnActive]}
-      onPress={onPress}
+    <View
+      style={[s.serviceBtn, selected && s.serviceBtnActive, s.serviceBtnDisabled]}
       accessibilityRole="radio"
       accessibilityLabel={label}
-      accessibilityState={{ selected }}
+      accessibilityState={{ selected, disabled: true }}
     >
-      <Text style={[s.serviceBtnText, selected && s.serviceBtnTextActive]}>{label}</Text>
-    </AnimatedPressable>
+      <Text style={[s.serviceBtnText, selected && s.serviceBtnTextActive, s.textInputDisabled]}>
+        {label}
+      </Text>
+    </View>
   );
 }
 
@@ -459,12 +388,11 @@ const s = StyleSheet.create({
     color: colors.textPrimary,
   },
   topBarSpacer: {
-    width: 24,
+    width: 28,
   },
   scroll: {
-    flexGrow: 1,
     paddingHorizontal: 16,
-    paddingTop: 20,
+    paddingTop: 24,
   },
   content: {
     flexGrow: 1,
@@ -472,102 +400,123 @@ const s = StyleSheet.create({
   form: {
     gap: 24,
   },
+  pageNotice: {
+    fontFamily: fontFamilies.notoSansRegular,
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.textTertiary,
+  },
   fieldSection: {
-    gap: 12,
+    gap: 8,
   },
   fieldLabel: {
     fontFamily: fontFamilies.sanchezRegular,
     fontSize: 16,
     color: colors.textPrimary,
   },
-  textField: {
-    height: 56,
-    borderWidth: 1,
-    borderColor: colors.borderOutline,
-    borderRadius: radius.sm,
-    paddingHorizontal: 13,
-    justifyContent: 'center',
-  },
-  textInput: {
-    fontFamily: fontFamilies.notoSansRegular,
-    fontSize: 14,
-    color: colors.textPrimary,
-    paddingVertical: 0,
-  },
-  phoneRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 10,
-  },
-  countryBtn: {
-    height: 56,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  flagEmoji: {
-    fontSize: 28,
-    lineHeight: 32,
-  },
-  phoneField: {
-    flex: 1,
-    height: 56,
-    borderWidth: 1,
-    borderColor: colors.borderOutline,
-    borderRadius: radius.sm,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    gap: 10,
-  },
-  phoneFieldCol: {
-    flex: 1,
-  },
-  dialCode: {
-    fontFamily: fontFamilies.notoSansRegular,
-    fontSize: 14,
+  fieldLabelDisabled: {
     color: colors.textNavInactive,
   },
-  phoneInput: {
-    flex: 1,
-    fontFamily: fontFamilies.notoSansRegular,
-    fontSize: 14,
-    color: colors.textPrimary,
-    paddingVertical: 0,
-  },
-  dateField: {
-    height: 56,
+  textField: {
     borderWidth: 1,
     borderColor: colors.borderOutline,
-    borderRadius: radius.sm,
-    paddingHorizontal: 13,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  dateInput: {
-    flex: 1,
-    fontFamily: fontFamilies.notoSansRegular,
-    fontSize: 14,
-    color: colors.textPrimary,
-    paddingVertical: 0,
-  },
-  calendarBtn: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
+    borderRadius: radius.md,
+    paddingHorizontal: 16,
+    minHeight: 56,
     justifyContent: 'center',
+    backgroundColor: colors.white,
+  },
+  fieldDisabled: {
+    backgroundColor: colors.bgApp,
+    opacity: 0.85,
   },
   fieldError: {
     borderColor: colors.statusDeclinedBorder,
+  },
+  textInput: {
+    fontFamily: fontFamilies.notoSansRegular,
+    fontSize: 16,
+    color: colors.textPrimary,
+    paddingVertical: 0,
+  },
+  textInputDisabled: {
+    color: colors.textNavInactive,
+  },
+  helperText: {
+    fontFamily: fontFamilies.notoSansRegular,
+    fontSize: 12,
+    color: colors.textNavInactive,
+    marginTop: 6,
+    lineHeight: 16,
   },
   errorText: {
     fontFamily: fontFamilies.notoSansRegular,
     fontSize: 12,
     color: colors.statusDeclinedText,
-    marginTop: 2,
-    marginLeft: 4,
+    marginTop: 6,
+  },
+  phoneRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  countryBtn: {
+    width: 72,
+    height: 56,
+    borderWidth: 1,
+    borderColor: colors.borderOutline,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.white,
+  },
+  flagEmoji: {
+    fontSize: 22,
+  },
+  phoneFieldCol: {
+    flex: 1,
+  },
+  phoneField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.borderOutline,
+    borderRadius: radius.md,
+    paddingHorizontal: 16,
+    height: 56,
+    backgroundColor: colors.white,
+    gap: 8,
+  },
+  dialCode: {
+    fontFamily: fontFamilies.notoSansRegular,
+    fontSize: 16,
+    color: colors.textPrimary,
+  },
+  phoneInput: {
+    flex: 1,
+    fontFamily: fontFamilies.notoSansRegular,
+    fontSize: 16,
+    color: colors.textPrimary,
+    paddingVertical: 0,
+  },
+  dateField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.borderOutline,
+    borderRadius: radius.md,
+    paddingHorizontal: 16,
+    height: 56,
+    backgroundColor: colors.white,
+  },
+  dateInput: {
+    flex: 1,
+    fontFamily: fontFamilies.notoSansRegular,
+    fontSize: 16,
+    color: colors.textPrimary,
+    paddingVertical: 0,
+  },
+  calendarBtn: {
+    padding: 4,
   },
   serviceGrid: {
     gap: 12,
@@ -585,15 +534,19 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 8,
+    backgroundColor: colors.white,
   },
   serviceBtnActive: {
     borderColor: colors.primary,
     backgroundColor: colors.statusApprovedBg,
   },
+  serviceBtnDisabled: {
+    opacity: 0.7,
+  },
   serviceBtnText: {
     fontFamily: fontFamilies.notoSansMedium,
     fontSize: 15,
-    color: colors.textNavInactive,
+    color: colors.textTertiary,
     textAlign: 'center',
   },
   serviceBtnTextActive: {
@@ -604,21 +557,24 @@ const s = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: colors.white,
     paddingTop: FOOTER_PAD_TOP,
     paddingHorizontal: 16,
+    backgroundColor: colors.white,
     ...shadows.navBottom,
   },
   saveBtn: {
     height: PRIMARY_FOOTER_BTN_HEIGHT,
-    backgroundColor: colors.primary,
     borderRadius: radius.md,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  saveBtnDisabled: {
+    opacity: 0.6,
+  },
   saveBtnLabel: {
-    fontFamily: fontFamilies.notoSansSemiBold,
-    fontSize: 14,
+    fontFamily: fontFamilies.ibmPlexSansSemiBold,
+    fontSize: 16,
     color: colors.white,
   },
 });
