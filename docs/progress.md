@@ -4934,3 +4934,38 @@ useEffect(() => {
 - VisionCamera v5 Nitro HybridObjects cannot be passed as React props through Fabric's `folly::dynamic` serialization path — this is a structural incompatibility, not a race condition.
 - expo-camera `CameraView` cleanly supports device switching via React key remounting; no special session management needed.
 - EAS builds blocked by Apple Developer Program License Agreement require the account **holder** (not a team member) to accept at developer.apple.com/account.
+
+---
+
+## [2026-07-20 Session 216] — PiP layout polish + session-end feedback screen
+
+**Session goal:** Move the selfie PiP to the left side on both capture and preview, push the "Capture your progress" copy below the PiP, and surface the feedback screen after a user ends a session.
+**Workflow used:** Chat / inline edits
+
+### Skills Invoked
+
+| Skill | Purpose | Outcome |
+|---|---|---|
+| None | All work done inline | — |
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Move PiP from right to left (capture step) | `screens/PhotoCaptureScreen.tsx` | ✅ `right: PIP_RIGHT` → `left: PIP_RIGHT` on SequentialCapture |
+| Move PiP from right to left (preview step) | `screens/PhotoCaptureScreen.tsx` | ✅ Same change in BeRealPreview |
+| Push copy block below PiP on back-camera step | `screens/PhotoCaptureScreen.tsx` | ✅ `copyAreaBelowPip` style: marginTop = PIP_TOP + PIP_SIZE − 56 + 12 = 140 |
+| Add "Share Feedback" button to submission confirmation footer | `screens/SubmissionConfirmationScreen.tsx` | ✅ Outlined primary button above "Go Home"; pushes to `/session-feedback` |
+| Fix FeedbackScreen session-skip navigation loop | `screens/FeedbackScreen.tsx` | ✅ `router.push('/submission-confirmation')` → `router.back()` |
+| Bump FOOTER_HEIGHT for extra button | `screens/SubmissionConfirmationScreen.tsx` | ✅ 168 → 232 |
+
+### Key Decisions
+
+- PiP is now left-anchored at `PIP_RIGHT = 17` on both the back-camera capture step and the BeReal-style preview — consistent across both views.
+- Copy block on the back step uses a conditional style (`copyAreaBelowPip`) rather than restructuring the overlay layout — zero impact on front-step appearance.
+- Feedback is surfaced as a prominent (but skippable) CTA in the confirmation footer rather than auto-navigating — avoids jarring forced navigation after an emotional moment.
+
+### Learnings
+
+- `replace_all: true` on `{ top: insets.top + PIP_TOP, right: PIP_RIGHT }` is safe here because both PiP instances use identical inline style objects.
+- FeedbackScreen's `handleSkip` for `source === 'session'` was incorrectly pushing a new confirmation screen (creating a stack loop); correct fix is `router.back()`.
