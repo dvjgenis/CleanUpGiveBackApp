@@ -1,5 +1,6 @@
 import {
   haversineMiles,
+  isRouteCoordinate,
   milesToMeters,
   MIN_ROUTE_SAMPLE_METERS,
   type RouteCoordinate,
@@ -26,6 +27,9 @@ export const DISPLAY_COORDINATE_EMA_ALPHA = 0.35;
 
 /** Douglas-Peucker tolerance for display simplification (meters). */
 export const DISPLAY_SIMPLIFY_TOLERANCE_METERS = 4;
+/** Tighter Douglas-Peucker tolerance for the live tracker trail only. */
+export const LIVE_DISPLAY_SIMPLIFY_TOLERANCE_METERS = 2;
+const LIVE_DISPLAY_TAIL_RAW_POINTS = 6;
 
 export type MotionState = 'walking' | 'stationary';
 
@@ -559,7 +563,144 @@ export function simplifyRouteForDisplay(
   return smoothRouteForDisplay(simplified);
 }
 
+/** Live tracker display: lighter simplify with recent raw tail for fluid motion. */
+export function simplifyRouteForLiveDisplay(coordinates: RouteCoordinate[]): RouteCoordinate[] {
+  if (coordinates.length < 2) {
+    return coordinates;
+  }
+
+  if (coordinates.length <= LIVE_DISPLAY_TAIL_RAW_POINTS + 2) {
+    return simplifyRouteForDisplay(coordinates, LIVE_DISPLAY_SIMPLIFY_TOLERANCE_METERS);
+  }
+
+  const splitIndex = coordinates.length - LIVE_DISPLAY_TAIL_RAW_POINTS;
+  const head = coordinates.slice(0, splitIndex);
+  const tail = coordinates.slice(splitIndex);
+  const simplifiedHead = simplifyRouteForDisplay(head, LIVE_DISPLAY_SIMPLIFY_TOLERANCE_METERS);
+
+  if (simplifiedHead.length === 0) {
+    return tail;
+  }
+
+  const lastHead = simplifiedHead[simplifiedHead.length - 1];
+  const firstTail = tail[0];
+  if (deltaMetersBetween(lastHead, firstTail) < 1) {
+    return [...simplifiedHead.slice(0, -1), ...tail];
+  }
+
+  return [...simplifiedHead, ...tail];
+}
+
+/** Extends the display polyline to the EMA-smoothed tip between GPS appends. */
+export function appendLiveTipToDisplayRoute(
+  displayRoute: RouteCoordinate[],
+  tip: RouteCoordinate | null,
+): RouteCoordinate[] {
+  if (!tip || !isRouteCoordinate(tip)) {
+    return displayRoute;
+  }
+
+  if (displayRoute.length === 0) {
+    return [tip];
+  }
+
+  const last = displayRoute[displayRoute.length - 1];
+  if (deltaMetersBetween(last, tip) < 0.5) {
+    return displayRoute;
+  }
+
+  return [...displayRoute, tip];
+}
+
+/** Slices a route by fraction of path length (0–1), with interpolated tip. */
+export function sliceRouteByDistanceProgress(
+  coords: RouteCoordinate[],
+  progress: number,
+): RouteCoordinate[] {
+  if (coords.length < 2) {
+    return coords;
+  }
+
+  const clamped = Math.max(0, Math.min(1, progress));
+  if (clamped <= 0) {
+    return [coords[0]];
+  }
+
+  if (clamped >= 1) {
+    return coords;
+  }
+
+  const cumulative: number[] = [0];
+  for (let index = 1; index < coords.length; index += 1) {
+    cumulative.push(cumulative[index - 1] + deltaMetersBetween(coords[index - 1], coords[index]));
+  }
+
+  const totalMeters = cumulative[cumulative.length - 1];
+  if (totalMeters <= 0) {
+    return [coords[0]];
+  }
+
+  const targetMeters = clamped * totalMeters;
+  let segmentIndex = 1;
+  while (segmentIndex < cumulative.length && cumulative[segmentIndex] < targetMeters) {
+    segmentIndex += 1;
+  }
+
+  if (segmentIndex >= coords.length) {
+    return coords;
+  }
+
+  const segmentStart = segmentIndex - 1;
+  const segmentLength = cumulative[segmentIndex] - cumulative[segmentStart];
+  const segmentT =
+    segmentLength > 0 ? (targetMeters - cumulative[segmentStart]) / segmentLength : 0;
+  const from = coords[segmentStart];
+  const to = coords[segmentIndex];
+  const tip: RouteCoordinate = [
+    from[0] + (to[0] - from[0]) * segmentT,
+    from[1] + (to[1] - from[1]) * segmentT,
+  ];
+
+  return [...coords.slice(0, segmentIndex), tip];
+}
+
+/** Foreground + background GPS can deliver the same fix within a short window. */
+export const DUPLICATE_SAMPLE_WINDOW_MS = 750;
+export const DUPLICATE_SAMPLE_MAX_METERS = 2;
+
+export function shouldSkipDuplicateLocationSample(params: {
+  sampleTimestampMs: number;
+  coordinate: RouteCoordinate;
+  lastProcessedTimestampMs: number | null;
+  lastProcessedCoordinate: RouteCoordinate | null;
+}): boolean {
+  const {
+    sampleTimestampMs,
+    coordinate,
+    lastProcessedTimestampMs,
+    lastProcessedCoordinate,
+  } = params;
+
+  if (lastProcessedTimestampMs == null || lastProcessedCoordinate == null) {
+    return false;
+  }
+
+  if (sampleTimestampMs <= lastProcessedTimestampMs) {
+    return true;
+  }
+
+  const deltaMs = sampleTimestampMs - lastProcessedTimestampMs;
+  if (deltaMs > DUPLICATE_SAMPLE_WINDOW_MS) {
+    return false;
+  }
+
+  return deltaMetersBetween(lastProcessedCoordinate, coordinate) < DUPLICATE_SAMPLE_MAX_METERS;
+}
+
 export function deltaMetersBetween(from: RouteCoordinate, to: RouteCoordinate): number {
+  if (!isRouteCoordinate(from) || !isRouteCoordinate(to)) {
+    return Number.POSITIVE_INFINITY;
+  }
   return milesToMeters(
     haversineMiles(from[1], from[0], to[1], to[0]),
   );

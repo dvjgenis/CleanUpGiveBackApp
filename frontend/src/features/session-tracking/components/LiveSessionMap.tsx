@@ -1,19 +1,10 @@
-import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { Platform, StyleSheet, Text, View } from 'react-native';
+
+import { isExpoGoClient } from '@/utils/isExpoGoClient';
 
 import { useLiveSession } from '../liveSessionStore';
 import { colors, radius, textStyles } from '../tokens';
 import { Icon } from './Icon';
-
-/**
- * True in Expo Go (MapLibre is a native module and cannot run there) or on
- * web (`@maplibre/maplibre-react-native`'s native components call
- * `codegenNativeComponent`, unimplemented by `react-native-web` — see
- * `@/components/ui/map.web.tsx`). See README.md "Previewing this feature"
- * for the dev-client build steps.
- */
-const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
-const needsWebFallback = Platform.OS === 'web';
 
 type Props = {
   style?: object;
@@ -25,13 +16,13 @@ type Props = {
  * `/live-session` route without evaluating the native map module at import time.
  */
 export function LiveSessionMap({ style }: Props) {
-  if (isExpoGo) {
+  if (isExpoGoClient()) {
     const { LiveSessionMapWebView } =
       require('./LiveSessionMapWebView') as typeof import('./LiveSessionMapWebView');
     return <LiveSessionMapWebView style={style} />;
   }
 
-  if (needsWebFallback) {
+  if (Platform.OS === 'web') {
     return <ExpoGoMapFallback style={style} />;
   }
 

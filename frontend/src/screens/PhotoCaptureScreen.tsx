@@ -5,7 +5,7 @@ import {
 import { Sanchez_400Regular } from '@expo-google-fonts/sanchez';
 import { CameraView, type FlashMode, useCameraPermissions } from 'expo-camera';
 import { useFonts } from 'expo-font';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -17,6 +17,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
   runOnJS,
@@ -31,7 +32,11 @@ import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { CoachmarkEnter } from '@/components/motion/CoachmarkEnter';
 import { useFadeUpEnter } from '@/components/motion/hooks';
 import { staggerDelay } from '@/motion';
-import { addPhotoCheckpoint } from '@/features/session-tracking/liveSessionStore';
+import { addPhotoCheckpoint, finalizeLiveSession, resetCheckpointCountdown, startNewLiveSession, useLiveSession } from '@/features/session-tracking/liveSessionStore';
+import {
+  clearPendingSessionSetup,
+  consumePendingSessionSetup,
+} from '@/features/session-tracking/pendingSessionSetup';
 import { persistCheckpointPhotos } from '@/features/session-tracking/utils/persistCheckpointPhotos';
 import { colors as tokens } from '@/constants/tokens';
 
@@ -413,9 +418,11 @@ function BeRealPreview({
 function SequentialCapture({
   onDone,
   onCancel,
+  endSessionMode = false,
 }: {
   onDone: (progressUri: string, selfieUri: string) => void;
   onCancel: () => void;
+  endSessionMode?: boolean;
 }) {
   const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
@@ -428,8 +435,8 @@ function SequentialCapture({
   const [zoom, setZoom] = useState(0);
   const cameraRef = useRef<CameraView>(null);
 
+  // `onCameraReady` fires once per mount; flipping `facing` does not re-fire it on iOS.
   useEffect(() => {
-    setCameraReady(false);
     setCaptureError(null);
     setZoom(0);
     // Flash is back-camera only; reset so a retake doesn't keep a surprise flash.
@@ -476,6 +483,7 @@ function SequentialCapture({
     setCapturing(true);
     setCaptureError(null);
     try {
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       const photo = await cameraRef.current.takePictureAsync({ quality: 0.9 });
       if (!photo?.uri) throw new Error('Capture returned no URI');
 
@@ -498,16 +506,28 @@ function SequentialCapture({
   return (
     <View style={s.root}>
       <CameraView
-        key={step}
         ref={cameraRef as unknown as React.Ref<CameraView>}
         style={StyleSheet.absoluteFillObject}
         facing={step}
         flash={step === 'back' ? flashMode : 'off'}
         zoom={zoom}
+        mirror={step === 'front'}
         onCameraReady={() => setCameraReady(true)}
       />
 
-      {!cameraReady && (
+      {step === 'back' && selfieUri ? (
+        <View style={[s.pip, { top: insets.top + PIP_TOP, right: PIP_RIGHT }]} pointerEvents="none">
+          <Image
+            source={{ uri: selfieUri }}
+            style={StyleSheet.absoluteFillObject}
+            resizeMode="cover"
+            accessibilityIgnoresInvertColors
+            accessibilityLabel="Selfie preview"
+          />
+        </View>
+      ) : null}
+
+      {!cameraReady && step === 'front' && (
         <View style={[StyleSheet.absoluteFillObject, s.center]} pointerEvents="none">
           <ActivityIndicator color={C.primary} />
         </View>
@@ -540,14 +560,24 @@ function SequentialCapture({
             <View style={s.copyBlock}>
               {step === 'front' ? (
                 <>
-                  <Text style={s.copyTitle}>Take your selfie</Text>
-                  <Text style={s.copySubtitle}>Face the camera and tap the button.</Text>
+                  <Text style={s.copyTitle}>
+                    {endSessionMode ? 'Final selfie' : 'Take your selfie'}
+                  </Text>
+                  <Text style={s.copySubtitle}>
+                    {endSessionMode
+                      ? 'One last photo before you finish your session.'
+                      : 'Face the camera and tap the button.'}
+                  </Text>
                 </>
               ) : (
                 <>
-                  <Text style={s.copyTitle}>Capture your progress</Text>
+                  <Text style={s.copyTitle}>
+                    {endSessionMode ? 'Final progress photo' : 'Capture your progress'}
+                  </Text>
                   <Text style={s.copySubtitle}>
-                    Point at the cleanup area and tap the button.
+                    {endSessionMode
+                      ? 'Show your cleanup area, then submit to end the session.'
+                      : 'Point at the cleanup area and tap the button.'}
                   </Text>
                 </>
               )}
@@ -574,10 +604,24 @@ function SequentialCapture({
 
 export function PhotoCaptureScreen() {
   const router = useRouter();
+  const { mode } = useLocalSearchParams<{ mode?: string }>();
+  const { isActive } = useLiveSession();
+  const isSessionStart = mode === 'session-start';
+  const isSessionEnd = mode === 'session-end';
+  /** Capture active state on mount — after End Session finalize, isActive becomes
+   * false; do NOT treat that as a stale screen and bounce to Home (that raced
+   * `replace('/submission-confirmation')` and skipped the session preview). */
+  const wasActiveOnMountRef = useRef(isActive);
   const [selfieUri, setSelfieUri] = useState<string | null>(null);
   const [progressUri, setProgressUri] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isSessionEnd && !wasActiveOnMountRef.current) {
+      router.replace('/' as Href);
+    }
+  }, [isSessionEnd, router]);
 
   const [fontsLoaded] = useFonts({
     Sanchez_400Regular,
@@ -623,11 +667,38 @@ export function PhotoCaptureScreen() {
     setIsSubmitting(true);
     setSubmitError(null);
     try {
+      const capturedAt = Date.now();
       const persisted = await persistCheckpointPhotos({
         selfieUri,
         progressUri,
-        capturedAt: Date.now(),
+        capturedAt,
       });
+
+      if (isSessionStart) {
+        const setup = consumePendingSessionSetup();
+        if (!setup) {
+          setSubmitError('Session setup expired. Please start again from Session Setup.');
+          return;
+        }
+        await startNewLiveSession(setup);
+        addPhotoCheckpoint(persisted);
+        resetCheckpointCountdown();
+        router.replace('/live-session?from=onboarding' as Href);
+        return;
+      }
+
+      if (isSessionEnd) {
+        if (!isActive) {
+          setSubmitError('No active session. Return to the tracker and try again.');
+          return;
+        }
+        addPhotoCheckpoint(persisted);
+        finalizeLiveSession({ status: 'under_review' });
+        // Session summary + route replay first; feedback is offered from confirmation.
+        router.replace('/submission-confirmation' as Href);
+        return;
+      }
+
       addPhotoCheckpoint(persisted);
       router.replace('/photo-submitted');
     } catch {
@@ -641,6 +712,19 @@ export function PhotoCaptureScreen() {
     setSelfieUri(null);
     setProgressUri(null);
     setSubmitError(null);
+  };
+
+  const handleCancelCapture = () => {
+    if (isSessionStart) {
+      clearPendingSessionSetup();
+      router.back();
+      return;
+    }
+    if (isSessionEnd) {
+      router.dismissTo('/live-session');
+      return;
+    }
+    router.dismissTo('/live-session');
   };
 
   if (selfieUri && progressUri) {
@@ -659,7 +743,8 @@ export function PhotoCaptureScreen() {
   return (
     <SequentialCapture
       onDone={handleDone}
-      onCancel={() => router.dismissTo('/live-session')}
+      onCancel={handleCancelCapture}
+      endSessionMode={isSessionEnd}
     />
   );
 }

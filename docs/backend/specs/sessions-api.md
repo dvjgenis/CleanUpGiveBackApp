@@ -1,7 +1,7 @@
 # Backend spec: Sessions API
 
 **Date:** 2026-07-13  
-**Status:** Draft — engineering requirements  
+**Status:** Implemented — live on Fly (`https://cleanup-sessions.fly.dev`)  
 **ADR:** [ADR-004](../../adr/ADR-004-sessions-backend-supabase-fly.md)  
 **Setup:** [supabase.md](../../supabase.md)  
 **Frontend:** [session-tracking-expo-go.md](../../frontend/specs/session-tracking-expo-go.md)
@@ -101,6 +101,15 @@ Admin status change (test phase: manual curl or Supabase table editor).
 - **Auth:** admin role or service_role (implementation TBD for v1)
 - **Response:** `200 { "id": "<uuid>", "status": "<new_status>" }`
 
+#### `DELETE /sessions/:id`
+
+Volunteer-owned hard delete (removes session from admin review queue).
+
+- **Auth:** JWT; session must belong to caller
+- **Allowed when:** status is `active`, `under_review`, `not_approved`, or `invalid`
+- **Rejected when:** status is `approved` → `409 { "error": "Approved sessions cannot be deleted" }`
+- **Response:** `204` (no body); checkpoints cascade-delete via FK
+
 ## Data model
 
 ### `sessions`
@@ -147,6 +156,7 @@ Private bucket. Path: `{user_id}/{session_id}/{checkpoint_id}-selfie.jpg`.
 - [x] **AC-8:** Session ends with `invalid` when client calls finalize with `status: "invalid"` (missed-checkpoint grace expiry)
 - [x] **AC-9:** `GET /health` returns 200 for Fly health checks
 - [x] **AC-10:** `GET /sessions` includes `checkpointCount` and `photoCount` per row for Home impact stats
+- [x] **AC-11:** `DELETE /sessions/:id` hard-deletes non-`approved` sessions owned by the caller; returns `409` when `approved`
 
 ## Security & privacy
 

@@ -1,12 +1,13 @@
-import { useEffect, useRef } from 'react';
-import { StyleSheet } from 'react-native';
+import { useEffect, useMemo, useRef } from 'react';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 
 import { useLiveSession } from '../liveSessionStore';
 import { useEffectiveMapTheme, type MapBasemapTheme } from '../mapThemeStore';
-import { colors, radius } from '../tokens';
+import { colors, radius, textStyles } from '../tokens';
 import { getMapStylePayload, type MapLayerType } from '../utils/mapStyles';
 import { buildWebViewMapHelpers } from '../utils/webViewMapHelpers';
+import { appendLiveTipToDisplayRoute } from '../utils/routeFiltering';
 import { MapInteractionContainer } from './MapInteractionContainer';
 
 const PRIMARY = colors.primary;
@@ -120,7 +121,7 @@ function buildHtml(initialCenter: [number, number] | null, theme: MapBasemapThem
         id: 'route',
         type: 'line',
         source: 'route',
-        paint: { 'line-color': '${PRIMARY}', 'line-width': 4 },
+        paint: { 'line-color': '${PRIMARY}', 'line-width': 4, 'line-join': 'round', 'line-cap': 'round' },
       });
       routeAdded = true;
     } else if (routeAdded && map.getSource('route')) {
@@ -213,8 +214,12 @@ export function LiveSessionMapWebView({ style }: Props) {
   const mapTheme = useEffectiveMapTheme();
   const webRef = useRef<WebView>(null);
   const readyRef = useRef(false);
-  const routeForMap =
+  const baseRouteForMap =
     displayRouteCoordinates.length >= 2 ? displayRouteCoordinates : routeCoordinates;
+  const routeForMap = useMemo(
+    () => appendLiveTipToDisplayRoute(baseRouteForMap, displayCoordinate),
+    [baseRouteForMap, displayCoordinate],
+  );
 
   // Only bake HTML once we have a real fix — never start at the US overview.
   const seedCenter =
@@ -223,7 +228,7 @@ export function LiveSessionMapWebView({ style }: Props) {
     (routeCoordinates[0] as [number, number] | undefined) ??
     null;
   const htmlRef = useRef<string | null>(null);
-  if (htmlRef.current === null) {
+  if (seedCenter && htmlRef.current === null) {
     htmlRef.current = buildHtml(seedCenter, mapTheme);
   }
 
@@ -276,6 +281,19 @@ export function LiveSessionMapWebView({ style }: Props) {
     pushStyleUpdate();
   }, [mapLayer, mapTheme]);
 
+  if (!seedCenter || !htmlRef.current) {
+    return (
+      <MapInteractionContainer style={[styles.container, style]}>
+        <View style={styles.waiting}>
+          <ActivityIndicator size="small" color={colors.primary} />
+          <Text style={[textStyles.bodySmall, styles.waitingText]}>
+            Getting precise location…
+          </Text>
+        </View>
+      </MapInteractionContainer>
+    );
+  }
+
   return (
     <MapInteractionContainer style={[styles.container, style]}>
       <WebView
@@ -313,5 +331,16 @@ const styles = StyleSheet.create({
   webview: {
     flex: 1,
     backgroundColor: colors.bgSurface,
+  },
+  waiting: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    backgroundColor: colors.bgSurface,
+  },
+  waitingText: {
+    color: colors.textTertiary,
+    textAlign: 'center',
   },
 });

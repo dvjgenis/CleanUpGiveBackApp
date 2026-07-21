@@ -38,23 +38,21 @@ This spec defines the process and acceptance criteria for migrating the app from
 - [ ] `frontend/assets/stitch/` and `frontend/design/stitch_htmls/` archived or deleted
 - [ ] `docs/current.md` updated to reflect full native implementation
 
-## Related, non-conforming build
+## Session Tracking note
 
-`frontend/src/features/session-tracking/` implements the full Session
-Tracking flow (PRD §6.9–6.15) in code, but **does not** follow this spec's
-Phase 1 acceptance criteria: screens live outside `frontend/src/app/`, there
-is no per-screen route at `frontend/src/app/<routeKey>.tsx`, and
-`manifest.yaml` statuses were not advanced to `implemented`. It was built as
-an isolated, explicitly-requested exploratory slice with its own preview
-harness (`dev/PreviewApp.tsx`) — see that folder's `README.md`. Treat it as
-a reference implementation to draw from when Session Tracking's screens are
-migrated for real under this spec, not as migration progress itself.
+Production Session Tracking (PRD §6.9–6.15) now ships via Expo Router routes
+under `frontend/src/app/` (`live-session`, `photo-capture`, etc.) that import
+store/map/checkpoint code from `frontend/src/features/session-tracking/`.
+That folder also keeps a **legacy mock** `dev/PreviewApp.tsx` harness for
+isolated UI review — see that folder's `README.md`. When advancing
+`manifest.yaml` statuses, treat the **app routes** as the source of truth,
+not the PreviewApp harness.
 
 ## Out of scope
 
 - Figma MCP token export automation (addressed separately when DS is stable)
 - Code Connect / Figma-to-RN code generation
-- Backend API implementation (tracked in `docs/implementation-plan.md`)
+- Backend payments / remaining HTML screens (sessions API is live — see `docs/implementation-plan.md`)
 - Design changes to existing Figma screens (handled in Figma; update `manifest.yaml` notes as needed)
 
 ## Dependencies

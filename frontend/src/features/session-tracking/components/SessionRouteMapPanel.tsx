@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { useReducedMotion } from 'react-native-reanimated';
 
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 
@@ -7,14 +8,15 @@ import { formatCountdown } from '../mocks/session';
 import { colors, radius, textStyles } from '../tokens';
 import { DEFAULT_MAP_LAYER, type MapLayerType } from '../utils/mapStyles';
 import type { RouteCoordinate } from '../utils/geo';
+import {
+  computeRouteReplayDurationMs,
+  computeRouteReplayDurationSeconds,
+} from '../utils/routeReplayDuration';
 import { Icon } from './Icon';
 import { PauseIcon } from './icons/PauseIcon';
 import { PlayIcon } from './icons/PlayIcon';
 import { ReplayIcon } from './icons/ReplayIcon';
 import { SessionRouteMapPreview } from './SessionRouteMapPreview';
-
-const REPLAY_DURATION_MS = 8000;
-const REPLAY_DURATION_SECONDS = REPLAY_DURATION_MS / 1000;
 
 type Props = {
   routeCoordinates: RouteCoordinate[];
@@ -36,10 +38,6 @@ function SessionRouteMapEmptyState() {
   );
 }
 
-function replayClockSeconds(progress: number): number {
-  return Math.round(Math.max(0, Math.min(1, progress)) * REPLAY_DURATION_SECONDS);
-}
-
 /** Interactive route preview with pan/zoom and optional replay controls. */
 export function SessionRouteMapPanel({
   routeCoordinates,
@@ -48,19 +46,33 @@ export function SessionRouteMapPanel({
   enableReplay = true,
   style,
 }: Props) {
+  const reducedMotion = useReducedMotion();
   const [mapLayer] = useState<MapLayerType>(initialMapLayer);
-  const [replayProgress, setReplayProgress] = useState(1);
+  const [replayProgress, setReplayProgress] = useState(() => (replayOnce ? 0 : 1));
   const [isPlaying, setIsPlaying] = useState(false);
   const animationRef = useRef<number | null>(null);
   const playStartRef = useRef(0);
   const playFromRef = useRef(0);
   const hasAutoPlayedRef = useRef(false);
 
+  const replayDurationMs = useMemo(
+    () => computeRouteReplayDurationMs(routeCoordinates),
+    [routeCoordinates],
+  );
+  const replayDurationSeconds = useMemo(
+    () => computeRouteReplayDurationSeconds(routeCoordinates),
+    [routeCoordinates],
+  );
+  const replayDurationMsRef = useRef(replayDurationMs);
+  replayDurationMsRef.current = replayDurationMs;
+
   const hasRoute = routeCoordinates.length >= 2;
   const canReplay = enableReplay && hasRoute;
   const showControls = hasRoute && canReplay;
-  const currentSeconds = replayClockSeconds(canReplay ? replayProgress : 1);
-  const totalSeconds = REPLAY_DURATION_SECONDS;
+  const currentSeconds = Math.round(
+    Math.max(0, Math.min(1, canReplay ? replayProgress : 1)) * replayDurationSeconds,
+  );
+  const totalSeconds = Math.round(replayDurationSeconds);
   const timeLabel = `${formatCountdown(currentSeconds)} / ${formatCountdown(totalSeconds)}`;
 
   const stopAnimation = useCallback(() => {
@@ -71,8 +83,9 @@ export function SessionRouteMapPanel({
   }, []);
 
   const tickReplay = useCallback(() => {
+    const durationMs = replayDurationMsRef.current;
     const elapsed = Date.now() - playStartRef.current;
-    const next = Math.min(1, playFromRef.current + elapsed / REPLAY_DURATION_MS);
+    const next = Math.min(1, playFromRef.current + elapsed / durationMs);
     setReplayProgress(next);
 
     if (next >= 1) {
@@ -108,11 +121,11 @@ export function SessionRouteMapPanel({
   }, [isPlaying, stopAnimation, tickReplay]);
 
   useEffect(() => {
-    setReplayProgress(1);
+    setReplayProgress(replayOnce ? 0 : 1);
     setIsPlaying(false);
     stopAnimation();
     hasAutoPlayedRef.current = false;
-  }, [routeCoordinates, stopAnimation]);
+  }, [replayOnce, routeCoordinates, stopAnimation]);
 
   useEffect(() => {
     if (!canReplay || !replayOnce || hasAutoPlayedRef.current) {
@@ -120,8 +133,14 @@ export function SessionRouteMapPanel({
     }
 
     hasAutoPlayedRef.current = true;
+
+    if (reducedMotion) {
+      setReplayProgress(1);
+      return;
+    }
+
     startReplay(0);
-  }, [canReplay, replayOnce, routeCoordinates, startReplay]);
+  }, [canReplay, reducedMotion, replayOnce, routeCoordinates, startReplay]);
 
   const handlePlayPause = () => {
     if (isPlaying) {

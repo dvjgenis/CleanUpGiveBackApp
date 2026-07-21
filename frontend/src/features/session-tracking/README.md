@@ -1,20 +1,18 @@
 # Session Tracking (feature slice)
 
+> **Production:** The shipped Expo Router flow lives in `frontend/src/app/` and uses `liveSessionStore.ts` with real `expo-location`, `expo-camera`, Fly API, and WebView/native maps. Active sessions persist a debounced AsyncStorage draft (`liveSessionDraft.ts`) with cold-start **Resume / Discard** via `LiveSessionResumeGate`. Volunteers can delete non-approved sessions via `removeVolunteerSession`. This folder also contains a **legacy preview harness** (`dev/PreviewApp.tsx`) with mocked data for isolated UI review.
+
 Standalone implementation of the Session Tracking flow (PRD §6.9–6.15) —
 Session Setup → Permissions → Live Session → Photo Checkpoint → Session
 Review → Submission Confirmation, plus the Missed Checkpoint dead-end and
 the Home-minimize interaction.
 
-Deliberately **not** wired into `frontend/src/app/` (Expo Router). This is a
-self-contained folder so it can be reviewed/iterated on without touching the
-existing prototype flow at `frontend/src/app/prototype/[screen].tsx` or the
-legacy `frontend/prototype/` screens.
+Deliberately **not** wired into `frontend/src/app/` (Expo Router) for the **mock preview harness only**. Production routes import the same store/components from this folder.
 
-## Scope of this pass
+## Scope of the preview harness (not production)
 
-Every screen renders real layout, tokens, typography, and Reanimated motion
-against **mocked data** (`mocks/session.ts`). Nothing here talks to a
-backend, `expo-location`, or `expo-camera`:
+Every screen in `dev/PreviewApp.tsx` renders real layout, tokens, typography, and Reanimated motion
+against **mocked data** (`mocks/session.ts`). The production app routes use live GPS/camera/API instead:
 
 - Timers (elapsed / countdown) run off local `setInterval`s seeded from mock values.
 - Permission toggles/buttons flip local state only — no OS permission prompt.
@@ -85,9 +83,9 @@ which is easy to miss on one path and leave the widget silently wrong.
 4. **Running it**: `cd frontend && npx expo start --web` (browser at `http://localhost:8081`) or `npx expo start` for Expo Go / a dev-client build. If `expo start` fails before you even get here, see [progress.md](../../../../docs/progress.md) "Fixed three pre-existing dev-server bugs" — those are environment fixes, not specific to this feature.
 5. Use the horizontal chip strip at the top of `PreviewApp` to jump directly to any screen (useful for `MissedCheckpointScreen`, which has no natural trigger in the happy-path flow demoed here).
 
-## Known gaps / deferred
+## Known gaps / deferred (preview harness only)
 
-- No real `expo-location` / `expo-camera` integration.
+- Preview harness screens still use mocks — see production `frontend/src/app/live-session` et al. for real integrations.
 - No Session Detail screen (PRD §6.18) — separate from Session Review/Submission Confirmation, belongs to the Sessions History feature.
 - No backend submission call — "Submit for Approval" is a local state transition only.
 - `eas build` / `eas init` have not been run — configuration only.

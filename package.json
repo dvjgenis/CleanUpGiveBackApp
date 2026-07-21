@@ -5,6 +5,8 @@
   "scripts": {
     "start": "npm --prefix frontend start",
     "start:tunnel": "npm --prefix frontend run start:tunnel",
+    "start:lan": "npm --prefix frontend run start:lan",
+    "start:device": "npm --prefix frontend run start:device",
     "ios": "npm --prefix frontend run ios",
     "android": "npm --prefix frontend run android",
     "web": "npm --prefix frontend run web",

@@ -3,6 +3,9 @@ import '@/global.css';
 import { Stack } from 'expo-router';
 
 import { AuthProvider } from '@/components/AuthProvider';
+import { CheckpointMissNavigationGate } from '@/components/CheckpointMissNavigationGate';
+import { CheckpointNotificationBootstrap } from '@/components/CheckpointNotificationBootstrap';
+import { LiveSessionResumeGate } from '@/components/LiveSessionResumeGate';
 import { prefetchAllOnboardingGraphics } from '@/components/onboarding/onboardingGraphics';
 import { prefetchAllTourGraphics } from '@/components/onboarding/tourAssets';
 import { prefetchAllShopGraphics } from '@/features/figma-screens/shopAssets';
@@ -48,6 +51,9 @@ const homeScreenOptions = ({ route }: { route: { params?: { enter?: string } } }
 export default function RootLayout() {
   return (
     <AuthProvider>
+      <CheckpointNotificationBootstrap />
+      <CheckpointMissNavigationGate />
+      <LiveSessionResumeGate />
       <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" options={homeScreenOptions} />
       <Stack.Screen name="session-setup-guide" options={guideBackwardScreenOptions} />

@@ -1,6 +1,6 @@
 import * as Location from 'expo-location';
 import { useSyncExternalStore } from 'react';
-import { Platform } from 'react-native';
+import { AppState, type AppStateStatus, Platform } from 'react-native';
 
 import {
   addCheckpoint,
@@ -10,6 +10,10 @@ import {
 import { uploadCheckpointPhotos } from '@/lib/uploadCheckpointPhotos';
 
 import { BACKGROUND_LOCATION_TASK } from './backgroundLocationConstants';
+import {
+  CHECKPOINT_MISS_GRACE_MS,
+  PHOTO_CHECKPOINT_INTERVAL_SECONDS,
+} from './checkpointConstants';
 import { recordCompletedSession } from './recentSessionsStore';
 import { cacheCompletedSession } from './completedSessionCache';
 import { recordSessionStatFromSnapshot } from './sessionStatsStore';
@@ -17,6 +21,7 @@ import { DEFAULT_MAP_LAYER, type MapLayerType } from './utils/mapStyles';
 import { computeSessionDurationSeconds } from './utils/sessionFormat';
 import {
   haversineMiles,
+  isRouteCoordinate,
   MIN_ROUTE_SAMPLE_METERS,
   toRouteCoordinate,
   type RouteCoordinate,
@@ -35,17 +40,28 @@ import {
   resolveCompassHeading,
   resolveHeading,
   shouldAppendRoutePoint,
+  shouldSkipDuplicateLocationSample,
   simplifyRouteForDisplay,
+  simplifyRouteForLiveDisplay,
   smoothCoordinateEma,
   smoothHeadingEma,
   type MotionState,
   type RouteSample,
 } from './utils/routeFiltering';
+import {
+  cancelCheckpointNotifications,
+  scheduleCheckpointNotifications,
+} from './checkpointNotifications';
+import {
+  clearLiveSessionDraft,
+  liveSessionSetupFromDraft,
+  persistLiveSessionDraftDebounced,
+  resolveLiveSessionResumeOffer,
+  type LiveSessionDraft,
+  type LiveSessionResumeOffer,
+} from './liveSessionDraft';
 
-export const PHOTO_CHECKPOINT_INTERVAL_SECONDS = 30 * 60;
-
-/** Grace after checkpoint deadline before session is marked invalid (ms). */
-export const CHECKPOINT_MISS_GRACE_MS = 5 * 60 * 1000;
+export { CHECKPOINT_MISS_GRACE_MS, PHOTO_CHECKPOINT_INTERVAL_SECONDS } from './checkpointConstants';
 
 export type LiveSessionSetup = {
   activity: string;
@@ -131,6 +147,9 @@ let headingSubscription: Location.LocationSubscription | null = null;
 let lastAcceptedTimestamp: number | null = null;
 let lastRouteAppendTimestamp: number | null = null;
 let lastProcessedSampleTimestamp: number | null = null;
+let lastProcessedCoordinate: RouteCoordinate | null = null;
+let pendingResumeOffer: LiveSessionResumeOffer | null = null;
+let pendingMissedCheckpointNavigation = false;
 let motionState: MotionState = 'walking';
 let locationKalman: LocationKalmanFilter = createLocationKalmanFilter();
 let compassAvailable = false;
@@ -144,6 +163,9 @@ function notify() {
 function setState(patch: Partial<LiveSessionState>) {
   state = { ...state, ...patch };
   notify();
+  if (state.isActive) {
+    persistLiveSessionDraftDebounced(state);
+  }
 }
 
 function setSessionSyncWarning(message: string | null) {
@@ -180,6 +202,7 @@ function syncSessionClocks() {
     elapsedSeconds: deriveElapsedSeconds(state.startedAt),
     checkpointSecondsRemaining: deriveCheckpointSecondsRemaining(state.checkpointWindowStartedAt),
   });
+  evaluateCheckpointMissAndFinalize();
 }
 
 function startTicking() {
@@ -206,7 +229,22 @@ function stopTicking() {
 }
 
 function buildDisplayRoute(routeCoordinates: RouteCoordinate[]): RouteCoordinate[] {
-  return simplifyRouteForDisplay(routeCoordinates);
+  return simplifyRouteForLiveDisplay(routeCoordinates);
+}
+
+function resolveLastRoutePoint(
+  routeCoordinates: RouteCoordinate[],
+  fallback: RouteCoordinate | null,
+): RouteCoordinate | null {
+  const tail =
+    routeCoordinates.length > 0 ? routeCoordinates[routeCoordinates.length - 1] : null;
+  if (isRouteCoordinate(tail)) {
+    return tail;
+  }
+  if (isRouteCoordinate(fallback)) {
+    return fallback;
+  }
+  return null;
 }
 
 function appendRouteSample(sample: RouteSample) {
@@ -224,14 +262,6 @@ function recordLocationSample(position: Location.LocationObject) {
   }
 
   const sampleTimestamp = position.timestamp ?? Date.now();
-  if (
-    lastProcessedSampleTimestamp != null &&
-    sampleTimestamp <= lastProcessedSampleTimestamp
-  ) {
-    return;
-  }
-
-  lastProcessedSampleTimestamp = sampleTimestamp;
 
   const { latitude, longitude, accuracy, heading, speed } = position.coords;
   const resolvedAccuracy = resolveAccuracyMeters(accuracy);
@@ -241,6 +271,33 @@ function recordLocationSample(position: Location.LocationObject) {
     accuracyMeters: resolvedAccuracy,
     timestampMs: sampleTimestamp,
   });
+
+  if (!isRouteCoordinate(filteredCoordinate)) {
+    return;
+  }
+
+  if (
+    lastProcessedSampleTimestamp != null &&
+    !isRouteCoordinate(lastProcessedCoordinate)
+  ) {
+    lastProcessedSampleTimestamp = null;
+    lastProcessedCoordinate = null;
+  }
+
+  if (
+    shouldSkipDuplicateLocationSample({
+      sampleTimestampMs: sampleTimestamp,
+      coordinate: filteredCoordinate,
+      lastProcessedTimestampMs: lastProcessedSampleTimestamp,
+      lastProcessedCoordinate,
+    })
+  ) {
+    lastProcessedSampleTimestamp = sampleTimestamp;
+    return;
+  }
+
+  lastProcessedSampleTimestamp = sampleTimestamp;
+  lastProcessedCoordinate = filteredCoordinate;
 
   const previousCoordinate = state.currentCoordinate;
   const nextHeading = compassAvailable
@@ -266,7 +323,7 @@ function recordLocationSample(position: Location.LocationObject) {
   const speedMps = speed != null && Number.isFinite(speed) && speed >= 0 ? speed : null;
   const deltaMs =
     lastAcceptedTimestamp != null ? sampleTimestamp - lastAcceptedTimestamp : 0;
-  const deltaMetersFromLastFix = previousCoordinate
+  const deltaMetersFromLastFix = isRouteCoordinate(previousCoordinate)
     ? deltaMetersBetween(previousCoordinate, filteredCoordinate)
     : 0;
 
@@ -284,7 +341,7 @@ function recordLocationSample(position: Location.LocationObject) {
     timestampMs: sampleTimestamp,
   };
 
-  if (!previousCoordinate) {
+  if (!isRouteCoordinate(previousCoordinate)) {
     lastAcceptedTimestamp = sampleTimestamp;
     lastRouteAppendTimestamp = sampleTimestamp;
     setState({
@@ -295,11 +352,23 @@ function recordLocationSample(position: Location.LocationObject) {
     return;
   }
 
-  const lastRoutePoint = state.routeCoordinates[state.routeCoordinates.length - 1];
-  const prevRoutePoint =
+  const lastRoutePoint = resolveLastRoutePoint(state.routeCoordinates, previousCoordinate);
+  if (!lastRoutePoint) {
+    lastAcceptedTimestamp = sampleTimestamp;
+    lastRouteAppendTimestamp = sampleTimestamp;
+    setState({
+      routeCoordinates: [filteredCoordinate],
+      routeSamples: [sample],
+      displayRouteCoordinates: buildDisplayRoute([filteredCoordinate]),
+    });
+    return;
+  }
+
+  const prevRoutePointRaw =
     state.routeCoordinates.length >= 2
       ? state.routeCoordinates[state.routeCoordinates.length - 2]
       : null;
+  const prevRoutePoint = isRouteCoordinate(prevRoutePointRaw) ? prevRoutePointRaw : null;
   const deltaMetersFromRoute = deltaMetersBetween(lastRoutePoint, filteredCoordinate);
 
   if (
@@ -338,6 +407,7 @@ function recordLocationSample(position: Location.LocationObject) {
 
 export function ingestBackgroundLocationSample(position: Location.LocationObject) {
   recordLocationSample(position);
+  evaluateCheckpointMissAndFinalize();
 }
 
 function getForegroundWatchOptions(): Location.LocationOptions {
@@ -464,6 +534,7 @@ function stopLocationWatching() {
   lastAcceptedTimestamp = null;
   lastRouteAppendTimestamp = null;
   lastProcessedSampleTimestamp = null;
+  lastProcessedCoordinate = null;
   motionState = 'walking';
   resetLocationKalmanFilter(locationKalman);
 }
@@ -622,6 +693,35 @@ export async function ensureLocationWatching() {
   await startLocationWatching();
 }
 
+/** Sync clocks and restart GPS after returning from background (Expo Go / When In Use). */
+export async function resumeLiveSessionTrackingAfterForeground() {
+  if (!state.isActive) {
+    return;
+  }
+
+  syncSessionClocks();
+  ensureLiveSessionTicking();
+  await startLocationWatching();
+}
+
+let appStateSubscription: ReturnType<typeof AppState.addEventListener> | null = null;
+
+function ensureLiveSessionAppStateListener() {
+  if (appStateSubscription) {
+    return;
+  }
+
+  appStateSubscription = AppState.addEventListener('change', (nextState: AppStateStatus) => {
+    if (nextState !== 'active') {
+      return;
+    }
+
+    void resumeLiveSessionTrackingAfterForeground();
+  });
+}
+
+ensureLiveSessionAppStateListener();
+
 export function hasSubmittedCheckpointForCurrentWindow(): boolean {
   const windowStart = state.checkpointWindowStartedAt;
   if (!windowStart) {
@@ -645,6 +745,53 @@ export function isCheckpointMissed(): boolean {
     overdueMs >
     PHOTO_CHECKPOINT_INTERVAL_SECONDS * 1000 + CHECKPOINT_MISS_GRACE_MS
   );
+}
+
+export function isCheckpointInGracePeriod(): boolean {
+  if (!state.isActive || state.checkpointWindowStartedAt == null) {
+    return false;
+  }
+
+  if (hasSubmittedCheckpointForCurrentWindow()) {
+    return false;
+  }
+
+  const overdueMs = Date.now() - state.checkpointWindowStartedAt;
+  const intervalMs = PHOTO_CHECKPOINT_INTERVAL_SECONDS * 1000;
+  return overdueMs >= intervalMs && overdueMs <= intervalMs + CHECKPOINT_MISS_GRACE_MS;
+}
+
+export function isDraftCheckpointMissed(draft: LiveSessionDraft): boolean {
+  const windowStart = draft.checkpointWindowStartedAt;
+  const submittedInWindow = draft.submittedCheckpoints.some(
+    (checkpoint) => checkpoint.capturedAt >= windowStart,
+  );
+  if (submittedInWindow) {
+    return false;
+  }
+
+  const overdueMs = Date.now() - windowStart;
+  return (
+    overdueMs >
+    PHOTO_CHECKPOINT_INTERVAL_SECONDS * 1000 + CHECKPOINT_MISS_GRACE_MS
+  );
+}
+
+export function consumePendingMissedCheckpointNavigation(): boolean {
+  const pending = pendingMissedCheckpointNavigation;
+  pendingMissedCheckpointNavigation = false;
+  return pending;
+}
+
+/** Finalizes an invalid session when the grace window has expired. */
+export function evaluateCheckpointMissAndFinalize(): boolean {
+  if (!isCheckpointMissed()) {
+    return false;
+  }
+
+  pendingMissedCheckpointNavigation = true;
+  finalizeLiveSession({ status: 'invalid' });
+  return true;
 }
 
 export function clearSessionSyncWarning() {
@@ -687,6 +834,8 @@ export async function startNewLiveSession(setup: LiveSessionSetup) {
   notify();
   startTicking();
   void startLocationWatching();
+  persistLiveSessionDraftDebounced(state);
+  void scheduleCheckpointNotifications(startedAt);
 
   try {
     const created = await createSession({
@@ -749,6 +898,9 @@ export function resetCheckpointCountdown() {
     checkpointSecondsRemaining: PHOTO_CHECKPOINT_INTERVAL_SECONDS,
   });
   startTicking();
+  if (state.checkpointWindowStartedAt != null) {
+    void scheduleCheckpointNotifications(state.checkpointWindowStartedAt);
+  }
 }
 
 export function finalizeLiveSession(options?: { status?: 'under_review' | 'invalid' }) {
@@ -787,6 +939,9 @@ export function getCompletedSessionSnapshot() {
 export function endLiveSession() {
   stopTicking();
   stopLocationWatching();
+  void clearLiveSessionDraft();
+  void cancelCheckpointNotifications();
+  pendingResumeOffer = null;
   state = {
     isActive: false,
     remoteSessionId: null,
@@ -866,4 +1021,88 @@ export function getLiveSessionMapCenter(): RouteCoordinate | null {
 
 export function getLiveSessionMapZoom(): number {
   return 15;
+}
+
+export function getPendingLiveSessionResume(): LiveSessionResumeOffer | null {
+  return pendingResumeOffer;
+}
+
+export async function bootstrapLiveSessionResumeOffer() {
+  if (state.isActive) {
+    pendingResumeOffer = null;
+    notify();
+    return;
+  }
+
+  pendingResumeOffer = await resolveLiveSessionResumeOffer();
+  if (pendingResumeOffer && isDraftCheckpointMissed(pendingResumeOffer.draft)) {
+    await resumeLiveSessionFromDraft(pendingResumeOffer.draft);
+    evaluateCheckpointMissAndFinalize();
+    pendingResumeOffer = null;
+    notify();
+    return;
+  }
+
+  notify();
+}
+
+export async function resumeLiveSessionFromDraft(draft: LiveSessionDraft) {
+  stopTicking();
+  stopLocationWatching();
+  completedSessionSnapshot = null;
+  locationKalman = createLocationKalmanFilter();
+
+  const setup = liveSessionSetupFromDraft(draft);
+  const sanitizedRoute = draft.routeCoordinates.filter(isRouteCoordinate);
+  const sanitizedSamples = draft.routeSamples.filter((sample) =>
+    isRouteCoordinate(sample.coordinate),
+  );
+  const lastSample = sanitizedSamples[sanitizedSamples.length - 1];
+  const lastCoord =
+    sanitizedRoute[sanitizedRoute.length - 1] ??
+    lastSample?.coordinate ??
+    null;
+
+  lastAcceptedTimestamp = lastSample?.timestampMs ?? null;
+  lastRouteAppendTimestamp = lastSample?.timestampMs ?? null;
+  lastProcessedSampleTimestamp = lastSample?.timestampMs ?? null;
+  lastProcessedCoordinate = lastCoord;
+
+  state = {
+    isActive: true,
+    remoteSessionId: draft.remoteSessionId,
+    startedAt: draft.startedAt,
+    checkpointWindowStartedAt: draft.checkpointWindowStartedAt,
+    elapsedSeconds: deriveElapsedSeconds(draft.startedAt),
+    checkpointSecondsRemaining: deriveCheckpointSecondsRemaining(draft.checkpointWindowStartedAt),
+    distanceMiles: draft.distanceMiles,
+    setup,
+    routeCoordinates: [...sanitizedRoute],
+    routeSamples: [...sanitizedSamples],
+    displayRouteCoordinates: buildDisplayRoute(sanitizedRoute),
+    currentCoordinate: lastCoord,
+    displayCoordinate: lastCoord,
+    currentHeading: lastSample?.heading ?? null,
+    mapRecenterToken: 0,
+    mapFollowEnabled: draft.mapFollowEnabled,
+    mapLayer: draft.mapLayer,
+    submittedCheckpoints: [...draft.submittedCheckpoints],
+    sessionSyncWarning: null,
+    backgroundLocationEnabled: false,
+  };
+
+  pendingResumeOffer = null;
+  notify();
+  startTicking();
+  void startLocationWatching();
+  persistLiveSessionDraftDebounced(state);
+  if (state.checkpointWindowStartedAt != null) {
+    void scheduleCheckpointNotifications(state.checkpointWindowStartedAt);
+  }
+}
+
+export async function discardPendingLiveSessionResume() {
+  pendingResumeOffer = null;
+  await clearLiveSessionDraft();
+  notify();
 }

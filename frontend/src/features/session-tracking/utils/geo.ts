@@ -30,6 +30,15 @@ export function toRouteCoordinate(longitude: number, latitude: number): RouteCoo
   return [longitude, latitude];
 }
 
+export function isRouteCoordinate(value: unknown): value is RouteCoordinate {
+  return (
+    Array.isArray(value) &&
+    value.length >= 2 &&
+    Number.isFinite(value[0]) &&
+    Number.isFinite(value[1])
+  );
+}
+
 /** Normalizes API route arrays to MapLibre-ready coordinates. */
 export function toRouteCoordinates(route: number[][] | null | undefined): RouteCoordinate[] {
   if (!route || route.length < 2) {

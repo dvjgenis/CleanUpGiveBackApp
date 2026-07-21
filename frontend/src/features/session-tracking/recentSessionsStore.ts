@@ -6,6 +6,7 @@ import { isApiConfigured } from '@/lib/api';
 import { mapApiSessionToListItem } from '@/lib/mapApiSessions';
 
 import type { CompletedSessionSnapshot } from './liveSessionStore';
+import { isVolunteerSessionDeleted } from './volunteerDeletedSessions';
 import {
   formatRecentSessionDateLabel,
   formatRecentSessionDurationLabel,
@@ -58,6 +59,7 @@ export async function hydrateRecentSessionsFromApi() {
     const sessions = await listSessions();
     recentSessions = sessions
       .filter((session) => session.status !== 'active')
+      .filter((session) => !isVolunteerSessionDeleted(session.id))
       .slice(0, MAX_RECENT_SESSIONS)
       .map((session) => {
         const item = mapApiSessionToListItem(session);
@@ -101,5 +103,11 @@ export function useRecentSessions() {
 /** Test/dev helper — clears in-memory recent sessions. */
 export function resetRecentSessions() {
   recentSessions = [];
+  notify();
+}
+
+/** Removes one session from the Home recent list (e.g. after volunteer delete). */
+export function removeRecentSession(sessionId: string) {
+  recentSessions = recentSessions.filter((session) => session.id !== sessionId);
   notify();
 }

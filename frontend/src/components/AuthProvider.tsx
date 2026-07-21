@@ -2,6 +2,7 @@ import { createContext, use, useEffect, useState, type ReactNode } from 'react';
 
 import { hydrateMapThemeSettings } from '@/features/session-tracking/mapThemeStore';
 import { hydrateRecentSessionsFromApi } from '@/features/session-tracking/recentSessionsStore';
+import { hydrateVolunteerDeletedSessions } from '@/features/session-tracking/volunteerDeletedSessions';
 import { hydrateSessionNotesFromStorage } from '@/features/session-tracking/sessionNotesStore';
 import { hydrateSessionStatsFromApi, hydrateSessionStatsFromStorage } from '@/features/session-tracking/sessionStatsStore';
 import { ensureAnonymousAuth, isSupabaseConfigured } from '@/lib/supabase';
@@ -28,6 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    void hydrateVolunteerDeletedSessions();
     void hydrateSessionStatsFromStorage();
     void hydrateSessionNotesFromStorage();
   }, []);
@@ -42,6 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     ensureAnonymousAuth()
       .then(async () => {
+        await hydrateVolunteerDeletedSessions();
         await hydrateRecentSessionsFromApi();
         await hydrateSessionStatsFromApi();
       })

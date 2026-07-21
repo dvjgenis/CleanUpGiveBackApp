@@ -21,6 +21,7 @@ The Home dashboard Service Hours chart, total hours label, weekly streak badge, 
 - [x] **AC-3:** Declined sessions are excluded from service hours; pending and approved count toward hours.
 - [x] **AC-4:** Impact stats (miles, locations, sessions, photos) derive from the same `sessionStatsStore`; **Photos Submitted** uses API `photoCount` / `checkpointCount * 2` on cold start (merge prefers higher `photoCount` when IDs collide).
 - [x] **AC-5:** Week picker changes recompute chart data for the selected week (not empty mock bars).
+- [x] **AC-7:** Recent Sessions **View All** navigates to `/sessions-list`.
 - [ ] **AC-6:** Stacked approval-status bars (Approved / In Review / Not Approved) — deferred; v1 uses single green bar per day.
 
 ## Out of scope

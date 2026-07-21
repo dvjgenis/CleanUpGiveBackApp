@@ -23,6 +23,7 @@ Fastify service in `backend/sessions/` on Fly.io (`https://cleanup-sessions.fly.
 | GET | `/sessions` | List user's sessions (includes `checkpointCount` / `photoCount`) |
 | GET | `/sessions/:id` | Session detail + checkpoints |
 | PATCH | `/sessions/:id/approval` | Admin status change |
+| DELETE | `/sessions/:id` | Volunteer delete (not when `approved`) |
 
 Auth: Supabase JWT verified via JWKS (ES256). Requires `SUPABASE_URL` + `DATABASE_URL` (Supabase Postgres) on Fly.
 
@@ -40,9 +41,10 @@ Full schema: [supabase.md](../../supabase.md) §2.
 - **Supabase** — Postgres (via Prisma), Auth (anonymous JWT), Storage (photo evidence)
 - **Fly.io** — API hosting
 - **Frontend** — `liveSessionStore` wires `startNewLiveSession` / `addPhotoCheckpoint` / `finalizeLiveSession` to API (local session activates immediately; remote create is best-effort); missed checkpoint → `finalizeLiveSession({ status: 'invalid' })`
+- **Live session draft** — debounced AsyncStorage snapshot while `isActive` (`liveSessionDraft.ts`); cold-start **Resume/Discard** via `LiveSessionResumeGate` (not a server mid-session route sync)
 - **Home stats** — `sessionStatsStore` + `homeDashboardStats.ts` hydrate from list `photoCount` / duration / miles
 - **Maps** — geolocation is client-owned (Kalman + optional background while active); route persisted on finalize. See [maps.md](maps.md).
-- **Camera** — VisionCamera sequential checkpoint capture (EAS); dual multi-cam path disabled pending native fix
+- **Camera** — `expo-camera` sequential checkpoint capture (Expo Go + dev client); simultaneous dual-cam out of scope
 
 ## Policies
 
@@ -55,5 +57,7 @@ Full schema: [supabase.md](../../supabase.md) §2.
 
 - Code: `backend/sessions/` — Fastify + Prisma API deployed to Fly.io
 - Frontend store: `frontend/src/features/session-tracking/liveSessionStore.ts`
+- Frontend draft / resume: `liveSessionDraft.ts`, `components/LiveSessionResumeGate.tsx`
+- Frontend delete: `removeVolunteerSession.ts` / `removeVolunteerSessions` (bulk from Sessions list) + `sessionsApi.deleteSession`; client tombstones in `volunteerDeletedSessions.ts` (AsyncStorage)
 - Frontend stats: `sessionStatsStore.ts`, `utils/homeDashboardStats.ts`
 - Frontend spec: [session-tracking-expo-go.md](../../frontend/specs/session-tracking-expo-go.md)

@@ -7,7 +7,7 @@ Read the exact versioned Expo docs at https://docs.expo.dev/versions/v54.0.0/ be
 | Area | Path |
 |------|------|
 | Expo app | `frontend/` |
-| Backend (planned) | `backend/{maps,payments,sessions}/` |
+| Backend | `backend/sessions/` (live on Fly); `backend/{maps,payments}/` planned |
 | Living docs | `docs/` — start at [README.md](../README.md) |
 | Cursor config | `.cursor/` (repo root only) |
 
@@ -22,7 +22,7 @@ Read the exact versioned Expo docs at https://docs.expo.dev/versions/v54.0.0/ be
 
 - **Stack:** Expo SDK 54, React Native 0.81, TypeScript, Expo Router.
 - **Monorepo:** `frontend/` (app), `backend/` (services), `docs/` (living docs).
-- **Builds:** EAS (development, preview, production). Location/camera need `frontend/app.json` plugins when implemented.
+- **Builds:** EAS (development, preview, production). Location (`expo-location` + background task) and camera (`expo-camera`) plugins are configured in `frontend/app.json`.
 - **Context docs:** `docs/` — start at [docs/README.md](../README.md).
 
 ---

@@ -41,7 +41,7 @@ function PhotoCheckpointCameraIcon({ size = 79 }: { size?: number }) {
   );
 }
 
-const AUTO_DISMISS_SECONDS = 5 * 60;
+const AUTO_DISMISS_SECONDS = 10 * 60;
 
 function formatDismissCountdown(secs: number): string {
   const m = Math.floor(secs / 60);

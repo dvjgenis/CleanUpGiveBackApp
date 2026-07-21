@@ -25,17 +25,19 @@ Or work directly inside `frontend/`:
 ```bash
 cd frontend
 npm install
-npx expo start
+npm start
 ```
 
-Scan the QR code with **Expo Go** on a device on the same Wi-Fi network, or press `i` / `a` for simulators.
-
-**Physical device won't connect?** If Expo shows `exp://127.0.0.1:8081`, your phone is trying to reach itself — not your Mac. Stop the server and restart with LAN mode (default after this fix), or use tunnel mode if you're on a restrictive network:
+Scan the QR code with **Expo Go**. **`npm start` uses tunnel by default** (works on Wi‑Fi, hotspot, or phone on cellular). Use **`npm run start:lan`** when the phone and Mac share the same Wi‑Fi and you want the fastest connection.
 
 ```bash
-npm start              # uses --lan (your Mac's IP, e.g. exp://192.168.x.x:8081)
-npm run start:tunnel   # routes through Expo's servers if LAN fails
+npm start              # default: tunnel (Wi‑Fi / hotspot / cellular)
+npm run start:lan      # same Wi‑Fi only (fast LAN)
+npm run start:device   # tunnel (alias)
+npm run start:tunnel   # tunnel (alias)
 ```
+
+See [docs/frontend/specs/expo-go-dev-networking.md](docs/frontend/specs/expo-go-dev-networking.md) for Wi‑Fi / hotspot / cellular testing.
 
 ## Frontend structure
 

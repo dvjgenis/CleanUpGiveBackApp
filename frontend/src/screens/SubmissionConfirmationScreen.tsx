@@ -6,9 +6,9 @@ import {
   NotoSans_700Bold,
 } from '@expo-google-fonts/noto-sans';
 import { Sanchez_400Regular } from '@expo-google-fonts/sanchez';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
-import { useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   Image,
   NativeScrollEvent,
@@ -144,7 +144,14 @@ export function SubmissionConfirmationScreen() {
   const photosStyle = useFadeUpEnter(staggerDelay(2));
   const timelineStyle = useFadeUpEnter(staggerDelay(3));
   const footerStyle = useFadeUpEnter(staggerDelay(4));
-  const session = useMemo(() => getCompletedSessionSnapshot(), []);
+  const [session, setSession] = useState(() => getCompletedSessionSnapshot());
+
+  useFocusEffect(
+    useCallback(() => {
+      setSession(getCompletedSessionSnapshot());
+    }, []),
+  );
+
   const sessionId = session ? resolveCompletedSessionId(session) : undefined;
 
   const sessionPhotos: SessionPhoto[] = useMemo(

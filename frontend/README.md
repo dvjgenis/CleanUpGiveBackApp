@@ -6,9 +6,13 @@ Expo React Native app for Clean Up - Give Back.
 
 ```bash
 npm install
-npm start          # --lan: required for Expo Go on a physical device
-# npm run start:tunnel   # if LAN / firewall blocks the connection
+npm start          # default tunnel — Wi‑Fi, hotspot, or cellular on phone
+npm run start:lan  # same Wi‑Fi only (fast LAN)
+npm run start:device   # tunnel (alias)
+npm run start:tunnel   # tunnel (alias)
 ```
+
+Networking details: [docs/frontend/specs/expo-go-dev-networking.md](../docs/frontend/specs/expo-go-dev-networking.md).
 
 From repo root: `npm start` (delegates here).
 

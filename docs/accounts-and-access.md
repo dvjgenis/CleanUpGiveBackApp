@@ -4,7 +4,7 @@ Org-owned accounts for this project. **Do not store secrets, API keys, or passwo
 
 | Service | Purpose | Notes |
 |---------|---------|-------|
-| Expo / EAS | App builds, OTA, Expo Go testing | Org account; `eas.json` configured; **EAS development build required** for VisionCamera checkpoint capture, native MapLibre, and **background GPS while session active** (`expo-task-manager`) |
+| Expo / EAS | App builds, OTA, Expo Go testing | Org account; `eas.json` configured; **EAS development build required** for native MapLibre and **background GPS while session active** (`expo-task-manager`). Checkpoint capture uses **`expo-camera`** (works in Expo Go). **Expo Go on a physical device:** [expo-go-dev-networking.md](frontend/specs/expo-go-dev-networking.md) — `npm start` (tunnel), `start:lan`, `start:device`. |
 | Supabase | Auth (anonymous), Postgres, Storage | Project created; setup guide: [supabase.md](supabase.md) |
 | Fly.io | Sessions API hosting | Install CLI: `curl -L https://fly.io/install.sh \| sh` then `fly auth login`; deploy `backend/sessions/` when implemented |
 | Apple Developer | iOS distribution (TestFlight) | Org account TBD; not required for Expo Go testing |
@@ -16,12 +16,12 @@ Org-owned accounts for this project. **Do not store secrets, API keys, or passwo
 
 ## EAS development build
 
-Required for VisionCamera checkpoint capture, native MapLibre maps, and background route tracking during active sessions. Expo Go uses foreground-only GPS and WebView maps (camera/background GPS limited).
+Required for native MapLibre maps and background route tracking during active sessions. Expo Go uses foreground-only GPS, WebView maps, and **`expo-camera`** sequential checkpoint capture.
 
 1. `cd frontend && eas build --profile development --platform ios` (and/or `android`)
-2. Install the build on a physical device (iPhone XS+ or dual-cam Android recommended)
+2. Install the build on a physical device
 3. `npm run start:dev-client` (or `npx expo start --dev-client`) and open the dev client on the same network
-4. Smoke test: **Start Tracking** → grant **Always** location when prompted → `/live-session` (GPS + map; lock screen and verify route continues) → **Submit Photo** → `/photo-capture` (sequential selfie → progress; dual path disabled)
+4. Smoke test: **Start Tracking** → grant **Always** location when prompted → `/live-session` (GPS + map; lock screen and verify route continues) → **Submit Photo** → `/photo-capture` (`expo-camera` sequential selfie → progress)
 
 ## Environment files
 

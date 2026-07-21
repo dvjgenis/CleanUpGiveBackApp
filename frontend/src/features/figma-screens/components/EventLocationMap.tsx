@@ -1,13 +1,13 @@
-import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { Platform, StyleSheet, Text } from 'react-native';
 
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
+import { isExpoGoClient } from '@/utils/isExpoGoClient';
 
 import { EventLocationPinIcon } from './EventIcons';
 import { colors, fontFamilies } from '../tokens';
 import type { MapCoordinate } from '../utils/openLocationInMaps';
 
-const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+const isExpoGo = isExpoGoClient();
 const isWeb = Platform.OS === 'web';
 
 type Props = {

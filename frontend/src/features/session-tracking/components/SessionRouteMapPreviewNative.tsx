@@ -10,7 +10,7 @@ import {
   getRouteMapZoom,
   type RouteCoordinate,
 } from '../utils/geo';
-import { simplifyRouteForDisplay, computeBearingDegrees } from '../utils/routeFiltering';
+import { simplifyRouteForDisplay, computeBearingDegrees, sliceRouteByDistanceProgress } from '../utils/routeFiltering';
 import { MapInteractionContainer } from './MapInteractionContainer';
 import { SessionCurrentArrowMarker, SessionEndMarker, SessionStartMarker } from './SessionMapMarkers';
 
@@ -20,20 +20,6 @@ type Props = {
   replayProgress?: number;
   style?: object;
 };
-
-function sliceRouteByProgress(coords: RouteCoordinate[], progress: number): RouteCoordinate[] {
-  if (coords.length < 2) {
-    return coords;
-  }
-
-  const clamped = Math.max(0, Math.min(1, progress));
-  if (clamped >= 1) {
-    return coords;
-  }
-
-  const targetIndex = Math.max(1, Math.round(clamped * (coords.length - 1)));
-  return coords.slice(0, targetIndex + 1);
-}
 
 /** MapLibre branch for read-only session route previews. */
 export function SessionRouteMapPreviewNative({
@@ -47,7 +33,7 @@ export function SessionRouteMapPreviewNative({
     [routeCoordinates],
   );
   const visibleRoute = useMemo(
-    () => sliceRouteByProgress(displayRoute, replayProgress),
+    () => sliceRouteByDistanceProgress(displayRoute, replayProgress),
     [displayRoute, replayProgress],
   );
 

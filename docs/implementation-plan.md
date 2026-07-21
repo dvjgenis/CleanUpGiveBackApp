@@ -30,7 +30,14 @@ Docs complete — see [ADR-004](adr/ADR-004-sessions-backend-supabase-fly.md), [
 - [x] Frontend: `LiveSessionMapWebView` for Expo Go (ADR-005)
 - [x] API smoke test: create/finalize/list against production (Supabase Postgres)
 - [x] Remove placeholder session mocks from production UI (`SessionsScreen`, `SessionDetailScreen`)
-- [ ] End-to-end test in Expo Go on physical device (force-quit persistence — AC-18; API verified via smoke test)
+- [x] Live-session draft Resume/Discard (AC-37) + GPS harden + distance-scaled route replay (Session 214: live display smoothness + Expo Go foreground banner)
+- [x] Volunteer `DELETE /sessions/:id` + session detail delete UI (AC-38)
+- [x] Delete 404 → local cleanup + tombstones so Sessions list stays in sync (AC-41)
+- [x] Sessions list multi-select bulk delete + AsyncStorage tombstones (AC-44, AC-41 persistence)
+- [x] Photo before start / end; due-only checkpoints; 5‑min grace + local notification reminders (AC-39–40, AC-42–43)
+- [x] Expo Go map gate via `isExpoGoClient()` (avoid `MLRNCameraModule` crash)
+- [x] Expo Go networking matrix — [expo-go-dev-networking.md](frontend/specs/expo-go-dev-networking.md)
+- [ ] End-to-end test in Expo Go on physical device (force-quit persistence — AC-18/AC-37; closed-app checkpoint alarms need EAS/dev client; API verified via smoke test)
 
 ### Other
 
@@ -39,11 +46,11 @@ Docs complete — see [ADR-004](adr/ADR-004-sessions-backend-supabase-fly.md), [
 - [x] Native session flow in `frontend/src/app/` — `expo-location`/`expo-camera` wired; GPS route + distance live in Expo Go
 - [ ] `backend/payments/` — shop checkout and donation processing
 - [ ] Replace remaining HTML prototype screens per [manifest.yaml](../frontend/design/figma/manifest.yaml) and [figma-to-native-handoff.md](frontend/specs/figma-to-native-handoff.md)
-- [x] One-click dual camera capture — [photo-checkpoint-dual-capture.md](frontend/specs/photo-checkpoint-dual-capture.md)
+- [x] Sequential checkpoint capture (`expo-camera`) — [photo-checkpoint-dual-capture.md](frontend/specs/photo-checkpoint-dual-capture.md) (simultaneous dual out of scope)
 - [x] Home dashboard session stats — chart + impact from `sessionStatsStore` — [home-dashboard-session-stats.md](frontend/specs/home-dashboard-session-stats.md)
 - [x] Session route replay on detail maps — [session-route-replay.md](frontend/specs/session-route-replay.md)
 - [x] Event calendar export — [event-calendar-export.md](frontend/specs/event-calendar-export.md)
-- [ ] EAS dev-client builds — run `eas build --profile development` from `frontend/` (see [accounts-and-access.md](accounts-and-access.md))
+- [ ] EAS dev-client builds — run `eas build --profile development` from `frontend/` (see [accounts-and-access.md](accounts-and-access.md); needed for background GPS + native MapLibre)
 
 ## Privacy & compliance
 

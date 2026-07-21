@@ -1,9 +1,10 @@
 # Spec: Session tracking — Expo Go test phase
 
-**Date:** 2026-07-13  
-**Status:** Draft — engineering requirements (implementation shipped 2026-07-13; Fly deploy pending)  
+**Date:** 2026-07-13 (updated 2026-07-20)  
+**Status:** Implemented — Expo Go test phase (API live at `cleanup-sessions.fly.dev`)  
 **ADR:** [ADR-004](../../adr/ADR-004-sessions-backend-supabase-fly.md), [ADR-005](../../adr/ADR-005-expo-go-webview-map.md)  
 **Backend:** [sessions-api.md](../../backend/specs/sessions-api.md)  
+**Dev networking:** [expo-go-dev-networking.md](expo-go-dev-networking.md)  
 **PRD:** §6.9–6.15 (session setup through submission confirmation)
 
 ## Summary
@@ -34,10 +35,15 @@ Wire the existing native session tracking flow (`frontend/src/app/` routes + `li
 - [x] **AC-31:** Onboarding's `/notification-preference` **Enable notifications** button fires the real `expo-notifications` `requestPermissionsAsync()` (native iOS prompt) before continuing to `/setup-complete`; Account → Permissions gets a third **Notifications** toggle following the exact same mirror-OS-status / request-on-enable / Open-Settings-on-disable pattern as Camera/Location
 - [x] **AC-4:** `liveSessionStore` accumulates route polyline and distance via `watchPositionAsync` during active session
 - [x] **AC-5:** Location watching stops when session ends (`endLiveSession` / `finalizeLiveSession`) — foreground watch + background task both stop
-- [x] **AC-6:** 30-minute checkpoint countdown runs; after grace (`CHECKPOINT_MISS_GRACE_MS`), missed checkpoint calls `finalizeLiveSession({ status: 'invalid' })` and navigates to `/missed-checkpoint`
+- [x] **AC-6:** 30-minute checkpoint countdown runs; **5-minute** grace (`CHECKPOINT_MISS_GRACE_MS`) after due; GPS + elapsed keep running during grace; missed grace calls `evaluateCheckpointMissAndFinalize()` → `finalizeLiveSession({ status: 'invalid' })` and navigates to `/missed-checkpoint` (store tick, background GPS ingest, or cold-start resume — not only `LiveSessionScreen`)
+- [x] **AC-39:** **Start Session** requires dual checkpoint photos first (`/photo-capture?mode=session-start`); GPS + elapsed + remote create begin only after submit (`pendingSessionSetup` → `startNewLiveSession` + first `addPhotoCheckpoint`)
+- [x] **AC-40:** Escalating checkpoint reminders: in-app `alertPhotoCheckpointDue` when due + every ~45s during grace; scheduled local notifications via `checkpointNotifications.ts` (high-importance Android channel); cancelled on submit/end; tap opens checkpoint or missed screen. Requires notification permission; EAS/dev client for reliable background delivery (Expo Go foreground-limited)
+- [x] **AC-41:** Volunteer delete treats remote **404** as success and always clears local recent/cache/stats; tombstone registry (AsyncStorage `@cugb/volunteer-deleted-sessions`, hydrated in `AuthProvider` before recent-session hydrate) hides deleted ids from Sessions list + Home recent (no post-delete full API rehydrate that resurrects rows)
+- [x] **AC-42:** Live tracker has **End Session** only (no manual Submit Photo); checkpoint UI opens when the 30-min timer hits zero (modal/notifications)
+- [x] **AC-43:** **End Session** requires final dual photo (`/photo-capture?mode=session-end`) before `finalizeLiveSession` → `/submission-confirmation` (map preview + route replay)
 - [x] **AC-32:** Position samples pass through a **2D constant-velocity Kalman** filter (`locationKalman.ts`) before append gates; min-move is `max(3m, accuracy×0.35)` with gap recovery after 30s of rejected appends
 - [x] **AC-33:** Adaptive motion state: walking → BestForNavigation 1s / ~3 m; stationary → longer interval / larger distance interval
-- [x] **AC-34:** **Background GPS while session active only** via `expo-task-manager` (`backgroundLocationTask.ts`) when Always permission granted; Expo Go is foreground-only; deny Always → soft banner, session still starts
+- [x] **AC-34:** **Background GPS while session active only** via `expo-task-manager` (`backgroundLocationTask.ts`) when Always permission granted; Expo Go is foreground-only; when background GPS is unavailable (`backgroundLocationEnabled === false`), live tracker shows **`LiveSessionBackgroundTrackingBanner`** (route pauses on background/lock; session still starts); returning to foreground restarts GPS via `resumeLiveSessionTrackingAfterForeground`
 - [x] **AC-35:** Create / checkpoint / finalize sync failures no longer show a tracker banner (local success UX preserved; remote create is best-effort in the background)
 
 ### Map (Expo Go WebView — to implement)
@@ -51,16 +57,18 @@ Wire the existing native session tracking flow (`frontend/src/app/` routes + `li
 - [x] **AC-23:** Live tracker map layers control toggles Standard, Satellite, and Hybrid basemaps (Carto Voyager + Esri, no API key); `MapTypesSheet` selection is wired to `liveSessionStore.mapLayer` so the basemap actually updates on tap
 - [x] **AC-29:** Standard basemap light/dark theme (Voyager / Dark Matter) via `mapThemeStore` — auto by local time (19:00–05:59 dark), Account Preferences toggle to follow time of day, live sun/moon tool to override; pressed/active map-tool states use brand mint + primary; see [map-theme-and-weather-icons.md](./map-theme-and-weather-icons.md)
 - [x] **AC-30:** Live location pill weather glyph reflects Open-Meteo `weather_code` (+ `is_day` for clear) via `WeatherConditionIcon`
-- [x] **AC-24:** GPS uses `BestForNavigation` at 1s (walking) with Kalman + hardened gates (≤15m accuracy or null after Kalman, adaptive min-move, stationary detection, sharp-reversal rejection, 8s warm-up, gap recovery); maps consume precomputed `displayRouteCoordinates` (Douglas-Peucker); stored route unchanged by display simplification
+- [x] **AC-24:** GPS uses `BestForNavigation` at 1s (walking) with Kalman + hardened gates (≤15m accuracy or null after Kalman, adaptive min-move, stationary detection, sharp-reversal rejection, 8s warm-up, gap recovery); maps consume precomputed `displayRouteCoordinates` (`simplifyRouteForLiveDisplay` on live tracker, ~4m Douglas–Peucker on previews/replay); live maps also append EMA tip segment for display; stored route unchanged by display simplification
 - [x] **AC-25:** Live map shows a primary-green heading-beam dot (white halo, flared cone-cylinder beam widening toward the tip with opacity fading to zero at the far arc) on EMA-smoothed `displayCoordinate` — no separate start pin (it sat on top of the tip for short walks and looked like a black duplicate); beam heading is driven by the device compass (`watchHeadingAsync`, adaptive EMA + platform accuracy gating, ~33 ms store publish) so it tracks which way the phone is facing in real time, falling back to GPS course-over-ground while the compass is unavailable; preview maps show start + end markers on simplified route polyline
 - [x] **AC-26:** Live tracker includes optional **Follow** toggle (default off); when on, map eases to smoothed position (~450ms) on each GPS update; Recenter still flies to current position independently
-- [x] **AC-27:** Session detail / submission confirmation route maps support **Play / Pause / Replay** via `SessionRouteMapPanel` (single RAF owner); auto-replay once on load where enabled; respects `useReducedMotion`; basemap opens on session-end layer (`CompletedSessionSnapshot.mapLayer`)
+- [x] **AC-27:** Session detail / submission confirmation route maps support **Play / Pause / Replay** via `SessionRouteMapPanel` (single RAF owner, route-length-scaled duration ~3–10s); replay progress follows **path distance** (`sliceRouteByDistanceProgress`); auto-replay once on load where enabled; **skips auto-play** when `useReducedMotion`; basemap opens on session-end layer (`CompletedSessionSnapshot.mapLayer`)
 
 ### Camera (client — already wired, verify in Expo Go)
 
-- [x] **AC-12:** Camera permission prompt; selfie (front) + progress (back) on `/photo-capture` via VisionCamera **sequential** capture (dual multi-cam disabled pending Fabric/Nitro fix; DualCapture still falls back on mount error / 8s timeout / capture failure)
+- [x] **AC-12:** Camera permission prompt; selfie (front) + progress (back) on `/photo-capture` via **`expo-camera` sequential** capture (mirrored front preview, selfie PiP on back step, haptic shutter; no camera remount between steps)
 - [x] **AC-13:** Submitted photos appear on submission confirmation with real timestamps
-- [x] **AC-36:** Sequential capture waits for camera `onStarted`/`onPreviewStarted` before enabling shutter; null URI / capture errors show Alert + inline message (no silent empty catch)
+- [x] **AC-36:** Sequential capture waits for `onCameraReady` on the **first** (front) step before enabling shutter (do not reset ready when flipping `facing`); null URI / capture errors show Alert + inline message (no silent empty catch)
+- [x] **AC-38:** Volunteers can delete non-`approved` sessions from session detail (`DELETE /sessions/:id` + `removeVolunteerSession` clears recent/cache/stats); `approved` blocked (409 / UI hide)
+- [x] **AC-44:** Sessions list supports **Select** mode — multi-select non-`approved` rows (approved rows disabled), **Select all** for visible deletable rows, **Delete (N)** bulk action with confirm alert; uses sequential `removeVolunteerSessions`; mock list respects tombstone filter when API unset
 
 ### Persistence (to implement)
 
@@ -70,6 +78,7 @@ Wire the existing native session tracking flow (`frontend/src/app/` routes + `li
 - [x] **AC-17:** Sessions list fetches from `GET /sessions` (replacing or merging with mock data for test phase); list includes `checkpointCount` / `photoCount` for Home impact hydration
 - [x] **AC-21:** Submission confirmation **DURATION** matches **DATE & TIME** range — duration derived from `startedAt`/`endedAt` wall clock (not a stale tick counter); backend finalize recomputes `durationSeconds` server-side
 - [x] **AC-18:** Completed session survives app kill + reopen (API persistence verified via production smoke test; manual Expo Go force-quit test recommended)
+- [x] **AC-37:** Active live session draft debounced to AsyncStorage; on cold start, **Resume** / **Discard** modal (`LiveSessionResumeGate`) when draft exists and remote session is still `active` (or local-only); draft cleared on finalize/cancel
 
 ### Environment
 
@@ -84,19 +93,19 @@ Wire the existing native session tracking flow (`frontend/src/app/` routes + `li
 | Background GPS while session active | ❌ (foreground-only; soft banner) | ✅ with Always permission |
 | WebView MapLibre maps | ✅ | ✅ |
 | Native MapLibre | ❌ | ✅ |
-| VisionCamera sequential checkpoint | ❌ / limited | ✅ |
+| `expo-camera` sequential checkpoint | ✅ | ✅ |
 | Simultaneous dual-cam | ❌ | Code path present; **disabled by default** (native crash risk) |
 
 ## Out of scope
 
-- Mid-session route PATCH to Fly (finalize-only)
-- Full offline queue / crash recovery of live session state
+- Mid-session route PATCH to Fly (finalize-only; local draft resume is client-only)
+- Full offline queue / sync retry beyond best-effort create/checkpoint/finalize
+- Simultaneous dual-camera re-enable
 - EAS production MapLibre builds beyond development profile
 - Google Cloud Maps API key
 - Stripe payments
 - Admin approval UI (manual status change in Supabase for test)
 - Email OTP / account linking
-- Background GPS (session-only foreground tracking per privacy baseline)
 - Real-time GPS streaming to server during session (batch on finalize only for v1)
 
 ## Dependencies
@@ -116,7 +125,16 @@ Wire the existing native session tracking flow (`frontend/src/app/` routes + `li
 |------|--------|
 | `frontend/src/lib/supabase.ts` | New — Supabase client + anon sign-in |
 | `frontend/src/lib/api.ts` | New — Fly API fetch wrapper with JWT |
-| `frontend/src/features/session-tracking/liveSessionStore.ts` | Wire create/checkpoint/finalize to API |
+| `frontend/src/features/session-tracking/liveSessionStore.ts` | Wire create/checkpoint/finalize to API; resume-from-draft |
+| `frontend/src/features/session-tracking/liveSessionDraft.ts` | Debounced AsyncStorage draft while session active |
+| `frontend/src/features/session-tracking/checkpointConstants.ts` | Checkpoint interval + 5-min grace constants |
+| `frontend/src/features/session-tracking/checkpointNotifications.ts` | Scheduled local checkpoint reminders |
+| `frontend/src/features/session-tracking/pendingSessionSetup.ts` | Stash setup until first photo before tracking |
+| `frontend/src/components/CheckpointMissNavigationGate.tsx` | Route to `/missed-checkpoint` after background finalize |
+| `frontend/src/components/CheckpointNotificationBootstrap.tsx` | Notification handler + tap routing |
+| `frontend/src/components/LiveSessionResumeGate.tsx` | Cold-start Resume / Discard modal |
+| `frontend/src/features/session-tracking/removeVolunteerSession.ts` | Volunteer delete + local cache cleanup |
+| `frontend/src/features/session-tracking/utils/routeReplayDuration.ts` | Length-scaled replay duration (~3–10s) |
 | `frontend/src/features/session-tracking/components/LiveSessionMapWebView.tsx` | New — WebView map for Expo Go |
 | `frontend/src/features/session-tracking/components/MapInteractionContainer.tsx` | Touch responder wrapper for map pan/zoom inside ScrollViews |
 | `frontend/src/features/session-tracking/utils/mapStyles.ts` | Basemap layer definitions (standard, satellite, hybrid) |
@@ -126,7 +144,7 @@ Wire the existing native session tracking flow (`frontend/src/app/` routes + `li
 | `frontend/src/features/session-tracking/components/SessionRouteMapPreview.tsx` | Route Expo Go → WebView read-only |
 | `frontend/src/features/session-tracking/components/SessionRouteMapPreviewWebView.tsx` | `replayOnce` prop — one-shot growing-polyline + tip-marker replay via `window.replayRoute`; initial HTML style is baked from `mapLayer` so Hybrid/Satellite open without a post-load `setStyle` race |
 | `frontend/src/features/session-tracking/components/SessionRouteMapPanel.tsx` | Icon Play / Pause / Replay + synced replay timer; threads `replayOnce` to preview; `initialMapLayer` opens the replay on the layer the session ended with (no layer picker on replay maps) |
-| `frontend/src/app/_layout.tsx` | Ensure anon auth on app mount |
+| `frontend/src/app/_layout.tsx` | Anon auth on mount + `LiveSessionResumeGate` |
 | `frontend/src/utils/sessionPermissions.ts` | Added `isSessionLocationPermissionGranted`/`isSessionCameraPermissionGranted` status checks (no OS prompt); camera request/check now goes through the `Camera` legacy object per `expo-camera` 17 |
 | `frontend/src/screens/SessionSetupFormScreen.tsx` | Location/Camera permission toggles default from actual OS-granted status on mount |
 | `frontend/src/screens/SessionSetupStep6Screen.tsx`, `SessionSetupStep7Screen.tsx` | Check grant status on mount; auto-`replace` to the next step when already granted instead of re-prompting |
@@ -137,13 +155,14 @@ Wire the existing native session tracking flow (`frontend/src/app/` routes + `li
 
 ## Test plan
 
-1. `cd frontend && npx expo install --check && npx expo start`
+1. From repo root: `npm start` (tunnel) or `npm run start:lan` (same Wi‑Fi) — see [expo-go-dev-networking.md](expo-go-dev-networking.md)
 2. Open in **Expo Go** on a physical iPhone or Android device
 3. Complete onboarding (or Log In shortcut) → Home
 4. **Start Tracking** → session setup → permissions → **Start Session**
 5. Walk outdoors ≥ 2 minutes; confirm WebView map shows route polyline and distance increments; toggle **Follow** to pan with you; drag to pan and pinch to zoom without map snapping back until follow is on or recenter is tapped
-6. Submit a photo checkpoint; confirm camera capture works
-7. **End Session** → submission confirmation shows photos + route preview; route preview auto-replays the walking path once (growing line + moving tip marker) before settling into the static view; pan/zoom route preview inside scrollable screen
-8. **Go Home** → session appears in Recent Sessions / Sessions list as Under Review; opening that session's detail screen replays the same walking-path animation once per visit
-9. Force-quit app → reopen → session still visible (fetched from API)
-10. Verify rows in Supabase `sessions` + `checkpoints` tables and objects in `session-photos` bucket
+6. Submit a photo checkpoint; confirm `expo-camera` sequential capture (mirror + PiP) works
+7. Force-quit mid-session → reopen → **Resume** restores tracker (or **Discard** clears draft)
+8. **End Session** → submission confirmation shows photos + route preview; route preview auto-replays once (length-scaled; skipped when reduced motion) before settling into the static view
+9. **Go Home** → session appears in Recent Sessions; **View All** → `/sessions-list`; opening detail replays the walking path; non-approved sessions show **Delete session**
+10. Force-quit after finalize → reopen → completed session still visible (fetched from API)
+11. Verify rows in Supabase `sessions` + `checkpoints` tables and objects in `session-photos` bucket

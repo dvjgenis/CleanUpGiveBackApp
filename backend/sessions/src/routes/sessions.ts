@@ -270,4 +270,31 @@ export async function registerSessionRoutes(app: FastifyInstance) {
       return { id: updated.id, status: updated.status };
     },
   );
+
+  app.delete<{ Params: { id: string } }>(
+    '/sessions/:id',
+    { preHandler: verifyAuth },
+    async (request, reply) => {
+      const { userId } = request as AuthenticatedRequest;
+      const { id } = request.params;
+
+      const session = await prisma.session.findFirst({
+        where: { id, userId },
+      });
+
+      if (!session) {
+        return reply.code(404).send({ error: 'Session not found' });
+      }
+
+      if (session.status === SessionStatus.approved) {
+        return reply.code(409).send({ error: 'Approved sessions cannot be deleted' });
+      }
+
+      await prisma.session.delete({
+        where: { id },
+      });
+
+      return reply.code(204).send();
+    },
+  );
 }

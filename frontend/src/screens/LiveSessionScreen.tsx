@@ -7,9 +7,9 @@ import {
   NotoSans_600SemiBold,
 } from '@expo-google-fonts/noto-sans';
 import { Image as ExpoImage } from 'expo-image';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { useFonts } from 'expo-font';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -27,6 +27,7 @@ import { Compass } from '@/components/ui/Compass';
 import { PhotoEnlargeModal } from '@/components/ui/PhotoEnlargeModal';
 import { SessionSetupBackChevronIcon } from '@/components/session-setup/icons/SessionSetupBackChevronIcon';
 import { LiveSessionMap } from '@/features/session-tracking/components/LiveSessionMap';
+import { LiveSessionBackgroundTrackingBanner } from '@/components/LiveSessionBackgroundTrackingBanner';
 import { MapTypesSheet } from '@/features/session-tracking/components/MapTypesSheet';
 import { TrackerActionButton } from '@/features/session-tracking/components/TrackerActionButton';
 import { LocationPinIcon } from '@/features/session-tracking/components/icons/LocationPinIcon';
@@ -35,7 +36,6 @@ import { TrackerLayersIcon } from '@/features/session-tracking/components/icons/
 import { TrackerMapDarkIcon, TrackerMapLightIcon } from '@/features/session-tracking/components/icons/TrackerMapThemeIcons';
 import { RouteIcon } from '@/features/session-tracking/components/icons/RouteIcon';
 import { TrackerMyLocationIcon } from '@/features/session-tracking/components/icons/TrackerMyLocationIcon';
-import { TrackerSubmitPhotoIcon } from '@/features/session-tracking/components/icons/TrackerSubmitPhotoIcon';
 import { TrackerWeatherIcon } from '@/features/session-tracking/components/icons/TrackerWeatherIcon';
 import {
   formatElapsed,
@@ -43,16 +43,18 @@ import {
 } from '@/features/session-tracking/mocks/session';
 import type { PhotoCheckpointSubmission } from '@/features/session-tracking/liveSessionStore';
 import {
-  finalizeLiveSession,
+  evaluateCheckpointMissAndFinalize,
   ensureLocationWatching,
   ensureLiveSessionTicking,
   getCheckpointProgress,
+  isCheckpointInGracePeriod,
   isCheckpointMissed,
   requestLiveSessionMapRecenter,
   setLiveSessionMapLayer,
   toggleLiveSessionMapFollow,
   useLiveSession,
 } from '@/features/session-tracking/liveSessionStore';
+import { alertPhotoCheckpointDue } from '@/utils/photoCheckpointAlert';
 import {
   toggleManualMapTheme,
   useEffectiveMapTheme,
@@ -237,7 +239,7 @@ function MapToolButton({
 /** PRD §6.11 · Figma `session_setup_guide` live tracker (`251:439`). */
 export function LiveSessionScreen() {
   const router = useRouter();
-  const { elapsedSeconds, checkpointSecondsRemaining, distanceMiles, submittedCheckpoints, mapLayer, mapFollowEnabled } =
+  const { elapsedSeconds, checkpointSecondsRemaining, distanceMiles, submittedCheckpoints, mapLayer, mapFollowEnabled, checkpointWindowStartedAt, backgroundLocationEnabled } =
     useLiveSession();
   const [mapLayerPickerVisible, setMapLayerPickerVisible] = useState(false);
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
@@ -278,6 +280,7 @@ export function LiveSessionScreen() {
   const checkpointProgress = getCheckpointProgress(checkpointSecondsRemaining);
   const checkpointMissed = isCheckpointMissed();
   const freeTrialExpired = !getTrackerHasPaid() && isFreeTrialExpired(elapsedSeconds);
+  const checkpointDueAlertedForWindow = useRef<number | null>(null);
 
   useEffect(() => {
     void ensureLocationWatching();
@@ -285,14 +288,35 @@ export function LiveSessionScreen() {
   }, []);
 
   useEffect(() => {
-    if (checkpointSecondsRemaining === 0) {
-      router.push('/photo-checkpoint');
+    if (checkpointSecondsRemaining !== 0 || checkpointWindowStartedAt == null) {
+      return;
     }
-  }, [checkpointSecondsRemaining, router]);
+
+    if (checkpointDueAlertedForWindow.current === checkpointWindowStartedAt) {
+      return;
+    }
+
+    checkpointDueAlertedForWindow.current = checkpointWindowStartedAt;
+    void alertPhotoCheckpointDue();
+    router.push('/photo-checkpoint');
+  }, [checkpointSecondsRemaining, checkpointWindowStartedAt, router]);
+
+  useEffect(() => {
+    if (!isCheckpointInGracePeriod()) {
+      return;
+    }
+
+    void alertPhotoCheckpointDue();
+    const interval = setInterval(() => {
+      void alertPhotoCheckpointDue();
+    }, 45_000);
+
+    return () => clearInterval(interval);
+  }, [checkpointSecondsRemaining, checkpointWindowStartedAt]);
 
   useEffect(() => {
     if (checkpointMissed) {
-      finalizeLiveSession({ status: 'invalid' });
+      evaluateCheckpointMissAndFinalize();
       router.replace('/missed-checkpoint');
     }
   }, [checkpointMissed, router]);
@@ -350,6 +374,12 @@ export function LiveSessionScreen() {
 
             <TrackerCompassControl chrome={chrome} />
           </View>
+
+          {!backgroundLocationEnabled ? (
+            <View style={s.backgroundBannerWrap} pointerEvents="none">
+              <LiveSessionBackgroundTrackingBanner />
+            </View>
+          ) : null}
 
           <View style={s.inProgressSection} pointerEvents="box-none">
             <View style={s.timerBlock} pointerEvents="box-none">
@@ -499,20 +529,10 @@ export function LiveSessionScreen() {
 
               <View style={s.actions}>
                 <TrackerActionButton
-                  label="Submit Photo"
-                  variant="primary"
-                  chrome={chrome}
-                  onPress={() => router.push('/photo-checkpoint')}
-                  icon={<TrackerSubmitPhotoIcon color={chrome.textOnPrimary} size={24} />}
-                />
-                <TrackerActionButton
                   label="End Session"
                   variant="secondary"
                   chrome={chrome}
-                  onPress={() => {
-                    finalizeLiveSession();
-                    router.push('/session-feedback');
-                  }}
+                  onPress={() => router.push('/photo-capture?mode=session-end' as Href)}
                   icon={<TrackerEndSessionIcon color={chrome.textTertiary} size={24} />}
                 />
               </View>
@@ -632,6 +652,9 @@ function createStyles(_chrome: TrackerChromeColors) {
     pillDivider: {
       width: 1,
       height: 13,
+    },
+    backgroundBannerWrap: {
+      paddingHorizontal: 16,
     },
     inProgressSection: {
       flex: 1,

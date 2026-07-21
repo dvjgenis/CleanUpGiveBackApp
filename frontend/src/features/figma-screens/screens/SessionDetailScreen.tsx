@@ -1,5 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
   ScrollView,
   Share,
   StyleSheet,
@@ -17,6 +19,7 @@ import { StatusPill } from '@/features/session-tracking/components/StatusPill';
 import { SessionRouteMapPanel } from '@/features/session-tracking/components/SessionRouteMapPanel';
 import { SessionNotesField } from '@/features/session-tracking/components/SessionNotesField';
 import { useSessionDetail } from '@/features/session-tracking/hooks/useSessionDetail';
+import { removeVolunteerSession } from '@/features/session-tracking/removeVolunteerSession';
 import { useSessionRouteCoordinates } from '@/features/session-tracking/hooks/useSessionRouteCoordinates';
 import {
   formatPhotoTimeLabel,
@@ -159,9 +162,15 @@ export function SessionDetailScreen() {
   const routeCoordinates = useSessionRouteCoordinates(sessionId);
 
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const canDeleteSession =
+    Boolean(sessionId) && !loading && !error && detail.status !== 'approved';
 
   const footerBottom = Math.max(insets.bottom, 12);
-  const scrollBottomPad = FOOTER_PAD_TOP + CTA_HEIGHT + FOOTER_PAD_BOTTOM + footerBottom + 96;
+  const footerExtra = canDeleteSession ? 44 : 0;
+  const scrollBottomPad =
+    FOOTER_PAD_TOP + CTA_HEIGHT + FOOTER_PAD_BOTTOM + footerBottom + footerExtra + 96;
   const contentWidth = Math.min(windowWidth - 32, 358);
 
   const selectedPhoto =
@@ -182,6 +191,36 @@ export function SessionDetailScreen() {
       // User dismissed or share unavailable.
     }
   }, [detail.dateTimeLabel, detail.locationAddress, detail.title]);
+
+  const handleDeleteSession = useCallback(() => {
+    if (!sessionId || deleting) {
+      return;
+    }
+
+    Alert.alert(
+      'Delete session?',
+      'This removes the session from your history and cancels admin review.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            void (async () => {
+              setDeleting(true);
+              const result = await removeVolunteerSession(sessionId, detail.status);
+              setDeleting(false);
+              if (!result.ok) {
+                Alert.alert('Could not delete', result.message);
+                return;
+              }
+              router.replace('/sessions-list' as Href);
+            })();
+          },
+        },
+      ],
+    );
+  }, [deleting, detail.status, router, sessionId]);
 
   return (
     <View style={s.root}>
@@ -248,6 +287,22 @@ export function SessionDetailScreen() {
       </ScrollView>
 
       <View style={[s.footer, { paddingBottom: footerBottom }]}>
+        {canDeleteSession ? (
+          <AnimatedPressable
+            scaleTo={0.98}
+            onPress={handleDeleteSession}
+            disabled={deleting}
+            accessibilityRole="button"
+            accessibilityLabel="Delete session"
+            style={s.deleteBtn}
+          >
+            {deleting ? (
+              <ActivityIndicator color={colors.statusDeclinedText} />
+            ) : (
+              <Text style={s.deleteLabel}>Delete session</Text>
+            )}
+          </AnimatedPressable>
+        ) : null}
         <AnimatedPressable
           scaleTo={0.98}
           onPress={() => router.push('/session-setup-guide' as Href)}
@@ -469,6 +524,17 @@ const s = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: FOOTER_PAD_TOP,
     backgroundColor: colors.bgApp,
+    gap: 12,
+  },
+  deleteBtn: {
+    minHeight: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteLabel: {
+    fontFamily: fontFamilies.notoSansSemiBold,
+    fontSize: 15,
+    color: colors.statusDeclinedText,
   },
   cta: {
     height: CTA_HEIGHT,

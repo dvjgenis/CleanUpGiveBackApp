@@ -1,13 +1,11 @@
-import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { Platform, StyleSheet, Text, View } from 'react-native';
+
+import { isExpoGoClient } from '@/utils/isExpoGoClient';
 
 import { colors, radius, textStyles } from '../tokens';
 import { DEFAULT_MAP_LAYER, type MapLayerType } from '../utils/mapStyles';
 import type { RouteCoordinate } from '../utils/geo';
 import { Icon } from './Icon';
-
-const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
-const needsFallback = Platform.OS === 'web';
 
 type Props = {
   routeCoordinates: RouteCoordinate[];
@@ -46,7 +44,8 @@ export function SessionRouteMapPreview({
   replayProgress = 1,
   style,
 }: Props) {
-  if (isExpoGo) {
+  // Resolve at render time — module-scope Constants can be wrong on first evaluate.
+  if (isExpoGoClient()) {
     const { SessionRouteMapPreviewWebView } =
       require('./SessionRouteMapPreviewWebView') as typeof import('./SessionRouteMapPreviewWebView');
     return (
@@ -59,7 +58,7 @@ export function SessionRouteMapPreview({
     );
   }
 
-  if (needsFallback) {
+  if (Platform.OS === 'web') {
     return <SessionRouteMapPreviewFallback routeCoordinates={routeCoordinates} style={style} />;
   }
 

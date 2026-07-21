@@ -18,11 +18,13 @@ Powers route display, GPS sampling, and distance stats during cleanup sessions. 
   - Foreground: `expo-location` `watchPositionAsync` at `BestForNavigation` (walking ~1s / 3 m; stationary longer interval) — started immediately after When-In-Use grant so the live map (which waits for a GPS seed) cannot stall behind Always permission or a hanging one-shot fix
   - Initial seed: `getLastKnownPositionAsync` + timed Balanced `getCurrentPositionAsync` (8s) in parallel with the watch; Always / background enablement is also non-blocking
   - Background (EAS only): `expo-task-manager` task while session active + Always permission granted; stops on finalize/cancel
-  - Pipeline: **2D Kalman** (`locationKalman.ts`) → hardened gates (≤15 m accuracy or null after Kalman, adaptive min-move `max(3m, accuracy×0.35)`, stationary, sharp-reversal, 8s warm-up, 30s gap recovery)
+  - Pipeline: **2D Kalman** (`locationKalman.ts`) → hardened gates (≤15 m accuracy or null after Kalman, adaptive min-move `max(3m, accuracy×0.35)`, stationary, sharp-reversal, 8s warm-up, 30s gap recovery); foreground/background sample dedupe
 - Rich in-memory samples `{lng, lat, accuracy, speed, heading, t}`; API finalize still sends `[[lng, lat], …]`
-- Route display: precomputed `displayRouteCoordinates` via `simplifyRouteForDisplay()` (outlier removal + Douglas-Peucker + light smooth); stored distance uses capture-filtered points
+- Route display: live tracker uses `simplifyRouteForLiveDisplay()` (~2 m + raw tail); previews/replay use `simplifyRouteForDisplay()` (~4 m); maps may append EMA tip segment (`appendLiveTipToDisplayRoute`); stored distance/route uses capture-filtered points only
 - Live map markers: primary-green heading-beam on EMA-smoothed `displayCoordinate` only (no start pin — it stacked on the tip for short walks); heading from device compass (`watchHeadingAsync`, adaptive EMA + platform accuracy gate, ~33 ms publish), GPS course fallback; optional Follow (~450 ms ease)
-- Soft banner when Always/background unavailable — session still starts foreground-only
+- Live maps wait for first GPS fix (“Getting precise location…”) before mounting the basemap (no US overview flash)
+- **`LiveSessionBackgroundTrackingBanner`** when Always/background unavailable (`backgroundLocationEnabled === false`) — session still starts foreground-only; **`AppState` active** → `resumeLiveSessionTrackingAfterForeground()` restarts GPS watch
+- Completed-session replay: `sliceRouteByDistanceProgress` (distance-scaled ~3–10s animation on detail/confirmation maps)
 - Live weather + reverse geocoding via [Open-Meteo](https://open-meteo.com/) — `useLiveWeather.ts`
 - Location plugins in `app.json`: when-in-use + Always strings; `isIosBackgroundLocationEnabled` / `isAndroidBackgroundLocationEnabled`
 
@@ -34,7 +36,7 @@ Powers route display, GPS sampling, and distance stats during cleanup sessions. 
 | EAS dev-client / native | `LiveSessionMapNative` | MapLibre RN + same layer/theme options |
 | Web | Placeholder fallback | N/A |
 
-Read-only route previews: `SessionRouteMapPreview` (+ WebView variant) with Play / Pause / Replay via `SessionRouteMapPanel`.
+Read-only route previews: `SessionRouteMapPreview` (+ WebView variant) with Play / Pause / Replay via `SessionRouteMapPanel` (length-scaled ~3–10s; auto-play respects `useReducedMotion`).
 
 ### Server (implemented via sessions API)
 

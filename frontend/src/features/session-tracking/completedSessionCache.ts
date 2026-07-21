@@ -21,3 +21,29 @@ export function getCachedCompletedSession(id?: string): CompletedSessionSnapshot
 export function resetCompletedSessionCache() {
   cache.clear();
 }
+
+/** Drops cached snapshot keys for a session id (local or remote). */
+export function removeCompletedSessionFromCache(sessionId: string) {
+  const keysToDelete = new Set<string>([sessionId]);
+  const snapshot = cache.get(sessionId);
+
+  if (snapshot) {
+    if (snapshot.remoteSessionId) {
+      keysToDelete.add(snapshot.remoteSessionId);
+    }
+    keysToDelete.add(`session-${snapshot.endedAt}`);
+  } else {
+    const localMatch = sessionId.match(/^session-(\d+)$/);
+    if (localMatch) {
+      for (const [key, value] of cache.entries()) {
+        if (String(value.endedAt) === localMatch[1]) {
+          keysToDelete.add(key);
+        }
+      }
+    }
+  }
+
+  for (const key of keysToDelete) {
+    cache.delete(key);
+  }
+}

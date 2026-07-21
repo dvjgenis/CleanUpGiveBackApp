@@ -110,3 +110,15 @@ export async function getSession(sessionId: string): Promise<{
 
   return apiFetch(`/sessions/${sessionId}`);
 }
+
+/** Hard-delete a session owned by the caller. Fails with 409 when already approved. */
+export async function deleteSession(sessionId: string): Promise<boolean> {
+  if (!isApiConfigured) {
+    return false;
+  }
+
+  await apiFetch<void>(`/sessions/${sessionId}`, {
+    method: 'DELETE',
+  });
+  return true;
+}

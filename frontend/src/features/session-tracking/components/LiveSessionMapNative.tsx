@@ -1,4 +1,5 @@
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { useMemo } from 'react';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { Map, MapMarker, MapRoute } from '@/components/ui/map';
 
@@ -8,9 +9,9 @@ import {
   useLiveSession,
 } from '../liveSessionStore';
 import { useEffectiveMapTheme } from '../mapThemeStore';
-import { colors, radius } from '../tokens';
+import { colors, radius, textStyles } from '../tokens';
 import { getNativeMapStyle } from '../utils/mapStyles';
-import { simplifyRouteForDisplay } from '../utils/routeFiltering';
+import { simplifyRouteForDisplay, appendLiveTipToDisplayRoute } from '../utils/routeFiltering';
 import { LiveSessionMapCamera } from './LiveSessionMapCamera';
 import { MapInteractionContainer } from './MapInteractionContainer';
 import { SessionCurrentArrowMarker } from './SessionMapMarkers';
@@ -37,6 +38,10 @@ export function LiveSessionMapNative({ style }: Props) {
     displayRouteCoordinates.length >= 2
       ? displayRouteCoordinates
       : simplifyRouteForDisplay(routeCoordinates);
+  const routeForMap = useMemo(
+    () => appendLiveTipToDisplayRoute(displayRoute, displayCoordinate),
+    [displayRoute, displayCoordinate],
+  );
 
   // Wait for a GPS seed before mounting the map so we never flash the
   // continental US default center, then jump to the user.
@@ -45,6 +50,9 @@ export function LiveSessionMapNative({ style }: Props) {
       <MapInteractionContainer style={[styles.container, style]}>
         <View style={styles.waiting}>
           <ActivityIndicator size="small" color={colors.primary} />
+          <Text style={[textStyles.bodySmall, styles.waitingText]}>
+            Getting precise location…
+          </Text>
         </View>
       </MapInteractionContainer>
     );
@@ -58,8 +66,8 @@ export function LiveSessionMapNative({ style }: Props) {
         zoom={getLiveSessionMapZoom()}
         showLoader
       >
-        {displayRoute.length >= 2 && (
-          <MapRoute coordinates={displayRoute} color={colors.primary} width={4} />
+        {routeForMap.length >= 2 && (
+          <MapRoute coordinates={routeForMap} color={colors.primary} width={4} />
         )}
 
         {displayCoordinate && (
@@ -87,6 +95,11 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 10,
     backgroundColor: colors.bgSurface,
+  },
+  waitingText: {
+    color: colors.textTertiary,
+    textAlign: 'center',
   },
 });

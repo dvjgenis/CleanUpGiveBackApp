@@ -34,7 +34,7 @@ import { SessionSetupToggle } from '@/components/session-setup/SessionSetupToggl
 import { SessionSetupTopAppBar } from '@/components/session-setup/SessionSetupTopAppBar';
 import { CameraIcon } from '@/features/session-tracking/components/icons/CameraIcon';
 import { LocationPinIcon } from '@/features/session-tracking/components/icons/LocationPinIcon';
-import { startNewLiveSession } from '@/features/session-tracking/liveSessionStore';
+import { setPendingSessionSetup } from '@/features/session-tracking/pendingSessionSetup';
 import {
   isSessionCameraPermissionGranted,
   isSessionLocationPermissionGranted,
@@ -224,14 +224,13 @@ export function SessionSetupFormScreen() {
 
     setFieldErrors(EMPTY_FIELD_ERRORS);
     setShowValidationToast(false);
-    void startNewLiveSession({
+    setPendingSessionSetup({
       activity: activity.trim(),
       date: sessionDate,
       courtOrdered,
       description: description.trim(),
     });
-    // Tag so tracker back goes to home, not the session-setup stack (onboarding / Track-tab guide).
-    router.push('/live-session?from=onboarding' as Href);
+    router.push('/photo-capture?mode=session-start' as Href);
   };
 
   if (!fontsLoaded) {

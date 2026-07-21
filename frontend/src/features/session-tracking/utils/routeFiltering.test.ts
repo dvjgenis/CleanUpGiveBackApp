@@ -11,7 +11,9 @@ import {
   resolveCompassHeading,
   resolveHeading,
   shouldAppendRoutePoint,
+  shouldSkipDuplicateLocationSample,
   simplifyRouteForDisplay,
+  sliceRouteByDistanceProgress,
   smoothCoordinateEma,
   smoothHeadingEma,
   smoothRouteForDisplay,
@@ -353,5 +355,82 @@ describe('simplifyRouteForDisplay', () => {
     expect(simplified[0]).toEqual(route[0]);
     expect(simplified[simplified.length - 1]).toEqual(route[route.length - 1]);
     expect(simplified.length).toBeLessThan(route.length);
+  });
+});
+
+describe('sliceRouteByDistanceProgress', () => {
+  it('returns start point at progress 0', () => {
+    const route: RouteCoordinate[] = [
+      [-87.63, 41.88],
+      [-87.62, 41.88],
+      [-87.61, 41.88],
+    ];
+    expect(sliceRouteByDistanceProgress(route, 0)).toEqual([route[0]]);
+  });
+
+  it('returns full route at progress 1', () => {
+    const route: RouteCoordinate[] = [
+      [-87.63, 41.88],
+      [-87.62, 41.88],
+      [-87.61, 41.88],
+    ];
+    expect(sliceRouteByDistanceProgress(route, 1)).toEqual(route);
+  });
+
+  it('interpolates tip at half distance rather than half index', () => {
+    const dense: RouteCoordinate[] = [
+      [-87.63, 41.88],
+      [-87.6299, 41.8801],
+      [-87.6298, 41.8799],
+      [-87.62, 41.88],
+    ];
+    const sparse: RouteCoordinate[] = [
+      [-87.63, 41.88],
+      [-87.62, 41.88],
+    ];
+
+    const denseHalf = sliceRouteByDistanceProgress(dense, 0.5);
+    const sparseHalf = sliceRouteByDistanceProgress(sparse, 0.5);
+
+    expect(denseHalf.length).toBeGreaterThan(1);
+    expect(sparseHalf.length).toBe(2);
+    expect(sparseHalf[1][0]).toBeCloseTo(-87.625, 3);
+  });
+});
+
+describe('shouldSkipDuplicateLocationSample', () => {
+  const base: RouteCoordinate = [-87.6298, 41.8781];
+
+  it('skips older timestamps', () => {
+    expect(
+      shouldSkipDuplicateLocationSample({
+        sampleTimestampMs: 1000,
+        coordinate: base,
+        lastProcessedTimestampMs: 1000,
+        lastProcessedCoordinate: base,
+      }),
+    ).toBe(true);
+  });
+
+  it('skips near-duplicate fixes inside the window', () => {
+    expect(
+      shouldSkipDuplicateLocationSample({
+        sampleTimestampMs: 1200,
+        coordinate: [-87.62981, 41.87811],
+        lastProcessedTimestampMs: 1000,
+        lastProcessedCoordinate: base,
+      }),
+    ).toBe(true);
+  });
+
+  it('allows distinct fixes after the window', () => {
+    expect(
+      shouldSkipDuplicateLocationSample({
+        sampleTimestampMs: 2000,
+        coordinate: [-87.63, 41.879],
+        lastProcessedTimestampMs: 1000,
+        lastProcessedCoordinate: base,
+      }),
+    ).toBe(false);
   });
 });

@@ -4,62 +4,288 @@ Session-by-session progress tracker. Distinct from `notes/journey.md` (correctio
 
 ---
 
-## [2026-07-20 Session 207] — Tracker chrome follows map dark mode
+## [2026-07-20 Session 214] — Live trail smoothness, Expo Go GPS UX, distance replay
 
-**Session goal:** When map dark mode is on (sun/moon or auto night), restyle live-tracker UI chrome to match — even if that means leaving cream brand surfaces.
-**Workflow used:** Chat
+### End goal
 
-### Skills Invoked
+Fix three issues found during **Expo Go** device QA on live session tracking:
 
-_None this session — direct inline edits._
+1. **Background / lock** — elapsed time keeps running but the GPS route stops when the user leaves the app or locks the phone; set honest expectations and resume cleanly on return (no fake background GPS in Expo Go).
+2. **Live map trail** — tracking is more granular after recent Kalman work, but the polyline still feels clunky; smooth **display-only** rendering without changing stored route samples.
+3. **Route replay** — submission confirmation / session detail replay should reanimate the path the user walked evenly (short ~3–10s preview), not jump by GPS vertex index.
 
-### Tasks Completed
+**Locked product choices:** testing client = **Expo Go**; replay = **Option A** (distance-scaled preview, not timestamp-true journey / no API schema change).
 
-| Task | File(s) | Status |
+### Approach
+
+- **Do not** attempt TaskManager background GPS in Expo Go — OS stops `watchPositionAsync` when backgrounded; gaps while locked are expected until an **EAS dev build + Always** location.
+- **Mitigate UX:** soft banner when `backgroundLocationEnabled` is false; **`AppState` → `active`** calls `resumeLiveSessionTrackingAfterForeground()` (sync clocks, ensure tick, **restart** location watch — subscription can exist but stall after background).
+- **Smooth live trail:** keep capture pipeline (1s / ~3m, Kalman, append gates); lighter live Douglas–Peucker (`simplifyRouteForLiveDisplay`, ~2m + raw tail); **`appendLiveTipToDisplayRoute`** so the line reaches the EMA-smoothed arrow between appends; round WebView line caps/joins.
+- **Replay:** shared **`sliceRouteByDistanceProgress`** (cumulative meters + interpolated tip) in native + WebView preview maps; duration still from `computeRouteReplayDurationMs`; fix auto-play starting at progress `1` then flashing full route.
+
+### Steps done so far
+
+| Area | What shipped | Key files |
 |---|---|---|
-| Add `getTrackerChromeColors(theme)` palette | `trackerChromeTheme.ts` | ✅ Light = brand; dark = near-black + light type |
-| Wire `LiveSessionScreen` overlays to chrome | `LiveSessionScreen.tsx` | ✅ Cards, pill, tools, timer, CTAs |
-| Theme `TrackerActionButton` + `MapTypesSheet` | those components | ✅ Optional/required chrome / `mapTheme` |
-| Spec + docs | `map-theme-and-weather-icons.md`, `app.md`, `current.md` | ✅ AC-10 |
+| Expo Go GPS honesty | `LiveSessionBackgroundTrackingBanner` on live tracker when background GPS off; copy explains pause on background/lock | `LiveSessionBackgroundTrackingBanner.tsx`, `LiveSessionScreen.tsx` |
+| Foreground resume | `AppState` listener → `resumeLiveSessionTrackingAfterForeground()` | `liveSessionStore.ts` |
+| Live display simplify | `simplifyRouteForLiveDisplay` used in `buildDisplayRoute` | `routeFiltering.ts`, `liveSessionStore.ts` |
+| Live tip segment | Maps draw route + EMA tip between appends | `appendLiveTipToDisplayRoute`, `LiveSessionMapNative.tsx`, `LiveSessionMapWebView.tsx` |
+| WebView polyline paint | `line-join` / `line-cap` round on live + preview WebViews | `LiveSessionMapWebView.tsx`, `SessionRouteMapPreviewWebView.tsx` |
+| Distance replay slice | `sliceRouteByDistanceProgress` + WebView helper | `routeFiltering.ts`, `webViewMapHelpers.ts`, `SessionRouteMapPreviewNative.tsx`, `SessionRouteMapPreviewWebView.tsx` |
+| Replay auto-play flash | `SessionRouteMapPanel` initial progress `0` when `replayOnce` | `SessionRouteMapPanel.tsx` |
+| Tests | Unit tests for distance slice (48 total in `routeFiltering.test.ts`) | `routeFiltering.test.ts` |
+| Living docs | Spec ACs, components registry, current capability text | `session-route-replay.md`, `session-tracking-expo-go.md` (AC-34 banner wired), `current.md`, `components.md` |
 
-### Key Decisions
+**Verified:** `cd frontend && npx tsc --noEmit`; `npm test -- --testPathPattern=routeFiltering`.
 
-- Chrome tracks **`mapThemeStore` effective theme**, not OS appearance — same toggle as the basemap.
-- Dark chrome intentionally deviates from cream brand tokens for night-map contrast; primary/lime accents stay.
+### Failures encountered (and status)
 
-### Learnings
+| Failure | Cause | Status |
+|---|---|---|
+| GPS route freezes while timer runs (lock / background) | Expo Go cannot run Always + `expo-task-manager` background updates; foreground watch pauses | **Mitigated** (banner + restart on foreground); **not fixable in Expo Go** — EAS dev client + Always for pocket walks |
+| Clunky live polyline | Line only grows on route append (~3m) while arrow EMA updates every fix; 4m display simplify on live path | **Fixed** (display-only tip segment + lighter live simplify) |
+| Replay speed uneven / “wrong” animation | Replay sliced by **vertex index** after Douglas–Peucker, not path distance | **Fixed** (`sliceRouteByDistanceProgress` + interpolated tip) |
+| Full route flash before auto-replay | `replayProgress` initialized at `1` then auto-play jumped to `0` | **Fixed** (`replayOnce` starts at `0`) |
+| AC-34 claimed soft banner but UI missing | `backgroundLocationEnabled` set in store, never shown | **Fixed** (`LiveSessionBackgroundTrackingBanner`) |
 
-- Static `StyleSheet` color constants can't follow theme — pass chrome into children or build styles via `useMemo`.
+### Current failure / open issue (working on)
+
+| Failure | Evidence | Notes |
+|---|---|---|
+| **Post-ship device QA not signed off** | Code + unit tests pass; user-reported clunky trail / replay / background behavior addressed in this session | **Next:** re-walk in Expo Go — app open (smooth trail), lock screen (banner + expected gap), unlock (GPS resumes), end session (even replay). Report any remaining jank on WebView replay RAF. |
+| **Checkpoint persist 404** during live session | Metro: `[sessions] checkpoint persist failed: API 404: {"error":"Active session not found"}` | **Carried from Session 213** — local checkpoint kept; remote create lag / draft id / env mismatch. Not in scope for Session 214 code changes. |
+| **Continuous GPS while phone locked** | Product need for pocket walks | **Out of scope for Expo Go** — requires EAS development build, Always permission, existing `backgroundLocationTask.ts` path (see [accounts-and-access.md](accounts-and-access.md)). |
+
+Also still watching: Expo Go notification delivery limits; route replay still needs ≥2 GPS points (indoor / very short tests → “No route recorded”).
+
+### Specs touched
+
+- [session-route-replay.md](frontend/specs/session-route-replay.md) — AC-2 / AC-5 distance-along-path replay
+- [session-tracking-expo-go.md](frontend/specs/session-tracking-expo-go.md) — AC-24 live display; AC-27 distance replay; AC-34 banner + foreground resume
+- [current.md](current.md), [frontend/context/components.md](frontend/context/components.md), [frontend/context/project.md](frontend/context/project.md)
+- [backend/context/maps.md](backend/context/maps.md), [implementation-plan.md](implementation-plan.md)
 
 ---
 
-## [2026-07-20 Session 206] — Photo capture: flash (back only) + zoom
+## [2026-07-20 Session 213] — Sessions multi-select delete, persisted tombstones, 5‑min grace
 
-**Session goal:** Add flash and zoom controls to checkpoint photo capture using expo-camera only (no VisionCamera).
-**Workflow used:** Chat
+### End goal
 
-### Skills Invoked
+1. **Mass delete** on the Sessions list — volunteers can multi-select sessions and hard-delete them in one action (same rules as detail: no archive; approved sessions blocked).
+2. **Deletes stay gone** after `npm start` / app restart — no ghost rows on Sessions or Home after testing deletes.
+3. **Shorter checkpoint grace** — miss window after a due checkpoint is **5 minutes** (was 10).
 
-_None this session — direct inline edits._
+### Approach
+
+- **Bulk hard delete only** — no soft-delete / archive status; reuse existing `removeVolunteerSession` + `DELETE /sessions/:id` in a sequential bulk helper (`removeVolunteerSessions`).
+- **Client tombstones + remote delete** — Postgres hard delete is source of truth when API is configured; AsyncStorage tombstones (`@cugb/volunteer-deleted-sessions`) hide ids across restarts so list/hydrate cannot resurrect rows (including mock/offline path).
+- Hydrate tombstones in `AuthProvider` **before** `hydrateRecentSessionsFromApi()` so Home never briefly shows deleted sessions.
+- Grace duration is a single constant (`CHECKPOINT_MISS_GRACE_MS`) consumed by store tick, notifications, and miss finalize.
+
+### Steps done so far
+
+| Area | What shipped | Key files |
+|---|---|---|
+| Persist tombstones | In-memory Set + AsyncStorage write-through; `hydrateVolunteerDeletedSessions()` | `volunteerDeletedSessions.ts`, `AuthProvider.tsx` |
+| Bulk delete helper | Sequential deletes; returns `{ deletedIds, failed[] }` | `removeVolunteerSession.ts` (`removeVolunteerSessions`) |
+| Sessions multi-select UI | Top bar **Select** / **Cancel** / **Select all**; row checkboxes; approved disabled; sticky **Delete (N)** + confirm Alert; mock list filtered by tombstones | `SessionsScreen.tsx` |
+| 5‑min grace | `CHECKPOINT_MISS_GRACE_MS = 5 * 60 * 1000` | `checkpointConstants.ts` |
+| Specs / living docs | AC-44 multi-select; AC-41 AsyncStorage tombstones; AC-6 grace = 5 min | `session-tracking-expo-go.md`, `current.md`, `app.md`, `components.md`, `implementation-plan.md` |
+
+### Failures encountered (and status)
+
+| Failure | Cause | Status |
+|---|---|---|
+| Deleted session reappears after `npm start` | Tombstones were in-memory only; after restart, `listSessions` / hydrate brought the row back if remote delete missed or mocks were used | **Fixed** (AsyncStorage tombstones + hydrate-before-recent; remote DELETE still required for API-backed permanence) |
+| Wanted “archive” on multi-select | No session archive / soft-delete in domain | **Out of scope** — bulk hard delete only (user chose option 1) |
+
+### Current failure / open issue (working on)
+
+| Failure | Evidence | Notes |
+|---|---|---|
+| **Checkpoint persist 404** during live session | Metro: `[sessions] checkpoint persist failed: API 404: {"error":"Active session not found"}` (seen under `npm start` / Expo Go tunnel) | Local checkpoint still kept; remote create likely lagged, draft resumed against a missing remote id, or env/JWT mismatch. **Not fixed this session** — device QA / sync timing follow-up. Same class of risk noted in Session 212. |
+
+Also still watching (not active bugs this session): Expo Go notification limits; checkpoint persist 404 (see above).
+
+### Specs touched
+
+- [session-tracking-expo-go.md](frontend/specs/session-tracking-expo-go.md) — AC-44; AC-41 persistence; AC-6 5‑min grace
+- [current.md](current.md), [frontend/context/app.md](frontend/context/app.md), [frontend/context/components.md](frontend/context/components.md), [implementation-plan.md](implementation-plan.md)
+
+---
+
+## [2026-07-20 Session 212] — Session photo gates, delete sync, Expo Go map + end-flow fixes
+
+### End goal
+
+Make volunteer session lifecycle trustworthy and photo-gated end-to-end:
+
+1. **Delete** removes a session from Sessions / Home and does not leave ghost rows.
+2. **Start** requires dual checkpoint photos before GPS/time tracking begins.
+3. **During** session: 30‑min checkpoints with a **5‑min grace**, loud reminders (in-app + scheduled local notifications), tracking continues through grace; miss → `invalid` finalize even if UI is not open.
+4. **Live tracker** has no manual **Submit Photo** — only due popup / notifications.
+5. **End** requires a final dual photo, then show **submission confirmation** with route preview + live replay (not Home).
+
+### Approach
+
+- Prefer local-first UX with Fly API best-effort sync; treat remote DELETE **404** as already-gone and **tombstone** ids so list/hydrate cannot resurrect rows.
+- Gate tracking with `pendingSessionSetup` + `/photo-capture?mode=session-start|session-end`.
+- Centralize checkpoint interval/grace in `checkpointConstants.ts`; schedule reminders in `checkpointNotifications.ts`; evaluate miss from store tick, resume, and background GPS ingest.
+- In Expo Go, never mount MapLibre native (`MLRNCameraModule`); use `isExpoGoClient()` (`StoreClient` **or** `appOwnership === 'expo'`) → WebView maps.
+- Avoid navigation races after `finalizeLiveSession()` clears `isActive`.
+
+### Steps done so far
+
+| Area | What shipped | Key files |
+|---|---|---|
+| Delete 404 + cleanup | Remote 404 → continue local cleanup; delete cached `remoteSessionId` for `session-*` ids | `removeVolunteerSession.ts` |
+| Delete list sync | In-memory tombstones; Sessions list filters + optimistic update; detail → `replace('/sessions-list')`; hydrate skips tombstones; **removed** post-delete `hydrateRecentSessionsFromApi` (it refilled deleted rows) | `volunteerDeletedSessions.ts`, `SessionsScreen.tsx`, `SessionDetailScreen.tsx`, `recentSessionsStore.ts` |
+| Photo before start | Start Session → capture → then `startNewLiveSession` + first checkpoint | `pendingSessionSetup.ts`, `SessionSetupFormScreen.tsx`, `PhotoCaptureScreen.tsx` |
+| 5‑min grace + alarms | Grace 5m; in-app alert + ~45s nag; scheduled local notifications; miss finalize without LiveSessionScreen | `checkpointConstants.ts`, `checkpointNotifications.ts`, `liveSessionStore.ts`, `LiveSessionScreen.tsx`, gates in `_layout.tsx`, `app.json` |
+| Tracker UX | Removed Submit Photo; End Session → `mode=session-end` | `LiveSessionScreen.tsx` |
+| End → confirmation | Finalize → `/submission-confirmation` (map + replay); refresh snapshot on focus | `PhotoCaptureScreen.tsx`, `SubmissionConfirmationScreen.tsx` |
+| Expo Go map crash | `MLRNCameraModule` missing — gate WebView via `isExpoGoClient()` | `isExpoGoClient.ts`, `LiveSessionMap.tsx`, `SessionRouteMapPreview.tsx`, `EventLocationMap.tsx` |
+| Specs / living docs | AC-39–43, dual-capture start/end modes, current/app/components | `session-tracking-expo-go.md`, `photo-checkpoint-dual-capture.md`, `current.md`, `app.md`, `components.md` |
+
+### Failures encountered (and status)
+
+| Failure | Cause | Status |
+|---|---|---|
+| Delete showed “Session not found” / row stayed | Cache-first detail + hard-fail on API 404; post-delete hydrate resurrected rows | **Fixed** (404→local OK + tombstones; no post-delete hydrate) |
+| `MLRNCameraModule` crash after photos → live map | Expo Go took native MapLibre path (`executionEnvironment` alone insufficient) | **Fixed** (`appOwnership === 'expo'` too) |
+| After final end photos, bounced to **Home** (no preview/replay) | `PhotoCaptureScreen` `useEffect`: `isSessionEnd && !isActive` → `replace('/')` raced `replace('/submission-confirmation')` after finalize cleared `isActive` | **Fixed** (redirect only if inactive **on mount**) |
+| After end photos, went to feedback first (no immediate preview) | Initial end flow targeted `/session-feedback` | **Fixed** (navigate to `/submission-confirmation`) |
+
+### Current status / remaining risk
+
+- **Primary end-of-session preview race: fixed** (user confirmed). Instrumentation removed.
+- **Still watch in device QA:**
+  - Closed-app checkpoint alarms need notification permission + **EAS/dev client** for reliability (Expo Go limited; iOS Critical Alerts out of scope).
+  - Metro may log `checkpoint persist failed: API 404 Active session not found` when remote create lagged / env mismatch — local checkpoint still kept.
+  - Route replay needs ≥2 GPS points; very short indoor tests may show “No route recorded”.
+  - Rebuild native binary after `app.json` `expo-notifications` / permission changes.
+
+### Specs touched
+
+- [session-tracking-expo-go.md](frontend/specs/session-tracking-expo-go.md) — AC-39–43
+- [photo-checkpoint-dual-capture.md](frontend/specs/photo-checkpoint-dual-capture.md) — start/end modes
+- [current.md](current.md), [frontend/context/app.md](frontend/context/app.md), [frontend/context/components.md](frontend/context/components.md)
+
+*(Grace duration later shortened to 5 minutes in Session 213.)*
+
+---
+
+## [2026-07-20 Session 211] — Sessions delete sync + tracker photo UX
+
+**Session goal:** Deleted sessions disappear from Sessions list; remove manual Submit Photo; require photo before End Session. *(Superseded detail in Session 212.)*
+
+| Task | File(s) | Status |
+|---|---|---|
+| Tombstone deleted ids + drop post-delete hydrate | `volunteerDeletedSessions.ts`, `removeVolunteerSession.ts`, `recentSessionsStore.ts` | ✅ |
+| Sessions list filter + detail → sessions-list | `SessionsScreen.tsx`, `SessionDetailScreen.tsx` | ✅ |
+| End Session → session-end capture; no Submit Photo | `LiveSessionScreen.tsx`, `PhotoCaptureScreen.tsx` | ✅ |
+| Docs | `session-tracking-expo-go.md`, `photo-checkpoint-dual-capture.md`, `current.md`, `app.md` | ✅ |
+
+---
+
+## [2026-07-20 Session 210] — Delete fix, photo-first start, 10-min grace alarms
+
+**Session goal:** Fix volunteer session delete on stale remote IDs; require dual photo before tracking; 10-min checkpoint grace with escalating notifications. *(See Session 212 for full arc.)*
+
+| Task | File(s) | Status |
+|---|---|---|
+| DELETE 404 → local cleanup; remote id from cache | `removeVolunteerSession.ts` | ✅ |
+| Photo-before-start flow | `pendingSessionSetup.ts`, `SessionSetupFormScreen.tsx`, `PhotoCaptureScreen.tsx` | ✅ |
+| 10-min grace + miss finalize without UI | `checkpointConstants.ts`, `liveSessionStore.ts`, `LiveSessionResumeGate.tsx`, `backgroundLocationTask` ingest | ✅ |
+| Scheduled + in-app checkpoint alarms | `checkpointNotifications.ts`, `LiveSessionScreen.tsx`, `_layout.tsx`, `app.json` | ✅ |
+| Specs + current/app/components docs | `session-tracking-expo-go.md`, `photo-checkpoint-dual-capture.md`, `current.md`, `app.md`, `components.md` | ✅ |
+
+---
+
+## [2026-07-20 Session 209] — Docs sync to current app state
+
+**Session goal:** Bring living docs under `docs/` in line with shipped session tracking (expo-camera, draft resume, delete, networking).
+
+| Task | File(s) | Status |
+|---|---|---|
+| Fix stale VisionCamera / Fly-pending / PreviewApp-only claims | `current.md`, `accounts-and-access.md`, `project.md`, `README.md` | ✅ |
+| Document resume gate, View All, delete, list refetch | `app.md`, `components.md`, `sessions.md` | ✅ |
+| Spec status + AC-36/38 + test plan | `session-tracking-expo-go.md`, `sessions-api.md`, `session-route-replay.md` | ✅ |
+| Index networking spec; mark plan items done | `docs/README.md`, `implementation-plan.md` | ✅ |
+
+---
+
+## [2026-07-20 Session 208] — Home View All + volunteer session delete
+
+**Session goal:** Wire Home Recent Sessions **View All**; let volunteers delete non-approved sessions (cancels admin review).
+
+| Task | File(s) | Status |
+|---|---|---|
+| View All → `/sessions-list` | `HomeScreen.tsx` | ✅ |
+| `DELETE /sessions/:id` (block `approved`) | `backend/sessions/src/routes/sessions.ts` | ✅ |
+| `deleteSession` + `removeVolunteerSession` + store cleanup | `sessionsApi.ts`, `removeVolunteerSession.ts`, recent/cache/stats stores | ✅ |
+| Session detail delete UI + list refetch on focus | `SessionDetailScreen.tsx`, `SessionsScreen.tsx` | ✅ |
+| API/context/current docs | `docs/backend/specs/sessions-api.md`, `docs/backend/context/sessions.md`, `docs/current.md` | ✅ |
+
+---
+
+## [2026-07-20 Session 207] — Expo Go dev server: Wi‑Fi, hotspot, cellular
+
+**Session goal:** Reliable Expo Go physical-device testing on home Wi‑Fi, iPhone Personal Hotspot, and phone-on-cellular.
+
+| Task | File(s) | Status |
+|---|---|---|
+| Harden start script (CI unset, no `--offline`, banner, ngrok preflight) | `frontend/scripts/start-expo-go.mjs` | ✅ |
+| `start:device` + root delegates | `frontend/package.json`, `package.json` | ✅ |
+| Metro `0.0.0.0` for LAN | `frontend/metro.config.js` | ✅ |
+| Networking spec + README/current/accounts | `docs/frontend/specs/expo-go-dev-networking.md` | ✅ |
+
+---
+
+## [2026-07-20 Session 207 — tracker chrome] — Tracker overlay follows map dark mode
+
+**Session goal:** When map dark mode is on (sun/moon or auto night), restyle live-tracker UI chrome to match (remote commit on `main` before local Session 214 rebase).
+
+| Task | File(s) | Status |
+|---|---|---|
+| Add `getTrackerChromeColors(theme)` palette | `trackerChromeTheme.ts` | ✅ |
+| Wire `LiveSessionScreen` overlays to chrome | `LiveSessionScreen.tsx` | ✅ |
+| Theme `TrackerActionButton` + `MapTypesSheet` | those components | ✅ |
+| Spec + docs | `map-theme-and-weather-icons.md`, `app.md`, `current.md` | ✅ |
+
+---
+
+## [2026-07-20 Session 206] — Session tracking harden (GPS, draft, camera, replay)
+
+**Session goal:** Polish the four shipped session pillars: smoother GPS ingest, mid-session crash recovery, BeReal-style sequential capture UX, and route replay quality.
 
 ### Tasks Completed
 
 | Task | File(s) | Status |
 |---|---|---|
-| Flash cycle Off → On → Auto on back-camera step | `PhotoCaptureScreen.tsx` | ✅ `flash` prop; hidden on front |
-| Apple-style curved zoom dial (1×–5×) + dim black shutter footer | `PhotoCaptureScreen.tsx` | ✅ Replaced vertical slider; GestureHandlerRootView wrap |
-| Docs sync | `app.md`, `current.md`, `progress.md` | ✅ |
+| Foreground/background GPS dedupe + last-processed coordinate tracking | `routeFiltering.ts`, `liveSessionStore.ts` | ✅ |
+| Live map cold-start: wait for GPS fix (WebView + native copy) | `LiveSessionMapWebView.tsx`, `LiveSessionMapNative.tsx` | ✅ |
+| AsyncStorage live-session draft + Resume/Discard modal | `liveSessionDraft.ts`, `liveSessionStore.ts`, `LiveSessionResumeGate.tsx`, `_layout.tsx` | ✅ |
+| Sequential capture: no remount flash, mirror, PiP, haptics | `PhotoCaptureScreen.tsx` | ✅ |
+| Route replay: scaled duration, `useReducedMotion` auto-play skip | `routeReplayDuration.ts`, `SessionRouteMapPanel.tsx` | ✅ |
+| Specs/docs sync (expo-camera, AC-37, replay) | `docs/frontend/specs/*`, `docs/current.md`, feature README | ✅ |
 
-### Key Decisions
+### Verification
 
-- **Flash back-only:** Front cameras rarely have a flash unit; `flash` stays `'off'` on the selfie step and the toggle is not rendered.
-- **Stay on expo-camera:** Zoom/flash are first-class `CameraView` props — no VisionCamera for this feature.
-- **Zoom UX:** Curved dial inspired by iOS Camera (yellow caret + major stops 1/2/3/5); display factor maps onto expo-camera `zoom` 0–1. Dim black footer behind shutter for contrast (no Apple mode strip).
+- `npm test -- --testPathPattern='locationKalman|routeFiltering'` — 48 passed
+- Device checklist: outdoor walk, force-quit resume, checkpoint capture, replay on confirmation/detail (manual)
 
-### Learnings
+---
 
-- expo-camera `zoom` is normalized 0–1 (fraction of device max); UI shows a cosmetic 1×–5× dial for readability.
-- `GestureDetector` on this screen needs a local `GestureHandlerRootView` — root `_layout` does not wrap one.
+## [2026-07-20 Session 206b] — Photo capture: flash (back only) + zoom
+
+**Session goal:** Add flash and zoom on the back-camera step; Apple-style zoom dial.
+
+| Task | File(s) | Status |
+|---|---|---|
+| Flash cycle Off → On → Auto (back step only) | `PhotoCaptureScreen.tsx` | ✅ |
+| Curved zoom dial 1×–5× + dim shutter footer | `PhotoCaptureScreen.tsx` | ✅ |
 
 ---
 

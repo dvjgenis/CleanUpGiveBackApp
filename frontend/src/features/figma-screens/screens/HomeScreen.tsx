@@ -194,9 +194,11 @@ function ImpactSection({ impactStats }: { impactStats: ImpactStat[] }) {
 function RecentSessionsSection({
   recentSessions,
   onSessionPress,
+  onViewAllPress,
 }: {
   recentSessions: HomeDashboardData['recentSessions'];
   onSessionPress?: (sessionId: string) => void;
+  onViewAllPress?: () => void;
 }) {
   return (
     <View style={s.paddedSection}>
@@ -204,7 +206,14 @@ function RecentSessionsSection({
         <Text style={s.sectionTitle}>Recent Sessions</Text>
         {recentSessions.length > 0 && (
           <View style={s.sectionHeaderActions}>
-            <Text style={s.viewAllLink}>View All</Text>
+            <AnimatedPressable
+              accessibilityRole="button"
+              accessibilityLabel="View all sessions"
+              onPress={onViewAllPress}
+              hitSlop={8}
+            >
+              <Text style={s.viewAllLink}>View All</Text>
+            </AnimatedPressable>
           </View>
         )}
       </View>
@@ -420,6 +429,7 @@ export function HomeScreenWithData({
           onSessionPress={(sessionId) =>
             router.push(`/session-detail?id=${encodeURIComponent(sessionId)}` as Href)
           }
+          onViewAllPress={() => router.push('/sessions-list' as Href)}
         />
         <RecentEventsSection recentEvents={data.recentEvents} allEvents={data.allEvents} />
       </ScrollView>

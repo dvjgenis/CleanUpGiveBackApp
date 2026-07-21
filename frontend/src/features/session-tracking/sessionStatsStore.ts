@@ -89,3 +89,18 @@ export async function hydrateSessionStatsFromApi() {
 export function resetSessionStats() {
   setSessionStats([]);
 }
+
+function statIdsForSession(sessionId: string): Set<string> {
+  const ids = new Set<string>([sessionId]);
+  const localMatch = sessionId.match(/^session-(\d+)$/);
+  if (localMatch) {
+    ids.add(`local-${localMatch[1]}`);
+  }
+  return ids;
+}
+
+/** Removes dashboard stats for a deleted session. */
+export function removeSessionStatsForSession(sessionId: string) {
+  const ids = statIdsForSession(sessionId);
+  setSessionStats(sessionStats.filter((record) => !ids.has(record.id)));
+}

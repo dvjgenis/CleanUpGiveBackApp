@@ -144,6 +144,46 @@ export function buildWebViewMapHelpers(
     return smoothRouteForDisplay(simplified);
   }
 
+  function sliceRouteByDistanceProgress(coords, progress) {
+    if (!coords || coords.length < 2) return coords || [];
+    const clamped = Math.max(0, Math.min(1, progress));
+    if (clamped <= 0) return [coords[0]];
+    if (clamped >= 1) return coords;
+
+    const cumulative = [0];
+    for (let index = 1; index < coords.length; index += 1) {
+      cumulative.push(
+        cumulative[index - 1] + deltaMetersBetween(coords[index - 1], coords[index]),
+      );
+    }
+
+    const totalMeters = cumulative[cumulative.length - 1];
+    if (totalMeters <= 0) return [coords[0]];
+
+    const targetMeters = clamped * totalMeters;
+    let segmentIndex = 1;
+    while (segmentIndex < cumulative.length && cumulative[segmentIndex] < targetMeters) {
+      segmentIndex += 1;
+    }
+
+    if (segmentIndex >= coords.length) return coords;
+
+    const segmentStart = segmentIndex - 1;
+    const segmentLength = cumulative[segmentIndex] - cumulative[segmentStart];
+    const segmentT =
+      segmentLength > 0
+        ? (targetMeters - cumulative[segmentStart]) / segmentLength
+        : 0;
+    const from = coords[segmentStart];
+    const to = coords[segmentIndex];
+    const tip = [
+      from[0] + (to[0] - from[0]) * segmentT,
+      from[1] + (to[1] - from[1]) * segmentT,
+    ];
+
+    return coords.slice(0, segmentIndex).concat([tip]);
+  }
+
   function createStartMarkerElement() {
     const el = document.createElement('div');
     el.style.width = '14px';

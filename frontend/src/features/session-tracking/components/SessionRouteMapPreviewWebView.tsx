@@ -43,11 +43,7 @@ function buildHtml() {
   ${MAP_HELPERS}
 
   function sliceCoordsByProgress(coords, progress) {
-    if (!coords || coords.length < 2) return coords || [];
-    const clamped = Math.max(0, Math.min(1, progress));
-    if (clamped >= 1) return coords;
-    const targetIndex = Math.max(1, Math.round(clamped * (coords.length - 1)));
-    return coords.slice(0, targetIndex + 1);
+    return sliceRouteByDistanceProgress(coords, progress);
   }
 
   function syncPreviewMarkers(coords, progress) {
@@ -105,7 +101,7 @@ function buildHtml() {
         id: 'route',
         type: 'line',
         source: 'route',
-        paint: { 'line-color': '${PRIMARY}', 'line-width': 4 },
+        paint: { 'line-color': '${PRIMARY}', 'line-width': 4, 'line-join': 'round', 'line-cap': 'round' },
       });
       routeAdded = true;
     } else if (map.getSource('route')) {
