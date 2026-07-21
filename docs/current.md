@@ -32,14 +32,14 @@ What runs in the repo today.
 
 - **Supabase anonymous auth** on app launch via `AuthProvider` in `_layout.tsx` (`frontend/src/lib/supabase.ts`)
 - **Fly sessions API** client (`frontend/src/lib/api.ts`, `sessionsApi.ts`) — persists create/checkpoint/finalize when `EXPO_PUBLIC_API_URL` is set
-- **GPS + camera** live in Expo Go via `liveSessionStore` (`expo-location` BestForNavigation at **1 s / ~1 m**; 2D Kalman position filter; foreground/background dedupe; hardened capture filters — min-move `max(1m, accuracy×0.25)`, slow-walk friendly stationary gate, gap recovery, sharp-reversal rejection; mid-session foreground resume preserves Kalman via soft subscription stop; device-compass heading with adaptive EMA + platform accuracy gating and GPS fallback; EMA-smoothed live arrow; optional Follow toggle (~280 ms); lighter live display simplify (~1 m + tail) + tip segment on maps; Douglas-Peucker on previews/replay; live maps wait for first GPS fix with “Getting precise location…” instead of US overview flash). **Live session draft** persists to AsyncStorage while active; **Resume/Discard** on cold start via `LiveSessionResumeGate`. **Background GPS** during active sessions via `expo-task-manager` when Always location is granted (EAS dev build required; **Expo Go is foreground-only** — GPS restarts when the app returns to foreground and re-asserts background task when Always granted; route gaps while locked/backgrounded are expected in Expo Go)
+- **GPS + camera** live in Expo Go via `liveSessionStore` (`expo-location` BestForNavigation at **1 s / ~1 m**; 2D Kalman position filter; route append gated on **Kalman-resolved accuracy ≤ 25 m**; stationary gate ignores `speedMps === 0` (common on iOS while walking) and uses distance from last route point; foreground/background dedupe; hardened capture filters — min-move `max(1m, accuracy×0.25)`, slow-walk friendly stationary gate, gap recovery, sharp-reversal rejection; mid-session foreground resume preserves Kalman via soft subscription stop; device-compass heading with adaptive EMA + platform accuracy gating and GPS fallback; EMA-smoothed live arrow; optional Follow toggle (~280 ms); **`displayRouteCoordinates` + live tip refreshed every fix**; WebView MapLibre line layer re-ensured each update (`layout` line-join/cap); distance UI shows hundredths under 0.1 mi; lighter live display simplify (~1 m + tail) + tip segment on live maps; **session detail / confirmation replay** uses the same **`simplifyRouteForLiveDisplay`** (not 4 m preview simplify); Douglas-Peucker on legacy 4 m paths where still referenced; live maps wait for first GPS fix with “Getting precise location…” instead of US overview flash). **Live session draft** persists to AsyncStorage while active; **Resume/Discard** on cold start via `LiveSessionResumeGate`. **Background GPS** during active sessions via `expo-task-manager` when Always location is granted (EAS dev build required; **Expo Go is foreground-only** — GPS restarts when the app returns to foreground and re-asserts background task when Always granted; route gaps while locked/backgrounded are expected in Expo Go)
 - **WebView map** in Expo Go (MapLibre GL JS + Carto Voyager / Dark Matter) per ADR-005; user pan/zoom on live and preview maps; live tracker map layer picker (Standard / Satellite / Hybrid) wired to `liveSessionStore.mapLayer`; Standard light/dark theme via `mapThemeStore` (auto by local time 7pm–6am, Account toggle to follow time of day, live sun/moon tool to override); **tracker UI chrome** (timer/location/tools/checkpoint/CTAs/Map Types) follows the same theme via `trackerChromeTheme.ts`; dark theme repaints parks/nature reserves/green landcover a legible dark green (upstream Dark Matter renders them invisible against the near-black background — see `mapStyles.ts`); weather pill uses Open-Meteo `weather_code` icons; native MapLibre unchanged for EAS builds
 - **Sessions list** refetches from Fly API on focus when `EXPO_PUBLIC_API_URL` is set — loading/empty/error states; when API is unset, shows filtered mock rows; **Select** → bulk delete non-approved sessions (AsyncStorage tombstones keep deleted ids hidden across restarts)
 - **Session detail** fetches from Fly API + Supabase Storage signed URLs via `useSessionDetail`; volunteers can **Delete session** when status is not `approved` (`DELETE /sessions/:id` + `removeVolunteerSession` clears recent/cache/stats + AsyncStorage tombstones); after delete, returns to `/sessions-list` with row removed
 - **Checkpoint grace** — **5 minutes** after a due checkpoint (`CHECKPOINT_MISS_GRACE_MS`) before invalid finalize / `/missed-checkpoint`
 - **Backend:** Fastify + Prisma in `backend/sessions/` — deployed to `https://cleanup-sessions.fly.dev`; uses Supabase Postgres + JWKS (ES256) auth verification
-- **GPS trail QA (open):** Code for denser capture + soft resume is shipped (see [progress.md](progress.md) 2026-07-21); **outdoor device re-walk** still needed to confirm user-reported trail stops / chunkiness are resolved in Expo Go and EAS + Always.
-- **Open QA issue:** Metro may log `checkpoint persist failed: API 404 Active session not found` when remote create lags or the local session id is not active on Fly — local checkpoint is kept; sync timing still under investigation (see [progress.md](progress.md) Session 213)
+- **GPS trail QA:** Outdoor Expo Go walk confirmed green polyline + distance increments after stationary-gate / WebView layer / distance-format fixes (2026-07-21). EAS + Always lock-screen continuity still open.
+- **Checkpoint sync:** Client **recreates remote session once and retries** on Fly `404 Active session not found` (`ensureRemoteSession` in `liveSessionStore`); fill `frontend/.env` with **project root** Supabase URL (no `/rest/v1/`) and **anon public JWT** — see [supabase.md](supabase.md). Restart Metro after `.env` changes. Residual 404s usually mean API/env mismatch — see [expo-go-eas-tester-runbook.md](frontend/specs/expo-go-eas-tester-runbook.md).
 
 **API:** `EXPO_PUBLIC_API_URL=https://cleanup-sessions.fly.dev` in `frontend/.env`. Backend needs `DATABASE_URL` + `SUPABASE_URL` on Fly.
 
@@ -53,14 +53,23 @@ What runs in the repo today.
 
 ```bash
 npm install --prefix frontend
-npm start              # default: tunnel (Wi‑Fi / hotspot / cellular)
-npm run start:lan      # same Wi‑Fi only (fast)
-npm run start:device   # tunnel (alias)
+npm start              # smart: hotspot → LAN; else tunnel (cellular / guest Wi‑Fi)
+npm run start:lan      # same Wi‑Fi (fast)
+npm run start:hotspot  # Mac on iPhone Personal Hotspot → LAN
+npm run start:device   # force tunnel (phone on LTE/5G)
 ```
 
 Full matrix and troubleshooting: [expo-go-dev-networking.md](frontend/specs/expo-go-dev-networking.md).
 
-**Physical device (Expo Go):** **`npm run start:device`** when the phone is on **LTE/5G** and the Mac is on Wi‑Fi. **`npm start`** auto-tunnels on **iPhone Personal Hotspot** (`172.20.10.x`). On shared home Wi‑Fi use **`npm run start:lan`**. Metro clears inherited `CI=true` so fast refresh stays enabled.
+**Physical device (Expo Go):**
+
+| Phone connection | Command |
+|------------------|---------|
+| Same Wi‑Fi as Mac | `npm run start:lan` |
+| Mac on iPhone hotspot (`172.20.10.x`) | `npm start` or `npm run start:hotspot` |
+| Phone on cellular, Mac on Wi‑Fi | `npm run start:device` |
+
+Metro clears inherited `CI=true` so fast refresh stays enabled. If tunnel/ngrok times out, the start script prints recovery commands.
 
 ### EAS development build (background GPS + native MapLibre)
 

@@ -7,7 +7,7 @@
 
 ## Summary
 
-Completed sessions show an animated **route replay** on the walking-path map: Play advances the polyline over a **route-length-scaled** duration (clamped ~3–10s), Pause holds progress, Replay restarts from the start. Progress is **distance along the simplified path** (interpolated tip), not GPS timestamp playback. Auto-replay once on load respects **`useReducedMotion`** (static full route when enabled). Works in Expo Go (WebView MapLibre) and EAS dev-client native MapLibre previews.
+Completed sessions show an animated **route replay** on the walking-path map: Play advances the polyline over a **route-length-scaled** duration (clamped ~3–10s), Pause holds progress, Replay restarts from the start. Progress is **distance along the display path** (interpolated tip), not GPS timestamp playback. The displayed path uses **`simplifyRouteForLiveDisplay`** (1 m Douglas–Peucker + raw tail) — the same pipeline as the live tracker — not the coarser 4 m preview simplify. Auto-replay once on load respects **`useReducedMotion`** (static full route when enabled). Works in Expo Go (WebView MapLibre) and EAS dev-client native MapLibre previews.
 
 ## User stories
 
@@ -16,7 +16,7 @@ Completed sessions show an animated **route replay** on the walking-path map: Pl
 ## Acceptance criteria
 
 - [x] **AC-1:** When a route has ≥ 2 GPS points, `SessionRouteMapPanel` shows icon **Play**, **Pause**, and **Replay** controls plus a synced `MM:SS / MM:SS` replay timer.
-- [x] **AC-2:** Play animates partial polyline from start to end (duration from `computeRouteReplayDurationMs`, ~3–10s by path length); progress follows **distance along the simplified path** (`sliceRouteByDistanceProgress` with interpolated tip), not vertex index; end marker appears when complete.
+- [x] **AC-2:** Play animates partial polyline from start to end (duration from `computeRouteReplayDurationMs`, ~3–10s by path length); progress follows **distance along the live-display path** (`simplifyRouteForLiveDisplay` then `sliceRouteByDistanceProgress` with interpolated tip), not vertex index; end marker appears when complete.
 - [x] **AC-3:** Pause stops animation at current progress; Play resumes from that point.
 - [x] **AC-4:** Replay resets to start and plays again.
 - [x] **AC-5:** Expo Go WebView uses `setRouteReplayProgress`; native MapLibre slices coordinates by distance progress (shared `sliceRouteByDistanceProgress` / WebView helper).

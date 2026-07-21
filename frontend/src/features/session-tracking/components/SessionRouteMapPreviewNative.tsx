@@ -10,7 +10,7 @@ import {
   getRouteMapZoom,
   type RouteCoordinate,
 } from '../utils/geo';
-import { simplifyRouteForDisplay, computeBearingDegrees, sliceRouteByDistanceProgress } from '../utils/routeFiltering';
+import { simplifyRouteForLiveDisplay, computeBearingDegrees, sliceRouteByDistanceProgress } from '../utils/routeFiltering';
 import { MapInteractionContainer } from './MapInteractionContainer';
 import { SessionCurrentArrowMarker, SessionEndMarker, SessionStartMarker } from './SessionMapMarkers';
 
@@ -29,7 +29,7 @@ export function SessionRouteMapPreviewNative({
   style,
 }: Props) {
   const displayRoute = useMemo(
-    () => simplifyRouteForDisplay(routeCoordinates),
+    () => simplifyRouteForLiveDisplay(routeCoordinates),
     [routeCoordinates],
   );
   const visibleRoute = useMemo(

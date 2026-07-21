@@ -11,6 +11,8 @@ import { appendLiveTipToDisplayRoute } from '../utils/routeFiltering';
 import { MapInteractionContainer } from './MapInteractionContainer';
 
 const PRIMARY = colors.primary;
+/** Bump when inline MapLibre JS changes so Expo Go remounts the WebView HTML. */
+const LIVE_MAP_HTML_REVISION = 4;
 /** Start-pin color unused on the live tracker (no start marker — matches native).
  * Still required by `buildWebViewMapHelpers` for shared preview helpers. */
 const MAP_HELPERS = buildWebViewMapHelpers(PRIMARY, colors.textTertiary);
@@ -113,18 +115,42 @@ function buildHtml(initialCenter: [number, number] | null, theme: MapBasemapThem
     // this guard to avoid touching the map before it's ready at all.
     if (!forceApply && !map.isStyleLoaded()) return;
 
-    const displayCoords = pendingCoords;
+    let displayCoords = pendingCoords || [];
+    if (
+      displayCoords.length === 1 &&
+      pendingCurrent &&
+      pendingCurrent.length === 2 &&
+      deltaMetersBetween(displayCoords[0], pendingCurrent) >= 0.15
+    ) {
+      displayCoords = [displayCoords[0], pendingCurrent];
+    }
     const data = { type: 'Feature', geometry: { type: 'LineString', coordinates: displayCoords } };
-    if (!routeAdded && displayCoords.length >= 2) {
-      map.addSource('route', { type: 'geojson', data });
-      map.addLayer({
-        id: 'route',
-        type: 'line',
-        source: 'route',
-        paint: { 'line-color': '${PRIMARY}', 'line-width': 4, 'line-join': 'round', 'line-cap': 'round' },
-      });
-      routeAdded = true;
-    } else if (routeAdded && map.getSource('route')) {
+    if (displayCoords.length >= 2) {
+      try {
+        if (!map.getSource('route')) {
+          map.addSource('route', { type: 'geojson', data });
+        } else {
+          map.getSource('route').setData(data);
+        }
+        // Source can exist without a layer if a prior addLayer threw (invalid
+        // paint props, style race). Always ensure the line layer is present.
+        if (!map.getLayer('route')) {
+          map.addLayer({
+            id: 'route',
+            type: 'line',
+            source: 'route',
+            layout: { 'line-join': 'round', 'line-cap': 'round' },
+            paint: { 'line-color': '${PRIMARY}', 'line-width': 7, 'line-opacity': 1 },
+          });
+        }
+        routeAdded = !!map.getLayer('route');
+        if (map.getLayer('route')) {
+          try { map.moveLayer('route'); } catch (e) {}
+        }
+      } catch (e) {
+        // Style races can throw; the next GPS tick retries.
+      }
+    } else if (map.getSource('route')) {
       map.getSource('route').setData(data);
     }
 
@@ -215,11 +241,10 @@ export function LiveSessionMapWebView({ style }: Props) {
   const webRef = useRef<WebView>(null);
   const readyRef = useRef(false);
   const baseRouteForMap =
-    displayRouteCoordinates.length >= 2 ? displayRouteCoordinates : routeCoordinates;
-  const routeForMap = useMemo(
-    () => appendLiveTipToDisplayRoute(baseRouteForMap, displayCoordinate),
-    [baseRouteForMap, displayCoordinate],
-  );
+    displayRouteCoordinates.length >= 1
+      ? displayRouteCoordinates
+      : appendLiveTipToDisplayRoute(routeCoordinates, displayCoordinate);
+  const routeForMap = useMemo(() => baseRouteForMap, [baseRouteForMap]);
 
   // Only bake HTML once we have a real fix — never start at the US overview.
   const seedCenter =
@@ -228,8 +253,14 @@ export function LiveSessionMapWebView({ style }: Props) {
     (routeCoordinates[0] as [number, number] | undefined) ??
     null;
   const htmlRef = useRef<string | null>(null);
-  if (seedCenter && htmlRef.current === null) {
+  const bakedRevisionRef = useRef<number | null>(null);
+  if (
+    seedCenter &&
+    (htmlRef.current === null || bakedRevisionRef.current !== LIVE_MAP_HTML_REVISION)
+  ) {
     htmlRef.current = buildHtml(seedCenter, mapTheme);
+    bakedRevisionRef.current = LIVE_MAP_HTML_REVISION;
+    readyRef.current = false;
   }
 
   const pushRouteUpdate = () => {
@@ -273,9 +304,19 @@ export function LiveSessionMapWebView({ style }: Props) {
     webRef.current.injectJavaScript(script);
   };
 
+  // Push route geometry when the path or pin moves — not on every compass tick.
+  // Heading-only updates still refresh the arrow via a throttled inject below.
   useEffect(() => {
     pushRouteUpdate();
-  }, [routeForMap, displayCoordinate, currentHeading, mapRecenterToken, mapFollowEnabled]);
+  }, [routeForMap, displayCoordinate, mapRecenterToken, mapFollowEnabled]);
+
+  useEffect(() => {
+    if (!readyRef.current || !webRef.current) {
+      return;
+    }
+    const script = `window.updateRoute(${JSON.stringify(routeForMap)}, ${JSON.stringify(displayCoordinate)}, ${currentHeading ?? 'null'}, ${mapRecenterToken}, ${mapFollowEnabled}); true;`;
+    webRef.current.injectJavaScript(script);
+  }, [currentHeading]);
 
   useEffect(() => {
     pushStyleUpdate();
@@ -297,6 +338,7 @@ export function LiveSessionMapWebView({ style }: Props) {
   return (
     <MapInteractionContainer style={[styles.container, style]}>
       <WebView
+        key={`live-map-html-${LIVE_MAP_HTML_REVISION}`}
         ref={webRef}
         style={styles.webview}
         originWhitelist={['*']}

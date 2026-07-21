@@ -15,8 +15,11 @@ import type { PhotoCheckpointSubmission } from '@/features/session-tracking/live
 const PILL_MIN_HEIGHT = 112;
 
 function formatDistanceMiles(miles: number): string {
-  if (miles === 0) {
-    return '0';
+  if (!Number.isFinite(miles) || miles <= 0) {
+    return '0.0';
+  }
+  if (miles < 0.1) {
+    return miles.toFixed(2);
   }
   return miles.toFixed(1);
 }

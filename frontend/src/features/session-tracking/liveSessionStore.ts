@@ -2,6 +2,7 @@ import * as Location from 'expo-location';
 import { useSyncExternalStore } from 'react';
 import { AppState, type AppStateStatus, Platform } from 'react-native';
 
+import { isApiConfigured } from '@/lib/api';
 import {
   addCheckpoint,
   createSession,
@@ -33,6 +34,7 @@ import {
   type LocationKalmanFilter,
 } from './utils/locationKalman';
 import {
+  appendLiveTipToDisplayRoute,
   deltaMetersBetween,
   isAcceptableAccuracy,
   resolveAccuracyMeters,
@@ -151,6 +153,8 @@ let pendingMissedCheckpointNavigation = false;
 let locationKalman: LocationKalmanFilter = createLocationKalmanFilter();
 let compassAvailable = false;
 let lastHeadingNotifyMs = 0;
+let emptyRouteDiagnosticLogged = false;
+let firstPinWithoutRouteAtMs: number | null = null;
 const listeners = new Set<() => void>();
 
 function notify() {
@@ -229,6 +233,13 @@ function buildDisplayRoute(routeCoordinates: RouteCoordinate[]): RouteCoordinate
   return simplifyRouteForLiveDisplay(routeCoordinates);
 }
 
+function buildDisplayRouteWithTip(
+  routeCoordinates: RouteCoordinate[],
+  tip: RouteCoordinate | null,
+): RouteCoordinate[] {
+  return appendLiveTipToDisplayRoute(buildDisplayRoute(routeCoordinates), tip);
+}
+
 function resolveLastRoutePoint(
   routeCoordinates: RouteCoordinate[],
   fallback: RouteCoordinate | null,
@@ -245,9 +256,13 @@ function resolveLastRoutePoint(
 }
 
 function appendRouteSample(sample: RouteSample) {
-  const displayRouteCoordinates = buildDisplayRoute([...state.routeCoordinates, sample.coordinate]);
+  const routeCoordinates = [...state.routeCoordinates, sample.coordinate];
+  const displayRouteCoordinates = buildDisplayRouteWithTip(
+    routeCoordinates,
+    state.displayCoordinate,
+  );
   setState({
-    routeCoordinates: [...state.routeCoordinates, sample.coordinate],
+    routeCoordinates,
     routeSamples: [...state.routeSamples, sample],
     displayRouteCoordinates,
   });
@@ -305,15 +320,37 @@ function recordLocationSample(position: Location.LocationObject) {
         current: filteredCoordinate,
       });
   const nextDisplayCoordinate = smoothCoordinateEma(state.displayCoordinate, filteredCoordinate);
+  const nextDisplayRoute = buildDisplayRouteWithTip(state.routeCoordinates, nextDisplayCoordinate);
 
   // Pin the map to the latest fix immediately, even before GPS accuracy settles.
   setState({
     currentCoordinate: filteredCoordinate,
     displayCoordinate: nextDisplayCoordinate,
     currentHeading: nextHeading,
+    displayRouteCoordinates: nextDisplayRoute,
   });
 
-  if (!isAcceptableAccuracy(accuracy)) {
+  if (__DEV__) {
+    if (state.routeCoordinates.length === 0) {
+      if (firstPinWithoutRouteAtMs == null) {
+        firstPinWithoutRouteAtMs = Date.now();
+      } else if (
+        !emptyRouteDiagnosticLogged &&
+        Date.now() - firstPinWithoutRouteAtMs > 10_000
+      ) {
+        emptyRouteDiagnosticLogged = true;
+        console.info('[location] route still empty after 10s with active pin', {
+          rawAccuracyMeters: accuracy,
+          resolvedAccuracyMeters: resolvedAccuracy,
+        });
+      }
+    } else {
+      firstPinWithoutRouteAtMs = null;
+      emptyRouteDiagnosticLogged = false;
+    }
+  }
+
+  if (!isAcceptableAccuracy(resolvedAccuracy)) {
     return;
   }
 
@@ -343,7 +380,7 @@ function recordLocationSample(position: Location.LocationObject) {
     setState({
       routeCoordinates: [filteredCoordinate],
       routeSamples: [sample],
-      displayRouteCoordinates: buildDisplayRoute([filteredCoordinate]),
+      displayRouteCoordinates: buildDisplayRouteWithTip([filteredCoordinate], nextDisplayCoordinate),
     });
     return;
   }
@@ -355,7 +392,7 @@ function recordLocationSample(position: Location.LocationObject) {
     setState({
       routeCoordinates: [filteredCoordinate],
       routeSamples: [sample],
-      displayRouteCoordinates: buildDisplayRoute([filteredCoordinate]),
+      displayRouteCoordinates: buildDisplayRouteWithTip([filteredCoordinate], nextDisplayCoordinate),
     });
     return;
   }
@@ -398,7 +435,11 @@ function recordLocationSample(position: Location.LocationObject) {
     return;
   }
 
-  lastAcceptedTimestamp = sampleTimestamp;
+  // Keep lastAcceptedTimestamp at the last seed/append so deltaMs measures
+  // time since a route-accepted sample (not every rejected pin tick).
+  setState({
+    displayRouteCoordinates: buildDisplayRouteWithTip(state.routeCoordinates, nextDisplayCoordinate),
+  });
 }
 
 export function ingestBackgroundLocationSample(position: Location.LocationObject) {
@@ -525,6 +566,8 @@ function stopLocationWatching() {
   lastProcessedSampleTimestamp = null;
   lastProcessedCoordinate = null;
   resetLocationKalmanFilter(locationKalman);
+  emptyRouteDiagnosticLogged = false;
+  firstPinWithoutRouteAtMs = null;
 }
 
 /** One-shot GPS can hang indefinitely on some devices — never await it untimed. */
@@ -643,34 +686,86 @@ async function ensureBackgroundLocationRunning() {
   }
 }
 
-async function persistCheckpointToRemote(checkpoint: PhotoCheckpointSubmission): Promise<boolean> {
-  const sessionId = state.remoteSessionId;
+async function ensureRemoteSession(): Promise<string | null> {
+  if (!state.isActive || !state.setup) {
+    return null;
+  }
+
+  if (state.remoteSessionId) {
+    return state.remoteSessionId;
+  }
+
+  if (!isApiConfigured) {
+    return null;
+  }
+
+  try {
+    const created = await createSession({
+      activity: state.setup.activity,
+      courtOrdered: state.setup.courtOrdered,
+      description: state.setup.description,
+      date: state.setup.date.toISOString().slice(0, 10),
+    });
+    if (created?.id) {
+      setState({ remoteSessionId: created.id });
+      return created.id;
+    }
+  } catch (error) {
+    console.warn('[sessions] create session failed:', error);
+  }
+
+  return null;
+}
+
+function isActiveSessionNotFoundError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes('404') && message.includes('Active session not found');
+}
+
+async function postCheckpointToRemote(
+  sessionId: string,
+  checkpoint: PhotoCheckpointSubmission,
+): Promise<void> {
+  const paths = await uploadCheckpointPhotos({
+    sessionId,
+    checkpointId: checkpoint.id,
+    selfieUri: checkpoint.selfieUri,
+    progressUri: checkpoint.progressUri,
+  });
+
+  if (!paths) {
+    throw new Error('Photo upload failed');
+  }
+
+  await addCheckpoint(sessionId, {
+    selfiePath: paths.selfiePath,
+    progressPath: paths.progressPath,
+    capturedAt: new Date(checkpoint.capturedAt).toISOString(),
+    submittedEarly: checkpoint.submittedEarly,
+  });
+}
+
+async function persistCheckpointToRemote(
+  checkpoint: PhotoCheckpointSubmission,
+  retried = false,
+): Promise<boolean> {
+  let sessionId = await ensureRemoteSession();
   if (!sessionId) {
     return false;
   }
 
   try {
-    const paths = await uploadCheckpointPhotos({
-      sessionId,
-      checkpointId: checkpoint.id,
-      selfieUri: checkpoint.selfieUri,
-      progressUri: checkpoint.progressUri,
-    });
-
-    if (!paths) {
-      setSessionSyncWarning('Photo upload failed — checkpoint not saved to the server.');
-      return false;
-    }
-
-    await addCheckpoint(sessionId, {
-      selfiePath: paths.selfiePath,
-      progressPath: paths.progressPath,
-      capturedAt: new Date(checkpoint.capturedAt).toISOString(),
-      submittedEarly: checkpoint.submittedEarly,
-    });
-
+    await postCheckpointToRemote(sessionId, checkpoint);
     return true;
   } catch (error) {
+    if (!retried && isActiveSessionNotFoundError(error)) {
+      setState({ remoteSessionId: null });
+      sessionId = await ensureRemoteSession();
+      if (sessionId) {
+        return persistCheckpointToRemote(checkpoint, true);
+      }
+    }
+
     console.warn('[sessions] checkpoint persist failed:', error);
     setSessionSyncWarning('Could not sync checkpoint to the server. Photos are saved on device.');
     return false;
@@ -856,19 +951,7 @@ export async function startNewLiveSession(setup: LiveSessionSetup) {
   persistLiveSessionDraftDebounced(state);
   void scheduleCheckpointNotifications(startedAt);
 
-  try {
-    const created = await createSession({
-      activity: setup.activity,
-      courtOrdered: setup.courtOrdered,
-      description: setup.description,
-      date: setup.date.toISOString().slice(0, 10),
-    });
-    if (created?.id) {
-      setState({ remoteSessionId: created.id });
-    }
-  } catch (error) {
-    console.warn('[sessions] create session failed:', error);
-  }
+  await ensureRemoteSession();
 }
 
 /** Records a submitted selfie + progress photo pair for the session detail screen. */
@@ -1098,7 +1181,10 @@ export async function resumeLiveSessionFromDraft(draft: LiveSessionDraft) {
     setup,
     routeCoordinates: [...sanitizedRoute],
     routeSamples: [...sanitizedSamples],
-    displayRouteCoordinates: buildDisplayRoute(sanitizedRoute),
+    displayRouteCoordinates: buildDisplayRouteWithTip(
+      sanitizedRoute,
+      isRouteCoordinate(lastCoord) ? lastCoord : null,
+    ),
     currentCoordinate: lastCoord,
     displayCoordinate: lastCoord,
     currentHeading: lastSample?.heading ?? null,

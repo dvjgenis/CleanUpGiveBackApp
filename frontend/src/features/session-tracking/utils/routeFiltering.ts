@@ -8,7 +8,7 @@ import {
 import { DEFAULT_ACCURACY_METERS } from './locationKalman';
 
 /** Reject fixes with horizontal accuracy worse than this (meters). */
-export const MAX_ACCEPTABLE_ACCURACY_METERS = 15;
+export const MAX_ACCEPTABLE_ACCURACY_METERS = 25;
 
 /** After this gap since last route append, relax movement gates (ms). */
 export const ROUTE_GAP_RECOVERY_MS = 30_000;
@@ -109,7 +109,10 @@ export function isStationary({
   const impliedSpeed =
     deltaMs > 0 ? deltaMeters / (deltaMs / 1000) : 0;
 
-  if (speedMps != null && Number.isFinite(speedMps) && speedMps >= 0) {
+  // Trust device speed only when it reports a positive value. iOS/Android
+  // often report speedMps === 0 while the user is walking outdoors, which
+  // previously classified real movement as stationary and blocked the trail.
+  if (speedMps != null && Number.isFinite(speedMps) && speedMps > 0) {
     if (speedMps < MIN_SPEED_TO_RECORD_MPS && deltaMeters < minMovementMeters * 1.5) {
       return true;
     }
@@ -184,11 +187,13 @@ export function shouldAppendRoutePoint(input: AppendRoutePointInput): boolean {
     return false;
   }
 
+  // Use distance from the last *route* point (not the last pin tick). Kalman
+  // pin steps are often <1 m even while walking; the route gap is the signal.
   if (
     isStationary({
       speedMps,
-      deltaMeters: deltaMetersFromLastFix,
-      deltaMs,
+      deltaMeters: deltaMetersFromRoute,
+      deltaMs: gapSinceRouteAppend > 0 ? gapSinceRouteAppend : deltaMs,
       minMovementMeters: effectiveMinMovement,
     })
   ) {
@@ -605,7 +610,7 @@ export function appendLiveTipToDisplayRoute(
   }
 
   const last = displayRoute[displayRoute.length - 1];
-  if (deltaMetersBetween(last, tip) < 0.5) {
+  if (deltaMetersBetween(last, tip) < 0.15) {
     return displayRoute;
   }
 

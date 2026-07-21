@@ -16,12 +16,13 @@ Org-owned accounts for this project. **Do not store secrets, API keys, or passwo
 
 ## EAS development build
 
-Required for native MapLibre maps and background route tracking during active sessions. Expo Go uses foreground-only GPS, WebView maps, and **`expo-camera`** sequential checkpoint capture.
+Required for native MapLibre maps and background route tracking during active sessions. Expo Go uses foreground-only GPS, WebView maps, and **`expo-camera`** sequential checkpoint capture (no simultaneous dual-camera plugin).
 
-1. `cd frontend && eas build --profile development --platform ios` (and/or `android`)
-2. Install the build on a physical device
-3. `npm run start:dev-client` (or `npx expo start --dev-client`) and open the dev client on the same network
-4. Smoke test: **Start Tracking** → grant **Always** location when prompted → `/live-session` (GPS + map; lock screen and verify route continues) → **Submit Photo** → `/photo-capture` (`expo-camera` sequential selfie → progress)
+1. Ensure `frontend/.env` has Supabase + `EXPO_PUBLIC_API_URL` (see [supabase.md](supabase.md)).
+2. `cd frontend && eas build --profile development --platform ios` (and/or `android`)
+3. Install the build on a physical device
+4. `npm run start:dev-client` from repo root (or `cd frontend && npm run start:dev-client`) and open the dev client on the same network
+5. Smoke test: follow [expo-go-eas-tester-runbook.md](frontend/specs/expo-go-eas-tester-runbook.md) — grant **Always** location → lock screen and verify route continues on EAS (gap expected in Expo Go only)
 
 ## Environment files
 

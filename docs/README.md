@@ -28,6 +28,7 @@ Living docs for the Clean Up - Give Back monorepo. Templates are copy-only.
 | [frontend/specs/event-calendar-export.md](frontend/specs/event-calendar-export.md) | Event detail → Apple / Google / device calendar |
 | [frontend/specs/photo-checkpoint-dual-capture.md](frontend/specs/photo-checkpoint-dual-capture.md) | Checkpoint capture (`expo-camera` sequential) |
 | [frontend/specs/expo-go-dev-networking.md](frontend/specs/expo-go-dev-networking.md) | Expo Go Metro LAN / tunnel / cellular testing |
+| [frontend/specs/expo-go-eas-tester-runbook.md](frontend/specs/expo-go-eas-tester-runbook.md) | Dual-runtime smoke checklist (Expo Go + EAS dev client) |
 | [frontend/specs/map-theme-and-weather-icons.md](frontend/specs/map-theme-and-weather-icons.md) | Standard light/dark map theme + weather glyphs |
 
 ## Figma design workspace

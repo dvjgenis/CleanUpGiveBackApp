@@ -32,13 +32,16 @@ Docs complete — see [ADR-004](adr/ADR-004-sessions-backend-supabase-fly.md), [
 - [x] Remove placeholder session mocks from production UI (`SessionsScreen`, `SessionDetailScreen`)
 - [x] Live-session draft Resume/Discard (AC-37) + GPS harden + distance-scaled route replay (Session 214: live display smoothness + Expo Go foreground banner)
 - [x] GPS trail precision + continuity — denser ~1m capture, soft resume (preserve Kalman), slow-walk gates, EAS background re-assert (Session 2026-07-21; see [progress.md](progress.md))
+- [x] Outdoor Expo Go live trail restore — resolved-accuracy 25 m, `speedMps===0` stationary fix, WebView line-layer reliability, distance hundredths &lt; 0.1 mi (2026-07-21; see [progress.md](progress.md) “Fix live GPS trail”)
+- [x] Session route replay uses live display simplify (`simplifyRouteForLiveDisplay`) on detail/confirmation maps (2026-07-21)
+- [x] Test-readiness harden — remove unused `expo-dual-camera`, `expo-camera` plugin, checkpoint 404 recreate/retry, eslint, root scripts, [expo-go-eas-tester-runbook.md](frontend/specs/expo-go-eas-tester-runbook.md)
 - [x] Volunteer `DELETE /sessions/:id` + session detail delete UI (AC-38)
 - [x] Delete 404 → local cleanup + tombstones so Sessions list stays in sync (AC-41)
 - [x] Sessions list multi-select bulk delete + AsyncStorage tombstones (AC-44, AC-41 persistence)
 - [x] Photo before start / end; due-only checkpoints; 5‑min grace + local notification reminders (AC-39–40, AC-42–43)
 - [x] Expo Go map gate via `isExpoGoClient()` (avoid `MLRNCameraModule` crash)
 - [x] Expo Go networking matrix — [expo-go-dev-networking.md](frontend/specs/expo-go-dev-networking.md)
-- [ ] End-to-end test in Expo Go on physical device (force-quit persistence — AC-18/AC-37; closed-app checkpoint alarms need EAS/dev client; API verified via smoke test)
+- [ ] End-to-end test in Expo Go on physical device (force-quit persistence — AC-18/AC-37; outdoor foreground trail **AC-45 signed off**; closed-app checkpoint alarms + lock-screen GPS need EAS/dev client; API sync needs valid anon JWT in `.env`)
 
 ### Other
 

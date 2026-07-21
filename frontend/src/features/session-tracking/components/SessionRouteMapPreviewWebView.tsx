@@ -101,7 +101,8 @@ function buildHtml() {
         id: 'route',
         type: 'line',
         source: 'route',
-        paint: { 'line-color': '${PRIMARY}', 'line-width': 4, 'line-join': 'round', 'line-cap': 'round' },
+        layout: { 'line-join': 'round', 'line-cap': 'round' },
+        paint: { 'line-color': '${PRIMARY}', 'line-width': 5, 'line-opacity': 1 },
       });
       routeAdded = true;
     } else if (map.getSource('route')) {
@@ -113,7 +114,7 @@ function buildHtml() {
     pendingCoords = coords || [];
     if (pendingCoords.length < 2) return;
 
-    displayCoords = simplifyRouteForDisplay(pendingCoords);
+    displayCoords = simplifyRouteForLiveDisplay(pendingCoords);
     const visibleCoords = sliceCoordsByProgress(displayCoords, replayProgress);
     applyRouteGeometry(visibleCoords);
     syncPreviewMarkers(visibleCoords, replayProgress);

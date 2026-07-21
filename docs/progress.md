@@ -4,6 +4,121 @@ Session-by-session progress tracker. Distinct from `notes/journey.md` (correctio
 
 ---
 
+## [2026-07-21] — Expo Go networking: Wi‑Fi / hotspot / cellular
+
+**Goal:** Reliable physical-device Metro for same Wi‑Fi, iPhone Personal Hotspot, and phone-on-cellular.
+
+**Change:** Smart `npm start` — hotspot (`172.20.10.x`) → **LAN** (was wrongly forcing tunnel); `start:hotspot` → LAN; tunnel failure prints recovery hints; docs matrix updated.
+
+| Connection | Command |
+|---|---|
+| Same Wi‑Fi | `npm run start:lan` |
+| Hotspot | `npm start` or `npm run start:hotspot` |
+| Cellular | `npm run start:device` |
+
+See [expo-go-dev-networking.md](frontend/specs/expo-go-dev-networking.md).
+
+---
+
+## [2026-07-21] — Match replay precision to live trail
+
+**Goal:** Session detail / confirmation replay should look as granular as the live green trail (not a chunky 4 m polygon).
+
+**Cause:** Replay used `simplifyRouteForDisplay` (4 m); live uses `simplifyRouteForLiveDisplay` (1 m + raw tail). Stored `routeCoordinates` were already dense.
+
+**Fix:** `SessionRouteMapPreviewNative` + preview WebView (`simplifyRouteForLiveDisplay` in `webViewMapHelpers`) use the live display pipeline. Tests + spec AC updates.
+
+**Verify:** `npm run typecheck && npm test`; replay a walked session in Expo Go.
+
+---
+
+## [2026-07-21] — Fix live GPS trail (outdoor walk, Expo Go)
+
+### End goal
+
+Ship a **visible, granular green trail** and an **honest distance readout** during outdoor cleanup walks in **Expo Go** (app open / foreground), then carry the same capture quality into **EAS + Always** for lock-screen continuity.
+
+This session sits on top of [GPS trail precision and continuity](#2026-07-21--gps-trail-precision-and-continuity): density/resume work had landed in code, but a physical outdoor walk still showed **pin moving, Distance 0.0, no polyline** (live tracker and post-session detail).
+
+**Success criteria (Expo Go, outdoors, app open):**
+1. Walk 1–2 minutes → **Distance** climbs (hundredths under 0.1 mi, then tenths).
+2. **Green polyline** grows behind the heading pin (tip + stored points).
+3. Brief app switch → return → trail continues (soft resume already shipped).
+4. End session → confirmation / session detail replay shows the same path.
+
+**Out of scope:** lock-screen continuous GPS in Expo Go (still EAS + Always); Strava-grade map-matching; fixing Supabase publishable-key vs anon JWT beyond docs/env guidance.
+
+### Approach
+
+| Layer | Strategy |
+|---|---|
+| **Capture gates** | Align append accuracy with Kalman (**resolvedAccuracy ≤ 25 m**); stop treating iOS `speedMps === 0` as stationary; stationary uses **distance from last route point**, not tiny per-tick Kalman steps; do not advance `lastAcceptedTimestamp` on rejected appends. |
+| **Display sync** | Refresh `displayRouteCoordinates` + live tip (**0.15 m** deadband) on every pin update so the line reaches the arrow between appends. |
+| **MapLibre WebView** | Ensure GeoJSON **line layer** exists whenever the source does (`line-join`/`line-cap` in **layout**); two-point fallback when one stored point + moving pin; remount HTML via revision key after map JS changes. |
+| **UX honesty** | Distance format: **2 decimals under 0.1 mi** so short walks do not read as `0.0`. |
+| **Env / sync** | Normalize Supabase project URL (strip `/rest/v1`); document anon JWT vs publishable key — auth noise does not block local GPS but blocks sync QA. |
+| **Debug method** | Runtime Metro logs (`[dbg-…]`) on device walk → confirm/reject hypotheses → fix with evidence → strip instrumentation after user confirmation. |
+
+```mermaid
+flowchart TD
+  fix[GPS fix] --> kalman[Kalman filter]
+  kalman --> pin[Update pin + display tip]
+  kalman --> acc{resolvedAccuracy <= 25m?}
+  acc -->|no| pinOnly[Pin only - no append]
+  acc -->|yes| gates[Append gates]
+  gates -->|speed 0 trusted wrongly| blocked[Was: false stationary]
+  gates -->|route gap + implied speed| append[routeCoordinates + distance]
+  append --> display[displayRoute + tip]
+  display --> webview[WebView: source AND line layer]
+```
+
+### Steps done so far
+
+| Step | What shipped | Key files | Status |
+|---|---|---|---|
+| Accuracy gate | Append path uses `isAcceptableAccuracy(resolvedAccuracy)`; cap **15 → 25 m** | `liveSessionStore.ts`, `routeFiltering.ts` | ✅ |
+| Display tip every fix | `buildDisplayRouteWithTip`; tip deadband **0.5 → 0.15 m** | `liveSessionStore.ts`, `routeFiltering.ts` | ✅ |
+| WebView tip fallback | One stored point + current ≥ 0.15 m → two-point LineString | `LiveSessionMapWebView.tsx` | ✅ |
+| Supabase URL normalize | Strip `/rest/v1`; `.env.example` + `docs/supabase.md` warnings | `supabase.ts`, `.env.example` | ✅ |
+| Stationary / speed=0 | Ignore `speedMps === 0`; stationary uses **route-gap** meters + gap timing | `routeFiltering.ts` | ✅ |
+| Timestamp hygiene | Do not bump `lastAcceptedTimestamp` on rejected appends | `liveSessionStore.ts` | ✅ |
+| Line layer reliability | Re-add layer if missing; layout vs paint; thicker line; `LIVE_MAP_HTML_REVISION` remount | `LiveSessionMapWebView.tsx`, preview WebView | ✅ |
+| Distance UI | Hundredths below 0.1 mi on live + minimized pill | `LiveSessionScreen.tsx`, `LiveSessionMinimizedPill.tsx` | ✅ |
+| Heading flood | Route inject on geometry/pin; separate heading-only inject | `LiveSessionMapWebView.tsx` | ✅ |
+| Tests | Accuracy 25 m; stationary `speedMps === 0` walking case | `routeFiltering.test.ts` | ✅ |
+| Docs | `current.md`, runbook troubleshooting, `supabase.md` | `docs/` | ✅ |
+| Instrumentation cleanup | Removed debug ingest / `[dbg-2d9418]` after user confirmed trail works | — | ✅ |
+
+**Verified:** Outdoor Expo Go walk — user confirmed trail + distance; `npm run typecheck && npm test` (**84** tests).
+
+### Failures encountered (and status)
+
+| Failure | Evidence | Cause | Status |
+|---|---|---|---|
+| Pin moves, no trail, Distance 0.0 (~2 min) | Screenshots; empty/sparse `routeCoordinates` early in investigation | Raw accuracy gate / sparse appends; later: **`speedMps === 0` stationary** | **Fixed** |
+| Store had route but UI looked broken | Metro: `routeLen` 30+, `distanceMiles` ~0.05, `mapLen` 17+, `hasSource: true` while UI showed 0.0 / no line | (1) `toFixed(1)` hid short distance (2) WebView **source without line layer** / bad paint props | **Fixed** |
+| Supabase `Invalid path` / `Invalid API key` | Metro during live session | URL had `/rest/v1/`; anon value may be publishable key not JWT | **Mitigated** (URL normalize + docs); **user must set anon JWT** for sync |
+| Checkpoint / create session 404 / Not authenticated | Metro | Auth/env until anon JWT + API healthy | **Open** (sync path; local GPS OK) |
+
+### Current failure / open issue (working on)
+
+Expo Go **foreground trail is signed off**. Remaining work is sync + EAS continuity, not “no green line while walking with app open.”
+
+| Open item | Evidence | Next |
+|---|---|---|
+| **Supabase anon JWT in local `.env`** | Metro: `anonymous sign-in failed: Invalid API key`; sessions create/hydrate fail | Dashboard → API → **anon public** `eyJ…` (not `sb_publishable_…`); Project URL without `/rest/v1/`; restart Metro |
+| **EAS + Always lock-screen trail** | Expo Go cannot keep GPS while locked | Dev-client build; Always location; walk with lock; confirm polyline continues |
+| **Checkpoint sync residual 404s** | Prior Metro 404 Active session not found | Re-test after auth fixed; `ensureRemoteSession` already retries once |
+
+### Specs / docs touched
+
+- [expo-go-eas-tester-runbook.md](frontend/specs/expo-go-eas-tester-runbook.md) — trail troubleshooting
+- [supabase.md](supabase.md) — Project URL + anon JWT
+- [current.md](current.md), [implementation-plan.md](implementation-plan.md)
+- Related prior session: [GPS trail precision and continuity](#2026-07-21--gps-trail-precision-and-continuity)
+
+---
+
 ## [2026-07-21] — Sessions Select on sort row
 
 **R:** Select sat in the top app bar away from list controls; user wanted it beside Most recent.
@@ -33,6 +148,24 @@ Session-by-session progress tracker. Distinct from `notes/journey.md` (correctio
 **P:** Done for this batch; configure `RESEND_API_KEY` / `EMAIL_FROM` on Fly for real delivery.
 
 **H:** Session start order is now form → photo → live (not photo → form).
+
+---
+
+## [2026-07-21] — Finalize for Expo Go + EAS testing
+
+**Session goal:** Crash-safe dual-runtime QA (Expo Go + EAS dev client) with live Fly/Supabase sync; align docs and tooling.
+
+| Task | Status |
+|---|---|
+| Root `package.json` scripts-only (no Expo 57 mismatch) | ✅ |
+| Remove `expo-dual-camera`; add `expo-camera` plugin + Android CAMERA | ✅ |
+| Photo capture remount on front/back step | ✅ |
+| `ensureRemoteSession` + checkpoint 404 recreate/retry | ✅ |
+| `frontend/.env` + `.env.example` (API URL + Supabase placeholders) | ✅ |
+| ESLint + root `npm test` | ✅ |
+| [expo-go-eas-tester-runbook.md](frontend/specs/expo-go-eas-tester-runbook.md) | ✅ |
+
+**Open:** Set **anon public JWT** in `frontend/.env` (not publishable key); outdoor Expo Go trail **confirmed** (see trail-fix session); EAS build when ready for lock-screen GPS.
 
 ---
 
@@ -96,10 +229,11 @@ flowchart LR
 
 | Failure | Evidence | Notes |
 |---|---|---|
-| **Device QA not signed off for GPS precision work** | User reported trail stops + chunky/laggy **before** this session’s code landed; unit tests and `tsc` pass but **outdoor re-walk not yet confirmed** on a physical device | **Next:** Expo Go — slow walk with app open (continuous trail), brief app switch (no long blank / Kalman jump), lock/unlock (expect gap in Expo Go, resume on unlock). EAS + Always — lock-screen samples should append to the same polyline. Report any remaining WebView jank or stalls. |
-| **Checkpoint persist 404** during live session | Metro: `[sessions] checkpoint persist failed: API 404: {"error":"Active session not found"}` | **Separate from GPS trail work** — local checkpoint kept; remote create lag / draft id / env mismatch (see Session 213). Still tracked in [current.md](current.md). |
+| **Expo Go outdoor trail (no line / Distance 0.0)** | Follow-up outdoor walks after this density work | **Resolved in** [Fix live GPS trail (outdoor walk)](#2026-07-21--fix-live-gps-trail-outdoor-walk-expo-go) — stationary `speedMps===0`, WebView line layer, distance format |
+| **EAS + Always lock-screen continuity** | Expo Go cannot keep GPS while locked | **Still open** — needs EAS dev client + Always; same capture pipeline |
+| **Checkpoint / auth sync** | Metro Not authenticated / Invalid API key until anon JWT set | **Separate** — see trail-fix session open items + [supabase.md](supabase.md) |
 
-Also still watching: Expo Go notification delivery limits; very short / indoor sessions may still show sparse or empty routes (≥2 accepted points needed for replay).
+Also still watching: Expo Go notification delivery limits; very short / indoor sessions may still show sparse routes (≥2 accepted points needed for replay).
 
 ### Specs touched
 

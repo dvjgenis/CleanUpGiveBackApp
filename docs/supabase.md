@@ -70,8 +70,8 @@ create policy "users_own_checkpoints" on public.checkpoints
 
 | Variable | Source | Notes |
 |----------|--------|-------|
-| `EXPO_PUBLIC_SUPABASE_URL` | Dashboard → Settings → API → Project URL | Safe to ship in client |
-| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Dashboard → Settings → API → anon public | Safe to ship in client |
+| `EXPO_PUBLIC_SUPABASE_URL` | Dashboard → Settings → API → **Project URL** (e.g. `https://<ref>.supabase.co`) | **Not** the REST path (`/rest/v1`). Safe to ship in client |
+| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Dashboard → Settings → API → **anon public** JWT (`eyJ…`) | Not the publishable `sb_publishable_…` key. Safe to ship in client |
 | `EXPO_PUBLIC_API_URL` | Fly app URL after deploy (e.g. `https://cleanup-sessions.fly.dev`) | Fly Fastify sessions API |
 
 ### Fly secrets (server only — never in repo)

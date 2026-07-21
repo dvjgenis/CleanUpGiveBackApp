@@ -18,7 +18,7 @@ Powers route display, GPS sampling, and distance stats during cleanup sessions. 
   - Foreground: `expo-location` `watchPositionAsync` at `BestForNavigation` (**1 s / ~1 m** for active sessions) — started immediately after When-In-Use grant so the live map (which waits for a GPS seed) cannot stall behind Always permission or a hanging one-shot fix
   - Initial seed: `getLastKnownPositionAsync` + timed Balanced `getCurrentPositionAsync` (8s) in parallel with the watch; Always / background enablement is also non-blocking
   - Background (EAS only): `expo-task-manager` task while session active + Always permission granted (**1 s / ~1 m**); stops on finalize/cancel; re-asserted on foreground resume if updates stopped
-  - Pipeline: **2D Kalman** (`locationKalman.ts`) → hardened gates (≤15 m accuracy or null after Kalman, adaptive min-move `max(1m, accuracy×0.25)`, stationary, sharp-reversal, **3 s** warm-up, 30s gap recovery); foreground/background sample dedupe; soft subscription stop on mid-session watch restart (Kalman + append timestamps preserved)
+  - Pipeline: **2D Kalman** (`locationKalman.ts`) → hardened gates (Kalman-resolved accuracy ≤**25 m**, adaptive min-move `max(1m, accuracy×0.25)`, stationary ignores `speedMps===0` and uses route-gap distance, sharp-reversal, **3 s** warm-up, 30s gap recovery); foreground/background sample dedupe; soft subscription stop on mid-session watch restart (Kalman + append timestamps preserved); `displayRouteCoordinates` + tip refreshed every fix; WebView ensures GeoJSON **line layer** (not source-only)
 - Rich in-memory samples `{lng, lat, accuracy, speed, heading, t}`; API finalize still sends `[[lng, lat], …]`
 - Route display: live tracker uses `simplifyRouteForLiveDisplay()` (~**1 m** + raw tail); previews/replay use `simplifyRouteForDisplay()` (~4 m); maps may append EMA tip segment (`appendLiveTipToDisplayRoute`); stored distance/route uses capture-filtered points only
 - Live map markers: primary-green heading-beam on EMA-smoothed `displayCoordinate` only (no start pin — it stacked on the tip for short walks); heading from device compass (`watchHeadingAsync`, adaptive EMA + platform accuracy gate, ~33 ms publish), GPS course fallback; optional Follow (~**280 ms** ease)
@@ -66,7 +66,8 @@ Read-only route previews: `SessionRouteMapPreview` (+ WebView variant) with Play
 
 ## Decisions
 
-- **2026-07-21 — GPS trail precision:** ~1 m capture, soft subscription stop on mid-session resume (preserve Kalman), motion gating in append filters only (not watch throttling). Rationale and open device QA: [progress.md](../../progress.md) (section “GPS trail precision and continuity”).
+- **2026-07-21 — GPS trail precision:** ~1 m capture, soft subscription stop on mid-session resume (preserve Kalman), motion gating in append filters only (not watch throttling). See [progress.md](../../progress.md) (“GPS trail precision and continuity”).
+- **2026-07-21 — Outdoor trail restore:** resolved-accuracy 25 m, ignore `speedMps===0` for stationary, WebView line-layer re-ensure, distance UI hundredths &lt; 0.1 mi. Expo Go foreground trail confirmed; EAS + Always still open. See [progress.md](../../progress.md) (“Fix live GPS trail”).
 
 ## Related
 

@@ -7,6 +7,8 @@ export function buildWebViewMapHelpers(
   return `
   const EARTH_RADIUS_MILES = 3958.8;
   const DISPLAY_SIMPLIFY_TOLERANCE_METERS = 4;
+  const LIVE_DISPLAY_SIMPLIFY_TOLERANCE_METERS = 1;
+  const LIVE_DISPLAY_TAIL_RAW_POINTS = 10;
 
   function toRadians(degrees) {
     return (degrees * Math.PI) / 180;
@@ -134,14 +136,35 @@ export function buildWebViewMapHelpers(
     return smoothed;
   }
 
-  function simplifyRouteForDisplay(coords) {
+  function simplifyRouteForDisplay(coords, toleranceMeters) {
     if (!coords || coords.length < 2) return coords || [];
+    const tolerance = toleranceMeters != null ? toleranceMeters : DISPLAY_SIMPLIFY_TOLERANCE_METERS;
     const withoutOutliers = removeDisplayOutliers(coords);
     const simplified =
       withoutOutliers.length >= 3
-        ? douglasPeucker(withoutOutliers, DISPLAY_SIMPLIFY_TOLERANCE_METERS)
+        ? douglasPeucker(withoutOutliers, tolerance)
         : withoutOutliers;
     return smoothRouteForDisplay(simplified);
+  }
+
+  function simplifyRouteForLiveDisplay(coords) {
+    if (!coords || coords.length < 2) return coords || [];
+    if (coords.length <= LIVE_DISPLAY_TAIL_RAW_POINTS + 2) {
+      return simplifyRouteForDisplay(coords, LIVE_DISPLAY_SIMPLIFY_TOLERANCE_METERS);
+    }
+    const splitIndex = coords.length - LIVE_DISPLAY_TAIL_RAW_POINTS;
+    const head = coords.slice(0, splitIndex);
+    const tail = coords.slice(splitIndex);
+    const simplifiedHead = simplifyRouteForDisplay(head, LIVE_DISPLAY_SIMPLIFY_TOLERANCE_METERS);
+    if (simplifiedHead.length === 0) {
+      return tail;
+    }
+    const lastHead = simplifiedHead[simplifiedHead.length - 1];
+    const firstTail = tail[0];
+    if (deltaMetersBetween(lastHead, firstTail) < 1) {
+      return simplifiedHead.slice(0, -1).concat(tail);
+    }
+    return simplifiedHead.concat(tail);
   }
 
   function sliceRouteByDistanceProgress(coords, progress) {

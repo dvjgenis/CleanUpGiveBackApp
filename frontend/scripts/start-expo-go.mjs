@@ -2,8 +2,14 @@
 /**
  * Starts Expo Go with LAN or tunnel based on network context.
  *
- * Default: **tunnel** (Wi‑Fi, iPhone hotspot, phone on cellular).
- * LAN (faster, same Wi‑Fi only): `npm run start:lan` or `EXPO_GO_LAN=1`.
+ * Smart default (`npm start`):
+ * - iPhone Personal Hotspot (Mac at 172.20.10.x) → **LAN** (same subnet; tunnel often flakes)
+ * - Otherwise → **tunnel** (phone on cellular / guest Wi‑Fi / AP isolation)
+ *
+ * Overrides:
+ * - `npm run start:lan` / `EXPO_GO_LAN=1` — same Wi‑Fi or hotspot, fastest
+ * - `npm run start:device` / `start:tunnel` / `EXPO_GO_TUNNEL=1` — force tunnel (cellular)
+ * - `npm run start:hotspot` — LAN on Personal Hotspot
  */
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
@@ -28,12 +34,17 @@ function resolveHostMode(argv) {
   if (argv.includes('--tunnel')) {
     return 'tunnel';
   }
+  // Personal Hotspot: Mac + phone share 172.20.10.0/24 — LAN is reliable; tunnel often times out.
   if (isPersonalHotspotActive()) {
-    return 'tunnel';
+    return 'lan';
   }
   if (process.env.EXPO_GO_AUTO === 'lan') {
     return 'lan';
   }
+  if (process.env.EXPO_GO_AUTO === 'tunnel') {
+    return 'tunnel';
+  }
+  // Default: tunnel so phone-on-cellular / guest Wi‑Fi still works with plain `npm start`.
   return 'tunnel';
 }
 
@@ -120,18 +131,39 @@ function assertNgrokBinary() {
 
 function printStartupBanner(hostMode) {
   const lanIp = getPrimaryLanIPv4();
+  const hotspot = isPersonalHotspotActive();
+
   console.log(`[expo] Dev server host mode: ${hostMode.toUpperCase()}`);
   if (lanIp) {
-    console.log(`[expo] Mac IPv4: ${lanIp}`);
+    console.log(`[expo] Mac IPv4: ${lanIp}${hotspot ? ' (iPhone Personal Hotspot)' : ''}`);
   }
+  console.log('[expo] Pick a mode for your phone connection:');
+  console.log('[expo]   Wi‑Fi (same network)  →  npm run start:lan     (fast)');
+  console.log('[expo]   Hotspot (Mac on phone) →  npm run start:hotspot (or npm start)');
+  console.log('[expo]   Cellular / LTE data    →  npm run start:device  (tunnel)');
   if (hostMode === 'lan') {
-    console.log('[expo] LAN only — phone must be on the same Wi‑Fi. Otherwise use: npm start (tunnel)');
+    console.log(
+      hotspot
+        ? '[expo] LAN on hotspot — scan QR (exp://172.20.10.x:8081). Phone must stay on this hotspot.'
+        : '[expo] LAN — phone must be on the same Wi‑Fi. Cellular? Use: npm run start:device',
+    );
   } else {
-    console.log('[expo] Tunnel — works when phone is on Wi‑Fi, hotspot, or cellular (Mac needs internet).');
-    console.log('[expo] Same Wi‑Fi and want faster loads? Use: npm run start:lan');
+    console.log('[expo] Tunnel — Mac needs internet; works for Wi‑Fi, hotspot, or cellular.');
+    console.log('[expo] Same Wi‑Fi / hotspot and tunnel flakes? Use: npm run start:lan');
   }
   console.log('[expo] If Expo asks to log in, choose Proceed anonymously.');
   console.log('[expo] Docs: docs/frontend/specs/expo-go-dev-networking.md');
+}
+
+function printTunnelFailureHints() {
+  console.error('');
+  console.error('[expo] Tunnel failed (ngrok timeout or closed). Try one of:');
+  if (isPersonalHotspotActive()) {
+    console.error('[expo]   npm run start:hotspot   # LAN on Personal Hotspot (recommended)');
+  }
+  console.error('[expo]   npm run start:lan       # same Wi‑Fi as Mac');
+  console.error('[expo]   npm run start:device    # retry tunnel (cellular / cross-network)');
+  console.error('[expo]   USB fallback: docs/frontend/specs/expo-go-dev-networking.md');
 }
 
 function buildChildEnv() {
@@ -140,6 +172,16 @@ function buildChildEnv() {
     delete childEnv.CI;
   }
   return childEnv;
+}
+
+function looksLikeTunnelFailure(text) {
+  const lower = text.toLowerCase();
+  return (
+    lower.includes('ngrok tunnel took too long') ||
+    lower.includes('tunnel connection has been closed') ||
+    lower.includes('failed to start tunnel') ||
+    lower.includes('tunneling agent failed')
+  );
 }
 
 const passthrough = process.argv.slice(2).filter((arg) => arg !== '--lan' && arg !== '--tunnel');
@@ -155,9 +197,23 @@ const expoArgs = ['expo', 'start', '--go', `--${hostMode}`, ...passthrough];
 
 const child = spawn('npx', expoArgs, {
   cwd: frontendRoot,
-  stdio: ['pipe', 'inherit', 'inherit'],
+  stdio: ['pipe', 'pipe', 'pipe'],
   shell: true,
   env: buildChildEnv(),
+});
+
+let sawTunnelFailure = false;
+
+child.stdout?.on('data', (chunk) => {
+  process.stdout.write(chunk);
+});
+
+child.stderr?.on('data', (chunk) => {
+  const text = String(chunk);
+  process.stderr.write(chunk);
+  if (hostMode === 'tunnel' && looksLikeTunnelFailure(text)) {
+    sawTunnelFailure = true;
+  }
 });
 
 /** Select "Proceed anonymously" when Expo shows the login prompt (second menu item). */
@@ -173,6 +229,9 @@ child.on('spawn', () => {
 });
 
 child.on('exit', (code, signal) => {
+  if (sawTunnelFailure || (hostMode === 'tunnel' && code !== 0 && code != null)) {
+    printTunnelFailureHints();
+  }
   if (signal) {
     process.kill(process.pid, signal);
     return;

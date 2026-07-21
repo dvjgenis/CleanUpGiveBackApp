@@ -13,6 +13,7 @@ import {
   shouldAppendRoutePoint,
   shouldSkipDuplicateLocationSample,
   simplifyRouteForDisplay,
+  simplifyRouteForLiveDisplay,
   sliceRouteByDistanceProgress,
   smoothCoordinateEma,
   smoothHeadingEma,
@@ -24,13 +25,13 @@ import {
 import type { RouteCoordinate } from './geo';
 
 describe('isAcceptableAccuracy', () => {
-  it('accepts fixes within 15m', () => {
+  it('accepts fixes within 25m', () => {
     expect(isAcceptableAccuracy(10)).toBe(true);
-    expect(isAcceptableAccuracy(15)).toBe(true);
+    expect(isAcceptableAccuracy(25)).toBe(true);
   });
 
   it('rejects poor accuracy', () => {
-    expect(isAcceptableAccuracy(16)).toBe(false);
+    expect(isAcceptableAccuracy(26)).toBe(false);
   });
 
   it('allows missing accuracy for Kalman default trust', () => {
@@ -60,15 +61,27 @@ describe('getMinMovementMeters', () => {
 });
 
 describe('isStationary', () => {
-  it('rejects append when device speed is near zero and movement is small', () => {
+  it('rejects append when positive near-zero speed and movement is small', () => {
     expect(
       isStationary({
-        speedMps: 0,
+        speedMps: 0.05,
         deltaMeters: 4,
         deltaMs: 2000,
         minMovementMeters: 6,
       }),
     ).toBe(true);
+  });
+
+  it('does not treat speedMps === 0 alone as stationary when movement is clear', () => {
+    // Phones often report 0 while walking; rely on implied speed instead.
+    expect(
+      isStationary({
+        speedMps: 0,
+        deltaMeters: 4,
+        deltaMs: 2000,
+        minMovementMeters: 1,
+      }),
+    ).toBe(false);
   });
 
   it('allows movement when speed indicates walking', () => {
@@ -373,6 +386,20 @@ describe('simplifyRouteForDisplay', () => {
     expect(simplified[0]).toEqual(route[0]);
     expect(simplified[simplified.length - 1]).toEqual(route[route.length - 1]);
     expect(simplified.length).toBeLessThan(route.length);
+  });
+});
+
+describe('simplifyRouteForLiveDisplay', () => {
+  it('retains more points than 4m preview simplify on a long path', () => {
+    const route: RouteCoordinate[] = [];
+    for (let i = 0; i <= 20; i += 1) {
+      route.push([-87.63 + i * 0.00005, 41.88 + (i % 2 === 0 ? 0.00002 : -0.00002)]);
+    }
+    const preview = simplifyRouteForDisplay(route);
+    const live = simplifyRouteForLiveDisplay(route);
+    expect(live.length).toBeGreaterThan(preview.length);
+    expect(live[0]).toEqual(route[0]);
+    expect(live[live.length - 1]).toEqual(route[route.length - 1]);
   });
 });
 

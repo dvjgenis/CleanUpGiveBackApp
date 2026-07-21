@@ -3,8 +3,23 @@ import 'react-native-url-polyfill/auto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient, type Session } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
+/** Project root only — not `/rest/v1`. See docs/supabase.md */
+export function normalizeSupabaseProjectUrl(raw: string): string {
+  const trimmed = raw.trim().replace(/\/+$/, '');
+  return trimmed.replace(/\/rest\/v1\/?$/i, '');
+}
+
+const supabaseUrlRaw = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
+const supabaseUrl = normalizeSupabaseProjectUrl(supabaseUrlRaw);
+const supabaseAnonKey = (process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '').trim();
+
+let supabaseUrlFormatWarned = false;
+if (supabaseUrlRaw && supabaseUrlRaw.trim() !== supabaseUrl && !supabaseUrlFormatWarned) {
+  supabaseUrlFormatWarned = true;
+  console.warn(
+    '[supabase] EXPO_PUBLIC_SUPABASE_URL should be the project root (https://<ref>.supabase.co), not /rest/v1 — see docs/supabase.md',
+  );
+}
 
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
 

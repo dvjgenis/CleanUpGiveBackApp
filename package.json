@@ -6,18 +6,13 @@
     "start": "npm --prefix frontend start",
     "start:tunnel": "npm --prefix frontend run start:tunnel",
     "start:lan": "npm --prefix frontend run start:lan",
+    "start:hotspot": "npm --prefix frontend run start:hotspot",
     "start:device": "npm --prefix frontend run start:device",
     "ios": "npm --prefix frontend run ios",
     "android": "npm --prefix frontend run android",
     "web": "npm --prefix frontend run web",
     "lint": "npm --prefix frontend run lint",
+    "test": "npm --prefix frontend test",
     "typecheck": "npm --prefix frontend exec -- tsc --noEmit"
-  },
-  "dependencies": {
-    "expo": "^57.0.7"
-  },
-  "devDependencies": {
-    "@types/react": "~19.2.4",
-    "typescript": "~6.0.3"
   }
 }
