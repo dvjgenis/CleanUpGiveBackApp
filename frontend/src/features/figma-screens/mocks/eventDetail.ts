@@ -28,6 +28,8 @@ export type EventDetail = {
   overview: string;
   organizer: EventOrganizer;
   whatToBring: WhatToBringItem[];
+  /** Optional description shown below the "What to bring" heading. */
+  whatToBringDescription?: string;
   locationName: string;
   locationAddress: string;
   /** WGS84 pin for the location map + Apple/Google Maps deep link. */
@@ -44,12 +46,10 @@ const DEFAULT_WHAT_TO_BRING: WhatToBringItem[] = [
     icon: 'clothing',
     label: 'Wear weather-appropriate clothing',
   },
-  {
-    id: 'provided',
-    icon: 'water',
-    label: 'CleanUp Give Back provides snacks, supplies, water, and music',
-  },
 ];
+
+const DEFAULT_WHAT_TO_BRING_DESCRIPTION =
+  'CleanUp Give Back provides snacks, supplies, water, and music.';
 
 /** Figma `events_detail` (`196:226`) — Downtown Riverfront Clean-up. */
 export const downtownRiverfrontEvent: EventDetail = {
@@ -57,7 +57,7 @@ export const downtownRiverfrontEvent: EventDetail = {
   title: 'Downtown Riverfront Clean-up',
   statusLabel: 'UPCOMING',
   registeredCount: 14,
-  dateTimeLabel: 'July 15 at 5PM',
+  dateTimeLabel: 'July 15 from 5PM - 7PM',
   calendarStartIso: '2026-07-15T17:00:00',
   calendarEndIso: '2026-07-15T19:00:00',
   addressShort: '600 E Algonquin Rd, Des Plaines, IL, 60018',
@@ -69,6 +69,7 @@ export const downtownRiverfrontEvent: EventDetail = {
     image: ORGANIZER,
   },
   whatToBring: DEFAULT_WHAT_TO_BRING,
+  whatToBringDescription: DEFAULT_WHAT_TO_BRING_DESCRIPTION,
   locationName: 'Clean Up - Give Back',
   locationAddress: '600 E Algonquin Rd, Des Plaines, IL, 60018',
   // Approximate pin for 600 E Algonquin Rd, Des Plaines, IL
@@ -83,7 +84,7 @@ const EVENT_DETAILS: Record<string, EventDetail> = {
     id: 'ev-2',
     title: 'McKinley Road Clean-up',
     registeredCount: 9,
-    dateTimeLabel: 'July 27 at 9AM',
+    dateTimeLabel: 'July 27 from 9AM - 11AM',
     calendarStartIso: '2026-07-27T09:00:00',
     calendarEndIso: '2026-07-27T11:00:00',
     addressShort: '1425 N McKinley Rd, Des Plaines, IL, 60016',
@@ -100,7 +101,7 @@ const EVENT_DETAILS: Record<string, EventDetail> = {
     id: 'ev-3',
     title: 'Mt Prospect Trail Clean-up',
     registeredCount: 11,
-    dateTimeLabel: 'August 3 at 1PM',
+    dateTimeLabel: 'August 3 from 1PM - 3:30PM',
     calendarStartIso: '2026-08-03T13:00:00',
     calendarEndIso: '2026-08-03T15:30:00',
     addressShort: '2200 E Algonquin Rd, Mt Prospect, IL, 60056',
@@ -117,7 +118,7 @@ const EVENT_DETAILS: Record<string, EventDetail> = {
     id: 'ev-4',
     title: 'Glenview Central Clean-up',
     registeredCount: 6,
-    dateTimeLabel: 'August 10 at 8:30AM',
+    dateTimeLabel: 'August 10 from 8:30AM - 10:30AM',
     calendarStartIso: '2026-08-10T08:30:00',
     calendarEndIso: '2026-08-10T10:30:00',
     addressShort: '800 Central Rd, Glenview, IL, 60025',

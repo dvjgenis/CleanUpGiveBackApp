@@ -77,7 +77,7 @@ Shared UI components in `frontend/src/components/`.
 | EmailVerificationModal | `components/EmailVerificationModal.tsx` | 6-digit email-change confirmation modal |
 | CompanyCodeConfirmModal / CompanyCodeUpgradeSuccessModal | `components/CompanyCodeModals.tsx` | Account company-code confirm + upgraded success overlays |
 | ExportServiceRecordScreen | `screens/ExportServiceRecordScreen.tsx` | Court mandated checkbox forces approved-only status export |
-| SessionsScreen | `screens/SessionsScreen.tsx` | Top bar **Select** enters multi-select; bulk delete non-approved; multi-status mocks |
+| SessionsScreen | `screens/SessionsScreen.tsx` | Sort-row **Select** (beside Most recent) enters multi-select; bulk delete non-approved; multi-status mocks |
 | weekCalendar utils | `utils/weekCalendar.ts` | Monday-based week math, ISO week labels, month grid builder |
 | getTimeOfDayGreeting | `utils/getTimeOfDayGreeting.ts` | Local-time greeting: night (midnight–4:59 AM), morning (5 AM–noon), afternoon (noon–4:59 PM), evening (5 PM–11:59 PM) |
 | HomeScreen | `screens/HomeScreen.tsx` | Home dashboard (`home_dashboard___final_branding`, Figma `406:291`); Service Hours / streak / Your Impact from `sessionStatsStore` + `homeDashboardStats` (chart values in **hours**, not mock minutes); chart Y-axis uses integer-only ticks (`niceMax` → multiple of 4); greeting uses `getTimeOfDayGreeting` + preferred name from `onboardingStore`; week picker drives real chart buckets; recent sessions from `recentSessionsStore`; Recent Sessions **View All** → `/sessions-list`; recent events → `/event-detail` |

@@ -96,14 +96,12 @@ function canDeleteSessionStatus(status: SessionApprovalStatus): boolean {
 function SessionsTopAppBar({
   title,
   selectionMode,
-  onEnterSelection,
   onCancelSelection,
   onSelectAll,
   selectAllEnabled,
 }: {
   title: string;
   selectionMode: boolean;
-  onEnterSelection: () => void;
   onCancelSelection: () => void;
   onSelectAll: () => void;
   selectAllEnabled: boolean;
@@ -146,16 +144,7 @@ function SessionsTopAppBar({
             </Text>
           </AnimatedPressable>
         ) : (
-          <AnimatedPressable
-            scaleTo={0.98}
-            onPress={onEnterSelection}
-            style={s.topBarSideRight}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            accessibilityRole="button"
-            accessibilityLabel="Select sessions"
-          >
-            <Text style={s.topBarActionLabel}>Select</Text>
-          </AnimatedPressable>
+          <View style={s.topBarSideRight} />
         )}
       </View>
     </View>
@@ -190,25 +179,42 @@ function SortDropdown({
   open,
   onToggle,
   onSelect,
+  onEnterSelection,
+  showSelect,
 }: {
   value: SessionSortOption;
   open: boolean;
   onToggle: () => void;
   onSelect: (next: SessionSortOption) => void;
+  onEnterSelection: () => void;
+  showSelect: boolean;
 }) {
   return (
     <View style={s.sortHeader}>
-      <AnimatedPressable
-        scaleTo={0.98}
-        onPress={onToggle}
-        accessibilityRole="button"
-        accessibilityLabel={`Sort by ${sortOptionLabel(value).toLowerCase()}`}
-        accessibilityState={{ expanded: open }}
-        style={s.sortControl}
-      >
-        <Text style={s.sortLabel}>{sortOptionLabel(value)}</Text>
-        <SessionsSortChevronIcon pointingDown={!open} />
-      </AnimatedPressable>
+      <View style={s.sortRow}>
+        <AnimatedPressable
+          scaleTo={0.98}
+          onPress={onToggle}
+          accessibilityRole="button"
+          accessibilityLabel={`Sort by ${sortOptionLabel(value).toLowerCase()}`}
+          accessibilityState={{ expanded: open }}
+          style={s.sortControl}
+        >
+          <Text style={s.sortLabel}>{sortOptionLabel(value)}</Text>
+          <SessionsSortChevronIcon pointingDown={!open} />
+        </AnimatedPressable>
+        {showSelect ? (
+          <AnimatedPressable
+            scaleTo={0.98}
+            onPress={onEnterSelection}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            accessibilityRole="button"
+            accessibilityLabel="Select sessions"
+          >
+            <Text style={s.sortSelectLabel}>Select</Text>
+          </AnimatedPressable>
+        ) : null}
+      </View>
       <View style={s.sortDivider} />
       {open && (
         <View style={s.sortMenu} accessibilityRole="menu">
@@ -511,7 +517,6 @@ export function SessionsScreen() {
       <SessionsTopAppBar
         title={selectionMode ? `${selectedCount} selected` : 'Sessions'}
         selectionMode={selectionMode}
-        onEnterSelection={handleEnterSelection}
         onCancelSelection={handleCancelSelection}
         onSelectAll={handleSelectAllVisible}
         selectAllEnabled={deletableVisibleSessions.length > 0}
@@ -554,6 +559,8 @@ export function SessionsScreen() {
           open={sortOpen}
           onToggle={() => setSortOpen((current) => !current)}
           onSelect={handleSelectSort}
+          onEnterSelection={handleEnterSelection}
+          showSelect={!selectionMode}
         />
       </View>
 
@@ -778,6 +785,11 @@ const s = StyleSheet.create({
     position: 'relative',
     zIndex: 10,
   },
+  sortRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   sortControl: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -788,6 +800,11 @@ const s = StyleSheet.create({
     fontFamily: fontFamilies.notoSansSemiBold,
     fontSize: 10,
     color: colors.textNavInactive,
+  },
+  sortSelectLabel: {
+    fontFamily: fontFamilies.notoSansSemiBold,
+    fontSize: 12,
+    color: colors.primary,
   },
   sortDivider: {
     height: StyleSheet.hairlineWidth,

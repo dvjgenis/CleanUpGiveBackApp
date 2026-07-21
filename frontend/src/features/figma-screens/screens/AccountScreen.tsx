@@ -36,6 +36,7 @@ import {
   GiveFeedbackIcon,
   LocationAccessIcon,
   LogOutIcon,
+  MembershipIcon,
   NotificationsRowIcon,
   OrderHistoryIcon,
   PermissionsLockIcon,
@@ -320,8 +321,13 @@ export function AccountScreen({ profile = defaultAccountProfile }: { profile?: A
               icon={<PersonalDetailsRowIcon width={16} height={16} />}
               onPress={() => router.push('/personal-details' as Href)}
             />
+          </SectionCard>
+
+          <SectionCard
+            title="Membership"
+            headerIcon={<MembershipIcon width={18} height={18} color={colors.textPrimary} />}
+          >
             <View style={s.companyCodeBlock}>
-              <Text style={s.companyCodeLabel}>Company code</Text>
               {hasPaid ? (
                 <Text style={s.companyCodeUpgraded}>
                   Account upgraded — one-hour limit removed.
@@ -341,7 +347,7 @@ export function AccountScreen({ profile = defaultAccountProfile }: { profile?: A
                       }}
                       keyboardType="number-pad"
                       maxLength={10}
-                      placeholder="10-digit code"
+                      placeholder="10-digit company code"
                       placeholderTextColor={colors.textNavInactive}
                       accessibilityLabel="Company code"
                     />
@@ -456,6 +462,7 @@ export function AccountScreen({ profile = defaultAccountProfile }: { profile?: A
               onPress={() => router.push('/give-feedback' as Href)}
             />
           </View>
+
         </View>
 
         <View style={s.actions}>
@@ -672,13 +679,8 @@ const s = StyleSheet.create({
   },
   companyCodeBlock: {
     gap: 8,
-    paddingTop: 8,
+    paddingTop: 4,
     paddingBottom: 8,
-  },
-  companyCodeLabel: {
-    fontFamily: fontFamilies.sanchezRegular,
-    fontSize: 16,
-    color: colors.textPrimary,
   },
   companyCodeRow: {
     flexDirection: 'row',

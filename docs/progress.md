@@ -4,6 +4,20 @@ Session-by-session progress tracker. Distinct from `notes/journey.md` (correctio
 
 ---
 
+## [2026-07-21] — Sessions Select on sort row
+
+**R:** Select sat in the top app bar away from list controls; user wanted it beside Most recent.
+
+**A:** Moved **Select** onto the sort header row (right of Most recent); Cancel / Select all stay in the top bar during selection mode. Docs: `app.md`, `components.md`, `current.md`.
+
+**L:** —
+
+**P:** Done. `npx tsc --noEmit` clean.
+
+**H:** Sessions multi-select entry is on the sort row, not the title bar.
+
+---
+
 ## [2026-07-21] — Product copy, account upgrades, and flow edits
 
 **R:** Ship onboarding/legal copy, court/nighttime notices, email confirmations, company-code upgrade, export court-mandated filter, form→selfie session start order, mock location event images, and sessions Select + mocks.

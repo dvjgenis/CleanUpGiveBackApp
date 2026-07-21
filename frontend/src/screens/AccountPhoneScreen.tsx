@@ -104,7 +104,8 @@ export function AccountPhoneScreen() {
                 <Text style={s.title}>A few details</Text>
                 <Text style={s.subtitle}>
                   We need this information to help tailor your clean-up experience and verify your
-                  impact. Please make sure all details are accurate.
+                  impact. Please make sure all details are accurate. You are responsible for making
+                  sure your court accepts this program.
                 </Text>
               </View>
 

@@ -125,7 +125,8 @@ export function AccountDetailsScreen() {
                 <Text style={s.title}>A few details</Text>
                 <Text style={s.subtitle}>
                   We need this information to help tailor your clean-up experience and verify your
-                  impact. Please make sure all details are accurate.
+                  impact. Please make sure all details are accurate. You are responsible for making
+                  sure your court accepts this program.
                 </Text>
               </View>
 
@@ -206,10 +207,6 @@ export function AccountDetailsScreen() {
                   </View>
                   {showError('serviceType') ? <Text style={s.errorText}>{showError('serviceType')}</Text> : null}
                 </View>
-                <Text style={s.noticeText}>
-                  You are responsible for making sure your court accepts this program. Nighttime
-                  cleanings are not allowed.
-                </Text>
               </View>
             </View>
           </Pressable>
@@ -287,7 +284,7 @@ const s = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: 16,
     paddingTop: 16,
-    paddingBottom: 180,
+    paddingBottom: 280,
   },
   content: {
     flexGrow: 1,
@@ -352,7 +349,7 @@ const s = StyleSheet.create({
     marginLeft: 4,
   },
   serviceGrid: {
-    gap: 16,
+    gap: 10,
   },
   serviceRow: {
     flexDirection: 'row',
@@ -380,12 +377,5 @@ const s = StyleSheet.create({
   },
   serviceBtnTextActive: {
     color: C.primary,
-  },
-  noticeText: {
-    fontFamily: 'NotoSans_400Regular',
-    fontSize: 13,
-    color: C.textTertiary,
-    lineHeight: 18,
-    marginTop: 12,
   },
 });
