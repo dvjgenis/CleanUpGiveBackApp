@@ -34,7 +34,17 @@ import { SessionSetupToggle } from '@/components/session-setup/SessionSetupToggl
 import { SessionSetupTopAppBar } from '@/components/session-setup/SessionSetupTopAppBar';
 import { CameraIcon } from '@/features/session-tracking/components/icons/CameraIcon';
 import { LocationPinIcon } from '@/features/session-tracking/components/icons/LocationPinIcon';
-import { setPendingSessionSetup } from '@/features/session-tracking/pendingSessionSetup';
+import {
+  clearPendingSessionStartPhotos,
+  consumePendingSessionStartPhotos,
+  hasPendingSessionStartPhotos,
+  setPendingSessionStartPhotos,
+} from '@/features/session-tracking/pendingSessionSetup';
+import {
+  addPhotoCheckpoint,
+  resetCheckpointCountdown,
+  startNewLiveSession,
+} from '@/features/session-tracking/liveSessionStore';
 import {
   isSessionCameraPermissionGranted,
   isSessionLocationPermissionGranted,
@@ -103,6 +113,7 @@ export function SessionSetupFormScreen() {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>(EMPTY_FIELD_ERRORS);
   const [showValidationToast, setShowValidationToast] = useState(false);
   const [missingLabels, setMissingLabels] = useState<string[]>([]);
+  const [isStarting, setIsStarting] = useState(false);
   const dateFieldRef = useRef<SessionSetupDateFieldRef>(null);
   const scrollRef = useRef<ScrollView>(null);
 
@@ -118,6 +129,11 @@ export function SessionSetupFormScreen() {
   // them (e.g. via the onboarding or session-setup-guide permission prompts),
   // so the user doesn't have to re-enable something iOS already allows.
   useEffect(() => {
+    if (!hasPendingSessionStartPhotos()) {
+      router.replace('/photo-capture?mode=session-start' as Href);
+      return;
+    }
+
     let isMounted = true;
 
     void isSessionLocationPermissionGranted().then((granted) => {
@@ -134,7 +150,7 @@ export function SessionSetupFormScreen() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [router]);
 
   const introStyle = useFadeUpEnter(0);
   const fieldsStyle = useFadeUpEnter(staggerDelay(1));
@@ -142,6 +158,7 @@ export function SessionSetupFormScreen() {
   const ctaStyle = useFadeUpEnter(staggerDelay(3));
 
   const handleBack = () => {
+    clearPendingSessionStartPhotos();
     if (router.canGoBack()) {
       router.back();
       return;
@@ -211,7 +228,11 @@ export function SessionSetupFormScreen() {
     applyValidationState(nextActivity, dateValid, nextLocation, nextCamera);
   };
 
-  const handleStartSession = () => {
+  const handleStartSession = async () => {
+    if (isStarting) {
+      return;
+    }
+
     Keyboard.dismiss();
 
     const dateValid = dateFieldRef.current?.validate() ?? false;
@@ -222,15 +243,30 @@ export function SessionSetupFormScreen() {
       return;
     }
 
+    const photos = consumePendingSessionStartPhotos();
+    if (!photos) {
+      router.replace('/photo-capture?mode=session-start' as Href);
+      return;
+    }
+
     setFieldErrors(EMPTY_FIELD_ERRORS);
     setShowValidationToast(false);
-    setPendingSessionSetup({
-      activity: activity.trim(),
-      date: sessionDate,
-      courtOrdered,
-      description: description.trim(),
-    });
-    router.push('/photo-capture?mode=session-start' as Href);
+    setIsStarting(true);
+
+    try {
+      await startNewLiveSession({
+        activity: activity.trim(),
+        date: sessionDate,
+        courtOrdered,
+        description: description.trim(),
+      });
+      addPhotoCheckpoint(photos);
+      resetCheckpointCountdown();
+      router.replace('/live-session?from=onboarding' as Href);
+    } catch {
+      setPendingSessionStartPhotos(photos);
+      setIsStarting(false);
+    }
   };
 
   if (!fontsLoaded) {
@@ -258,7 +294,7 @@ export function SessionSetupFormScreen() {
           <View style={s.introCard}>
             <Text style={s.introTitle}>Ready to Make an Impact?</Text>
             <Text style={s.introSubtitle}>
-              Fill out the details before starting your clean-up session.
+              Fill out the details to start tracking your clean-up session.
             </Text>
           </View>
         </Animated.View>
@@ -386,12 +422,16 @@ export function SessionSetupFormScreen() {
 
         <Animated.View style={ctaStyle}>
         <AnimatedPressable
-          style={s.startBtn}
-          onPress={handleStartSession}
+          style={[s.startBtn, isStarting && s.startBtnDisabled]}
+          onPress={() => {
+            void handleStartSession();
+          }}
+          disabled={isStarting}
           accessibilityRole="button"
           accessibilityLabel="Start session"
+          accessibilityState={{ disabled: isStarting }}
         >
-          <Text style={s.startBtnText}>Start Session</Text>
+          <Text style={s.startBtnText}>{isStarting ? 'Starting…' : 'Start Session'}</Text>
         </AnimatedPressable>
         </Animated.View>
       </ScrollView>
@@ -605,6 +645,10 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 20,
     marginTop: 30,
+  },
+
+  startBtnDisabled: {
+    opacity: 0.7,
   },
 
   startBtnText: {

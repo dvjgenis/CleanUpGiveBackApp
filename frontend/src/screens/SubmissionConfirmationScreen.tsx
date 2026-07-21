@@ -8,11 +8,8 @@ import {
 import { Sanchez_400Regular } from '@expo-google-fonts/sanchez';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
-  Image,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
   ScrollView,
   StyleSheet,
   Text,
@@ -26,14 +23,15 @@ import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { useFadeUpEnter } from '@/components/motion/hooks';
 import { requestHomeFadeIn } from '@/features/onboarding/homeEnterTransition';
 import { staggerDelay } from '@/motion';
-import { PhotoEnlargeModal } from '@/components/ui/PhotoEnlargeModal';
 
 import { CheckCircleIcon } from '@/features/session-tracking/components/icons/CheckCircleIcon';
-import { ChevronLeftIcon } from '@/features/session-tracking/components/icons/ChevronLeftIcon';
-import { ChevronRightIcon } from '@/features/session-tracking/components/icons/ChevronRightIcon';
 import { SessionRouteMapPanel } from '@/features/session-tracking/components/SessionRouteMapPanel';
 import { StatusPill } from '@/features/session-tracking/components/StatusPill';
 import { SessionNotesField } from '@/features/session-tracking/components/SessionNotesField';
+import {
+  SessionPhotosSection,
+  type SessionPhotosSectionItem,
+} from '@/features/session-tracking/components/SessionPhotosSection';
 import { getCompletedSessionSnapshot } from '@/features/session-tracking/liveSessionStore';
 import { resolveCompletedSessionId } from '@/features/session-tracking/utils/resolveCompletedSessionId';
 import {
@@ -63,9 +61,7 @@ const C = {
   approvalIcon: tokens.statusPendingText,
 } as const;
 
-const PHOTO_SIZE = 171;
-const PHOTO_GAP = 16;
-const FOOTER_HEIGHT = 168;
+const FOOTER_HEIGHT = 232;
 /** Extra scroll room below Court Ordered Status so content can clear the sticky footer. */
 const SCROLL_FOOTER_GAP = 96;
 
@@ -73,14 +69,6 @@ type Checkpoint = {
   time: string;
   label: string;
   isLast?: boolean;
-};
-
-type SessionPhoto = {
-  uri: string;
-  timeLabel: string;
-  key: string;
-  label: string;
-  capturedAt: number;
 };
 
 function ApprovalIcon({ size = 24 }: { size?: number }) {
@@ -135,10 +123,6 @@ function CheckpointTimelineItem({ checkpoint }: { checkpoint: Checkpoint }) {
 export function SubmissionConfirmationScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const photoScrollRef = useRef<ScrollView>(null);
-  const [photoScrollX, setPhotoScrollX] = useState(0);
-  const [photoViewportWidth, setPhotoViewportWidth] = useState(0);
-  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
   const headerStyle = useFadeUpEnter(0);
   const mapStyle = useFadeUpEnter(staggerDelay(1));
   const photosStyle = useFadeUpEnter(staggerDelay(2));
@@ -154,7 +138,7 @@ export function SubmissionConfirmationScreen() {
 
   const sessionId = session ? resolveCompletedSessionId(session) : undefined;
 
-  const sessionPhotos: SessionPhoto[] = useMemo(
+  const sessionPhotos: SessionPhotosSectionItem[] = useMemo(
     () =>
       (session?.submittedCheckpoints ?? []).flatMap((checkpoint) => [
         {
@@ -218,27 +202,6 @@ export function SubmissionConfirmationScreen() {
     return <View style={s.root} />;
   }
 
-  const photoStride = PHOTO_SIZE + PHOTO_GAP;
-  const maxPhotoScrollX = Math.max(0, sessionPhotos.length * photoStride - photoViewportWidth);
-  const canScrollPhotosLeft = photoScrollX > 4;
-  const canScrollPhotosRight = photoScrollX < maxPhotoScrollX - 4;
-
-  const scrollPhotos = (direction: 'left' | 'right') => {
-    const nextX =
-      direction === 'left'
-        ? Math.max(0, photoScrollX - photoStride)
-        : Math.min(maxPhotoScrollX, photoScrollX + photoStride);
-    photoScrollRef.current?.scrollTo({ x: nextX, animated: true });
-    setPhotoScrollX(nextX);
-  };
-
-  const onPhotoScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    setPhotoScrollX(event.nativeEvent.contentOffset.x);
-  };
-
-  const selectedPhoto =
-    selectedPhotoIndex !== null ? sessionPhotos[selectedPhotoIndex] ?? null : null;
-
   return (
     <View style={s.root}>
       <SafeAreaView edges={['top']} style={s.topSafeArea}>
@@ -296,74 +259,7 @@ export function SubmissionConfirmationScreen() {
         </Animated.View>
 
         <Animated.View style={photosStyle}>
-        <View style={s.sectionBlock}>
-          <Text style={s.sectionHeading}>Photos</Text>
-          {sessionPhotos.length > 0 ? (
-          <View
-            style={s.photosSection}
-            onLayout={(event) => setPhotoViewportWidth(event.nativeEvent.layout.width)}
-          >
-          <ScrollView
-            ref={photoScrollRef}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={s.photosRow}
-            onScroll={onPhotoScroll}
-            scrollEventThrottle={16}
-            decelerationRate="fast"
-            snapToInterval={photoStride}
-          >
-            {sessionPhotos.map((photo, index) => (
-              <AnimatedPressable
-                key={photo.key}
-                style={s.photoCard}
-                scaleTo={0.98}
-                onPress={() => setSelectedPhotoIndex(index)}
-                accessibilityRole="button"
-                accessibilityLabel={`View enlarged ${photo.label.toLowerCase()} photo at ${photo.timeLabel}`}
-              >
-                <Image
-                  source={{ uri: photo.uri }}
-                  style={s.photoImage}
-                  resizeMode="cover"
-                  accessibilityIgnoresInvertColors
-                  accessibilityElementsHidden
-                  importantForAccessibility="no-hide-descendants"
-                />
-                <View style={s.photoTimePill}>
-                  <Text style={s.photoTimeText}>{photo.timeLabel}</Text>
-                </View>
-              </AnimatedPressable>
-            ))}
-          </ScrollView>
-
-          <View style={s.photoNavRow} pointerEvents="box-none">
-            <AnimatedPressable
-              style={[s.photoNavBtn, !canScrollPhotosLeft && s.photoNavBtnHidden]}
-              scaleTo={0.98}
-              onPress={() => scrollPhotos('left')}
-              disabled={!canScrollPhotosLeft}
-              accessibilityRole="button"
-              accessibilityLabel="Scroll photos left"
-            >
-              <ChevronLeftIcon color={C.textTertiary} size={24} />
-            </AnimatedPressable>
-            <AnimatedPressable
-              style={[s.photoNavBtn, s.photoNavBtnRight, !canScrollPhotosRight && s.photoNavBtnHidden]}
-              scaleTo={0.98}
-              onPress={() => scrollPhotos('right')}
-              disabled={!canScrollPhotosRight}
-              accessibilityRole="button"
-              accessibilityLabel="Scroll photos right"
-            >
-              <ChevronRightIcon color={C.textTertiary} size={24} />
-            </AnimatedPressable>
-          </View>
-        </View>
-          ) : (
-            <Text style={s.emptyPhotosText}>No checkpoint photos were submitted for this session.</Text>
-          )}
-        </View>
+          <SessionPhotosSection photos={sessionPhotos} style={s.sectionBlock} />
         </Animated.View>
 
         <Animated.View style={[s.timelineBlock, timelineStyle]}>
@@ -410,6 +306,15 @@ export function SubmissionConfirmationScreen() {
 
           <View style={s.goHomeBtnWrap}>
             <AnimatedPressable
+              style={s.feedbackBtn}
+              scaleTo={0.98}
+              onPress={() => router.push('/session-feedback')}
+              accessibilityRole="button"
+              accessibilityLabel="Share feedback"
+            >
+              <Text style={s.feedbackBtnText}>Share Feedback</Text>
+            </AnimatedPressable>
+            <AnimatedPressable
               style={s.goHomeBtn}
               scaleTo={0.98}
               onPress={() => {
@@ -424,36 +329,6 @@ export function SubmissionConfirmationScreen() {
           </View>
         </View>
       </Animated.View>
-
-      <PhotoEnlargeModal
-        visible={selectedPhotoIndex !== null}
-        uri={selectedPhoto?.uri ?? null}
-        caption={selectedPhoto?.label}
-        dateLabel={
-          selectedPhoto ? formatSessionDateLabel(selectedPhoto.capturedAt) : undefined
-        }
-        timeLabel={selectedPhoto?.timeLabel}
-        counterLabel={
-          selectedPhotoIndex !== null && sessionPhotos.length > 0
-            ? `${selectedPhotoIndex + 1}/${sessionPhotos.length}`
-            : undefined
-        }
-        onClose={() => setSelectedPhotoIndex(null)}
-        hasPrevious={selectedPhotoIndex !== null && selectedPhotoIndex > 0}
-        hasNext={
-          selectedPhotoIndex !== null && selectedPhotoIndex < sessionPhotos.length - 1
-        }
-        onPrevious={() =>
-          setSelectedPhotoIndex((index) =>
-            index !== null && index > 0 ? index - 1 : index,
-          )
-        }
-        onNext={() =>
-          setSelectedPhotoIndex((index) =>
-            index !== null && index < sessionPhotos.length - 1 ? index + 1 : index,
-          )
-        }
-      />
     </View>
   );
 }
@@ -564,14 +439,6 @@ const s = StyleSheet.create({
     flex: 1,
   },
 
-  emptyPhotosText: {
-    fontFamily: 'NotoSans_400Regular',
-    fontSize: 14,
-    lineHeight: 20,
-    color: C.textTertiary,
-    includeFontPadding: false,
-  },
-
   sectionBlock: {
     gap: 0,
   },
@@ -593,69 +460,6 @@ const s = StyleSheet.create({
 
   timelineBlock: {
     gap: 16,
-  },
-
-  photosSection: {
-    gap: 12,
-  },
-
-  photosRow: {
-    gap: PHOTO_GAP,
-    paddingRight: 16,
-  },
-
-  photoCard: {
-    width: PHOTO_SIZE,
-    height: PHOTO_SIZE,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: C.borderOutline,
-    overflow: 'hidden',
-  },
-
-  photoImage: {
-    width: '100%',
-    height: '100%',
-  },
-
-  photoTimePill: {
-    position: 'absolute',
-    right: 8,
-    bottom: 8,
-    backgroundColor: C.borderOutline,
-    borderRadius: 9999,
-    borderWidth: 1,
-    borderColor: C.borderOutline,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-
-  photoTimeText: {
-    fontFamily: 'NotoSans_600SemiBold',
-    fontSize: 10,
-    color: C.textTertiary,
-  },
-
-  photoNavRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 0,
-  },
-
-  photoNavBtn: {
-    width: 24,
-    height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  photoNavBtnRight: {
-    marginLeft: 'auto',
-  },
-
-  photoNavBtnHidden: {
-    opacity: 0.35,
   },
 
   checkpointsCard: {
@@ -810,6 +614,28 @@ const s = StyleSheet.create({
 
   goHomeBtnWrap: {
     width: '100%',
+    gap: 10,
+  },
+
+  feedbackBtn: {
+    width: '100%',
+    minHeight: 54,
+    backgroundColor: C.bgSurfaceWhite,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: C.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    overflow: 'hidden',
+  },
+
+  feedbackBtnText: {
+    fontFamily: 'NotoSans_600SemiBold',
+    fontSize: 16,
+    color: C.primary,
+    textAlign: 'center',
   },
 
   goHomeBtn: {

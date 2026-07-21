@@ -22,9 +22,9 @@ Photo checkpoints use a BeReal-style **preview** (full-bleed progress + selfie P
 - [x] **AC-2:** Shutter is disabled until `onCameraReady`; null URI / capture failures show Alert + inline error.
 - [x] **AC-3:** Preview matches Figma `383:239`: full-bleed progress, selfie PiP, **Retake Photos** and **Submit**.
 - [x] **AC-4:** **Retake** returns to live capture; **Submit** persists via `persistCheckpointPhotos`, calls `addPhotoCheckpoint`, navigates to `/photo-submitted`.
-- [x] **AC-9:** **Session start** mode (`?mode=session-start`): after setup **Start Session**, volunteer must capture selfie + progress on `/photo-capture` before GPS/timer start; submit calls `startNewLiveSession` + first checkpoint then `/live-session`; cancel clears pending setup and returns to session setup
+- [x] **AC-9:** **Session start** mode (`?mode=session-start`): guide finale / restart opens capture first; submit stashes photos and opens `/session-setup`; form **Start Session** calls `startNewLiveSession` + first checkpoint then `/live-session`; cancel clears pending photos and returns
 - [x] **AC-10:** **Session end** mode (`?mode=session-end`): **End Session** on live tracker opens dual capture; submit adds final checkpoint + `finalizeLiveSession` → `/submission-confirmation` (route preview + replay); cancel returns to `/live-session`
-- [x] **AC-5:** **Cancel** / Go Back uses `dismissTo('/live-session')` for in-session checkpoints; session-start cancel returns to setup
+- [x] **AC-5:** **Cancel** / Go Back uses `dismissTo('/live-session')` for in-session checkpoints; session-start cancel clears pending photos and returns
 - [x] **AC-6:** Historical VisionCamera `DualCapture` path is **not mounted**; simultaneous dual remains out of scope until native crash is fixed.
 - [x] **AC-7:** Web shows “camera not available” guidance.
 - [x] **AC-8:** Submitted photos appear on submission confirmation with real timestamps (see session-tracking AC-13).

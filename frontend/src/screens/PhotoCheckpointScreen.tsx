@@ -60,19 +60,27 @@ export function PhotoCheckpointScreen() {
 
   useEffect(() => {
     intervalRef.current = setInterval(() => {
-      setSecondsLeft((prev) => {
-        if (prev <= 1) {
-          if (intervalRef.current) clearInterval(intervalRef.current);
-          router.back();
-          return 0;
-        }
-        return prev - 1;
-      });
+      setSecondsLeft((prev) => (prev <= 1 ? 0 : prev - 1));
     }, 1000);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [router]);
+  }, []);
+
+  // Navigate from an effect (not the ticker's state updater) so `router.back()`
+  // never fires while React is mid-render for this component, and so it fires
+  // exactly once on the 0 transition instead of every tick that follows.
+  useEffect(() => {
+    if (secondsLeft > 0) {
+      return;
+    }
+
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    router.back();
+  }, [secondsLeft, router]);
 
   const [fontsLoaded] = useFonts({
     Sanchez_400Regular,

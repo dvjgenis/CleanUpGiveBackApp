@@ -23,7 +23,7 @@ Powers route display, GPS sampling, and distance stats during cleanup sessions. 
 - Route display: live tracker uses `simplifyRouteForLiveDisplay()` (~2 m + raw tail); previews/replay use `simplifyRouteForDisplay()` (~4 m); maps may append EMA tip segment (`appendLiveTipToDisplayRoute`); stored distance/route uses capture-filtered points only
 - Live map markers: primary-green heading-beam on EMA-smoothed `displayCoordinate` only (no start pin — it stacked on the tip for short walks); heading from device compass (`watchHeadingAsync`, adaptive EMA + platform accuracy gate, ~33 ms publish), GPS course fallback; optional Follow (~450 ms ease)
 - Live maps wait for first GPS fix (“Getting precise location…”) before mounting the basemap (no US overview flash)
-- **`LiveSessionBackgroundTrackingBanner`** when Always/background unavailable (`backgroundLocationEnabled === false`) — session still starts foreground-only; **`AppState` active** → `resumeLiveSessionTrackingAfterForeground()` restarts GPS watch
+- When Always/background unavailable (`backgroundLocationEnabled === false`), session still starts foreground-only; **`AppState` active** → `resumeLiveSessionTrackingAfterForeground()` restarts GPS watch
 - Completed-session replay: `sliceRouteByDistanceProgress` (distance-scaled ~3–10s animation on detail/confirmation maps)
 - Live weather + reverse geocoding via [Open-Meteo](https://open-meteo.com/) — `useLiveWeather.ts`
 - Location plugins in `app.json`: when-in-use + Always strings; `isIosBackgroundLocationEnabled` / `isAndroidBackgroundLocationEnabled`

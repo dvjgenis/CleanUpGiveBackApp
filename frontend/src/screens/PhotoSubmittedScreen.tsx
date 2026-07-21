@@ -43,9 +43,9 @@ const C = {
   borderOutline: tokens.borderOutline,
 } as const;
 
-/** Success checkmark hero size (150×150 source GIF). */
-const HERO_SIZE = 140;
-/** Legacy headroom prop — 0 for centered checkmark GIF. */
+/** Match missed-checkpoint `PlayOnceLottie` default size (150). */
+const HERO_SIZE = 150;
+/** Headroom unused — artboard matches missed-checkpoint 500×500 fill. */
 const HERO_TOP_INSET = 0;
 /** Equal inset from card border to hero top and button bottom. */
 const CARD_VERTICAL_INSET = 24;

@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -9,22 +9,21 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
-import { PhotoEnlargeModal } from '@/components/ui/PhotoEnlargeModal';
 import { StatusPill } from '@/features/session-tracking/components/StatusPill';
 import { SessionRouteMapPanel } from '@/features/session-tracking/components/SessionRouteMapPanel';
 import { SessionNotesField } from '@/features/session-tracking/components/SessionNotesField';
+import {
+  SessionPhotosSection,
+  type SessionPhotosSectionItem,
+} from '@/features/session-tracking/components/SessionPhotosSection';
 import { useSessionDetail } from '@/features/session-tracking/hooks/useSessionDetail';
 import { removeVolunteerSession } from '@/features/session-tracking/removeVolunteerSession';
 import { useSessionRouteCoordinates } from '@/features/session-tracking/hooks/useSessionRouteCoordinates';
-import {
-  formatPhotoTimeLabel,
-  formatSessionDateLabel,
-} from '@/features/session-tracking/utils/sessionFormat';
+import { formatPhotoTimeLabel } from '@/features/session-tracking/utils/sessionFormat';
 
 import {
   SessionDetailBackIcon,
@@ -33,11 +32,8 @@ import {
   SessionDetailPhotosIcon,
   SessionDetailShareIcon,
 } from '../components/SessionDetailIcons';
-import {
-  sessionStatusBadgeLabel,
-  type SessionEvidencePhoto,
-} from '../mocks/sessionDetail';
-import { layout, colors, fontFamilies, radius as R, shadows } from '../tokens';
+import { sessionStatusBadgeLabel } from '../mocks/sessionDetail';
+import { layout, colors, fontFamilies, shadows } from '../tokens';
 
 const MAP_HEIGHT = 190;
 const CTA_HEIGHT = 50;
@@ -106,37 +102,6 @@ function StatCard({
   );
 }
 
-function SessionPhotoEvidenceCard({
-  photos,
-  onPressPhoto,
-}: {
-  photos: SessionEvidencePhoto[];
-  onPressPhoto: (index: number) => void;
-}) {
-  if (photos.length === 0) {
-    return null;
-  }
-
-  return (
-    <View style={s.photoCard}>
-      <Text style={s.photoCardTitle}>Photo Evidence ({photos.length})</Text>
-      <View style={s.thumbnails}>
-        {photos.map((photo, index) => (
-          <AnimatedPressable
-            key={photo.id}
-            scaleTo={0.98}
-            onPress={() => onPressPhoto(index)}
-            accessibilityRole="imagebutton"
-            accessibilityLabel={photo.caption ?? `View photo evidence ${index + 1}`}
-          >
-            <Image source={photo.source} style={s.thumbnail} contentFit="cover" />
-          </AnimatedPressable>
-        ))}
-      </View>
-    </View>
-  );
-}
-
 function SessionDescriptionSection({ description }: { description: string }) {
   const body = description.trim() || '—';
 
@@ -161,7 +126,6 @@ export function SessionDetailScreen() {
   const { detail, loading, error } = useSessionDetail(sessionId);
   const routeCoordinates = useSessionRouteCoordinates(sessionId);
 
-  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   const canDeleteSession =
@@ -173,8 +137,17 @@ export function SessionDetailScreen() {
     FOOTER_PAD_TOP + CTA_HEIGHT + FOOTER_PAD_BOTTOM + footerBottom + footerExtra + 96;
   const contentWidth = Math.min(windowWidth - 32, 358);
 
-  const selectedPhoto =
-    selectedPhotoIndex !== null ? detail.evidencePhotos[selectedPhotoIndex] ?? null : null;
+  const sessionPhotos: SessionPhotosSectionItem[] = useMemo(
+    () =>
+      detail.evidencePhotos.map((photo) => ({
+        key: photo.id,
+        source: photo.source,
+        timeLabel: photo.capturedAt ? formatPhotoTimeLabel(photo.capturedAt) : '',
+        label: photo.caption ?? 'Photo',
+        capturedAt: photo.capturedAt,
+      })),
+    [detail.evidencePhotos],
+  );
 
   const statusLabel = sessionStatusBadgeLabel(detail.status);
   const photosStatLabel =
@@ -273,10 +246,7 @@ export function SessionDetailScreen() {
                 </View>
               </View>
 
-              <SessionPhotoEvidenceCard
-                photos={detail.evidencePhotos}
-                onPressPhoto={setSelectedPhotoIndex}
-              />
+              <SessionPhotosSection photos={sessionPhotos} />
 
               <SessionDescriptionSection description={detail.description} />
             </>
@@ -313,45 +283,6 @@ export function SessionDetailScreen() {
           <Text style={s.ctaLabel}>New Session</Text>
         </AnimatedPressable>
       </View>
-
-      <PhotoEnlargeModal
-        visible={selectedPhotoIndex !== null && selectedPhoto !== null}
-        source={selectedPhoto?.source ?? null}
-        caption={
-          selectedPhoto?.caption ??
-          (selectedPhotoIndex !== null
-            ? `Photo Evidence ${selectedPhotoIndex + 1}`
-            : undefined)
-        }
-        dateLabel={
-          selectedPhoto?.capturedAt
-            ? formatSessionDateLabel(selectedPhoto.capturedAt)
-            : undefined
-        }
-        timeLabel={
-          selectedPhoto?.capturedAt
-            ? formatPhotoTimeLabel(selectedPhoto.capturedAt)
-            : undefined
-        }
-        counterLabel={
-          selectedPhotoIndex !== null && detail.evidencePhotos.length > 0
-            ? `${selectedPhotoIndex + 1}/${detail.evidencePhotos.length}`
-            : undefined
-        }
-        onClose={() => setSelectedPhotoIndex(null)}
-        hasPrevious={selectedPhotoIndex !== null && selectedPhotoIndex > 0}
-        hasNext={
-          selectedPhotoIndex !== null && selectedPhotoIndex < detail.evidencePhotos.length - 1
-        }
-        onPrevious={() =>
-          setSelectedPhotoIndex((index) => (index !== null && index > 0 ? index - 1 : index))
-        }
-        onNext={() =>
-          setSelectedPhotoIndex((index) =>
-            index !== null && index < detail.evidencePhotos.length - 1 ? index + 1 : index,
-          )
-        }
-      />
     </View>
   );
 }
@@ -473,29 +404,6 @@ const s = StyleSheet.create({
     fontFamily: fontFamilies.ibmPlexSansRegular,
     fontSize: 9,
     color: colors.textNavInactive,
-  },
-  // Photo Evidence card styles (Figma `555:2380`) — used when `evidencePhotos.length > 0`.
-  photoCard: {
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.borderOutline,
-    borderRadius: 12,
-    padding: 16,
-    gap: 12,
-  },
-  photoCardTitle: {
-    fontFamily: fontFamilies.notoSansMedium,
-    fontSize: 16,
-    color: colors.textPrimary,
-  },
-  thumbnails: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  thumbnail: {
-    width: 72,
-    height: 72,
-    borderRadius: R.sm,
   },
   infoCard: {
     backgroundColor: colors.white,

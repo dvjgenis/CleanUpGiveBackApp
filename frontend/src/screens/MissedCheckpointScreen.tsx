@@ -95,7 +95,7 @@ export function MissedCheckpointScreen() {
             <Animated.View style={[s.actions, actionsStyle]}>
               <AnimatedPressable
                 style={s.restartBtn}
-                onPress={() => router.replace('/session-setup')}
+                onPress={() => router.replace('/photo-capture?mode=session-start')}
                 accessibilityRole="button"
                 accessibilityLabel="Restart session"
               >

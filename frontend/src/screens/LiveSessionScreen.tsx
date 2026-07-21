@@ -27,7 +27,6 @@ import { Compass } from '@/components/ui/Compass';
 import { PhotoEnlargeModal } from '@/components/ui/PhotoEnlargeModal';
 import { SessionSetupBackChevronIcon } from '@/components/session-setup/icons/SessionSetupBackChevronIcon';
 import { LiveSessionMap } from '@/features/session-tracking/components/LiveSessionMap';
-import { LiveSessionBackgroundTrackingBanner } from '@/components/LiveSessionBackgroundTrackingBanner';
 import { MapTypesSheet } from '@/features/session-tracking/components/MapTypesSheet';
 import { TrackerActionButton } from '@/features/session-tracking/components/TrackerActionButton';
 import { LocationPinIcon } from '@/features/session-tracking/components/icons/LocationPinIcon';
@@ -81,6 +80,12 @@ import {
 const TIMER_BORDER_PULSE_MS = 2400;
 const CHECKPOINT_THUMB_SIZE = 44;
 const CHECKPOINT_THUMB_OVERLAP = 16;
+
+// Navbar row geometry (back button + location pill group, gap, compass size).
+const NAVBAR_BACK_BTN_SIZE = 44;
+const NAVBAR_GAP = 34;
+const NAVBAR_LOCATION_PILL_WIDTH = 203;
+const NAVBAR_COMPASS_SIZE = 48;
 
 type CheckpointViewerPhoto = {
   key: string;
@@ -195,7 +200,7 @@ function TrackerCompassControl({ chrome }: { chrome: TrackerChromeColors }) {
 
   return (
     <Compass
-      size={48}
+      size={NAVBAR_COMPASS_SIZE}
       borderColor={chrome.borderOutline}
       backgroundColor={chrome.surface}
       mutedColor={chrome.textTertiary}
@@ -239,7 +244,7 @@ function MapToolButton({
 /** PRD §6.11 · Figma `session_setup_guide` live tracker (`251:439`). */
 export function LiveSessionScreen() {
   const router = useRouter();
-  const { elapsedSeconds, checkpointSecondsRemaining, distanceMiles, submittedCheckpoints, mapLayer, mapFollowEnabled, checkpointWindowStartedAt, backgroundLocationEnabled } =
+  const { elapsedSeconds, checkpointSecondsRemaining, distanceMiles, submittedCheckpoints, mapLayer, mapFollowEnabled, checkpointWindowStartedAt } =
     useLiveSession();
   const [mapLayerPickerVisible, setMapLayerPickerVisible] = useState(false);
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
@@ -342,44 +347,42 @@ export function LiveSessionScreen() {
       <SafeAreaView style={s.overlay} edges={['top', 'bottom']} pointerEvents="box-none">
         <Animated.View style={[s.main, chromeStyle]} pointerEvents="box-none">
           <View style={s.navbar}>
-            <TrackerBackButton
-              onPress={() => router.replace('/')}
-              chrome={chrome}
-              styles={s}
-            />
+            <View style={s.navbarLeftGroup}>
+              <TrackerBackButton
+                onPress={() => router.replace('/')}
+                chrome={chrome}
+                styles={s}
+              />
 
-            <View
-              style={[
-                s.locationPill,
-                {
-                  borderColor: chrome.borderOutline,
-                  backgroundColor: chrome.surface,
-                },
-              ]}
-            >
-              <View style={s.locationRow}>
-                <LocationPinIcon color={chrome.textTertiary} size={18} strokeWidth={1.5} />
-                <Text style={[s.locationText, { color: chrome.textTertiary }]}>
-                  {isWeatherLoading && !placeLabel ? '…' : (placeLabel ?? 'Location off')}
-                </Text>
-              </View>
-              <View style={[s.pillDivider, { backgroundColor: chrome.borderOutline }]} />
-              <View style={s.temperatureRow}>
-                <TrackerWeatherIcon color={chrome.textTertiary} />
-                <Text style={[s.locationText, { color: chrome.textTertiary }]}>
-                  {isWeatherLoading ? '…' : temperatureLabel}
-                </Text>
+              <View
+                style={[
+                  s.locationPill,
+                  {
+                    borderColor: chrome.borderOutline,
+                    backgroundColor: chrome.surface,
+                  },
+                ]}
+              >
+                <View style={s.locationRow}>
+                  <LocationPinIcon color={chrome.textTertiary} size={18} strokeWidth={1.5} />
+                  <Text style={[s.locationText, { color: chrome.textTertiary }]}>
+                    {isWeatherLoading && !placeLabel ? '…' : (placeLabel ?? 'Location off')}
+                  </Text>
+                </View>
+                <View style={[s.pillDivider, { backgroundColor: chrome.borderOutline }]} />
+                <View style={s.temperatureRow}>
+                  <TrackerWeatherIcon color={chrome.textTertiary} />
+                  <Text style={[s.locationText, { color: chrome.textTertiary }]}>
+                    {isWeatherLoading ? '…' : temperatureLabel}
+                  </Text>
+                </View>
               </View>
             </View>
 
+            {/* Right-aligned to main's content edge — same boundary the map
+                layers icon (mapTools, alignSelf:'flex-end') hugs below. */}
             <TrackerCompassControl chrome={chrome} />
           </View>
-
-          {!backgroundLocationEnabled ? (
-            <View style={s.backgroundBannerWrap} pointerEvents="none">
-              <LiveSessionBackgroundTrackingBanner />
-            </View>
-          ) : null}
 
           <View style={s.inProgressSection} pointerEvents="box-none">
             <View style={s.timerBlock} pointerEvents="box-none">
@@ -608,12 +611,20 @@ function createStyles(_chrome: TrackerChromeColors) {
     navbar: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 34,
+      // space-between (not gap) — pushes the compass flush to the right edge
+      // of `main`, matching mapTools' alignSelf:'flex-end' boundary below,
+      // while the back button + location pill stay grouped on the left.
+      justifyContent: 'space-between',
       marginTop: 8,
     },
+    navbarLeftGroup: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: NAVBAR_GAP,
+    },
     backBtn: {
-      width: 44,
-      height: 44,
+      width: NAVBAR_BACK_BTN_SIZE,
+      height: NAVBAR_BACK_BTN_SIZE,
       borderRadius: 30,
       borderWidth: 1,
       overflow: 'hidden',
@@ -624,7 +635,7 @@ function createStyles(_chrome: TrackerChromeColors) {
       justifyContent: 'center',
     },
     locationPill: {
-      width: 203,
+      width: NAVBAR_LOCATION_PILL_WIDTH,
       height: 44,
       borderRadius: radius.full,
       borderWidth: 1,
@@ -653,9 +664,6 @@ function createStyles(_chrome: TrackerChromeColors) {
       width: 1,
       height: 13,
     },
-    backgroundBannerWrap: {
-      paddingHorizontal: 16,
-    },
     inProgressSection: {
       flex: 1,
       gap: 16,
@@ -665,6 +673,8 @@ function createStyles(_chrome: TrackerChromeColors) {
       gap: 10,
     },
     timerCard: {
+      // 100% of `main`'s content width — same right boundary the compass
+      // (space-between in navbar) and mapTools (alignSelf:'flex-end') hug.
       width: '100%',
       borderWidth: 3,
       borderColor: '#c2d832',

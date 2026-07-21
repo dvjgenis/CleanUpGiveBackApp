@@ -1,6 +1,8 @@
 import '@/global.css';
+import 'react-native-gesture-handler';
 
 import { Stack } from 'expo-router';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { AuthProvider } from '@/components/AuthProvider';
 import { CheckpointMissNavigationGate } from '@/components/CheckpointMissNavigationGate';
@@ -50,11 +52,12 @@ const homeScreenOptions = ({ route }: { route: { params?: { enter?: string } } }
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <CheckpointNotificationBootstrap />
-      <CheckpointMissNavigationGate />
-      <LiveSessionResumeGate />
-      <Stack screenOptions={{ headerShown: false }}>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <AuthProvider>
+        <CheckpointNotificationBootstrap />
+        <CheckpointMissNavigationGate />
+        <LiveSessionResumeGate />
+        <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" options={homeScreenOptions} />
       <Stack.Screen name="session-setup-guide" options={guideBackwardScreenOptions} />
       <Stack.Screen name="session-setup" />
@@ -72,7 +75,15 @@ export default function RootLayout() {
       <Stack.Screen name="give-feedback" />
       <Stack.Screen name="feedback-thank-you" />
       <Stack.Screen name="photo-checkpoint" options={{ presentation: 'transparentModal', headerShown: false, animation: 'fade' }} />
-      <Stack.Screen name="photo-capture" />
+      <Stack.Screen
+        name="photo-capture"
+        options={{
+          presentation: 'fullScreenModal',
+          contentStyle: { backgroundColor: '#000000' },
+          gestureEnabled: false,
+          animation: 'slide_from_bottom',
+        }}
+      />
       <Stack.Screen name="photo-submitted" options={{ presentation: 'transparentModal', headerShown: false, animation: 'fade' }} />
       <Stack.Screen name="submission-confirmation" />
       <Stack.Screen name="missed-checkpoint" options={{ presentation: 'transparentModal', headerShown: false, animation: 'fade' }} />
@@ -122,7 +133,8 @@ export default function RootLayout() {
       <Stack.Screen name="set-tour" />
       <Stack.Screen name="prototype/[screen]" />
       <Stack.Screen name="free-trial-done" options={{ presentation: 'transparentModal', headerShown: false, animation: 'fade' }} />
-    </Stack>
-    </AuthProvider>
+        </Stack>
+      </AuthProvider>
+    </GestureHandlerRootView>
   );
 }

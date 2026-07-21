@@ -341,7 +341,12 @@ function recordLocationSample(position: Location.LocationObject) {
     timestampMs: sampleTimestamp,
   };
 
-  if (!isRouteCoordinate(previousCoordinate)) {
+  // Seed on an empty route (not `!previousCoordinate`): a sample can set
+  // `currentCoordinate` and still be rejected below for poor accuracy before
+  // ever appending to `routeCoordinates`, which would otherwise make later
+  // samples skip seeding while `routeCoordinates` is still empty and crash
+  // on `state.routeCoordinates[-1]` being `undefined`.
+  if (state.routeCoordinates.length === 0) {
     lastAcceptedTimestamp = sampleTimestamp;
     lastRouteAppendTimestamp = sampleTimestamp;
     setState({

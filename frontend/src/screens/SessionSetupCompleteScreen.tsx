@@ -49,7 +49,7 @@ export function SessionSetupCompleteScreen() {
         <SessionSetupGuideFooterActions
           continueLabel="Start Tracking"
           hideSkip
-          onContinuePress={() => router.push('/session-setup')}
+          onContinuePress={() => router.push('/photo-capture?mode=session-start')}
           onPreviousPress={() => {
             void goToPreviousFromSessionSetupComplete(router);
           }}

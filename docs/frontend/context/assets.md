@@ -23,7 +23,7 @@ Static media and bundled prototype HTML.
 | `frontend/assets/figma/{photo-checkpoint,photo-submitted,missed-checkpoint,submission-confirmation,permissions}/` | Pointers to raster/animation companions |
 | `frontend/assets/images/` | App icons, logos, product/scene images |
 | `frontend/assets/images/screens/<screen>/` | Per-flow rasters — `session-setup/`, `permissions/`, `photo-checkpoint/`, `photo-submitted/`, `missed-checkpoint/`, `submission-confirmation/`, `session-detail/` |
-| `frontend/assets/animations/` | Motion exports — `photo-submitted-success.gif`, `missed-checkpoint.json`, `hourglass.json` (free-trial paywall), plus alt Lottie/GIF sources |
+| `frontend/assets/animations/` | Motion exports — `photo-submitted.lottie` (Camera Pop-Up, repeater-baked for RN; Metro `assetExts` includes `lottie`), `missed-checkpoint.json`, `hourglass.json` (free-trial paywall), plus alt JSON/GIF sources |
 | `frontend/assets/sounds/` | Short UI alert clips — `photo-checkpoint-alert.wav` (played when the 30-min checkpoint popup appears) |
 | `frontend/assets/stitch/` | Stitch HTML screens bundled into the app (**legacy — frozen**) |
 | `frontend/assets/expo.icon/` | iOS app icon asset catalog |

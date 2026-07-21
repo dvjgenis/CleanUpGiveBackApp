@@ -18,24 +18,36 @@ import {
   View,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
+  interpolateColor,
   runOnJS,
-  useAnimatedReaction,
   useAnimatedStyle,
   useSharedValue,
+  withTiming,
 } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Circle, G, Line, Path, Text as SvgText } from 'react-native-svg';
+import Svg, {
+  Circle,
+  ClipPath,
+  Defs,
+  G,
+  Line,
+  LinearGradient,
+  Path,
+  Rect,
+  Stop,
+  Text as SvgText,
+} from 'react-native-svg';
 
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { CoachmarkEnter } from '@/components/motion/CoachmarkEnter';
 import { useFadeUpEnter } from '@/components/motion/hooks';
 import { staggerDelay } from '@/motion';
-import { addPhotoCheckpoint, finalizeLiveSession, resetCheckpointCountdown, startNewLiveSession, useLiveSession } from '@/features/session-tracking/liveSessionStore';
+import { addPhotoCheckpoint, finalizeLiveSession, useLiveSession } from '@/features/session-tracking/liveSessionStore';
 import {
-  clearPendingSessionSetup,
-  consumePendingSessionSetup,
+  clearPendingSessionStartPhotos,
+  setPendingSessionStartPhotos,
 } from '@/features/session-tracking/pendingSessionSetup';
 import { persistCheckpointPhotos } from '@/features/session-tracking/utils/persistCheckpointPhotos';
 import { colors as tokens } from '@/constants/tokens';
@@ -47,7 +59,8 @@ const C = {
   textTertiary: tokens.textTertiary,
   textOnPrimary: tokens.textOnPrimary,
   overlay: 'rgba(0, 0, 0, 0.45)',
-  footer: 'rgba(0, 0, 0, 0.82)',
+  footer: '#000000',
+  footerDim: 'rgba(0, 0, 0, 0.75)',
   zoomAccent: '#F5C518',
 } as const;
 
@@ -58,13 +71,32 @@ const PIP_TOP = 14;
 const FLASH_CYCLE: FlashMode[] = ['off', 'on', 'auto'];
 
 /** Display zoom range mapped onto expo-camera's 0–1 `zoom` prop. */
-const ZOOM_MIN_FACTOR = 1;
+const ZOOM_MIN_FACTOR = 0.5;
 const ZOOM_MAX_FACTOR = 5;
-const ZOOM_MAJOR_STOPS = [1, 2, 3, 5] as const;
+const ZOOM_MAJOR_STOPS = [0.5, 1, 2, 3, 5] as const;
 const ZOOM_TICK_STEP = 0.1;
-const ZOOM_WHEEL_HEIGHT = 96;
-const ZOOM_PAN_SENSITIVITY = 0.0042;
-const ZOOM_ARC_SPAN_DEG = 56;
+// ZOOM_DIAL_TOP_INSET is 0 so the dial's topmost point (the 0.5× tick) starts
+// right at the container's top edge — putting the fixed caret + value label
+// (zoomOverlay, top:8) visually inside the dial's dark circle instead of
+// floating in blank space above it. ZOOM_WHEEL_HEIGHT is increased by the
+// same amount removed from the inset so the visible arc keeps its prior
+// breathing room at the bottom rather than crowding the pills below.
+const ZOOM_WHEEL_HEIGHT = 266;
+const ZOOM_DIAL_TOP_INSET = 0;
+/** Finger travel in px to traverse the full 0–1 zoom range. */
+const ZOOM_PAN_SENSITIVITY = 0.012;
+const ZOOM_ARC_SPAN_DEG = 80;
+// Distance ticks are pulled in from the dial's rim. Near the top of a circle
+// the curve is nearly flat, so ticks close to the rim (small gap) sit almost
+// on top of one another in y — and right where the fixed caret/value label
+// render (they overlap the currently-selected tick, which is always rotated
+// to the top). Pulling ticks in creates a plain dark collar at the rim for
+// the caret to sit in without touching any tick line or label.
+const ZOOM_TICK_RIM_GAP = 48;
+const ZOOM_PILL_FACTORS = [0.5, 1, 3] as const;
+// Width of the gradient overlays that fade ticks near the screen edges,
+// standing in for a hard overflow:'hidden' clip as the dial rotates.
+const ZOOM_FADE_WIDTH = 64;
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -90,6 +122,10 @@ function flashLabel(mode: FlashMode): string {
 
 function zoomToFactor(zoom: number): number {
   return ZOOM_MIN_FACTOR + zoom * (ZOOM_MAX_FACTOR - ZOOM_MIN_FACTOR);
+}
+
+function factorToZoom(factor: number): number {
+  return (factor - ZOOM_MIN_FACTOR) / (ZOOM_MAX_FACTOR - ZOOM_MIN_FACTOR);
 }
 
 function formatZoomFactor(factor: number): string {
@@ -174,147 +210,328 @@ function buildZoomTicks(): ZoomTick[] {
   return ticks;
 }
 
+const ZOOM_TICKS = buildZoomTicks();
+
 /**
- * Apple-style curved zoom dial. Horizontal pan rotates the arc so the
- * selected factor sits under a fixed yellow caret; maps to CameraView zoom 0–1.
+ * Zoom control: three tap-to-zoom pills. Dragging any pill reveals the arc
+ * wheel; swipe RIGHT on the wheel = zoom IN.
+ *
+ * All gesture handling is worklet-only (UI thread). The isDragging guard
+ * prevents the JS-thread useEffect from stomping on mid-drag zoomSV values.
  */
-function ZoomWheel({
+function ZoomControl({
   value,
   onChange,
 }: {
   value: number;
   onChange: (zoom: number) => void;
 }) {
+  const wheelReveal = useSharedValue(0);
   const zoomSV = useSharedValue(value);
-  const startZoom = useSharedValue(value);
-  const [label, setLabel] = useState(formatZoomFactor(zoomToFactor(value)));
-  const ticks = useMemo(() => buildZoomTicks(), []);
+  const dragStartSV = useSharedValue(value);
+  const isDragging = useSharedValue(false);
+
+  // One shared value per pill (fixed count — ZOOM_PILL_FACTORS has exactly 3
+  // entries) drives the pressed-state animation below.
+  const pill0Pressed = useSharedValue(0);
+  const pill1Pressed = useSharedValue(0);
+  const pill2Pressed = useSharedValue(0);
+  const pillPressedSVs = [pill0Pressed, pill1Pressed, pill2Pressed];
 
   const wheelWidth = SCREEN_WIDTH;
-  const radius = wheelWidth * 1.05;
-  const cx = wheelWidth / 2;
-  const cy = radius + 10;
+  const radius = wheelWidth * 0.72;
+  const cx = radius;
+  const cy = radius;
   const degPerFactor = ZOOM_ARC_SPAN_DEG / (ZOOM_MAX_FACTOR - ZOOM_MIN_FACTOR);
+  const range = ZOOM_MAX_FACTOR - ZOOM_MIN_FACTOR;
 
+  const currentFactor = zoomToFactor(value);
+  const label = formatZoomFactor(currentFactor);
+
+  // Only sync from React state when no gesture is active — mid-drag syncs
+  // would reset zoomSV to a stale JS value, causing the dial to jump backward.
   useEffect(() => {
-    zoomSV.value = value;
-    setLabel(formatZoomFactor(zoomToFactor(value)));
-  }, [value, zoomSV]);
+    if (!isDragging.value) {
+      zoomSV.value = value;
+      dragStartSV.value = value;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- shared values stable
+  }, [value]);
 
-  const commitZoom = useCallback(
-    (next: number) => {
-      const clamped = Math.min(1, Math.max(0, next));
-      onChange(clamped);
-      setLabel(formatZoomFactor(zoomToFactor(clamped)));
-    },
-    [onChange],
-  );
+  const notifyChange = useCallback((v: number) => { onChange(v); }, [onChange]);
 
-  useAnimatedReaction(
-    () => zoomSV.value,
-    (current, previous) => {
-      if (previous !== null && Math.abs(current - previous) < 0.002) return;
-      runOnJS(setLabel)(formatZoomFactor(zoomToFactor(current)));
-    },
-  );
+  // ── Animated styles ────────────────────────────────────────────────────────
 
-  const pan = Gesture.Pan()
-    .onBegin(() => {
-      startZoom.value = zoomSV.value;
-    })
-    .onChange((event) => {
-      // Drag left → zoom in (higher factors move under the caret).
-      const next = Math.min(
-        1,
-        Math.max(0, startZoom.value - event.translationX * ZOOM_PAN_SENSITIVITY),
-      );
-      zoomSV.value = next;
-      runOnJS(commitZoom)(next);
-    });
+  // Pills rest near the footer; sliding up toward the wheel's centered
+  // position (rather than fading in place) makes the transition read as the
+  // controls moving up to meet the revealed dial.
+  const pillsAnim = useAnimatedStyle(() => ({
+    opacity: 1 - wheelReveal.value,
+    transform: [{ translateY: -wheelReveal.value * 80 }],
+  }));
 
+  // opacity + translateY: opacity keeps the arc invisible when not in use even
+  // if overflow:hidden fails to clip absolutely-positioned children (Android).
+  const wheelAnim = useAnimatedStyle(() => ({
+    opacity: wheelReveal.value,
+    transform: [{ translateY: (1 - wheelReveal.value) * ZOOM_WHEEL_HEIGHT }],
+  }));
+
+  // Negative rotation: higher zoom brings right-side ticks under the caret.
+  // Positive would scroll into the blank arc left of 0.5×.
   const dialStyle = useAnimatedStyle(() => {
-    const factor = zoomToFactor(zoomSV.value);
+    const factor = ZOOM_MIN_FACTOR + zoomSV.value * range;
     const rotation = -(factor - ZOOM_MIN_FACTOR) * degPerFactor;
-    return {
-      transform: [{ rotate: `${rotation}deg` }],
-    };
+    return { transform: [{ rotate: `${rotation}deg` }] };
   });
 
+  // ── Gestures ───────────────────────────────────────────────────────────────
+
+  // Wheel pan — drag LEFT = zoom in (higher values scroll rightward past the caret).
+  const wheelPan = useMemo(() => Gesture.Pan()
+    .onBegin(() => {
+      'worklet';
+      isDragging.value = true;
+      dragStartSV.value = zoomSV.value;
+    })
+    .onUpdate((e) => {
+      'worklet';
+      const next = dragStartSV.value - e.translationX * ZOOM_PAN_SENSITIVITY;
+      const clamped = Math.min(1, Math.max(0, next));
+      zoomSV.value = clamped;
+      runOnJS(notifyChange)(clamped);
+    })
+    .onFinalize(() => {
+      'worklet';
+      isDragging.value = false;
+      wheelReveal.value = withTiming(0, { duration: 200 });
+    })
+    .minDistance(0)
+    .activeOffsetX([-3, 3]),
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- shared values stable
+  [notifyChange]);
+
+  // Per-pill: tap sets zoom only; drag reveals the wheel and fine-tunes.
+  // Drag LEFT = zoom in. onStart compensates for pre-activation drift so the
+  // dial pins exactly to this pill's zoom the instant the wheel appears.
+  const pillGestures = useMemo(() => {
+    return (ZOOM_PILL_FACTORS as readonly number[]).map((factor, i) => {
+      const targetZoom = factorToZoom(factor);
+      const pressed = pillPressedSVs[i]!;
+
+      const tap = Gesture.Tap()
+        .onBegin(() => {
+          'worklet';
+          pressed.value = withTiming(1, { duration: 80 });
+        })
+        .onEnd(() => {
+          'worklet';
+          zoomSV.value = targetZoom;
+          dragStartSV.value = targetZoom;
+          runOnJS(notifyChange)(targetZoom);
+        })
+        .onFinalize(() => {
+          'worklet';
+          pressed.value = withTiming(0, { duration: 120 });
+        });
+
+      const drag = Gesture.Pan()
+        .onBegin(() => {
+          'worklet';
+          pressed.value = withTiming(1, { duration: 80 });
+        })
+        .onStart((e: { translationX: number }) => {
+          'worklet';
+          isDragging.value = true;
+          // With negated pan (left = zoom in): next = dragStart - translationX * sens.
+          // At activation: next = targetZoom → dragStart = targetZoom + translationX * sens.
+          dragStartSV.value = targetZoom + e.translationX * ZOOM_PAN_SENSITIVITY;
+          zoomSV.value = targetZoom;
+          runOnJS(notifyChange)(targetZoom);
+          wheelReveal.value = withTiming(1, { duration: 200 });
+        })
+        .onUpdate((e: { translationX: number }) => {
+          'worklet';
+          const next = dragStartSV.value - e.translationX * ZOOM_PAN_SENSITIVITY;
+          const clamped = Math.min(1, Math.max(0, next));
+          zoomSV.value = clamped;
+          runOnJS(notifyChange)(clamped);
+        })
+        .onFinalize(() => {
+          'worklet';
+          isDragging.value = false;
+          wheelReveal.value = withTiming(0, { duration: 200 });
+          pressed.value = withTiming(0, { duration: 120 });
+        })
+        .minDistance(0)
+        .activeOffsetX([-5, 5])
+        .failOffsetY([-20, 20]);
+
+      return Gesture.Exclusive(tap, drag);
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- shared values stable
+  }, [notifyChange]);
+
+  const pillPressedAnims = pillPressedSVs.map((pressed) =>
+    // eslint-disable-next-line react-hooks/rules-of-hooks -- fixed-length array (3 pills), stable across renders
+    useAnimatedStyle(() => ({
+      transform: [{ scale: withTiming(1 - 0.12 * pressed.value, { duration: 80 }) }],
+      backgroundColor: interpolateColor(
+        pressed.value,
+        [0, 1],
+        ['rgba(0,0,0,0.45)', 'rgba(245,197,24,0.35)'],
+      ),
+      borderColor: interpolateColor(
+        pressed.value,
+        [0, 1],
+        ['rgba(255,255,255,0.35)', C.zoomAccent],
+      ),
+    })),
+  );
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+
   return (
-    <GestureHandlerRootView
-      style={s.zoomWheelRoot}
-      accessibilityLabel={`Zoom ${label}`}
-      accessibilityHint="Swipe left or right to adjust zoom"
-    >
-      <View style={s.zoomCaretRow} pointerEvents="none">
-        <View style={s.zoomCaret} />
-        <Text style={s.zoomValue}>{label}</Text>
-      </View>
-
-      <GestureDetector gesture={pan}>
-        <View style={s.zoomDialHit}>
-          <Animated.View
-            style={[
-              s.zoomDialSpin,
-              {
-                width: wheelWidth,
-                height: ZOOM_WHEEL_HEIGHT,
-                transformOrigin: `${cx}px ${cy}px`,
-              },
-              dialStyle,
-            ]}
+    <View style={s.zoomControlRoot}>
+      {/* Arc wheel — slides up from below when dragging a pill */}
+      <Animated.View
+        style={[StyleSheet.absoluteFillObject, wheelAnim]}
+        pointerEvents="box-none"
+      >
+        <GestureDetector gesture={wheelPan}>
+          <View
+            style={s.zoomDialHit}
+            accessibilityLabel={`Zoom ${label}`}
+            accessibilityHint="Swipe left to zoom in, right to zoom out"
           >
-            <Svg width={wheelWidth} height={ZOOM_WHEEL_HEIGHT}>
-              <Circle
-                cx={cx}
-                cy={cy}
-                r={radius - 46}
-                fill="rgba(18,18,18,0.5)"
-              />
-              {ticks.map((tick) => {
-                const angleDeg = -90 + (tick.factor - ZOOM_MIN_FACTOR) * degPerFactor;
-                const rad = (angleDeg * Math.PI) / 180;
-                const outer = radius;
-                const inner = tick.major ? radius - 18 : radius - 10;
-                const x1 = cx + outer * Math.cos(rad);
-                const y1 = cy + outer * Math.sin(rad);
-                const x2 = cx + inner * Math.cos(rad);
-                const y2 = cy + inner * Math.sin(rad);
-                const labelR = radius - 34;
-                const lx = cx + labelR * Math.cos(rad);
-                const ly = cy + labelR * Math.sin(rad);
+            <View style={s.zoomOverlay} pointerEvents="none">
+              <Text style={s.zoomValue}>{label}</Text>
+              <View style={s.zoomCaret} />
+            </View>
 
-                return (
-                  <G key={`tick-${tick.factor}`}>
-                    <Line
-                      x1={x1}
-                      y1={y1}
-                      x2={x2}
-                      y2={y2}
-                      stroke="rgba(255,255,255,0.88)"
-                      strokeWidth={tick.major ? 2 : 1}
-                      strokeLinecap="round"
-                    />
-                    {tick.label ? (
-                      <SvgText
-                        x={lx}
-                        y={ly + 4}
-                        fill="rgba(255,255,255,0.95)"
-                        fontSize={13}
-                        fontWeight="600"
-                        textAnchor="middle"
-                      >
-                        {tick.label}
-                      </SvgText>
-                    ) : null}
-                  </G>
-                );
-              })}
+            <Animated.View
+              style={[
+                s.zoomDialSpin,
+                {
+                  position: 'absolute',
+                  top: ZOOM_DIAL_TOP_INSET,
+                  left: wheelWidth / 2 - radius,
+                  width: radius * 2,
+                  height: radius * 2,
+                },
+                dialStyle,
+              ]}
+              renderToHardwareTextureAndroid
+            >
+              <Svg width={radius * 2} height={radius * 2}>
+                <Circle cx={cx} cy={cy} r={radius - 0.5} fill="rgba(28,27,27,0.5)" />
+                {ZOOM_TICKS.map((tick) => {
+                  const angleDeg = -90 + (tick.factor - ZOOM_MIN_FACTOR) * degPerFactor;
+                  const rad = (angleDeg * Math.PI) / 180;
+                  const outer = radius - ZOOM_TICK_RIM_GAP;
+                  const inner = tick.major ? outer - 18 : outer - 10;
+                  const x1 = cx + outer * Math.cos(rad);
+                  const y1 = cy + outer * Math.sin(rad);
+                  const x2 = cx + inner * Math.cos(rad);
+                  const y2 = cy + inner * Math.sin(rad);
+                  const labelR = outer - 34;
+                  const lx = cx + labelR * Math.cos(rad);
+                  const ly = cy + labelR * Math.sin(rad);
+                  return (
+                    <G key={`tick-${tick.factor}`}>
+                      <Line
+                        x1={x1} y1={y1} x2={x2} y2={y2}
+                        stroke="rgba(255,255,255,0.88)"
+                        strokeWidth={tick.major ? 2 : 1}
+                        strokeLinecap="round"
+                      />
+                      {tick.label ? (
+                        <SvgText
+                          x={lx} y={ly}
+                          fill="rgba(255,255,255,0.95)"
+                          fontSize={13} fontWeight="600"
+                          textAnchor="middle"
+                          alignmentBaseline="middle"
+                          rotation={angleDeg + 90}
+                          origin={`${lx},${ly}`}
+                        >
+                          {tick.label}
+                        </SvgText>
+                      ) : null}
+                    </G>
+                  );
+                })}
+              </Svg>
+            </Animated.View>
+
+            {/* Fixed (non-rotating) edge fade, clipped to the same circle as
+                the dial's own rim so the fade follows the round dial shape
+                instead of cutting a straight rectangular edge across it. */}
+            <Svg
+              width={wheelWidth}
+              height={ZOOM_WHEEL_HEIGHT}
+              style={StyleSheet.absoluteFillObject}
+              pointerEvents="none"
+            >
+              <Defs>
+                <ClipPath id="zoomDialRimClip">
+                  <Circle
+                    cx={wheelWidth / 2}
+                    cy={radius + ZOOM_DIAL_TOP_INSET}
+                    r={radius - 0.5}
+                  />
+                </ClipPath>
+                <LinearGradient id="zoomTickFadeLeft" x1="0" y1="0" x2="1" y2="0">
+                  <Stop offset="0"    stopColor="#1c1b1b" stopOpacity={0.85} />
+                  <Stop offset="0.35" stopColor="#1c1b1b" stopOpacity={0.45} />
+                  <Stop offset="0.7"  stopColor="#1c1b1b" stopOpacity={0.15} />
+                  <Stop offset="1"    stopColor="#1c1b1b" stopOpacity={0} />
+                </LinearGradient>
+                <LinearGradient id="zoomTickFadeRight" x1="0" y1="0" x2="1" y2="0">
+                  <Stop offset="0"    stopColor="#1c1b1b" stopOpacity={0} />
+                  <Stop offset="0.3"  stopColor="#1c1b1b" stopOpacity={0.15} />
+                  <Stop offset="0.65" stopColor="#1c1b1b" stopOpacity={0.45} />
+                  <Stop offset="1"    stopColor="#1c1b1b" stopOpacity={0.85} />
+                </LinearGradient>
+              </Defs>
+              <G clipPath="url(#zoomDialRimClip)">
+                <Rect
+                  x={0} y={0}
+                  width={ZOOM_FADE_WIDTH} height={ZOOM_WHEEL_HEIGHT}
+                  fill="url(#zoomTickFadeLeft)"
+                />
+                <Rect
+                  x={wheelWidth - ZOOM_FADE_WIDTH} y={0}
+                  width={ZOOM_FADE_WIDTH} height={ZOOM_WHEEL_HEIGHT}
+                  fill="url(#zoomTickFadeRight)"
+                />
+              </G>
             </Svg>
-          </Animated.View>
-        </View>
-      </GestureDetector>
-    </GestureHandlerRootView>
+          </View>
+        </GestureDetector>
+      </Animated.View>
+
+      {/* Pills — tap for instant zoom, drag to reveal wheel */}
+      <Animated.View style={[s.zoomPillsRow, pillsAnim]} pointerEvents="box-none">
+        {(ZOOM_PILL_FACTORS as readonly number[]).map((factor, i) => {
+          const isActive = Math.abs(currentFactor - factor) < 0.2;
+          return (
+            <GestureDetector key={factor} gesture={pillGestures[i]!}>
+              <Animated.View
+                style={[s.zoomPill, isActive && s.zoomPillActive, pillPressedAnims[i]!]}
+                accessibilityRole="button"
+                accessibilityLabel={`${factor}× zoom`}
+                accessibilityHint="Tap to zoom, drag to open wheel"
+              >
+                <Text style={[s.zoomPillText, isActive && s.zoomPillTextActive]}>
+                  {factor}×
+                </Text>
+              </Animated.View>
+            </GestureDetector>
+          );
+        })}
+      </Animated.View>
+    </View>
   );
 }
 
@@ -329,11 +546,12 @@ function ShutterButton({
 }) {
   return (
     <AnimatedPressable
-      style={[s.shutterOuter, disabled && s.disabled]}
+      style={s.shutterOuter}
       onPress={onPress}
       disabled={disabled}
       accessibilityRole="button"
       accessibilityLabel="Take photo"
+      accessibilityState={{ disabled: !!disabled }}
     >
       <View style={s.shutterInner} />
     </AnimatedPressable>
@@ -370,7 +588,7 @@ function BeRealPreview({
         accessibilityLabel="Cleanup progress photo"
       />
 
-      <View style={[s.pip, { top: insets.top + PIP_TOP, right: PIP_RIGHT }]} pointerEvents="none">
+      <View style={[s.pip, { top: insets.top + PIP_TOP, left: PIP_RIGHT }]} pointerEvents="none">
         <Image
           source={{ uri: selfieUri }}
           style={StyleSheet.absoluteFillObject}
@@ -432,13 +650,13 @@ function SequentialCapture({
   const [cameraReady, setCameraReady] = useState(false);
   const [captureError, setCaptureError] = useState<string | null>(null);
   const [flashMode, setFlashMode] = useState<FlashMode>('off');
-  const [zoom, setZoom] = useState(0);
+  const [zoom, setZoom] = useState(() => factorToZoom(1));
   const cameraRef = useRef<CameraView>(null);
 
   // `onCameraReady` fires once per mount; flipping `facing` does not re-fire it on iOS.
   useEffect(() => {
     setCaptureError(null);
-    setZoom(0);
+    setZoom(factorToZoom(1));
     // Flash is back-camera only; reset so a retake doesn't keep a surprise flash.
     if (step === 'front') setFlashMode('off');
   }, [step]);
@@ -504,7 +722,7 @@ function SequentialCapture({
   };
 
   return (
-    <View style={s.root}>
+    <View style={[s.root, s.rootCapture]}>
       <CameraView
         ref={cameraRef as unknown as React.Ref<CameraView>}
         style={StyleSheet.absoluteFillObject}
@@ -516,7 +734,7 @@ function SequentialCapture({
       />
 
       {step === 'back' && selfieUri ? (
-        <View style={[s.pip, { top: insets.top + PIP_TOP, right: PIP_RIGHT }]} pointerEvents="none">
+        <View style={[s.pip, { top: insets.top + PIP_TOP, left: PIP_RIGHT }]} pointerEvents="none">
           <Image
             source={{ uri: selfieUri }}
             style={StyleSheet.absoluteFillObject}
@@ -533,7 +751,12 @@ function SequentialCapture({
         </View>
       )}
 
-      <SafeAreaView style={s.overlay} edges={['top']} pointerEvents="box-none">
+      {/* Use insets directly — SafeAreaView edges can drop top padding when
+          SequentialCapture remounts after Retake (preview → capture). */}
+      <View
+        style={[s.overlay, { paddingTop: insets.top }]}
+        pointerEvents="box-none"
+      >
         <View style={s.topBar}>
           {step === 'front' ? (
             <AnimatedPressable
@@ -555,7 +778,7 @@ function SequentialCapture({
           ) : null}
         </View>
 
-        <View style={s.copyArea} pointerEvents="box-none">
+        <View style={[s.copyArea, step === 'back' && s.copyAreaBelowPip]} pointerEvents="box-none">
           <CoachmarkEnter>
             <View style={s.copyBlock}>
               {step === 'front' ? (
@@ -585,11 +808,11 @@ function SequentialCapture({
             </View>
           </CoachmarkEnter>
         </View>
-      </SafeAreaView>
+      </View>
 
-      <View style={[s.bottomCluster, { paddingBottom: Math.max(insets.bottom, 10) }]}>
-        <ZoomWheel value={zoom} onChange={setZoom} />
-        <View style={s.footer}>
+      <View style={s.bottomCluster}>
+        <ZoomControl value={zoom} onChange={setZoom} />
+        <View style={[s.footer, { paddingBottom: Math.max(insets.bottom, 8) }]}>
           <ShutterButton
             onPress={() => { void capture(); }}
             disabled={capturing || !cameraReady}
@@ -616,6 +839,8 @@ export function PhotoCaptureScreen() {
   const [progressUri, setProgressUri] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  /** Bumps on Retake so SequentialCapture resets front→back without relying on unmount timing. */
+  const [captureEpoch, setCaptureEpoch] = useState(0);
 
   useEffect(() => {
     if (isSessionEnd && !wasActiveOnMountRef.current) {
@@ -675,15 +900,8 @@ export function PhotoCaptureScreen() {
       });
 
       if (isSessionStart) {
-        const setup = consumePendingSessionSetup();
-        if (!setup) {
-          setSubmitError('Session setup expired. Please start again from Session Setup.');
-          return;
-        }
-        await startNewLiveSession(setup);
-        addPhotoCheckpoint(persisted);
-        resetCheckpointCountdown();
-        router.replace('/live-session?from=onboarding' as Href);
+        setPendingSessionStartPhotos(persisted);
+        router.replace('/session-setup' as Href);
         return;
       }
 
@@ -712,11 +930,12 @@ export function PhotoCaptureScreen() {
     setSelfieUri(null);
     setProgressUri(null);
     setSubmitError(null);
+    setCaptureEpoch((n) => n + 1);
   };
 
   const handleCancelCapture = () => {
     if (isSessionStart) {
-      clearPendingSessionSetup();
+      clearPendingSessionStartPhotos();
       router.back();
       return;
     }
@@ -727,25 +946,28 @@ export function PhotoCaptureScreen() {
     router.dismissTo('/live-session');
   };
 
-  if (selfieUri && progressUri) {
-    return (
-      <BeRealPreview
-        selfieUri={selfieUri}
-        progressUri={progressUri}
-        onSubmit={() => { void handleSubmit(); }}
-        onRetake={handleRetake}
-        isSubmitting={isSubmitting}
-        submitError={submitError}
-      />
-    );
-  }
+  const showingPreview = Boolean(selfieUri && progressUri);
 
   return (
-    <SequentialCapture
-      onDone={handleDone}
-      onCancel={handleCancelCapture}
-      endSessionMode={isSessionEnd}
-    />
+    <View style={s.root}>
+      {!showingPreview ? (
+        <SequentialCapture
+          key={captureEpoch}
+          onDone={handleDone}
+          onCancel={handleCancelCapture}
+          endSessionMode={isSessionEnd}
+        />
+      ) : (
+        <BeRealPreview
+          selfieUri={selfieUri!}
+          progressUri={progressUri!}
+          onSubmit={() => { void handleSubmit(); }}
+          onRetake={handleRetake}
+          isSubmitting={isSubmitting}
+          submitError={submitError}
+        />
+      )}
+    </View>
   );
 }
 
@@ -753,6 +975,14 @@ export function PhotoCaptureScreen() {
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bgApp },
+  rootCapture: {
+    backgroundColor: C.footer,
+    overflow: 'hidden',
+    // Omit width/height:'100%' — percentage heights are recalculated on every
+    // React re-render (zoom state updates), which makes the absolutely-positioned
+    // bottomCluster jump and leaves a white gap at the bottom.
+    // flex:1 from s.root already fills the parent stably.
+  },
   center: { alignItems: 'center', justifyContent: 'center' },
 
   overlay: {
@@ -765,7 +995,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 8,
+    paddingTop: 12,
     minHeight: 44,
   },
 
@@ -791,9 +1021,15 @@ const s = StyleSheet.create({
   },
 
   copyArea: {
-    marginTop: 28,
+    marginTop: 20,
     alignItems: 'center',
     paddingHorizontal: 16,
+  },
+
+  // Pushes the copy block below the PiP on the back-camera step.
+  // PiP bottom = PIP_TOP + PIP_SIZE = 184; topBar ≈ 56px → gap = 184 - 56 + 12.
+  copyAreaBelowPip: {
+    marginTop: PIP_TOP + PIP_SIZE - 56 + 12,
   },
 
   backBtn: {
@@ -847,17 +1083,23 @@ const s = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+    marginBottom: 0,
   },
 
-  zoomWheelRoot: {
-    alignItems: 'center',
-    marginBottom: -6,
+  zoomControlRoot: {
+    width: '100%',
+    height: ZOOM_WHEEL_HEIGHT,
+    overflow: 'hidden',
   },
 
-  zoomCaretRow: {
+  zoomOverlay: {
+    position: 'absolute',
+    top: 8,
+    left: 0,
+    right: 0,
     alignItems: 'center',
-    zIndex: 2,
-    marginBottom: -4,
+    gap: 4,
+    zIndex: 3,
   },
 
   zoomCaret: {
@@ -872,9 +1114,8 @@ const s = StyleSheet.create({
   },
 
   zoomValue: {
-    marginTop: 2,
     fontFamily: 'NotoSans_600SemiBold',
-    fontSize: 16,
+    fontSize: 15,
     color: C.zoomAccent,
     letterSpacing: 0.2,
   },
@@ -883,21 +1124,55 @@ const s = StyleSheet.create({
     width: '100%',
     height: ZOOM_WHEEL_HEIGHT,
     overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
   },
 
   zoomDialSpin: {
     alignItems: 'center',
   },
 
+  zoomPillsRow: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 14,
+  },
+
+  zoomPill: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 24,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.35)',
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
+
+  zoomPillActive: {
+    borderColor: C.zoomAccent,
+    backgroundColor: 'rgba(245,197,24,0.12)',
+  },
+
+  zoomPillText: {
+    fontFamily: 'NotoSans_600SemiBold',
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.9)',
+    letterSpacing: 0.3,
+  },
+
+  zoomPillTextActive: {
+    color: C.zoomAccent,
+  },
+
   footer: {
-    backgroundColor: C.footer,
+    backgroundColor: C.footerDim,
     alignItems: 'center',
     justifyContent: 'center',
     paddingTop: 18,
-    paddingBottom: 12,
     minHeight: 118,
+    width: '100%',
   },
 
   shutterOuter: {
@@ -905,17 +1180,17 @@ const s = StyleSheet.create({
     height: 78,
     borderRadius: 39,
     borderWidth: 4,
-    borderColor: C.textOnPrimary,
+    borderColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'transparent',
   },
 
   shutterInner: {
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: C.textOnPrimary,
+    backgroundColor: '#ffffff',
   },
 
   disabled: { opacity: 0.5 },
@@ -939,7 +1214,7 @@ const s = StyleSheet.create({
     right: 0,
     bottom: 0,
     paddingHorizontal: 16,
-    paddingBottom: 16,
+    paddingBottom: 48,
   },
 
   retakeBtn: {

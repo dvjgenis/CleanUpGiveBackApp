@@ -1,21 +1,34 @@
-import type { LiveSessionSetup } from './liveSessionStore';
+/**
+ * Stashes the first dual-checkpoint photos between capture and the session
+ * setup form. GPS / timer start only after the form is submitted.
+ */
 
-let pendingSetup: LiveSessionSetup | null = null;
+export type PendingSessionStartPhotos = {
+  selfieUri: string;
+  progressUri: string;
+  capturedAt: number;
+};
 
-export function setPendingSessionSetup(setup: LiveSessionSetup): void {
-  pendingSetup = setup;
+let pendingStartPhotos: PendingSessionStartPhotos | null = null;
+
+export function setPendingSessionStartPhotos(photos: PendingSessionStartPhotos): void {
+  pendingStartPhotos = photos;
 }
 
-export function getPendingSessionSetup(): LiveSessionSetup | null {
-  return pendingSetup;
+export function getPendingSessionStartPhotos(): PendingSessionStartPhotos | null {
+  return pendingStartPhotos;
 }
 
-export function consumePendingSessionSetup(): LiveSessionSetup | null {
-  const setup = pendingSetup;
-  pendingSetup = null;
-  return setup;
+export function consumePendingSessionStartPhotos(): PendingSessionStartPhotos | null {
+  const photos = pendingStartPhotos;
+  pendingStartPhotos = null;
+  return photos;
 }
 
-export function clearPendingSessionSetup(): void {
-  pendingSetup = null;
+export function clearPendingSessionStartPhotos(): void {
+  pendingStartPhotos = null;
+}
+
+export function hasPendingSessionStartPhotos(): boolean {
+  return pendingStartPhotos != null;
 }

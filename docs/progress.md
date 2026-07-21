@@ -4,7 +4,279 @@ Session-by-session progress tracker. Distinct from `notes/journey.md` (correctio
 
 ---
 
-## [2026-07-20 Session 214] — Live trail smoothness, Expo Go GPS UX, distance replay
+## [2026-07-20 Session 215] — Remove tracker banner; photo → setup form
+
+**Session goal:** Drop the live-tracker route-tracking banner; reverse start order so first dual photo precedes the session setup form (activity / description / etc.).
+
+| Task | File(s) | Status |
+|---|---|---|
+| Remove `LiveSessionBackgroundTrackingBanner` from tracker | `LiveSessionScreen.tsx` (deleted banner component) | ✅ |
+| Photo-first start: stash photos → `/session-setup` → start live | `pendingSessionSetup.ts`, `PhotoCaptureScreen.tsx`, `SessionSetupFormScreen.tsx`, `SessionSetupCompleteScreen.tsx`, `MissedCheckpointScreen.tsx` | ✅ |
+| Specs + living docs | `photo-checkpoint-dual-capture.md`, `session-tracking-expo-go.md`, `app.md`, `components.md`, `current.md`, `maps.md` | ✅ |
+
+
+## [2026-07-20 Session 225] — Integrate upstream `ea167d1` (session UX refinement)
+
+**Session goal:** Pull upstream commit `ea167d1` (checkpoint alerts, background-tracking banner, session delete, resume gate, `pendingSessionSetup`) into local tree without losing the in-flight `PhotoCaptureScreen` zoom-control + photo-submitted work.
+**A:** `git stash` → `git pull` (fast-forward) → `git stash pop` (auto-merge), then hand-resolved 7 conflicted files: `_layout.tsx` (nested `GestureHandlerRootView` outermost, 3 session gates inside `AuthProvider`), `LiveSessionScreen.tsx` (auto-merged cleanly — navbar refactor + checkpoint alerts + background banner all landed), `PhotoCaptureScreen.tsx` (kept `ZoomControl` pills+arc, merged in `mode=session-start/session-end`, PiP selfie, haptics, `handleCancelCapture`), `SubmissionConfirmationScreen.tsx` and `SessionDetailScreen.tsx` (kept shared `SessionPhotosSection`, merged in `useFocusEffect` refresh / delete-session button), `liveSessionStore.ts` (kept local route-seeding bugfix — seeds on `routeCoordinates.length === 0` rather than `!previousCoordinate`, which crashed when a low-accuracy sample set `currentCoordinate` before ever appending to the route), and the four doc files (combined both sides' bullets/rows; renumbered upstream's colliding progress-log heading to avoid a duplicate `Session 214`).
+**P:** All conflicts resolved and staged; `npx tsc --noEmit` verification pending.
+
+---
+
+## [2026-07-20 Session 224] — Fix zoom dial scroll direction
+
+**Session goal:** Stop the photo-capture zoom wheel from scrolling into the empty arc left of 0.5×; scroll only rightward through labeled stops.
+**R:** Tick angles place 0.5→5 top→right, but `dialStyle` used positive (clockwise) rotation — caret moved into blank space behind 0.5×.
+**A:** Negated dial rotation so zoom-in brings right-side ticks under the caret; clamps unchanged (hard floor at 0.5×); docs synced from horizontal-strip claim back to curved arc.
+**P:** On device — drag zoom pill, confirm caret travels 0.5→5 rightward only and never past 0.5× into empty arc.
+
+| Task | File(s) | Status |
+|---|---|---|
+| Negate dial rotation | `PhotoCaptureScreen.tsx` | ✅ |
+| Sync route docs | `docs/frontend/context/app.md` | ✅ |
+
+---
+
+## [2026-07-20 Session 223] — Match photo-submitted Lottie size to missed-checkpoint
+
+**Session goal:** Make the camera Lottie artboard/display as big as the missed-checkpoint Lottie.
+**A:** Refit composition to 500×500 (same as missed); hero `size` 150 (PlayOnceLottie default used on missed).
+**P:** Reload `/photo-submitted` — camera hero should match missed-checkpoint scale.
+
+| Task | File(s) | Status |
+|---|---|---|
+| 500 artboard + size 150 | `photo-submitted.*`, `PhotoSubmittedScreen.tsx`, `PhotoSubmittedHeroVideo.tsx` | ✅ |
+
+---
+
+## [2026-07-20 Session 222] — Nudge photo-submitted camera up again
+
+**A:** Pre-comp 1 Y nudged to 317.08 (down 20 from 297.08); rays unchanged.
+**P:** Reload `/photo-submitted`.
+
+---
+
+## [2026-07-20 Session 221] — Photo-submitted Lottie primary green
+
+**Session goal:** Make the camera body and ray lines brand primary green.
+**A:** Set body fill + ray strokes to `#009540` (`[0, 149/255, 64/255]`); kept lens/sensor white.
+**P:** Reload `/photo-submitted` for green camera + rays.
+
+| Task | File(s) | Status |
+|---|---|---|
+| Recolor Lottie | `photo-submitted.json`, `photo-submitted.lottie` | ✅ |
+
+---
+
+## [2026-07-20 Session 220] — Center camera in photo-submitted ray burst
+
+**Session goal:** Center the camera icon between the flash ray lines.
+**A:** Set Pre-comp 1 position to match Shape Layer 1 (rays) at `[360, 457.08]`.
+**P:** Reload `/photo-submitted` — camera should sit in the middle of the burst.
+
+| Task | File(s) | Status |
+|---|---|---|
+| Align camera to ray center | `photo-submitted.json`, `photo-submitted.lottie` | ✅ |
+
+---
+
+## [2026-07-20 Session 219] — Stop photo-submitted rays clipping at artboard edge
+
+**Session goal:** Flash rays were cut off at the Lottie edge after shifting them down.
+**R:** Ray tips extend ~230px from the layer; at Y 353 that overflowed the 512 artboard.
+**A:** Expanded composition to 720×720 and offset top layers by +104 so rays clear all edges.
+**P:** Reload `/photo-submitted` — full ray burst should be visible.
+
+| Task | File(s) | Status |
+|---|---|---|
+| Expand artboard + offset layers | `photo-submitted.json`, `photo-submitted.lottie` | ✅ |
+
+---
+
+## [2026-07-20 Session 218] — Lower photo-submitted flash rays
+
+**Session goal:** Move the flash ray lines down to align with the raised camera.
+**A:** Shape Layer 1 (rays) Y 257.08 → 305.08 → 353.08 (+96 total) in `photo-submitted.json` / `.lottie`.
+**P:** Reload `/photo-submitted` to check ray/camera alignment.
+
+| Task | File(s) | Status |
+|---|---|---|
+| Shift rays down | `photo-submitted.json`, `photo-submitted.lottie` | ✅ |
+
+---
+
+## [2026-07-20 Session 217] — Nudge photo-submitted camera up in Lottie
+
+**Session goal:** Position the camera icon higher so it sits between the side flash rays.
+**A:** Moved Pre-comp 1 Y from 256 → 208 (−48), then → 168 (−88 total) in `photo-submitted.json` / `.lottie`.
+**P:** Reload `/photo-submitted` to see the raised camera.
+
+| Task | File(s) | Status |
+|---|---|---|
+| Shift camera pre-comp up | `photo-submitted.json`, `photo-submitted.lottie` | ✅ |
+
+---
+
+## [2026-07-20 Session 216] — Loop photo-submitted Camera Pop-Up
+
+**Session goal:** Make the photo-submitted hero animation loop.
+**A:** Passed `loop` to `PlayOnceLottie` from `PhotoSubmittedHeroVideo`.
+**P:** `/photo-submitted` Camera Pop-Up animation repeats while the screen is open.
+
+| Task | File(s) | Status |
+|---|---|---|
+| Enable loop | `PhotoSubmittedHeroVideo.tsx` | ✅ |
+
+---
+
+## [2026-07-20 Session 215] — Photo-submitted uses Camera Pop-Up `.lottie`
+
+**Session goal:** Replace photo-submitted hero with `Camera Pop-Up.lottie`.
+**R:** Metro already lists `lottie` in `assetExts`; embedded JSON matches prior `Camera Pop-Up.json` and still needs repeater baking for RN.
+**A:** Packed repeater-baked animation into `photo-submitted.lottie`; `PhotoSubmittedHeroVideo` requires that asset.
+**P:** Reload Expo to pick up the new `.lottie` hero.
+
+| Task | File(s) | Status |
+|---|---|---|
+| Pack + wire `.lottie` | `photo-submitted.lottie`, `PhotoSubmittedHeroVideo.tsx` | ✅ |
+| Docs | `app.md`, `components.md`, `assets.md`, `progress.md` | ✅ |
+
+---
+
+## [2026-07-20 Session 214] — Swap photo-submitted Lottie to Camera Pop-Up
+
+**Session goal:** Replace photo-submitted hero with `Camera Pop-Up.json`.
+**R:** New asset differs from `TuZanFlZp9` (30fps vs 50fps); still uses Repeater + Trim Paths.
+**A:** Wrote repeater-baked copy to `photo-submitted.json` (+ alias); hero already requires that path.
+**P:** Reload `/photo-submitted` to see Camera Pop-Up animation.
+
+| Task | File(s) | Status |
+|---|---|---|
+| Replace + bake Lottie | `assets/animations/photo-submitted.json` | ✅ |
+| Docs | `components.md`, `assets.md`, `progress.md` | ✅ |
+
+---
+
+## [2026-07-20 Session 213] — DualCapture fallback, overlay screens, one-hour paywall, timer UX, prefetch
+
+**Session goal:** Fix VisionCamera v5 SIGABRT crash → wire SequentialCapture as default; add dark/light map toggle; overlay photo/checkpoint/paywall screens transparently over the live map; add one-hour session trigger; optimize onboarding image load time.
+**Workflow used:** Chat
+
+### Skills Invoked
+
+| Skill | Purpose | Outcome |
+|---|---|---|
+| `/wrap` | End-of-session hygiene | This block |
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Disable DualCapture (SIGABRT on Fabric); SequentialCapture always-on | `PhotoCaptureScreen.tsx` | ✅ |
+| Add map dark/light toggle button (4th MapToolButton) | `LiveSessionScreen.tsx` | ✅ |
+| Remove black start marker (MapLibre bitmap timing crash) | `LiveSessionMapNative.tsx` | ✅ |
+| Shrink timer card + reduce gap to move it up | `LiveSessionScreen.tsx` | ✅ |
+| One-hour elapsed trigger → navigate to `/free-trial-done` | `LiveSessionScreen.tsx` | ✅ |
+| `photo-checkpoint`, `photo-submitted`, `missed-checkpoint`, `free-trial-done` as `transparentModal` | `_layout.tsx` | ✅ |
+| Dim overlay root backgrounds (`rgba(0,0,0,0.55)`) for all four screens | `PhotoCheckpointScreen.tsx`, `PhotoSubmittedScreen.tsx`, `MissedCheckpointScreen.tsx`, `FreeTrialModal.tsx` | ✅ |
+| Replace shop-tour middle graphic with new image | `assets/figma/tour/shop-showcase.png` | ✅ |
+| Eager prefetch all tour/onboarding/shop graphics at module load | `tourAssets.ts`, `onboardingGraphics.ts`, `shopAssets.ts`, `_layout.tsx` | ✅ |
+| Local Xcode build unblocked (EAS blocked by team agreement) | `app.json` ATS plugin | ✅ |
+
+### Key Decisions
+
+- DualCapture preserved as dead code (hybridRef/JSI approach) for future re-enable when VisionCamera/Nitro fixes Fabric HybridObject prop serialization.
+- `transparentModal` keeps parent (live-session map) mounted and rendered — overlay screens must never push again from within or the stack breaks.
+- Prefetch uses `Asset.fromModule(module).uri` (sync, no downloadAsync) + batched `ExpoImage.prefetch(uris, 'memory-disk')` at module-load time.
+
+### Learnings
+
+- VisionCamera v5 HybridObjects cannot survive Fabric's `folly::dynamic` serialization at `UIManager::createNode` — hard SIGABRT. Only fix: avoid mounting NativePreviewView with hybridRef props until Nitro resolves this.
+- `MissedCheckpointScreen` has double-dim: root `rgba(0,0,0,0.55)` + static `scrim` View with same color — appears too dark. Known issue, needs visual fix.
+- Metro port 8081 held by Cursor editor process; kill with `lsof -ti:8081 | xargs kill -9` before starting dev server.
+
+---
+
+## [2026-07-20 Session 212] — Fix photo-submitted Camera Lottie rendering
+
+**Session goal:** Photo-submitted hero Lottie played but looked wrong vs the intended Camera animation.
+**R:** `TuZanFlZp9` uses Repeater (10× / 36°) + Trim Paths; `lottie-react-native` was only drawing a partial ray burst / odd lens fill. Same asset’s GIF export (`photo-submitted-success.gif`) shows the correct full burst.
+**A:** Baked the repeater into 10 explicit ray groups in `photo-submitted.json`; kept Lottie hero (transparent bg on the card); bumped display size to 160.
+**P:** `/photo-submitted` should show the full flash-ray Camera animation.
+
+| Task | File(s) | Status |
+|---|---|---|
+| Bake repeater in Lottie JSON | `assets/animations/photo-submitted.json` | ✅ |
+| Wire hero to baked Lottie | `PhotoSubmittedHeroVideo.tsx` | ✅ |
+| Docs | `components.md`, `assets.md`, `progress.md` | ✅ |
+
+---
+
+## [2026-07-20 Session 211] — Photo-submitted hero uses Lottie
+
+**Session goal:** Replace the photo-submitted success GIF with the Camera Lottie (`TuZanFlZp9.json`).
+**R:** That file already matched `assets/animations/photo-submitted.json`; the screen was still wired to `photo-submitted-success.gif`.
+**A:** `PhotoSubmittedHeroVideo` now plays `photo-submitted.json` once via `PlayOnceLottie`.
+**P:** `/photo-submitted` shows the Lottie hero instead of the GIF.
+
+| Task | File(s) | Status |
+|---|---|---|
+| Wire Lottie hero | `PhotoSubmittedHeroVideo.tsx` | ✅ |
+| Docs | `components.md`, `assets.md`, `app.md`, `progress.md` | ✅ |
+
+---
+
+## [2026-07-20 Session 210] — Free-trial Continue opens full checkout
+
+**Session goal:** Continue on "Your one hour is up!" should open the real checkout page, not a popup-wrapped screen.
+**R:** `/free-trial-done` is a `transparentModal`; `router.push` to checkout kept modal presentation for the next screen.
+**A:** Continue now `router.replace`s `/checkout?mode=tracker&returnTo=live-session` so checkout is a normal stack screen over the live tracker.
+**P:** Continue → full-page tracker checkout; back from checkout returns to live session.
+
+| Task | File(s) | Status |
+|---|---|---|
+| Replace (not push) checkout from paywall | `free-trial-done.tsx` | ✅ |
+| Docs | `app.md`, `components.md`, `progress.md` | ✅ |
+
+---
+
+## [2026-07-20 Session 209] — Session Detail Photos carousel (sessions tab)
+
+**Session goal:** Sessions-tab session detail should show the same clickable Photos section as post-session confirmation.
+**R:** Post-session UI already had a horizontal Photos carousel + enlarge modal; Sessions-tab detail used a smaller “Photo Evidence” card that felt different.
+**A:** Extracted `SessionPhotosSection`; wired it into `SessionDetailScreen` and `SubmissionConfirmationScreen`.
+**P:** Opening a session from Sessions → Session Details shows Photos (empty copy or carousel); tap opens full-screen viewer.
+
+| Task | File(s) | Status |
+|---|---|---|
+| Shared Photos carousel + enlarge | `SessionPhotosSection.tsx` | ✅ |
+| Sessions-tab detail uses shared section | `SessionDetailScreen.tsx` | ✅ |
+| Post-session confirmation uses shared section | `SubmissionConfirmationScreen.tsx` | ✅ |
+| Docs | `app.md`, `components.md`, `current.md`, `progress.md` | ✅ |
+
+---
+
+## [2026-07-20 Session 209] — Horizontal zoom tick strip
+
+**Session goal:** Replace the curved zoom arc with a horizontal tick strip; keep quick-zoom pills inside the dial.
+**R:** Arc SVG was tall/layout-fragile; user asked for ticks in a flat strip with controls in the dial.
+**A:** Rewrote `ZoomControl` — fixed caret + scrolling horizontal ticks; pills always visible below the strip; pan swipe-right = zoom in.
+**P:** Photo-capture zoom is a compact horizontal dial; Metro was aborted earlier — restart if testing on device.
+
+---
+
+## [2026-07-20 Session 208] — Fix photo-capture crash (zoom dial worklets)
+
+**Session goal:** Investigate crash when opening Submit Photo / photo-capture.
+**R:** Metro showed GestureDetector-without-root earlier; ZoomWheel also called non-worklet JS (`zoomToFactor` / `formatZoomFactor`) inside `useAnimatedStyle` / `useAnimatedReaction`, which crashes Reanimated on mount.
+**A:** Rewrote zoom dial to RN `PanResponder`; inlined zoom math in the worklet; wrapped app root in `GestureHandlerRootView`.
+**P:** Photo-capture should open without crashing; zoom still pans horizontally.
+
+---
+
+## [2026-07-20 Session 207] — Tracker chrome follows map dark mode
+
+## [2026-07-20 Session ea167d1] — Live trail smoothness, Expo Go GPS UX, distance replay (upstream sync)
 
 ### End goal
 

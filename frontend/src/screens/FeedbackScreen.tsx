@@ -197,7 +197,7 @@ export function FeedbackScreen({
         router.back();
         return;
       case 'session':
-        router.push('/submission-confirmation');
+        router.back();
         return;
       default: {
         const _exhaustive: never = source;

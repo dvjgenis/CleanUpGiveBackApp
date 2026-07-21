@@ -1,51 +1,43 @@
-import { Image } from 'expo-image';
-import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 
-/** Photo-submitted success checkmark animation (512×512 GIF, downscaled for display). */
-const SUCCESS_GIF = require('../../../assets/animations/photo-submitted-success.gif');
+import { PlayOnceLottie } from '@/components/ui/PlayOnceLottie';
+
+/**
+ * Photo-submitted Camera Pop-Up animation (dotLottie).
+ * Metro already resolves `.lottie` via `assetExts`. The file is a repeater-baked
+ * repack of `Camera Pop-Up.lottie` so native Lottie draws all flash rays.
+ */
+const SUCCESS_LOTTIE = require('../../../assets/animations/photo-submitted.lottie');
 
 type Props = {
   size?: number;
-  /** @deprecated Checkmark hero no longer needs headroom; accepted for compatibility. */
+  /** Headroom above the artboard when effects extend upward. */
   topInset?: number;
   style?: StyleProp<ViewStyle>;
   accessibilityLabel?: string;
 };
 
-/** Photo-submitted hero — animated green checkmark GIF. */
+/** Photo-submitted hero — looping Camera Pop-Up `.lottie`. */
 export function PhotoSubmittedHeroVideo({
-  size = 140,
+  size = 150,
   topInset = 0,
   style,
   accessibilityLabel = 'Photo submitted',
 }: Props) {
-  const frameHeight = size + topInset;
-
   return (
-    <View
-      style={[s.frame, { width: size, height: frameHeight }, style]}
-      accessible
+    <PlayOnceLottie
+      source={SUCCESS_LOTTIE}
+      size={size}
+      topInset={topInset}
+      style={[s.frame, style]}
       accessibilityLabel={accessibilityLabel}
-      accessibilityRole="image"
-    >
-      <Image
-        source={SUCCESS_GIF}
-        style={{ width: size, height: frameHeight }}
-        contentFit="contain"
-        cachePolicy="memory-disk"
-        priority="high"
-        allowDownscaling
-        accessibilityLabel={accessibilityLabel}
-      />
-    </View>
+      loop
+    />
   );
 }
 
 const s = StyleSheet.create({
   frame: {
-    overflow: 'visible',
-    alignItems: 'center',
-    justifyContent: 'center',
     backgroundColor: 'transparent',
   },
 });

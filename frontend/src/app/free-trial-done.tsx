@@ -11,9 +11,11 @@ import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 /**
- * Preview route for the free-trial paywall (Figma `free_trial_done`, `1141:2178`).
- * Reachable via the dev-only toggle on Home. Continue proceeds to the tracker
- * checkout flow; Pay Later dismisses back to the previous screen.
+ * Free-trial paywall overlay (Figma `free_trial_done`, `1141:2178`).
+ * Presented as a transparentModal over the live tracker. Continue must
+ * `replace` (not `push`) so checkout is a normal stack screen — pushing from
+ * a modal keeps the modal presentation and wraps checkout like a popup.
+ * Pay Later dismisses back to the live session.
  */
 export default function FreeTrialDoneRoute() {
   const router = useRouter();
@@ -30,7 +32,9 @@ export default function FreeTrialDoneRoute() {
   return (
     <SafeAreaProvider>
       <FreeTrialModal
-        onContinue={() => router.push('/checkout?mode=tracker' as Href)}
+        onContinue={() =>
+          router.replace('/checkout?mode=tracker&returnTo=live-session' as Href)
+        }
         onPayLater={() => router.back()}
       />
     </SafeAreaProvider>
