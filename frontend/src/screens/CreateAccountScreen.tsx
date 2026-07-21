@@ -7,7 +7,10 @@ import {
   GoogleIcon,
 } from '@/components/onboarding/OnboardingIcons';
 import { OnboardingProgressPills } from '@/components/onboarding/OnboardingProgressPills';
-import { setPreferredName as persistPreferredName } from '@/features/onboarding/onboardingStore';
+import {
+  setEmail as persistEmail,
+  setPreferredName as persistPreferredName,
+} from '@/features/onboarding/onboardingStore';
 import { colors as C } from '@/features/figma-screens/tokens';
 import {
   IBMPlexSans_400Regular,
@@ -74,6 +77,7 @@ export function CreateAccountScreen() {
     setSubmitted(true);
     if (Object.keys(errors).length === 0) {
       persistPreferredName(name);
+      persistEmail(email);
       router.push('/creating-account');
     }
   };

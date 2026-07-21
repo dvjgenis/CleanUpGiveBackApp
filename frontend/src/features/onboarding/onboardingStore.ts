@@ -6,6 +6,7 @@ import type { ServiceType } from '@/constants/serviceTypes';
 /** In-memory onboarding gate + profile fields for the prototype (no persistence yet). */
 let onboardingComplete = false;
 let preferredName = '';
+let email = '';
 let phoneCountryIso2 = DEFAULT_COUNTRY.iso2;
 let phoneDigits = '';
 /** First-of-month ISO date string (yyyy-mm-01), or null if not set. */
@@ -37,6 +38,16 @@ export function setPreferredName(name: string): void {
 
 export function getPreferredName(): string {
   return preferredName;
+}
+
+/** Saves the email address from the create-account step. */
+export function setEmail(value: string): void {
+  email = value.trim().toLowerCase();
+  notify();
+}
+
+export function getEmail(): string {
+  return email;
 }
 
 /** Saves the phone number (country + national digits) from the account-phone step. */
@@ -91,6 +102,7 @@ export function usePreferredName(): string {
 
 export type PersonalDetails = {
   preferredName: string;
+  email: string;
   phoneCountryIso2: string;
   phoneDigits: string;
   birthday: Date | null;
@@ -100,6 +112,7 @@ export type PersonalDetails = {
 function computePersonalDetailsSnapshot(): PersonalDetails {
   return {
     preferredName,
+    email,
     phoneCountryIso2,
     phoneDigits,
     birthday: getBirthday(),

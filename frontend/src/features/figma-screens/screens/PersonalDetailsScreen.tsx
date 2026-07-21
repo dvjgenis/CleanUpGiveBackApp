@@ -37,20 +37,31 @@ import {
 import { SuccessConfirmationModal } from '../components/SuccessConfirmationModal';
 import { colors, fontFamilies, radius, shadows } from '../tokens';
 import {
+  getEmail,
   getPhoneCountryIso2,
   getPhoneDigits,
   getPreferredName,
   usePersonalDetails,
   setBirthday as persistBirthday,
+  setEmail as persistEmail,
   setPhone as persistPhone,
   setPreferredName as persistPreferredName,
   setServiceType as persistServiceType,
 } from '@/features/onboarding/onboardingStore';
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 function validateName(value: string): string | undefined {
   const trimmed = value.trim();
   if (!trimmed) return 'Name is required';
   if (trimmed.length < 2) return 'Name must be at least 2 characters';
+  return undefined;
+}
+
+function validateEmail(value: string): string | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) return 'Email is required';
+  if (!EMAIL_RE.test(trimmed)) return 'Enter a valid email address';
   return undefined;
 }
 
@@ -72,6 +83,7 @@ export function PersonalDetailsScreen() {
   const stored = usePersonalDetails();
 
   const [name, setName] = useState(() => getPreferredName());
+  const [email, setEmail] = useState(() => getEmail());
   const [country, setCountry] = useState<Country>(
     () => COUNTRIES.find((item) => item.iso2 === getPhoneCountryIso2()) ?? DEFAULT_COUNTRY,
   );
@@ -86,11 +98,12 @@ export function PersonalDetailsScreen() {
   const [showBirthdayPicker, setShowBirthdayPicker] = useState(false);
 
   const [serviceType, setServiceType] = useState<ServiceType | null>(stored.serviceType);
-  const [touched, setTouched] = useState<{ name?: boolean; phone?: boolean; birthday?: boolean }>({});
+  const [touched, setTouched] = useState<{ name?: boolean; email?: boolean; phone?: boolean; birthday?: boolean }>({});
   const [submitted, setSubmitted] = useState(false);
   const [saveSuccessVisible, setSaveSuccessVisible] = useState(false);
 
   const nameError = validateName(name);
+  const emailError = validateEmail(email);
   const phoneError = validatePhone(digits, country);
   const birthdayError = validateBirthdayField(birthday, birthdayText);
   const showError = (field: keyof typeof touched, error: string | undefined) =>
@@ -129,6 +142,7 @@ export function PersonalDetailsScreen() {
     const resolvedBirthday = parseBirthdayDraft(birthdayText) ?? birthday;
     if (
       validateName(name) ||
+      validateEmail(email) ||
       validatePhone(digits, country) ||
       validateBirthdayField(resolvedBirthday, birthdayText)
     ) {
@@ -136,6 +150,7 @@ export function PersonalDetailsScreen() {
     }
 
     persistPreferredName(name);
+    persistEmail(email);
     persistPhone(country.iso2, digits);
     persistBirthday(resolvedBirthday);
     persistServiceType(serviceType);
@@ -194,6 +209,31 @@ export function PersonalDetailsScreen() {
                   </View>
                   {showError('name', nameError) ? (
                     <Text style={s.errorText}>{showError('name', nameError)}</Text>
+                  ) : null}
+                </View>
+              </View>
+
+              <View style={s.fieldSection}>
+                <Text style={s.fieldLabel}>Email</Text>
+                <View>
+                  <View style={[s.textField, showError('email', emailError) ? s.fieldError : null]}>
+                    <TextInput
+                      style={s.textInput}
+                      value={email}
+                      onChangeText={setEmail}
+                      onBlur={() => setTouched((t) => ({ ...t, email: true }))}
+                      placeholder="Email address"
+                      placeholderTextColor={colors.textNavInactive}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      keyboardType="email-address"
+                      returnKeyType="next"
+                      textContentType="emailAddress"
+                      accessibilityLabel="Email"
+                    />
+                  </View>
+                  {showError('email', emailError) ? (
+                    <Text style={s.errorText}>{showError('email', emailError)}</Text>
                   ) : null}
                 </View>
               </View>
