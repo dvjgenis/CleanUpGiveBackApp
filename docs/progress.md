@@ -2,6 +2,16 @@
 
 ---
 
+## [2026-07-22] — Instant minimize to Home + down chevron
+
+**Session goal:** Remove blank flash before Home when minimizing the live tracker; point minimize chevron down.
+
+**A:** Skip collapse wipe on dismiss (`dismissTo('/')` immediately). Rotate minimize chevron `-90deg` (down). Docs: `app.md`, `current.md`.
+
+**P:** Minimize lands on Home with no blank interstitial; chevron reads as “minimize down.”
+
+---
+
 ## [2026-07-22] — Session-start camera stability + merged My Location + reliable minimize
 
 **Session goal:** Fix crash after first session-start photos (camera remount drift vs specs); merge live tracker Follow + Recenter into one control; ensure minimize always returns to Home with session still running.

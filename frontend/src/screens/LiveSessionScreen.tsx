@@ -193,7 +193,7 @@ function TrackerBackButton({
       accessibilityRole="button"
       accessibilityLabel="Minimize tracker"
     >
-      <View style={[styles.backBtnIconWrap, { transform: [{ rotate: '90deg' }] }]} pointerEvents="none">
+      <View style={[styles.backBtnIconWrap, { transform: [{ rotate: '-90deg' }] }]} pointerEvents="none">
         <SessionSetupBackChevronIcon color={chrome.textTertiary} width={8.485} height={14.142} />
       </View>
     </AnimatedPressable>
@@ -264,23 +264,20 @@ export function LiveSessionScreen() {
   const mapTheme = useEffectiveMapTheme();
   const chrome = useMemo(() => getTrackerChromeColors(mapTheme), [mapTheme]);
   const s = useMemo(() => createStyles(chrome), [chrome]);
-  const { mapRevealStyle, chromeStyle, collapse } = useLiveSessionMapReveal();
+  const { mapRevealStyle, chromeStyle } = useLiveSessionMapReveal();
   const dismissing = useRef(false);
 
   const handleDismiss = useCallback(() => {
     if (dismissing.current) return;
     dismissing.current = true;
-    // Collapse animation, then pop the whole stack to Home so session-setup
-    // guide/form screens cannot sit under the dashboard. Session stays active
-    // (`isActive`) — Home shows LiveSessionMinimizedPill.
-    collapse(() => {
-      try {
-        router.dismissTo('/');
-      } catch {
-        router.replace('/');
-      }
-    });
-  }, [collapse, router]);
+    // Navigate immediately — a collapse wipe slides the map off and flashes a
+    // blank tint before Home mounts. Session stays active; Home shows the pill.
+    try {
+      router.dismissTo('/');
+    } catch {
+      router.replace('/');
+    }
+  }, [router]);
 
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
