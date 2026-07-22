@@ -50,7 +50,7 @@ Wire the existing native session tracking flow (`frontend/src/app/` routes + `li
 
 - [x] **AC-7:** Expo Go renders `LiveSessionMapWebView` with Carto Voyager / Dark Matter (Standard) + Esri Satellite/Hybrid and primary-color route polyline
 - [x] **AC-8:** Map updates live as `routeCoordinates` and `currentCoordinate` change in `liveSessionStore`
-- [x] **AC-9:** Recenter control triggers `requestLiveSessionMapRecenter()` → map re-centers on current position
+- [x] **AC-9:** Live tracker **My Location** control: when follow is off, tap calls `setLiveSessionMapFollow(true)` + `requestLiveSessionMapRecenter()` (flyTo + keep easing on GPS updates); when follow is on, tap turns follow off
 - [x] **AC-10:** Submission confirmation and session detail use read-only WebView route preview with `fitBounds`
 - [x] **AC-11:** Native MapLibre path unchanged for future EAS builds; web keeps placeholder
 - [x] **AC-22:** Live and preview maps support user pan and pinch zoom; live map recenters only on first GPS fix, when follow mode is enabled, or when recenter is tapped; preview `fitBounds` runs once on initial load
@@ -60,7 +60,7 @@ Wire the existing native session tracking flow (`frontend/src/app/` routes + `li
 - [x] **AC-24:** GPS uses `BestForNavigation` at 1s / ~1 m with Kalman + hardened gates (Kalman-resolved accuracy ≤**25 m**, adaptive min-move, stationary ignores device `speedMps===0` and uses route-gap distance, sharp-reversal rejection, 3s warm-up, gap recovery); mid-session foreground resume preserves Kalman/append state (soft subscription stop only); maps consume precomputed `displayRouteCoordinates` (`simplifyRouteForLiveDisplay` ~1m + raw tail on live tracker, ~4m Douglas–Peucker on previews/replay); live maps also append EMA tip segment for display and re-ensure the WebView GeoJSON **line layer**; live Distance UI shows hundredths under 0.1 mi; stored route unchanged by display simplification
 - [x] **AC-45:** Outdoor Expo Go walk (app open) draws a visible primary-green trail and increments Distance (confirmed 2026-07-21; see [progress.md](../../progress.md) “Fix live GPS trail”)
 - [x] **AC-25:** Live map shows a primary-green heading-beam dot (white halo, flared cone-cylinder beam widening toward the tip with opacity fading to zero at the far arc) on EMA-smoothed `displayCoordinate` — no separate start pin (it sat on top of the tip for short walks and looked like a black duplicate); beam heading is driven by the device compass (`watchHeadingAsync`, adaptive EMA + platform accuracy gating, ~33 ms store publish) so it tracks which way the phone is facing in real time, falling back to GPS course-over-ground while the compass is unavailable; preview maps show start + end markers on simplified route polyline
-- [x] **AC-26:** Live tracker includes optional **Follow** toggle (default off); when on, map eases to smoothed position (~280ms) on each GPS update; Recenter still flies to current position independently
+- [x] **AC-26:** Live tracker **My Location** merges recenter + follow (default off); first tap flies to smoothed position then eases (~280ms) on each GPS update; second tap stops following (user pan/zoom does not auto-clear follow)
 - [x] **AC-27:** Session detail / submission confirmation route maps support **Play / Pause / Replay** via `SessionRouteMapPanel` (single RAF owner, route-length-scaled duration ~3–10s); replay progress follows **path distance** on **`simplifyRouteForLiveDisplay`** (matches live tracker 1 m + raw tail); auto-replay once on load where enabled; **skips auto-play** when `useReducedMotion`; basemap opens on session-end layer (`CompletedSessionSnapshot.mapLayer`)
 
 ### Camera (client — already wired, verify in Expo Go)
@@ -160,7 +160,7 @@ Wire the existing native session tracking flow (`frontend/src/app/` routes + `li
 2. Open in **Expo Go** on a physical iPhone or Android device
 3. Complete onboarding (or Log In shortcut) → Home
 4. **Start Tracking** → session setup form → **Start Session** → photo capture (`session-start`) → live tracker
-5. Walk outdoors ≥ 2 minutes; confirm WebView map shows route polyline and distance increments; toggle **Follow** to pan with you; drag to pan and pinch to zoom without map snapping back until follow is on or recenter is tapped
+5. Walk outdoors ≥ 2 minutes; confirm WebView map shows route polyline and distance increments; tap **My Location** to fly to your position and follow; tap again to stop following; drag to pan and pinch to zoom without map snapping back until follow is on
 6. Submit a photo checkpoint; confirm `expo-camera` sequential capture (mirror + PiP) works
 7. Force-quit mid-session → reopen → **Resume** restores tracker (or **Discard** clears draft)
 8. **End Session** → submission confirmation shows photos + route preview; route preview auto-replays once (length-scaled; skipped when reduced motion) before settling into the static view

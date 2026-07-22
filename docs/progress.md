@@ -2,6 +2,20 @@
 
 ---
 
+## [2026-07-22] — Session-start camera stability + merged My Location + reliable minimize
+
+**Session goal:** Fix crash after first session-start photos (camera remount drift vs specs); merge live tracker Follow + Recenter into one control; ensure minimize always returns to Home with session still running.
+
+**A (Action):**
+- `PhotoCaptureScreen` `SequentialCapture`: removed `key={step}` on `CameraView`; stop resetting `cameraReady` on front→back step change (AC-12 / AC-36)
+- `LiveSessionScreen`: single **My Location** button — flyTo + enable follow when off; disable follow when on
+- Tracker minimize: collapse animation then `dismissTo('/')` (fallback `replace('/')`) so session-setup screens are cleared; Android hardware back minimizes the same way; collapse always invokes navigation even if the timing callback is interrupted
+- Updated `session-tracking-expo-go.md` AC-9 / AC-26, `current.md`, `app.md`, `project.md`, `maps.md`
+
+**P:** Session-start dual capture and live tracker map tools match shipped specs; minimize always lands on Home with the minimized pill while the session keeps running.
+
+---
+
 ## [2026-07-21] — Admin Portal Phase 1 Scaffold
 
 **R (Reasoning):** PRD v2.0 defines a standalone Next.js 15 admin portal at `admin/` with Supabase Auth, sessions management, and letterhead generation. Phase 1 covers auth + dashboard + sessions core + audit log.

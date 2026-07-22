@@ -653,9 +653,8 @@ function SequentialCapture({
   const [zoom, setZoom] = useState(() => factorToZoom(1));
   const cameraRef = useRef<CameraView>(null);
 
-  // `onCameraReady` fires once per mount; flipping `facing` does not re-fire it on iOS.
+  // `onCameraReady` fires once per mount; flipping `facing` does not re-fire it on iOS (AC-36).
   useEffect(() => {
-    setCameraReady(false);
     setCaptureError(null);
     setZoom(factorToZoom(1));
     // Flash is back-camera only; reset so a retake doesn't keep a surprise flash.
@@ -725,7 +724,6 @@ function SequentialCapture({
   return (
     <View style={[s.root, s.rootCapture]}>
       <CameraView
-        key={step}
         ref={cameraRef as unknown as React.Ref<CameraView>}
         style={StyleSheet.absoluteFillObject}
         facing={step}

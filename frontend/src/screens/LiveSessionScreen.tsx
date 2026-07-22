@@ -11,6 +11,7 @@ import { useRouter, type Href } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  BackHandler,
   StyleSheet,
   Text,
   View,
@@ -33,7 +34,6 @@ import { LocationPinIcon } from '@/features/session-tracking/components/icons/Lo
 import { TrackerEndSessionIcon } from '@/features/session-tracking/components/icons/TrackerEndSessionIcon';
 import { TrackerLayersIcon } from '@/features/session-tracking/components/icons/TrackerLayersIcon';
 import { TrackerMapDarkIcon, TrackerMapLightIcon } from '@/features/session-tracking/components/icons/TrackerMapThemeIcons';
-import { RouteIcon } from '@/features/session-tracking/components/icons/RouteIcon';
 import { TrackerMyLocationIcon } from '@/features/session-tracking/components/icons/TrackerMyLocationIcon';
 import { TrackerWeatherIcon } from '@/features/session-tracking/components/icons/TrackerWeatherIcon';
 import {
@@ -49,8 +49,8 @@ import {
   isCheckpointInGracePeriod,
   isCheckpointMissed,
   requestLiveSessionMapRecenter,
+  setLiveSessionMapFollow,
   setLiveSessionMapLayer,
-  toggleLiveSessionMapFollow,
   useLiveSession,
 } from '@/features/session-tracking/liveSessionStore';
 import { alertPhotoCheckpointDue } from '@/utils/photoCheckpointAlert';
@@ -191,7 +191,7 @@ function TrackerBackButton({
       scaleTo={0.98}
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel="Go back"
+      accessibilityLabel="Minimize tracker"
     >
       <View style={[styles.backBtnIconWrap, { transform: [{ rotate: '90deg' }] }]} pointerEvents="none">
         <SessionSetupBackChevronIcon color={chrome.textTertiary} width={8.485} height={14.142} />
@@ -270,8 +270,34 @@ export function LiveSessionScreen() {
   const handleDismiss = useCallback(() => {
     if (dismissing.current) return;
     dismissing.current = true;
-    collapse(() => router.replace('/'));
+    // Collapse animation, then pop the whole stack to Home so session-setup
+    // guide/form screens cannot sit under the dashboard. Session stays active
+    // (`isActive`) — Home shows LiveSessionMinimizedPill.
+    collapse(() => {
+      try {
+        router.dismissTo('/');
+      } catch {
+        router.replace('/');
+      }
+    });
   }, [collapse, router]);
+
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      handleDismiss();
+      return true;
+    });
+    return () => sub.remove();
+  }, [handleDismiss]);
+
+  const handleMyLocationPress = useCallback(() => {
+    if (mapFollowEnabled) {
+      setLiveSessionMapFollow(false);
+    } else {
+      setLiveSessionMapFollow(true);
+      requestLiveSessionMapRecenter();
+    }
+  }, [mapFollowEnabled]);
   const submittedCheckpointCount = submittedCheckpoints.length;
   const showSubmissionCount = shouldShowCheckpointSubmissionCount(submittedCheckpoints);
   const submittedCheckpointLabel = formatSubmittedCheckpointCount(submittedCheckpointCount);
@@ -461,20 +487,18 @@ export function LiveSessionScreen() {
                     </MapToolButton>
                   </View>
                   <MapToolButton
-                    accessibilityLabel={mapFollowEnabled ? 'Stop following location' : 'Follow my location'}
-                    onPress={toggleLiveSessionMapFollow}
+                    accessibilityLabel={
+                      mapFollowEnabled
+                        ? 'Stop following my location'
+                        : 'Center on my location and follow'
+                    }
+                    onPress={handleMyLocationPress}
                     chrome={chrome}
                     styles={s}
                   >
-                    <RouteIcon color={mapFollowEnabled ? chrome.primary : chrome.textTertiary} />
-                  </MapToolButton>
-                  <MapToolButton
-                    accessibilityLabel="Center on my location"
-                    onPress={requestLiveSessionMapRecenter}
-                    chrome={chrome}
-                    styles={s}
-                  >
-                    <TrackerMyLocationIcon color={chrome.textTertiary} />
+                    <TrackerMyLocationIcon
+                      color={mapFollowEnabled ? chrome.primary : chrome.textTertiary}
+                    />
                   </MapToolButton>
                   <MapToolButton
                     accessibilityLabel={mapTheme === 'dark' ? 'Switch to light map' : 'Switch to dark map'}

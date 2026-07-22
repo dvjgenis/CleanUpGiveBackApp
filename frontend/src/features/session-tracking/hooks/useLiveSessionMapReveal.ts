@@ -43,6 +43,16 @@ export function useLiveSessionMapReveal() {
         onDone();
         return;
       }
+
+      let settled = false;
+      const finish = () => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        onDone();
+      };
+
       chromeOpacity.value = withTiming(0, {
         duration: durations.modalExit,
         easing: easing.easeOut,
@@ -50,10 +60,9 @@ export function useLiveSessionMapReveal() {
       reveal.value = withTiming(
         0,
         { duration: durations.sheetDismiss, easing: easing.drawer },
-        (finished) => {
-          if (finished) {
-            runOnJS(onDone)();
-          }
+        () => {
+          // Always navigate — interrupted animations still must minimize to Home.
+          runOnJS(finish)();
         },
       );
     },
