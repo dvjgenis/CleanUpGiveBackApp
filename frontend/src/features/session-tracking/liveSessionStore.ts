@@ -686,6 +686,26 @@ async function ensureBackgroundLocationRunning() {
   }
 }
 
+/** Creates a Fly session from setup. Safe after local teardown (finalize path). */
+async function createRemoteSessionFromSetup(setup: LiveSessionSetup): Promise<string | null> {
+  if (!isApiConfigured) {
+    return null;
+  }
+
+  try {
+    const created = await createSession({
+      activity: setup.activity,
+      courtOrdered: setup.courtOrdered,
+      description: setup.description,
+      date: setup.date.toISOString().slice(0, 10),
+    });
+    return created?.id ?? null;
+  } catch (error) {
+    console.warn('[sessions] create session failed:', error);
+    return null;
+  }
+}
+
 async function ensureRemoteSession(): Promise<string | null> {
   if (!state.isActive || !state.setup) {
     return null;
@@ -695,23 +715,10 @@ async function ensureRemoteSession(): Promise<string | null> {
     return state.remoteSessionId;
   }
 
-  if (!isApiConfigured) {
-    return null;
-  }
-
-  try {
-    const created = await createSession({
-      activity: state.setup.activity,
-      courtOrdered: state.setup.courtOrdered,
-      description: state.setup.description,
-      date: state.setup.date.toISOString().slice(0, 10),
-    });
-    if (created?.id) {
-      setState({ remoteSessionId: created.id });
-      return created.id;
-    }
-  } catch (error) {
-    console.warn('[sessions] create session failed:', error);
+  const createdId = await createRemoteSessionFromSetup(state.setup);
+  if (createdId) {
+    setState({ remoteSessionId: createdId });
+    return createdId;
   }
 
   return null;
@@ -756,6 +763,7 @@ async function persistCheckpointToRemote(
 
   try {
     await postCheckpointToRemote(sessionId, checkpoint);
+    setSessionSyncWarning(null);
     return true;
   } catch (error) {
     if (!retried && isActiveSessionNotFoundError(error)) {
@@ -772,11 +780,28 @@ async function persistCheckpointToRemote(
   }
 }
 
+function rememberCompletedRemoteSessionId(sessionId: string) {
+  if (completedSessionSnapshot) {
+    completedSessionSnapshot = {
+      ...completedSessionSnapshot,
+      remoteSessionId: sessionId,
+    };
+  }
+}
+
 async function persistFinalizeToRemote(
   snapshot: CompletedSessionSnapshot,
   status: 'under_review' | 'invalid' = 'under_review',
+  retried = false,
 ): Promise<boolean> {
-  const sessionId = snapshot.remoteSessionId;
+  let sessionId = snapshot.remoteSessionId;
+  if (!sessionId) {
+    sessionId = await createRemoteSessionFromSetup(snapshot.setup);
+    if (sessionId) {
+      rememberCompletedRemoteSessionId(sessionId);
+    }
+  }
+
   if (!sessionId) {
     return false;
   }
@@ -791,6 +816,19 @@ async function persistFinalizeToRemote(
     });
     return true;
   } catch (error) {
+    if (!retried && isActiveSessionNotFoundError(error)) {
+      // Local session may already be torn down — create from snapshot setup, not live state.
+      const recreatedId = await createRemoteSessionFromSetup(snapshot.setup);
+      if (recreatedId) {
+        rememberCompletedRemoteSessionId(recreatedId);
+        return persistFinalizeToRemote(
+          { ...snapshot, remoteSessionId: recreatedId },
+          status,
+          true,
+        );
+      }
+    }
+
     console.warn('[sessions] finalize persist failed:', error);
     setSessionSyncWarning('Could not sync session to the server. Your route is saved on device.');
     return false;

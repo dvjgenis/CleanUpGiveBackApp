@@ -52,16 +52,16 @@ const FEEDBACK_MAX_LENGTH = 1000;
 /**
  * PRD: Figma feedback_screen (1126:1516) "Feedback Icons Row" shows 5 icon slots, but
  * two are an identical duplicate "Neutral" glyph — a Figma authoring artifact, not an
- * intentional design. Extended into a coherent 5-point scale (Excited → Very Sad) using
- * the existing asset SVGs plus a hand-authored `very-sad.svg` (same style/viewBox) for
- * the 5th slot, which has no Figma source.
+ * intentional design. Extended into a coherent 5-point scale using the existing asset
+ * SVGs plus a hand-authored `very-sad.svg` (same style/viewBox) for the 5th slot, which
+ * has no Figma source. Left-to-right order is Very Sad → Excited (negative → positive).
  */
 const EMOJIS = [
-  { key: 'excited', source: require('../../assets/figma/feedback-screen/excited.svg'), label: 'Excited' },
-  { key: 'happy', source: require('../../assets/figma/feedback-screen/happy.svg'), label: 'Happy' },
-  { key: 'neutral', source: require('../../assets/figma/feedback-screen/neutral.svg'), label: 'Neutral' },
-  { key: 'sad', source: require('../../assets/figma/feedback-screen/sad.svg'), label: 'Sad' },
   { key: 'verySad', source: require('../../assets/figma/feedback-screen/very-sad.svg'), label: 'Very sad' },
+  { key: 'sad', source: require('../../assets/figma/feedback-screen/sad.svg'), label: 'Sad' },
+  { key: 'neutral', source: require('../../assets/figma/feedback-screen/neutral.svg'), label: 'Neutral' },
+  { key: 'happy', source: require('../../assets/figma/feedback-screen/happy.svg'), label: 'Happy' },
+  { key: 'excited', source: require('../../assets/figma/feedback-screen/excited.svg'), label: 'Excited' },
 ] as const;
 
 const BUBBLE_TIMING = { duration: 180, easing: Easing.out(Easing.ease) };

@@ -249,8 +249,16 @@ function MapToolButton({
 /** PRD §6.11 · Figma `session_setup_guide` live tracker (`251:439`). */
 export function LiveSessionScreen() {
   const router = useRouter();
-  const { elapsedSeconds, checkpointSecondsRemaining, distanceMiles, submittedCheckpoints, mapLayer, mapFollowEnabled, checkpointWindowStartedAt } =
-    useLiveSession();
+  const {
+    elapsedSeconds,
+    checkpointSecondsRemaining,
+    distanceMiles,
+    submittedCheckpoints,
+    mapLayer,
+    mapFollowEnabled,
+    checkpointWindowStartedAt,
+    sessionSyncWarning,
+  } = useLiveSession();
   const [mapLayerPickerVisible, setMapLayerPickerVisible] = useState(false);
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
   const mapTheme = useEffectiveMapTheme();
@@ -351,6 +359,23 @@ export function LiveSessionScreen() {
 
       <SafeAreaView style={s.overlay} edges={['top', 'bottom']} pointerEvents="box-none">
         <Animated.View style={[s.main, chromeStyle]} pointerEvents="box-none">
+          {sessionSyncWarning ? (
+            <View
+              style={[
+                s.syncWarningBanner,
+                {
+                  backgroundColor: chrome.surface,
+                  borderColor: chrome.borderStrong,
+                },
+              ]}
+              accessibilityRole="alert"
+              accessibilityLiveRegion="polite"
+            >
+              <Text style={[s.syncWarningText, { color: chrome.textPrimary }]}>
+                {sessionSyncWarning}
+              </Text>
+            </View>
+          ) : null}
           <View style={s.navbar}>
             <View style={s.navbarLeftGroup}>
               <TrackerBackButton
@@ -612,6 +637,17 @@ function createStyles(_chrome: TrackerChromeColors) {
       flex: 1,
       paddingHorizontal: 16,
       gap: 10,
+    },
+    syncWarningBanner: {
+      borderWidth: 1,
+      borderRadius: radius.md,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+    },
+    syncWarningText: {
+      fontFamily: 'NotoSans_500Medium',
+      fontSize: 12,
+      lineHeight: 16,
     },
     navbar: {
       flexDirection: 'row',

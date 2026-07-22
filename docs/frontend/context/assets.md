@@ -18,7 +18,7 @@ Static media and bundled prototype HTML.
 | `frontend/assets/figma/sessions-calendar/` | Sessions calendar glyphs (designed) |
 | `frontend/assets/figma/session-detail/` | Session detail SVGs (back, share, hours, miles, photos) |
 | `frontend/assets/figma/account/` | Account tab + settings SVG icons; profile hero leaves from Figma `569:917`/`569:918` as `leaf-large.svg` / `leaf-small.svg` (rotated −75° / −50° in `AccountScreen`); Give Feedback row uses `give-feedback.svg` |
-| `frontend/assets/figma/feedback-screen/` | `FeedbackScreen` assets (Figma `1126:1516`) — rating glyphs `excited`/`happy`/`neutral`/`sad`/`very-sad.svg` (`fill="#BDCABA"`; `very-sad` hand-authored); header `chat.svg` + typing dots `big-bubble`/`medium-bubble`/`small-bubble.svg`; unused PNG exports (`chat-bubble.png`, `sparkle-*.png`) also live here |
+| `frontend/assets/figma/feedback-screen/` | `FeedbackScreen` assets (Figma `1126:1516`) — rating glyphs `very-sad`/`sad`/`neutral`/`happy`/`excited.svg` shown L→R negative→positive (`fill="#BDCABA"`; `very-sad` hand-authored); header `chat.svg` + typing dots `big-bubble`/`medium-bubble`/`small-bubble.svg`; unused PNG exports (`chat-bubble.png`, `sparkle-*.png`) also live here |
 | `frontend/assets/figma/shared/` | Cross-screen brand mark / leftover vectors |
 | `frontend/assets/figma/{photo-checkpoint,photo-submitted,missed-checkpoint,submission-confirmation,permissions}/` | Pointers to raster/animation companions |
 | `frontend/assets/images/` | App icons, logos, product/scene images (`scenes/volunteers.png` + `screens/session-detail/photo-*.png` reused as Upcoming Events card thumbs) |

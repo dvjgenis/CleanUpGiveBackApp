@@ -174,16 +174,6 @@ function buildChildEnv() {
   return childEnv;
 }
 
-function looksLikeTunnelFailure(text) {
-  const lower = text.toLowerCase();
-  return (
-    lower.includes('ngrok tunnel took too long') ||
-    lower.includes('tunnel connection has been closed') ||
-    lower.includes('failed to start tunnel') ||
-    lower.includes('tunneling agent failed')
-  );
-}
-
 const passthrough = process.argv.slice(2).filter((arg) => arg !== '--lan' && arg !== '--tunnel');
 const hostMode = resolveHostMode(process.argv.slice(2));
 
@@ -195,25 +185,14 @@ printStartupBanner(hostMode);
 
 const expoArgs = ['expo', 'start', '--go', `--${hostMode}`, ...passthrough];
 
+// Inherit stdout/stderr so Expo sees a TTY and prints the QR + interactive UI.
+// Piping those streams made Metro look non-interactive ("Waiting on http://…" with no QR).
+// Keep stdin piped so we can auto-select "Proceed anonymously" on the login prompt.
 const child = spawn('npx', expoArgs, {
   cwd: frontendRoot,
-  stdio: ['pipe', 'pipe', 'pipe'],
+  stdio: ['pipe', 'inherit', 'inherit'],
   shell: true,
   env: buildChildEnv(),
-});
-
-let sawTunnelFailure = false;
-
-child.stdout?.on('data', (chunk) => {
-  process.stdout.write(chunk);
-});
-
-child.stderr?.on('data', (chunk) => {
-  const text = String(chunk);
-  process.stderr.write(chunk);
-  if (hostMode === 'tunnel' && looksLikeTunnelFailure(text)) {
-    sawTunnelFailure = true;
-  }
 });
 
 /** Select "Proceed anonymously" when Expo shows the login prompt (second menu item). */
@@ -229,7 +208,7 @@ child.on('spawn', () => {
 });
 
 child.on('exit', (code, signal) => {
-  if (sawTunnelFailure || (hostMode === 'tunnel' && code !== 0 && code != null)) {
+  if (hostMode === 'tunnel' && code !== 0 && code != null) {
     printTunnelFailureHints();
   }
   if (signal) {

@@ -4,6 +4,48 @@ Session-by-session progress tracker. Distinct from `notes/journey.md` (correctio
 
 ---
 
+## [2026-07-21] — Fix Expo QR missing (piped stdio)
+
+**Goal:** Restore QR code after `npm start` stalled on “Waiting on http://localhost:8081” with no QR.
+
+**Cause:** `start-expo-go.mjs` piped Metro stdout/stderr, so Expo treated the session as non-interactive and skipped the QR.
+
+**Change:** Inherit stdout/stderr; keep stdin piped for anonymous login. Docs: `expo-go-dev-networking.md`.
+
+---
+
+## [2026-07-21] — App audit: sync resilience + feedback stack + docs
+
+
+**Goal:** Verify the runnable app (typecheck, tests, env, Fly/Supabase, Metro bundle) and fix correctness gaps found in the audit.
+
+**Verified**
+- `frontend/node_modules/.bin/tsc --noEmit` clean; Jest **85/85** pass; ESLint **0 errors** (warnings only)
+- `frontend/.env` shape OK (project-root Supabase URL, JWT anon key, Fly API URL)
+- Fly `GET /health` → 200; `GET /sessions` → 401 without auth (expected); Supabase GoTrue health → 200
+- Metro tunnel start + iOS entry bundle **200** (~8.7MB, 1423 modules)
+
+**Fixes**
+- Finalize now recreates remote session once on `404 Active session not found` via `createRemoteSessionFromSetup` (works after local teardown)
+- Live tracker surfaces `sessionSyncWarning` as a top banner; successful checkpoint sync clears it
+- Feedback thank-you Continue uses `dismissTo` so Back does not reopen the feedback form
+- Docs: `current.md`, `app.md`, `components.md` — end-session + feedback flow, sync banner, finalize recreate
+
+**Known (documented, not fixed this pass)**
+- Feedback Submit is UI-only (no API persistence yet)
+- Anon auth failure is memoized until app reload
+- Delete-account auth wipe still incomplete
+
+---
+
+## [2026-07-21] — Reverse feedback rating emoji order
+
+**Goal:** Show feedback rating faces negative → positive (Very Sad → Excited) instead of Excited → Very Sad.
+
+**Change:** Reversed `EMOJIS` in `FeedbackScreen.tsx`; docs in `components.md` / `assets.md`.
+
+---
+
 ## [2026-07-21] — Expo Go networking: Wi‑Fi / hotspot / cellular
 
 **Goal:** Reliable physical-device Metro for same Wi‑Fi, iPhone Personal Hotspot, and phone-on-cellular.

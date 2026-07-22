@@ -45,10 +45,15 @@ flowchart TD
 - **`start:hotspot`** forces LAN (not tunnel) — tunnel often times out on hotspot while LAN works.
 - **Metro:** [`metro.config.js`](../../../frontend/metro.config.js) sets `server.host = '0.0.0.0'` so LAN mode is reachable from other devices on the network.
 - **CI mode:** The start script **unsets `CI`** in the child process (unless `EXPO_GO_CI=1`) so Metro is not stuck in “CI mode” with reloads disabled.
+- **TTY / QR:** Metro’s **stdout and stderr are inherited** so Expo detects an interactive terminal and prints the QR. Only stdin is piped (to auto-select “Proceed anonymously”). Piping stdout/stderr makes Expo skip the QR and stall on “Waiting on http://localhost:8081”.
 - **Tunnel preflight:** Verifies `@expo/ngrok-bin-*` exists before starting tunnel.
-- **Tunnel failure hints:** On ngrok timeout / tunnel closed, the script prints `start:lan` / `start:hotspot` / `start:device` recovery lines.
+- **Tunnel failure hints:** On non-zero exit in tunnel mode, the script prints `start:lan` / `start:hotspot` / `start:device` recovery lines.
 
 ## Troubleshooting
+
+### No QR code — only “Waiting on http://localhost:8081”
+
+The start script must **inherit** Metro’s stdout/stderr (TTY). If those were piped, Expo skips the QR. Update is in `start-expo-go.mjs`; stop Metro (**Ctrl+C**) and run `npm start` again in a normal terminal (not a non-TTY log pane). Same Wi‑Fi? Prefer `npm run start:lan`.
 
 ### “The request timed out” (`exp://10.0.0.x:8081` or LAN IP)
 

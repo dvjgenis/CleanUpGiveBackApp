@@ -76,10 +76,13 @@ export function FeedbackThankYouScreen() {
 
   function handleContinue() {
     if (returnTo === 'account') {
-      router.replace('/account');
+      // Pop feedback + thank-you so Account is not buried under stale stack entries.
+      router.dismissTo('/account');
       return;
     }
-    router.replace('/submission-confirmation');
+    // Session path: confirmation → feedback → thank-you. Dismiss back to the
+    // original confirmation so Back does not reopen the feedback form.
+    router.dismissTo('/submission-confirmation');
   }
 
   return (

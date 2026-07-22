@@ -56,8 +56,8 @@ Shared UI components in `frontend/src/components/`.
 | Motion hooks | `motion/hooks.ts` | `useFadeUpEnter`, `useModalCardEnter`, `useAttentionShake`, `useCoachmarkEnter` — Emil Kowalski screen-enter patterns with `useReducedMotion()` skip |
 | Motion tokens | `motion/index.ts` | Shared easing, durations, springs, `enterFrom`, `staggerDelay` per `design.md` §10 |
 | TrackerActionButton | `features/session-tracking/components/TrackerActionButton.tsx` | Live-session primary/secondary CTAs — uses `AnimatedPressable` spring press; colors from required `chrome` (`getTrackerChromeColors`) so dark map mode restyles End Session |
-| FeedbackThankYouScreen | `screens/FeedbackThankYouScreen.tsx` | Hand-designed (no Figma source) — sits between `FeedbackScreen`'s Submit and the next step; reuses the `FeedbackScreen` centered-card shell + a `CheckCircleIcon` spring pop-in; **Continue** → `/submission-confirmation` (session) or `/account` when `?returnTo=account`. Reached only via Submit; Skip bypasses it. |
-| FeedbackScreen | `screens/FeedbackScreen.tsx` | Session-end + account feedback form (Figma `1126:1516`); optional `title` / `subtitle` / `source` — `/session-feedback` keeps default **"Rate your experience!"**; `/give-feedback` passes account copy |
+| FeedbackThankYouScreen | `screens/FeedbackThankYouScreen.tsx` | Hand-designed (no Figma source) — sits between `FeedbackScreen`'s Submit and the next step; reuses the `FeedbackScreen` centered-card shell + a `CheckCircleIcon` spring pop-in; **Continue** → `dismissTo('/submission-confirmation')` (session) or `dismissTo('/account')` when `?returnTo=account`. Reached only via Submit; Skip bypasses it. |
+| FeedbackScreen | `screens/FeedbackScreen.tsx` | Session-end + account feedback form (Figma `1126:1516`); optional `title` / `subtitle` / `source` — `/session-feedback` keeps default **"Rate your experience!"**; `/give-feedback` passes account copy; rating row left→right is **Very Sad → Excited**; Submit navigates only (rating/text not persisted yet) |
 
 ### Figma-screens feature (`frontend/src/features/figma-screens/`)
 
@@ -132,7 +132,7 @@ Shared UI components in `frontend/src/components/`.
 
 | Component | Path | Role |
 |-----------|------|------|
-| liveSessionStore | `features/session-tracking/liveSessionStore.ts` | Active session: Kalman GPS, compass heading, route samples, sync warnings, background task lifecycle, finalize; `AppState` → `resumeLiveSessionTrackingAfterForeground` on return to active |
+| liveSessionStore | `features/session-tracking/liveSessionStore.ts` | Active session: Kalman GPS, compass heading, route samples, sync warnings (banner on live tracker), background task lifecycle, finalize; checkpoint **and** finalize recreate once on Fly `404 Active session not found`; `AppState` → `resumeLiveSessionTrackingAfterForeground` on return to active |
 | backgroundLocationTask | `features/session-tracking/backgroundLocationTask.ts` | TaskManager task → `ingestBackgroundLocationSample` (active session only) |
 | sessionStatsStore | `features/session-tracking/sessionStatsStore.ts` | Home Service Hours / impact; local snapshots + AsyncStorage persistence + `GET /sessions` hydration |
 | LiveSessionMinimizedPill | `features/session-tracking/components/LiveSessionMinimizedPill.tsx` | Green minimized tracker pill (Figma `622:176`); checkpoint progress fill animates via `useAnimatedProgressFill` |
