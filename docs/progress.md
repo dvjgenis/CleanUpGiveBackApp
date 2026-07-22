@@ -1,5 +1,44 @@
 # PROGRESS.md — Clean-Up Give Back Prototype
 
+---
+
+## [2026-07-21] — Admin Portal Phase 1 Scaffold
+
+**R (Reasoning):** PRD v2.0 defines a standalone Next.js 15 admin portal at `admin/` with Supabase Auth, sessions management, and letterhead generation. Phase 1 covers auth + dashboard + sessions core + audit log.
+
+**A (Action):**
+- Scaffolded `admin/` Next.js 15 app at monorepo root (zero touches to `frontend/`, `backend/sessions/`, or any existing file)
+- Configured Tailwind with all brand tokens from `docs/admin/brand-web.md`
+- Loaded Sanchez, Noto Sans, IBM Plex Sans via `next/font/google`
+- Set up Supabase SSR client (browser + server + service role) with admin role claim check
+- Built middleware: auth guard redirects unauthenticated → `/login`; admin role check blocks non-admin users
+- Login page (`/login`): email/password via Supabase Auth + admin role check
+- Root layout with persistent sidebar (desktop 240px) + hamburger drawer + mobile bottom tab bar
+- Dashboard: 6 KPI cards (under review, approved, declined, open orders, total hours, avg feedback), "Needs attention" banner, recent activity feed — all with Framer Motion stagger animation
+- Sessions list (`/sessions`): status chips filter, court-ordered toggle, sort, 25/page pagination, inline approve/decline popover with Framer Motion animation
+- Session detail (`/sessions/[id]`): two-column layout, signed Supabase Storage URLs (1h expiry), photo grid with lightbox, full admin action panel (approve/decline/invalid/adjust hours/notes/letterhead links)
+- Server actions: `approveSession`, `declineSession`, `markInvalid`, `adjustHours`, `saveAdminNotes` — all write to `admin_audit_log`
+- Audit log (`/audit-log`): read-only table with before/after JSON collapsible
+- DB migration SQL at `admin/db/001_admin_portal_migration.sql` — additive only (no drops/renames)
+- Placeholder pages for Phases 3–6 routes (volunteers, court-hours, feedback, events, orders, payments)
+- `admin/.env.local.example` template
+
+**L (Learning):**
+- `@supabase/supabase-js` v2 Database generic requires an exact schema shape; easier to omit the generic and use inline type casts
+- Framer Motion `layoutId="nav-indicator"` sidebar pill requires `'use client'` on the Sidebar component
+- `CookieOptions` must be imported from `@supabase/ssr` explicitly to satisfy TypeScript strict mode
+
+**P (Progression):**
+- Phase 1 ✅ (auth, dashboard, sessions, audit log scaffold)
+- Phase 2 pending: individual + bulk letterhead PDF via `@react-pdf/renderer` server actions
+- Phase 3 pending: volunteer directory, court-hours tracker, court-order CRUD
+- Phases 4–7 pending: feedback, events, orders, notifications, CSV export, security hardening
+
+**H (History):**
+- Zero files modified in `frontend/`, `backend/sessions/`, `docs/frontend/`, or any existing path
+- DB migration is additive only — existing `sessions` and `checkpoints` tables unchanged except 3 new nullable columns
+- No Vercel deployment; portal runs at `localhost:3001` via `cd admin && npm run dev`
+
 Session-by-session progress tracker. Distinct from `notes/journey.md` (correction log) and `IMPLEMENTATION_PLAN.md` (task list).
 
 ---
@@ -5357,3 +5396,87 @@ useEffect(() => {
 
 - `replace_all: true` on `{ top: insets.top + PIP_TOP, right: PIP_RIGHT }` is safe here because both PiP instances use identical inline style objects.
 - FeedbackScreen's `handleSkip` for `source === 'session'` was incorrectly pushing a new confirmation screen (creating a stack loop); correct fix is `router.back()`.
+
+---
+
+## [2026-07-21 Session 258] — Admin portal PRD authored for Donna
+
+**Session goal:** Generate a comprehensive PRD for a standalone admin web portal so Donna can manage sessions, generate letterheads, view feedback, manage events, track shop orders, and receive notifications.
+**Workflow used:** Skill-driven / Plan-mode
+
+### Skills Invoked
+
+| Skill | Purpose | Outcome |
+|---|---|---|
+| `emil-design-eng` | Establish Emil Kowalski animation principles for the admin portal UI | Full motion spec added to PRD (§10): easing curves, component-specific animations, Framer Motion patterns, `prefers-reduced-motion` support |
+| `/wrap` | End-of-session hygiene | This block |
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Author admin portal PRD (v2.0) | `docs/admin/admin-portal-prd.md` | ✅ Full PRD including all features, agent assignments, 70-item checklist, isolation guarantee |
+| Create web brand guidelines | `docs/admin/brand-web.md` | ✅ CSS custom properties, next/font config, Tailwind config — all values from existing `tokens.ts`, original files untouched |
+| Index new admin docs | `docs/README.md` | ✅ Two entries added |
+| Save admin PRD memory | `.claude/projects/.../memory/project-admin-prd.md` | ✅ |
+| Update MEMORY.md index | `.claude/projects/.../memory/MEMORY.md` | ✅ |
+
+### Key Decisions
+
+- Admin portal lives in a new `admin/` directory; zero changes to `frontend/`, `backend/sessions/`, or any existing file (Isolation Guarantee §17 in PRD)
+- localhost-only for now — no Vercel deployment until feature set reviewed
+- Bulk letterhead (multi-session PDF per volunteer, date-range-scoped) is in scope v1 (resolved from open question Q4)
+- Web brand guidelines are a separate file (`docs/admin/brand-web.md`) — `docs/frontend/brand.md` is never touched
+- Animation follows Emil Kowalski principles: custom `cubic-bezier` curves, Framer Motion, `scale(0.95)` not `scale(0)`, no animations on keyboard actions or high-frequency interactions
+- All 7 deferred gaps from initial PRD draft pulled into v1 scope (volunteer directory, court-hours tracker, bulk letterhead, CSV export, event management, notifications, audit log viewer)
+
+### Learnings
+
+- `FeedbackScreen` (both `/session-feedback` and `/give-feedback`) currently persists nothing to the backend — `POST /feedback` is a blocker before the admin feedback view can populate
+- `backend/payments/` service and `shop_orders` table don't exist yet — blocker for admin orders view
+- Two blockers must be resolved before Phase 4 and Phase 6 respectively; phases are independent of each other
+
+---
+
+## [2026-07-21 Session 260] — Admin dashboard: data viz + mock data across all tabs
+
+**Session goal:** Replace the placeholder admin dashboard with a visual layout inspired by a CRM-style deals dashboard — donut charts, KPI cards, sortable sessions table — plus rich mock data for every stub tab.
+**Workflow used:** Skill-driven (frontend-design skill) + Chat
+
+### Skills Invoked
+
+| Skill | Purpose | Outcome |
+|---|---|---|
+| `frontend-design` | Establish aesthetic direction before building the dashboard UI | Design direction committed: clean operational dashboard using brand colors (forest green #009540, accent lime, Sanchez/Noto Sans/IBM Plex mono), 4-KPI row + 3 donut charts + table layout |
+| `wrap` | End-of-session hygiene | This block |
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Install Recharts | `admin/package.json` | ✅ `recharts@^3.10.0` added |
+| Build DonutChart component | `admin/components/ui/DonutChart.tsx` | ✅ PieChart with legend, center total label, Framer Motion reveal, CustomTooltip |
+| Build RecentSessionsTable component | `admin/components/ui/RecentSessionsTable.tsx` | ✅ 6-column table (Volunteer, Activity, Date, Duration, Distance, Status) with clickable volunteer names |
+| Rewrite dashboard page | `admin/app/(admin)/page.tsx` | ✅ 4 KPI cards + 3 donut charts (Status, Activity Type, Court-Ordered) + sessions table; mock fallback when DB empty |
+| Add volunteer name links to dashboard | `admin/components/ui/RecentSessionsTable.tsx` | ✅ Volunteer column links to /volunteers/:id |
+| Replace sidebar logo | `admin/components/nav/Sidebar.tsx`, `admin/public/logo.svg` | ✅ Splash logo SVG copied to public/, next/image renders it in green box |
+| Volunteers page mock data | `admin/app/(admin)/volunteers/page.tsx` | ✅ 12-volunteer directory table |
+| Volunteer detail page mock data | `admin/app/(admin)/volunteers/[id]/page.tsx` | ✅ Profile header, stat cards, session history per volunteer |
+| Court Hours page mock data | `admin/app/(admin)/court-hours/page.tsx` | ✅ 8 court-ordered volunteers with progress bars, at-risk detection, due dates |
+| Feedback page mock data | `admin/app/(admin)/feedback/page.tsx` | ✅ 12 entries, emoji ratings, flagged items, distribution row |
+| Events page mock data | `admin/app/(admin)/events/page.tsx` | ✅ Upcoming vs past events, fill-rate indicator, "almost full" warning |
+| Orders page mock data | `admin/app/(admin)/orders/page.tsx` | ✅ 8 orders with status chips, revenue summary, Stripe link |
+| Sessions page mock fallback | `admin/app/(admin)/sessions/page.tsx` | ✅ 14 mock sessions with full filter/sort/approve shell working client-side |
+
+### Key Decisions
+
+- Mock data is injected server-side when DB returns 0 rows — no env flag, no extra component — just a `useMock` boolean that routes to constants; real data takes precedence automatically
+- Volunteer IDs in dashboard mock sessions (`v1`–`v12`) match the MOCK_VOLUNTEERS map in the volunteer pages — clicking a name navigates to a pre-populated `/volunteers/v3` style page
+- Recharts chosen over Victory/nivo: smaller bundle, good RSC/Next.js story, straightforward PieChart API
+- Logo: `splash-logo.svg` uses `var(--stroke-0, #FCF9F8)` stroke — renders correctly on the `bg-primary` green background in the sidebar
+
+### Learnings
+
+- `admin/` is a completely separate Next.js app at port 3001 — run from `admin/` directory, not repo root
+- `npx tsc --noEmit` run from repo root silently exits 0 (wrong dir); must be run from `admin/` to catch errors
+- Volunteer detail route uses `params: Promise<{ id: string }>` — Next.js 15 App Router passes params as Promise, must be awaited

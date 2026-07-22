@@ -1,5 +1,5 @@
-import React, { useRef } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Animated, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -34,8 +34,27 @@ export function PrivacyPolicyDetailScreen({ sectionTitle, sections }: Props) {
   const { isActive } = useLiveSession();
 
   const bottomInset = Math.max(insets.bottom, 0);
-  const scrollBottomPad = bottomInset + layout.bottomNavHeight + 48;
+  const scrollBottomPad = bottomInset + layout.bottomNavHeight + 148;
   const scrollRef = useRef<ScrollView>(null);
+
+  const [hasReachedBottom, setHasReachedBottom] = useState(false);
+  const fabOpacity = useRef(new Animated.Value(0)).current;
+  const scrollY = useRef(0);
+  const contentH = useRef(0);
+  const layoutH = useRef(0);
+
+  const checkAtBottom = useCallback(() => {
+    const atBottom = scrollY.current + layoutH.current >= contentH.current - 20;
+    setHasReachedBottom(atBottom);
+  }, []);
+
+  useEffect(() => {
+    Animated.timing(fabOpacity, {
+      toValue: hasReachedBottom ? 1 : 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+  }, [fabOpacity, hasReachedBottom]);
 
   return (
     <View style={s.root}>
@@ -46,6 +65,19 @@ export function PrivacyPolicyDetailScreen({ sectionTitle, sections }: Props) {
         style={s.scroll}
         contentContainerStyle={[s.scrollContent, { paddingBottom: scrollBottomPad }]}
         showsVerticalScrollIndicator={false}
+        scrollEventThrottle={16}
+        onScroll={(e) => {
+          scrollY.current = e.nativeEvent.contentOffset.y;
+          checkAtBottom();
+        }}
+        onLayout={(e) => {
+          layoutH.current = e.nativeEvent.layout.height;
+          checkAtBottom();
+        }}
+        onContentSizeChange={(_, h) => {
+          contentH.current = h;
+          checkAtBottom();
+        }}
       >
         {/* Section header — back link + title + date */}
         <AnimatedPressable
@@ -70,22 +102,27 @@ export function PrivacyPolicyDetailScreen({ sectionTitle, sections }: Props) {
         </View>
       </ScrollView>
 
-      {/* Sticky FAB — scrolls to top */}
-      <AnimatedPressable
-        scaleTo={0.94}
-        onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })}
-        accessibilityRole="button"
-        accessibilityLabel="Scroll to top"
-        style={[s.fab, { bottom: bottomInset + layout.bottomNavHeight + 16 }]}
+      {/* Sticky FAB — hidden until user reaches the bottom, then scrolls to top */}
+      <Animated.View
+        style={[s.fab, { bottom: bottomInset + layout.bottomNavHeight + 16 }, { opacity: fabOpacity }]}
+        pointerEvents={hasReachedBottom ? 'auto' : 'none'}
       >
-        <View style={s.fabChevronWrap}>
-          <AccountChevronIcon
-            width={20}
-            height={20}
-            style={s.fabChevron}
-          />
-        </View>
-      </AnimatedPressable>
+        <AnimatedPressable
+          scaleTo={0.94}
+          onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })}
+          accessibilityRole="button"
+          accessibilityLabel="Scroll to top"
+          style={s.fabInner}
+        >
+          <View style={s.fabChevronWrap}>
+            <AccountChevronIcon
+              width={20}
+              height={20}
+              style={s.fabChevron}
+            />
+          </View>
+        </AnimatedPressable>
+      </Animated.View>
 
 
       <View style={[s.bottomStack, { paddingBottom: bottomInset }]}>
@@ -160,10 +197,15 @@ const s = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
+    ...shadows.barTop,
+  },
+  fabInner: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    ...shadows.barTop,
   },
   fabChevronWrap: {
     transform: [{ rotate: '-90deg' }],

@@ -1,6 +1,7 @@
-import { useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { useWindowDimensions } from 'react-native';
 import {
+  runOnJS,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
@@ -35,6 +36,30 @@ export function useLiveSessionMapReveal() {
     );
   }, [chromeOpacity, fromHome, reducedMotion, reveal]);
 
+  /** Reverse of the expand: chrome fades out, map slides back down, then calls onDone. */
+  const collapse = useCallback(
+    (onDone: () => void) => {
+      if (reducedMotion) {
+        onDone();
+        return;
+      }
+      chromeOpacity.value = withTiming(0, {
+        duration: durations.modalExit,
+        easing: easing.easeOut,
+      });
+      reveal.value = withTiming(
+        0,
+        { duration: durations.sheetDismiss, easing: easing.drawer },
+        (finished) => {
+          if (finished) {
+            runOnJS(onDone)();
+          }
+        },
+      );
+    },
+    [chromeOpacity, reducedMotion, reveal],
+  );
+
   const mapRevealStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: (1 - reveal.value) * windowHeight }],
   }));
@@ -43,5 +68,5 @@ export function useLiveSessionMapReveal() {
     opacity: chromeOpacity.value,
   }));
 
-  return { mapRevealStyle, chromeStyle, fromHome };
+  return { mapRevealStyle, chromeStyle, fromHome, collapse };
 }

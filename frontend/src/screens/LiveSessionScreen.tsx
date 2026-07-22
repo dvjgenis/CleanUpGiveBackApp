@@ -9,7 +9,7 @@ import {
 import { Image as ExpoImage } from 'expo-image';
 import { useRouter, type Href } from 'expo-router';
 import { useFonts } from 'expo-font';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -193,7 +193,7 @@ function TrackerBackButton({
       accessibilityRole="button"
       accessibilityLabel="Go back"
     >
-      <View style={styles.backBtnIconWrap} pointerEvents="none">
+      <View style={[styles.backBtnIconWrap, { transform: [{ rotate: '90deg' }] }]} pointerEvents="none">
         <SessionSetupBackChevronIcon color={chrome.textTertiary} width={8.485} height={14.142} />
       </View>
     </AnimatedPressable>
@@ -264,7 +264,14 @@ export function LiveSessionScreen() {
   const mapTheme = useEffectiveMapTheme();
   const chrome = useMemo(() => getTrackerChromeColors(mapTheme), [mapTheme]);
   const s = useMemo(() => createStyles(chrome), [chrome]);
-  const { mapRevealStyle, chromeStyle } = useLiveSessionMapReveal();
+  const { mapRevealStyle, chromeStyle, collapse } = useLiveSessionMapReveal();
+  const dismissing = useRef(false);
+
+  const handleDismiss = useCallback(() => {
+    if (dismissing.current) return;
+    dismissing.current = true;
+    collapse(() => router.replace('/'));
+  }, [collapse, router]);
   const submittedCheckpointCount = submittedCheckpoints.length;
   const showSubmissionCount = shouldShowCheckpointSubmissionCount(submittedCheckpoints);
   const submittedCheckpointLabel = formatSubmittedCheckpointCount(submittedCheckpointCount);
@@ -379,7 +386,7 @@ export function LiveSessionScreen() {
           <View style={s.navbar}>
             <View style={s.navbarLeftGroup}>
               <TrackerBackButton
-                onPress={() => router.replace('/')}
+                onPress={handleDismiss}
                 chrome={chrome}
                 styles={s}
               />

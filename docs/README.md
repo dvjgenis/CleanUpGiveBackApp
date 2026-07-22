@@ -12,6 +12,8 @@ Living docs for the Clean Up - Give Back monorepo. Templates are copy-only.
 | [accounts-and-access.md](accounts-and-access.md) | Org accounts (no secrets in repo) |
 | [supabase.md](supabase.md) | Supabase + Fly setup for sessions (schema, env vars) |
 | [reports/](reports/) | Session / decision reports (e.g. dual-cam App Store stance) |
+| [admin/admin-portal-prd.md](admin/admin-portal-prd.md) | Admin portal PRD — Donna's session review, letterheads, orders, events, feedback |
+| [admin/brand-web.md](admin/brand-web.md) | Web brand guidelines for admin portal (CSS tokens, fonts, Tailwind config) |
 
 ## Frontend
 
