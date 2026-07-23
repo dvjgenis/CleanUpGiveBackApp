@@ -81,7 +81,7 @@ Expo Router navigation and screen entry points.
 - **Guide navigation:** Continue uses `router.push`; Previous/back use `router.back()` (reverse swipe). Step 6 Previous uses `router.replace('/session-setup-step5')` with `animationTypeForReplace: 'pop'` when Skip bypasses the stack.
 - **Guide progress pills:** Coachmarks through free-kit use `useSessionSetupGuidePillProgress` with linear active indices (1–7). When location/camera will auto-skip, **total** shrinks (8 vs 10) so the bar stays contiguous without starting the guide on pill 3 (e.g. both granted: step5=5/8 → free-hour=6/8 → free-kit=7/8 → complete=8/8).
 - **Onboarding tour:** setup-complete → `/home-tour` → `/shop-tour` → `/track-tour` → `/session-tour` → `/set-tour` (Continue / Previous); finale Replay / Start Tracking / Go Home
-- **Onboarding account flow:** create-account → creating-account → account-phone → account-details → location-permission → camera-permission → notification-preference → setup-complete (under-age branch from account-details when age ≤ 13; users 14+ proceed straight through, no parent-permission gate)
+- **Onboarding account flow:** create-account → creating-account → account-phone → account-details → location-permission → camera-permission → notification-preference → setup-complete (under-age branch from account-details when `age < 13`; onboarding PII cleared immediately; users 13+ proceed straight through)
 - **NAV_RULES** + injected JS bridge handle cross-screen navigation via `postMessage`
 - Metro bundles `.html` via `frontend/metro.config.js` (`assetExts` includes `html`)
 - Asset loading: `expo-asset` + `expo-file-system` with fetch fallback
@@ -100,7 +100,8 @@ Expo Router navigation and screen entry points.
 
 ## Policies
 
-- **Minimum age is 13.** `AccountDetailsScreen` blocks Continue to `/under-age` (the parent/admin permission gate) only when `ageFromMonthYear(birthday) <= 13`. Users age 14+ go straight to `/location-permission` — the parent-permission screens never show for them.
+- **Minimum age is 13 (COPPA under 13).** `AccountDetailsScreen` uses `isUnderMinimumAge` from `constants/ageGate.ts` (`ageFromBirthday(birthday) < 13`). Under-age: `clearOnboardingSignupData()` then `router.replace('/under-age')` — birthday/service type are **not** persisted. Age 13+ persists details and continues to `/location-permission`.
+- **Universal privacy defaults:** notification preferences default off (opt-in); no nudge copy in notification settings. No teen privacy tier in app.
 - **Do not add new screens to the prototype.** New screens are registered in `frontend/design/figma/manifest.yaml` and implemented as native RN routes under `src/app/`.
 - The HTML prototype (`/prototype/[screen]`) is **frozen** — it continues to run for Expo Go demos but receives no new features.
 - Native production screens live under `src/app/<routeKey>.tsx` following Expo Router file-based conventions. Use the `routeKey` from `manifest.yaml` as the filename.

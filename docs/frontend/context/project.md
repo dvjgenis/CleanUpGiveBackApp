@@ -12,9 +12,9 @@ Product-wide ontology and cross-cutting decisions.
 | Cleanup session | Tracked service period with location + photo evidence |
 | Activity log | Record of hours and checkpoints |
 | Evidence | Photos and GPS data supporting a session |
-| Age-gate | Pre-auth month/year DOB screen before any PII collection |
-| Parental consent | COPPA verifiable consent flow for users under 13 |
-| Privacy tier | Account classification: `teen` (13–17) or `adult` (18+) with default settings |
+| Age-gate | Pre-auth month/year DOB screen before any PII collection (planned); today check on account-details |
+| Under-age block | COPPA: users under 13 cannot sign up; onboarding PII wiped immediately |
+| Parental consent | Deferred — not in current product (under-13 = block + wipe) |
 | DPIA | Data Protection Impact Assessment for child-safety risks |
 
 ## Stack

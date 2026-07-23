@@ -59,13 +59,13 @@
 
 #### Under 13
 
-- We need your parent's permission before you can use features that collect photos or location
-- Explain parental consent process
+- You must be at least 13 to use the app
+- If you enter an age under 13 during signup, we delete what you entered and do not keep it
 
-#### Ages 13–17
+#### Ages 13 and up
 
-- We use the highest privacy settings by default for teen accounts
-- Explain what is different for teen accounts
+- Everyone uses the same high privacy settings by default (for example, notifications are off until you turn them on)
+- We do not use dark patterns or nudges to get you to share more data than you need to
 
 ### 7. How long we keep your data
 

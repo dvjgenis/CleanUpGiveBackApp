@@ -1,5 +1,7 @@
+import { useEffect } from 'react';
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { QuestionIcon } from '@/components/onboarding/OnboardingIcons';
+import { clearOnboardingSignupData } from '@/features/onboarding/onboardingStore';
 import { colors as C, radius } from '@/features/figma-screens/tokens';
 import {
   IBMPlexSans_600SemiBold,
@@ -48,6 +50,10 @@ function AlertTriangleIcon() {
 /** Figma `parent-permission-confirmation` (728:901). */
 export function UnderAgeScreen() {
   const router = useRouter();
+
+  useEffect(() => {
+    clearOnboardingSignupData();
+  }, []);
 
   const [fontsLoaded] = useFonts({
     Sanchez_400Regular,

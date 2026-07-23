@@ -18,7 +18,7 @@ export type NotificationCategory = {
   preferences: NotificationPreference[];
 };
 
-/** Default notification settings — Figma `notifications` (`649:774`). */
+/** Default notification settings — Figma `notifications` (`649:774`). All off (opt-in). */
 export const defaultNotificationCategories: NotificationCategory[] = [
   {
     id: 'tracking-impact',
@@ -28,13 +28,13 @@ export const defaultNotificationCategories: NotificationCategory[] = [
         id: 'sessionReviews',
         title: 'Session Reviews',
         description: 'Get a summary when you finish a clean-up walk.',
-        enabled: true,
+        enabled: false,
       },
       {
         id: 'approvalStatus',
         title: 'Approval Status',
         description: 'Crucial updates on pending verifications and rejected sessions.',
-        enabled: true,
+        enabled: false,
       },
       {
         id: 'photoCheckpoints',
@@ -52,7 +52,7 @@ export const defaultNotificationCategories: NotificationCategory[] = [
         id: 'newEvents',
         title: 'New Events',
         description: 'Alerts for upcoming community clean-ups in your area.',
-        enabled: true,
+        enabled: false,
       },
       {
         id: 'shopOrders',

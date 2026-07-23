@@ -190,7 +190,7 @@ All other screens: instant, no decorative animation.
 | `parental-consent-notice` | 6.0b | Parent direct notice | `723:307` | designed |
 | `parental-consent-verify` | 6.0c | Verifiable consent | `723:317` | designed |
 | `parental-consent-pending` | 6.0d | Blocked until verified | `723:332` | designed |
-| `teen-privacy-notice` | 6.0e | Teen highest-privacy defaults | `723:49` | designed |
+| `teen-privacy-notice` | 6.0e | ~~Teen highest-privacy defaults~~ **Not shipping** — universal privacy defaults for all users | `723:49` | cancelled |
 | `privacy-policy` | 6.31 | Policy viewer | `723:339` | designed |
 | `terms-of-service` | 6.32 | ToS viewer | `723:352` | designed |
 | `privacy-rights-request` | 6.33 | CCPA access/deletion form | `723:365` | designed |

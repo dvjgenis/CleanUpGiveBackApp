@@ -3,9 +3,9 @@ import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { OnboardingInfoFooterActions } from '@/components/onboarding/OnboardingInfoFooterActions';
 import { OnboardingProgressPills } from '@/components/onboarding/OnboardingProgressPills';
 import { SessionSetupCalendarIcon } from '@/components/session-setup/icons/SessionSetupCalendarIcon';
+import { isUnderMinimumAge } from '@/constants/ageGate';
 import { SERVICE_TYPES, type ServiceType } from '@/constants/serviceTypes';
 import {
-  ageFromBirthday,
   BirthdayPickerModal,
   DEFAULT_BIRTHDAY_PICKER_DATE,
   formatBirthdayDraft,
@@ -14,6 +14,7 @@ import {
 } from '@/features/figma-screens/components/BirthdayPickerModal';
 import { colors as C } from '@/features/figma-screens/tokens';
 import {
+  clearOnboardingSignupData,
   getBirthday,
   getServiceType,
   setBirthday as persistBirthday,
@@ -220,12 +221,13 @@ export function AccountDetailsScreen() {
             const resolved = parseBirthdayDraft(birthdayText) ?? birthday;
             const currentErrors = validate(resolved, birthdayText, serviceType);
             if (Object.keys(currentErrors).length > 0) return;
-            persistBirthday(resolved);
-            persistServiceType(serviceType);
-            if (resolved && ageFromBirthday(resolved) <= 13) {
-              router.push('/under-age');
+            if (resolved && isUnderMinimumAge(resolved)) {
+              clearOnboardingSignupData();
+              router.replace('/under-age');
               return;
             }
+            persistBirthday(resolved);
+            persistServiceType(serviceType);
             router.push('/location-permission');
           }}
           onPrevious={() => {

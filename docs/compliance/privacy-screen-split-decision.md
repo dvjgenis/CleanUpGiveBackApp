@@ -22,7 +22,7 @@ Split into three distinct destinations:
 
 | Screen | routeKey | Entry point | Purpose |
 |--------|----------|-------------|---------|
-| **Account Privacy hub** | `account-privacy` | Account → Preferences → **Privacy** | Compliance landing: data summary, legal links, CCPA rights, permissions shortcut, do-not-sell, teen tier badge |
+| **Account Privacy hub** | `account-privacy` | Account → Preferences → **Privacy** | Compliance landing: data summary, legal links, CCPA rights, permissions shortcut, do-not-sell |
 | **OS permissions** | `privacy-permissions` | Hub → App permissions | PRD §6.27: Location, Camera, Notifications + Open Device Settings |
 | **Policy viewers** | `privacy-policy`, `terms-of-service` | Hub, signup checkbox, Settings About | Scrollable legal text; last-updated date |
 
@@ -49,7 +49,7 @@ Relocate as follows:
 
 Both **Settings → About** and **Account Privacy hub → Legal** link to the same policy viewers (§6.31–6.32). This is intentional:
 
-- **Hub** — primary CCPA / teen-law prominent disclosure path
+- **Hub** — primary CCPA / minor-privacy prominent disclosure path
 - **Settings About** — secondary entry for users who expect legal links under Settings
 
 Do not remove Settings About links when the hub ships.

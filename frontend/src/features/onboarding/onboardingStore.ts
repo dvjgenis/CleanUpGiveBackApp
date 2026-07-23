@@ -85,6 +85,18 @@ export function getServiceType(): ServiceType | null {
   return serviceType;
 }
 
+/** Clears signup/onboarding PII after COPPA under-age block (in-memory only). */
+export function clearOnboardingSignupData(): void {
+  onboardingComplete = false;
+  preferredName = '';
+  email = '';
+  phoneCountryIso2 = DEFAULT_COUNTRY.iso2;
+  phoneDigits = '';
+  birthdayIso = null;
+  serviceType = null;
+  notify();
+}
+
 function subscribe(listener: () => void) {
   listeners.add(listener);
   return () => {

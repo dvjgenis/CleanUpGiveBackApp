@@ -44,7 +44,7 @@ const SECTIONS = [
   },
   {
     title: 'Children and teens',
-    body: "If you are under 13, we need a parent's permission before you can use features that collect photos or location. If you are 13 to 17, your account uses stricter privacy settings by default. Teen accounts may have analytics turned off and other protections enabled.",
+    body: "If you are under 13, you cannot use the app. If you enter an age under 13 during signup, we delete the information you entered and do not keep it. If you are 13 or older, your account uses the same high privacy settings as everyone else. We do not use dark patterns or nudges to get you to share more data than you need to.",
   },
   {
     title: 'How long we keep your data',

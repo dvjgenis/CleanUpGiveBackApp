@@ -21,8 +21,8 @@
 
 | Compliance area | Existing screen | Gap |
 |-----------------|-----------------|-----|
-| Age verification | `account-details` (age field) | No pre-auth age-gate; no under-13 block |
-| Parental consent | — | Missing entirely |
+| Age verification | `account-details` + native `/under-age` | Pre-auth age-gate not shipped; under-13 blocked with PII wipe (`age < 13`) |
+| Parental consent | — | **Not shipping** — under-13 block + wipe instead |
 | Account privacy hub | `account` → Privacy row → `privacy-security` | No dedicated `account-privacy` hub |
 | Privacy policy viewer | `settings` no-op link | No `privacy-policy` screen |
 | Terms viewer | `settings` no-op link | No `terms-of-service` screen |
@@ -40,7 +40,7 @@
 
 | routeKey | PRD § | Priority | Entry | Acceptance criteria |
 |----------|-------|----------|-------|---------------------|
-| `account-privacy` | 6.37 | P0 | Account → Preferences → **Privacy** | Hub with: data summary, Privacy Policy + ToS links, rights rows (request data, deletion, export), permissions shortcut, do-not-sell line, teen tier badge when applicable |
+| `account-privacy` | 6.37 | P0 | Account → Preferences → **Privacy** | Hub with: data summary, Privacy Policy + ToS links, rights rows (request data, deletion, export), permissions shortcut, do-not-sell line |
 | `privacy-permissions` | 6.27 | P1 | `account-privacy` → App permissions | OS permissions only: Location, Camera, Notifications status + "Open Device Settings" |
 
 ### Page 7 · Compliance & Legal (11 new)
@@ -48,10 +48,10 @@
 | routeKey | PRD § | Priority | Entry | Acceptance criteria |
 |----------|-------|----------|-------|---------------------|
 | `age-gate` | 6.0a | P0 | App first launch | Month + year pickers only; neutral copy; no other fields; Continue disabled until valid |
-| `parental-consent-notice` | 6.0b | P0 | Age-gate &lt; 13 | Parent email; lists selfie + GPS collection in plain language |
-| `parental-consent-verify` | 6.0c | P0 | After notice sent | Verification method UI (TBD with counsel) |
-| `parental-consent-pending` | 6.0d | P0 | Awaiting verification | Blocked state; support contact; cannot access camera/GPS |
-| `teen-privacy-notice` | 6.0e | P0 | Age-gate 13–17 | Highest-privacy defaults explained; acknowledge to continue |
+| `parental-consent-notice` | 6.0b | — | **Not shipping** (under-13 block + wipe) | — |
+| `parental-consent-verify` | 6.0c | — | **Not shipping** | — |
+| `parental-consent-pending` | 6.0d | — | Native `/under-age` for under-13 block | — |
+| `teen-privacy-notice` | 6.0e | — | **Not shipping** — universal privacy defaults | — |
 | `privacy-policy` | 6.31 | P0 | Hub, signup, Settings | Scrollable policy; last-updated date; accessible headings |
 | `terms-of-service` | 6.32 | P0 | Hub, signup, Settings | Scrollable ToS |
 | `privacy-rights-request` | 6.33 | P1 | Hub → Request my data / deletion | Form: request type, confirmation, SLA copy |
@@ -79,11 +79,12 @@
 ### Onboarding (compliance-first)
 
 ```text
-age-gate
-  ├── < 13  → parental-consent-notice → parental-consent-verify → parental-consent-pending
-  ├── 13–17 → teen-privacy-notice → welcome
-  └── 18+   → welcome
-welcome → create-account (+ legal checkbox) → account-details → ...
+account-details (birthday)
+  ├── age < 13 → clear onboarding PII → /under-age
+  └── age ≥ 13 → location-permission → …
+
+(Future: pre-auth age-gate before PII — PRD §6.0a)
+welcome → create-account → account-details → ...
 ```
 
 ### Account privacy hub
@@ -130,9 +131,6 @@ Account tab (account)
 │                                     │
 │ We do not sell your personal        │
 │ information.                        │
-│                                     │
-│ [Teen badge: Highest privacy        │
-│  settings are on for your account]  │
 └─────────────────────────────────────┘
 ```
 

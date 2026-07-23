@@ -142,8 +142,7 @@ export function NotificationsScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Text style={s.intro}>
-          Manage how we contact you regarding your impact journey. We recommend keeping approval status
-          notifications on.
+          Manage how we contact you regarding your impact journey. Turn on only the alerts you want.
         </Text>
 
         <View style={s.categories}>

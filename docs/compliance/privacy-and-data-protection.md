@@ -70,21 +70,23 @@ All processors must be bound by agreements requiring appropriate security contro
 
 ### 3.1 Children under 13 (COPPA)
 
-Under COPPA, photos containing a child's image and precise geolocation are **personal information**. Before collecting selfies or GPS for a user under 13:
+Under COPPA, photos containing a child's image and precise geolocation are **personal information**. **Shipped product behavior:**
 
-1. Provide **direct notice** to parents describing what is collected and why.
-2. Obtain **verifiable parental consent** (FTC-approved methods — counsel to select).
-3. Halt all data collection until consent is verified.
+- Minimum age **13** (COPPA “under 13” standard: block when `age < 13`).
+- Users who are under 13 cannot create an account. The app shows `/under-age` and **immediately clears** signup/onboarding PII from client memory (name, email, phone, birthday, service type).
+- **No parental-consent collection flow** in the current app (deferred; counsel if product revisits).
+
+When backend auth exists, under-13 attempts must not persist profile rows or auth users.
 
 ### 3.2 Teens 13–17 (state laws)
 
-States including California (AADC), Connecticut, Maryland, and New Jersey require:
+States including California (AADC), Connecticut, Maryland, and New Jersey require privacy by design and plain-language notices for minors. We meet teen-law **default-settings** expectations by applying **the same highest-privacy defaults to every user age 13+** — not a separate teen tier:
 
-- **Privacy by design** — highest privacy settings by default.
-- **No dark patterns** — no manipulative UI encouraging users to give up privacy.
+- **Privacy by design** — highest privacy settings by default for all accounts.
+- **No dark patterns** — no manipulative UI encouraging users to give up privacy (app-wide, all ages).
 - **Plain-language notices** — policies readable by teenagers.
 
-Users aged 13–17 receive `privacy_tier = teen` with elevated defaults (analytics off, strictest sharing defaults).
+There is **no** `privacy_tier = teen` in the product; analytics/marketing toggles are opt-in for everyone.
 
 ### 3.3 App Store age-verification APIs
 
@@ -98,26 +100,19 @@ Emerging laws (TX, UT, LA) require integration with Apple Declared Age Range API
 
 ## 4. Nationwide compliance controls
 
-### 4.1 Neutral age-gate (pre-auth)
+### 4.1 Age check (signup)
 
-Before any other personal data collection or account creation:
+Today (native onboarding):
 
-- Present a **neutral** month + year of birth screen.
-- Collect **no other PII** on this screen.
-- Branch:
-  - **Under 13** → parental consent flow (halt).
-  - **13–17** → teen privacy notice, then continue with teen defaults.
-  - **18+** → continue to welcome/signup.
+- Birthday month/year on **account-details** (after name, email, phone in current flow).
+- **Under 13** → clear onboarding PII immediately → `/under-age` (halt).
+- **13+** → continue permissions and signup.
 
-See PRD addendum §6.0a–6.0d.
+**Future:** neutral pre-auth month/year screen before any other PII (PRD §6.0a).
 
-### 4.2 Parental consent flow
+### 4.2 Parental consent flow (deferred)
 
-For users under 13:
-
-1. **Notice** — email parent with plain-language disclosure (selfies + GPS).
-2. **Verify** — verifiable consent (method TBD with counsel).
-3. **Pending** — block camera/GPS until verified.
+Not shipped. Under-13 users are blocked with data wipe rather than held for parent verification.
 
 ### 4.3 Session-only geolocation
 
@@ -127,7 +122,7 @@ For users under 13:
 
 ### 4.4 Highest privacy defaults
 
-All profiles default to the highest privacy level. Teen accounts enforce stricter defaults automatically.
+All profiles use the same highest privacy level (notification categories default **off**; user opts in). No teen-only tier or badge.
 
 ### 4.5 Account-tab privacy hub
 

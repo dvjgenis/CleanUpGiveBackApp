@@ -60,8 +60,10 @@ Docs complete — see [ADR-004](adr/ADR-004-sessions-backend-supabase-fly.md), [
 
 - [ ] Counsel review of privacy policy + ToS before App Store submission
 - [x] Figma Page 6 — `account-privacy` hub + `privacy-permissions`
-- [x] Figma Page 7 — pre-auth compliance screens (age-gate, parental consent, policy viewers)
-- [ ] Age-gate + parental consent backend (Supabase flags, parent verification state machine)
+- [x] Figma Page 7 — pre-auth compliance screens (age-gate, parental consent, policy viewers) — **design only**
+- [x] Native COPPA under-13 block (`age < 13`) + immediate onboarding PII wipe + universal opt-in notification defaults
+- [ ] Pre-auth age-gate before PII (move birthday earlier in flow)
+- [ ] Age eligibility backend (reject under-13 registration when auth ships)
 - [ ] App Store Declared Age Range API integration (iOS / Google Play age signals)
 - [x] Session-only geolocation enforcement — background GPS only while session active; stops on finalize
 - [x] Core tracking audit — Kalman + adaptive sampling, Always-while-active background GPS (`expo-task-manager`), sync-failure banners, missed-checkpoint → `invalid`, list `photoCount` for Home stats (see [session-tracking-expo-go.md](frontend/specs/session-tracking-expo-go.md) AC-32–36)

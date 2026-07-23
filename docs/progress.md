@@ -2,6 +2,14 @@
 
 ---
 
+## [2026-07-23] — COPPA cutoff, under-age PII wipe, universal privacy
+
+**A:** `age < 13` via `constants/ageGate.ts`; under-age clears `onboardingStore` and `replace` to `/under-age`; notification defaults all off; removed notification nudge copy; policy copy updated; ADR-003 and compliance docs aligned (no Teen Privacy Tier).
+
+**P:** COPPA under-13 standard, no retention of blocked signup data, same highest-privacy defaults for all allowed users.
+
+---
+
 ## [2026-07-23] — System architecture Mermaid diagrams
 
 **A:** Added `docs/architecture.md` with four Mermaid diagrams (system context, frontend structure, sessions API surface, live-session sequence) and linked from `docs/README.md`.

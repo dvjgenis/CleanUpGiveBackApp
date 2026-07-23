@@ -13,8 +13,8 @@ Supabase (Postgres, Auth, Storage) must support privacy compliance from day one:
 
 ### AC-1: Profile privacy fields
 
-- [ ] `profiles` table includes: `date_of_birth_month`, `date_of_birth_year`, `age_verified_at`, `parental_consent_status` (enum: `not_required`, `pending`, `verified`, `denied`), `privacy_tier` (enum: `child_blocked`, `teen`, `adult`)
-- [ ] Under-13 users with `parental_consent_status != verified` cannot start sessions or upload photos (enforced server-side)
+- [ ] `profiles` table includes: `date_of_birth_month`, `date_of_birth_year`, `age_verified_at` (and age-eligibility flag as needed)
+- [ ] Users under 13 must not have persisted profiles or auth accounts — signup blocked client-side with immediate PII wipe; server must reject under-13 registration when auth ships
 
 ### AC-2: Row-level security
 
@@ -41,11 +41,9 @@ Supabase (Postgres, Auth, Storage) must support privacy compliance from day one:
 - [ ] Scheduled job purges GPS path points after verification window (default: session verified + 90 days — counsel to finalize)
 - [ ] Soft-delete grace period: 30 days before hard purge of deleted accounts
 
-### AC-6: Parental consent
+### AC-6: Parental consent (deferred)
 
-- [ ] Store parent email, consent method, `verified_at` timestamp
-- [ ] Webhook endpoint for third-party COPPA verification provider (provider TBD)
-- [ ] No camera/GPS API access until `parental_consent_status = verified` for under-13
+- [ ] Not in current product — under-13 blocked with no retention. Re-open with counsel if parental-consent path replaces block.
 
 ### AC-7: App Store age signals
 
@@ -70,12 +68,7 @@ Supabase (Postgres, Auth, Storage) must support privacy compliance from day one:
 alter table profiles add column date_of_birth_month smallint;
 alter table profiles add column date_of_birth_year smallint;
 alter table profiles add column age_verified_at timestamptz;
-alter table profiles add column parental_consent_status text
-  check (parental_consent_status in ('not_required','pending','verified','denied'));
-alter table profiles add column privacy_tier text
-  check (privacy_tier in ('child_blocked','teen','adult'));
-alter table profiles add column parent_email text;
-alter table profiles add column parental_consent_verified_at timestamptz;
+-- No privacy_tier / parental_consent columns in current product (under-13 = block, universal defaults for 13+)
 ```
 
 ## API endpoints (planned)

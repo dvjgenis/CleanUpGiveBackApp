@@ -5,7 +5,7 @@
 **Extends:** [cleanup_giveback_redone_prd_full_layouts.md](cleanup_giveback_redone_prd_full_layouts.md) — §6.0a–6.37 now live in the main PRD  
 **Framework:** [privacy-and-data-protection.md](../../compliance/privacy-and-data-protection.md)
 
-> This addendum remains as a focused reference. Authoritative screen requirements are in the main PRD. Screen split: [privacy-screen-split-decision.md](../../compliance/privacy-screen-split-decision.md).
+> **Shipped native behavior (2026-07-23):** COPPA cutoff `age < 13` on account-details; under-age → immediate `clearOnboardingSignupData()` + `/under-age`. No teen privacy tier — universal highest-privacy defaults for all users 13+. Pre-auth age-gate, parental consent, and `teen-privacy-notice` remain designed but **not shipping** as described below unless product revisits.
 
 ---
 
@@ -215,7 +215,8 @@ Primary privacy destination under the Account tab. Compliance-first landing page
 | Your rights | Request my data, Request deletion, Export service record |
 | Controls | App permissions → privacy-permissions (§6.27) |
 | Sharing | "We do not sell your personal information." |
-| Teens | Privacy tier badge when `privacy_tier = teen` |
+
+(Historical PRD row for teen-only badge removed — universal privacy defaults for all users.)
 
 ### Layout
 
