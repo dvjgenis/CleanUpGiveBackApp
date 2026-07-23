@@ -1,4 +1,4 @@
-import React, { type ReactNode } from 'react';
+import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,7 +9,12 @@ import { SessionSetupTopAppBar } from '@/components/session-setup/SessionSetupTo
 import { useLiveSession } from '@/features/session-tracking/liveSessionStore';
 
 import { AccountChevronIcon, CopyrightIcon } from '../components/AccountIcons';
-import { layout, colors, fontFamilies, shadows } from '../tokens';
+import {
+  PRIVACY_POLICY_EFFECTIVE_DATE,
+  PRIVACY_POLICY_INDEX_ROWS,
+  PRIVACY_POLICY_LAST_UPDATED,
+} from '../content/privacyPolicyContent';
+import { layout, colors, fontFamilies } from '../tokens';
 
 
 type PolicyRowProps = {
@@ -40,7 +45,7 @@ function PolicyRow({ title, description, onPress }: PolicyRowProps) {
 
 /**
  * Privacy Policy index (Figma `privacy_policy`, node `728:995` / PRD §6.31).
- * Lists five sections; each navigates to a detail screen.
+ * Lists four sections; each navigates to a detail screen.
  */
 export function PrivacyPolicyScreen() {
   const router = useRouter();
@@ -61,36 +66,26 @@ export function PrivacyPolicyScreen() {
       >
         <View style={s.header}>
           <Text style={s.headline}>Privacy Policy</Text>
-          <Text style={s.lastUpdated}>Last updated: June 30, 2026</Text>
+          <Text style={s.lastUpdated}>Effective: {PRIVACY_POLICY_EFFECTIVE_DATE}</Text>
+          <Text style={s.lastUpdated}>Last updated: {PRIVACY_POLICY_LAST_UPDATED}</Text>
         </View>
 
         <View style={s.rows}>
-          <PolicyRow
-            title="What we collect"
-            description="We collect photos, location, and account details during sessions to verify your service hours."
-            onPress={() => router.push('/privacy-what-we-collect' as Href)}
-          />
-          <PolicyRow
-            title="How we use it"
-            description="Your data helps us verify cleanup work, process payments, and keep the app running safely."
-            onPress={() => router.push('/privacy-how-we-use-it' as Href)}
-          />
-          <PolicyRow
-            title="Who we share it with"
-            description="We may share your information with partners and service providers to enhance service delivery."
-            onPress={() => router.push('/privacy-who-we-share-it-with' as Href)}
-          />
-          <PolicyRow
-            title="How we protect it"
-            description="We implement strong security measures to protect your data from unauthorized access."
-            onPress={() => router.push('/privacy-how-we-protect-it' as Href)}
-          />
-
+          {PRIVACY_POLICY_INDEX_ROWS.map((row) => (
+            <PolicyRow
+              key={row.href}
+              title={row.title}
+              description={row.description}
+              onPress={() => router.push(row.href as Href)}
+            />
+          ))}
         </View>
 
         <View style={s.copyrightRow}>
           <CopyrightIcon width={16} height={16} />
-          <Text style={s.copyrightText}>CleanUpGiveBack</Text>
+          <Text style={s.copyrightText}>
+            CleanUp Give Back is a 501(c)(3) nonprofit corporation.
+          </Text>
         </View>
       </ScrollView>
 
@@ -128,7 +123,7 @@ const s = StyleSheet.create({
     gap: 22,
   },
   header: {
-    gap: 12,
+    gap: 8,
   },
   headline: {
     fontFamily: fontFamilies.sanchezRegular,
@@ -171,6 +166,7 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   copyrightRow: {
+    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -179,8 +175,11 @@ const s = StyleSheet.create({
     paddingBottom: 8,
   },
   copyrightText: {
+    flexShrink: 1,
     fontFamily: fontFamilies.notoSansRegular,
     fontSize: 12,
+    lineHeight: 16,
+    textAlign: 'center',
     color: colors.textNavInactive,
   },
   bottomStack: {

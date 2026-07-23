@@ -132,7 +132,11 @@ function CartItemCard({
         <View style={s.itemTopRow}>
           <View style={s.itemCopy}>
             <Text style={s.itemName}>{item.name}</Text>
-            <Text style={s.itemDesc}>{item.description}</Text>
+            {item.description ? (
+              <Text style={s.itemDesc} numberOfLines={2} ellipsizeMode="tail">
+                {item.description}
+              </Text>
+            ) : null}
           </View>
           <AnimatedPressable
             scaleTo={0.92}
@@ -448,6 +452,7 @@ const s = StyleSheet.create({
   itemDesc: {
     fontFamily: fontFamilies.notoSansRegular,
     fontSize: 14,
+    lineHeight: 20,
     color: colors.textNavInactive,
   },
   removeBtn: {

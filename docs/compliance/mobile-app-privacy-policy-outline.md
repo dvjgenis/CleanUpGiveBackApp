@@ -1,8 +1,10 @@
 # Mobile App Privacy Policy — Outline
 
-**Date:** 2026-06-30  
-**Status:** Outline for counsel — **not final legal text**  
-**Parent:** [privacy-and-data-protection.md](privacy-and-data-protection.md)
+**Date:** 2026-07-23  
+**Effective:** 2026-07-20  
+**Status:** Draft product copy for counsel — **not final legal text**  
+**Parent:** [privacy-and-data-protection.md](privacy-and-data-protection.md)  
+**In-app source:** [`frontend/src/features/figma-screens/content/privacyPolicyContent.ts`](../../frontend/src/features/figma-screens/content/privacyPolicyContent.ts)
 
 > Write in plain language a teenager can understand. Counsel must review and finalize before publication.
 
@@ -12,30 +14,38 @@
 
 ### 1. Who we are
 
-- Clean Up - Give Back (501(c)(3) nonprofit)
-- Contact email for privacy questions
-- Effective date and last-updated date
+- Clean Up - Give Back (501(c)(3) nonprofit), Des Plaines, IL
+- Contact: privacy@cleanupgiveback.org
+- Effective date: July 20, 2026; last updated: July 23, 2026 at 5:17 PM CDT
 
 ### 2. What this policy covers
 
 - The mobile app (iOS and Android)
-- What "personal information" means in our app
+- Volunteers and court-ordered participants tracking/verifying community service hours
+- Data minimization: only what is needed to operate the app and verify hours
 
 ### 3. Information we collect
 
-#### 3.1 You provide directly
+#### 3.1 Account and service profile
 
-- Name, email, password, phone number, street address
-- Court-ordered service status
-- Photos you take in the app (selfies, trash-bag photos)
+- Legal name, email, phone, hashed password, anonymous/account user ID
+- Court-ordered status, activity type, session descriptions, digital signatures
+- Birth month and year only (age screening; no day of month)
+- Mailing address when needed for shop / shipping
 
-#### 3.2 Collected automatically during sessions
+#### 3.2 Collected during active sessions
 
-- **Precise location (GPS)** — only while a cleanup session is active
-- Session duration and timestamps
-- Device type and app version (for support)
+- **Precise location (GPS)** — route points only while a cleanup session is active
+- Live selfies and proof-of-work photos (trash / completed work)
 
-#### 3.3 Payment information
+#### 3.3 Device, communications, and local data
+
+- App version & OS; optional crash logs (Apple, Google, and/or Expo when enabled)
+- Optional push notification tokens (Expo)
+- Transactional email via Resend (registrations, email-change OTP, account notices)
+- On-device session drafts, preferences, and cached records (not shared with third parties)
+
+#### 3.4 Payment information
 
 - Processed by Stripe — we do not store full card numbers
 
@@ -43,62 +53,88 @@
 
 | Data | Why |
 |------|-----|
-| Identity fields | Account, service records, fraud prevention |
-| Selfies & photos | Verify you completed cleanup work |
-| GPS path | Verify where and how long you cleaned |
-| Payment | App purchase, shop, donations |
+| Identity & account fields | Auth, account management, PDF service logs |
+| Service profile & signatures | Program matching, fraud prevention, verification |
+| Age month/year | COPPA eligibility (13+) |
+| Selfies & photos | Verify physical presence and completed work |
+| GPS path | Verify time, distance, route; fraud prevention |
+| Payment / mailing | Shop, fees, donations |
+| Diagnostics | Bugs and stability |
+| Push / email | Opt-in alerts and operational notices |
+| Local drafts | Offline use and interrupted-session recovery |
 
 ### 5. Who we share with
 
-- **Supabase** — stores your data securely
-- **Google Maps** — shows your route during sessions
-- **Stripe** — processes payments
-- We **do not sell** your personal information
+- **Supabase** — accounts, session metadata, photo storage
+- **Fly.io** — Session API (sessions, finalized GPS routes, metadata) in the United States
+- **Stripe** — payments and related AML checks
+- **CARTO & Esri** — map tiles only (standard request metadata such as IP); not walking routes
+- **MapLibre** — on-device open-source map rendering library
+- **Open-Meteo** — approximate weather from starting coordinates; server logs purged within ~90 days
+- **Resend** — transactional email
+- **Expo** — app infrastructure and push token routing when enabled
+- **Apple & Google** — OS permissions, store distribution, optional crash reporting
+- **Authorized program/admin reviewers** — photos, routes, and logs for hour verification
+- We **do not sell or rent** personal information
+- Processors may use personal information only as needed to provide their services to Clean Up - Give Back — not to sell it or for their own advertising
 
 ### 6. Children and teens
 
 #### Under 13
 
-- You must be at least 13 to use the app
-- If you enter an age under 13 during signup, we delete what you entered and do not keep it
+- App is not intended for children under 13
+- Age screening uses birth month and year only
+- Under 13 → account creation blocked; signup data purged from device; nothing stored on servers
 
 #### Ages 13 and up
 
-- Everyone uses the same high privacy settings by default (for example, notifications are off until you turn them on)
-- We do not use dark patterns or nudges to get you to share more data than you need to
+- Same high privacy defaults for all allowed users (non-essential features and notification categories are opt-in)
+- No dark patterns to encourage oversharing; no segmented privacy tiers
 
 ### 7. How long we keep your data
 
-- Link to retention schedule in [privacy-and-data-protection.md](privacy-and-data-protection.md) §7
-- Court-ordered records may be kept longer if required by law
+| Data type | Standard retention |
+|-----------|-------------------|
+| GPS route paths | ~90 days after session verification |
+| Photo evidence | ~1 year (unless law/court requires longer) |
+| Payment records | Up to 7 years |
+| Account information | Active account + standard grace period after closure |
+| Court-ordered logs | As mandated by authorities / programs |
+
+Also see [privacy-and-data-protection.md](privacy-and-data-protection.md) §7.
 
 ### 8. Your rights
 
-- **See your data** — request a copy
-- **Delete your data** — request deletion (some records may be kept for legal reasons)
-- **Export** — download your service record
-- We will not treat you differently for exercising these rights
+- **Access & portability** — copy of personal data; export verified service history as PDF
+- **Correction** — update inaccurate profile details
+- **Deletion** — erase account/data subject to legal or court-mandated retention
+- **Non-discrimination** — no degraded experience for exercising rights
+- **Do not sell** — we do not sell or monetize personal information
+- Exercise in-app: **Account → Preferences → Privacy**, or email privacy@cleanupgiveback.org
 
 ### 9. Security
 
-- How we protect your data (encryption, access controls)
-- No system is 100% secure — what to do if you suspect a problem
+- TLS 1.2/1.3 in transit; encryption at rest
+- Row-Level Security (RLS) so users access only their records
+- Role-limited staff access for support, verification, security, or legal compliance
+- No system is 100% secure — contact privacy@cleanupgiveback.org if you suspect a problem
 
 ### 10. Location tracking
 
-- We only track location during active cleanup sessions
-- You will always see a clear indicator when location is being tracked
-- While a session is active, we may use Always location so your route continues when the screen is locked; tracking stops when you end or cancel the session
-- We do not track you in the background when no session is active
+- Session-only: collection starts on explicit start (e.g. “Start Cleanup”); stops on finalize/cancel
+- No tracking while idle or after session ends
+- With Always location, route may continue while screen is locked **only** during an active session
+- Prominent on-screen indicator whenever tracking is active
+- MapLibre on-device; CARTO (standard) / Esri (satellite/hybrid) for tiles — not route storage
 
 ### 11. Changes to this policy
 
-- How we notify you of updates
+- Material updates (especially location or collection) via in-app notices or direct alerts
 
 ### 12. Contact us
 
-- Privacy email
-- Mailing address (if required)
+- Email: privacy@cleanupgiveback.org
+- Mailing: Clean Up - Give Back, Des Plaines, IL (full street address TBD)
 
 ---
 
@@ -110,6 +146,7 @@
 | Account creation | Required checkbox before Continue |
 | Settings → About | Link (may duplicate hub) |
 | Home screen | Optional footer link |
+| Policy viewers | `/privacy-policy` + four detail routes |
 
 ---
 

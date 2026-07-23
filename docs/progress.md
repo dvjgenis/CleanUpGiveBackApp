@@ -2,6 +2,42 @@
 
 ---
 
+## [2026-07-23] — Who-we-share processors sentence completed
+
+**A:** Expanded the last “We do not sell your data” body so the processors clause is a full sentence (services to CUGB only — not sale/own advertising).
+
+**P:** `/privacy-who-we-share-it-with` last section no longer reads truncated.
+
+---
+
+## [2026-07-23] — Privacy policy index 501(c)(3) footer
+
+**A:** Replaced bare `CleanUpGiveBack` tag on `/privacy-policy` with Account-matching copy: “CleanUp Give Back is a 501(c)(3) nonprofit corporation.”
+
+**P:** Privacy policy main page footer states nonprofit status next to the copyright icon.
+
+---
+
+## [2026-07-23] — Cart line item description preview
+
+**R:** Cart cards showed title only when products were added from shop/product detail because `description` was not passed into `cartStore`.
+
+**A:** Wired product descriptions from `PRODUCT_DETAILS` on shop + product-detail add-to-cart; cart card shows up to 2 lines with `ellipsizeMode="tail"`.
+
+**P:** Any product added to cart shows a truncated description under the name.
+
+---
+
+## [2026-07-23] — Privacy policy in-app copy refresh
+
+**R:** July 23 draft policy must match engineering reality (MapLibre/CARTO/Esri, Fly.io, Resend) and replace stale Google Maps language.
+
+**A:** Centralized copy in `privacyPolicyContent.ts`; wired index + four detail routes; dates Effective July 20 / Last updated July 23; synced `mobile-app-privacy-policy-outline.md` and DPA checklist wording.
+
+**P:** In-app privacy UI reflects draft product copy; counsel review still required before App Store submission.
+
+---
+
 ## [2026-07-23] — COPPA cutoff, under-age PII wipe, universal privacy
 
 **A:** `age < 13` via `constants/ageGate.ts`; under-age clears `onboardingStore` and `replace` to `/under-age`; notification defaults all off; removed notification nudge copy; policy copy updated; ADR-003 and compliance docs aligned (no Teen Privacy Tier).

@@ -214,6 +214,7 @@ export function ProductDetailScreen() {
         name: product.name,
         unitPrice,
         image: images[0],
+        description: product.description,
       },
       quantity,
     );

@@ -22,7 +22,7 @@ import {
   ShopStreakIcon,
 } from '../components/ShopIcons';
 import { CART_ASSETS } from '../mocks/cart';
-import { SHOP_PRODUCT_TO_DETAIL_ID } from '../mocks/productDetail';
+import { getProductDetail, SHOP_PRODUCT_TO_DETAIL_ID } from '../mocks/productDetail';
 import { SHOP_HOME_ASSETS } from '../shopAssets';
 import { layout, colors, fontFamilies, radius as R, shadows } from '../tokens';
 
@@ -369,11 +369,13 @@ export function ShopScreen() {
 
   const addShopProduct = (product: Product) => {
     const detailId = SHOP_PRODUCT_TO_DETAIL_ID[product.id] ?? product.id;
+    const detail = getProductDetail(detailId);
     addCartItem({
       id: detailId,
       name: product.name,
       unitPrice: parsePrice(product.price),
       image: product.image,
+      description: detail.description,
     });
     router.push('/cart' as Href);
   };
@@ -395,12 +397,13 @@ export function ShopScreen() {
               <FeaturedItem
                 onViewKit={() => router.push('/product-detail?id=cleanup-kit' as Href)}
                 onAddToCart={() => {
+                  const kit = getProductDetail('cleanup-kit');
                   addCartItem({
-                    id: 'cleanup-kit',
-                    name: 'Trash Cleanup Kit',
-                    unitPrice: 29.99,
+                    id: kit.id,
+                    name: kit.name,
+                    unitPrice: parsePrice(kit.price),
                     image: CART_ASSETS.kitThumb,
-                    description: 'Essential gear for safe\npickups',
+                    description: kit.description,
                   });
                   router.push('/cart' as Href);
                 }}

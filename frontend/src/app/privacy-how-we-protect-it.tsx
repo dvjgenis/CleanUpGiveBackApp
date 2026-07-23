@@ -16,41 +16,10 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { PrivacyPolicyDetailScreen } from '@/features/figma-screens/screens/PrivacyPolicyDetailScreen';
 import { colors } from '@/features/figma-screens/tokens';
-
-const SECTIONS = [
-  {
-    title: 'Overview',
-    body: 'We work to keep your information safe. No app can promise perfect security. But we take important steps to protect your data, including encryption, access limits, and careful choice of service partners.',
-  },
-  {
-    title: 'Encryption',
-    body: 'Your data is scrambled when it moves between your phone and our servers. This is called encryption. Your data is also protected when it is stored. This makes it harder for others to read your information if they intercept it.',
-  },
-  {
-    title: 'Access controls',
-    body: 'Only approved staff can access user data. They can only access it when needed for support, security, or legal compliance. We limit access based on job role.',
-  },
-  {
-    title: 'Secure partners',
-    body: 'We use trusted companies like Supabase, Stripe, and Google to run the app. These partners must follow strong security practices and use your data only to provide their service to us.',
-  },
-  {
-    title: 'Your role',
-    body: "Use a strong password that you do not use on other sites. Do not share your login with anyone. Turn on your phone's screen lock. Contact us right away if you think someone else accessed your account.",
-  },
-  {
-    title: 'If something goes wrong',
-    body: 'Email privacy@cleanupgiveback.org if you think your data was accessed without permission. Tell us what happened and we will investigate. We will also explain what steps you can take to protect your account.',
-  },
-  {
-    title: 'How we store data',
-    body: 'Your account and session data are stored in secure cloud systems. We use industry standard tools to reduce the risk of unauthorized access.',
-  },
-  {
-    title: 'Keeping data after deletion',
-    body: 'When you delete your account or request deletion, we remove your data from active systems. Some information may remain in backups for a short time. We may also keep certain records if the law requires it.',
-  },
-];
+import {
+  HOW_WE_PROTECT_IT_SECTIONS,
+  PRIVACY_POLICY_LAST_UPDATED,
+} from '@/features/figma-screens/content/privacyPolicyContent';
 
 export default function PrivacyHowWeProtectRoute() {
   const [fontsLoaded] = useFonts({
@@ -70,7 +39,11 @@ export default function PrivacyHowWeProtectRoute() {
 
   return (
     <SafeAreaProvider>
-      <PrivacyPolicyDetailScreen sectionTitle="How we protect it" sections={SECTIONS} />
+      <PrivacyPolicyDetailScreen
+        sectionTitle="How we protect it"
+        sections={HOW_WE_PROTECT_IT_SECTIONS}
+        lastUpdated={PRIVACY_POLICY_LAST_UPDATED}
+      />
     </SafeAreaProvider>
   );
 }

@@ -16,41 +16,10 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { PrivacyPolicyDetailScreen } from '@/features/figma-screens/screens/PrivacyPolicyDetailScreen';
 import { colors } from '@/features/figma-screens/tokens';
-
-const SECTIONS = [
-  {
-    title: 'Overview',
-    body: 'We only share your information with companies that help us run the app. We share only what they need to do their job. We do not sell your information to data brokers or advertisers.',
-  },
-  {
-    title: 'Supabase',
-    body: 'Supabase stores your account profile, session history, photos, and location data from active sessions. They provide secure cloud storage and help us keep the app running.',
-  },
-  {
-    title: 'Google Maps',
-    body: 'Google Maps shows your route on the map while you track a cleanup session. Location data is shared with Google only during active sessions when the map is in use.',
-  },
-  {
-    title: 'Stripe',
-    body: 'Stripe processes shop purchases and donations. Stripe receives payment details needed to complete the transaction. We do not store your full card number on our servers.',
-  },
-  {
-    title: 'We do not sell your data',
-    body: 'We do not sell your information. We do not use your data for targeted ads on other apps and websites. We do not share your data with companies that want to market to you.',
-  },
-  {
-    title: 'When the law requires it',
-    body: "We may share information if the law requires it. For example, we may respond to a court order, subpoena, or government request. We may also share information to protect someone's safety or to investigate fraud or abuse.",
-  },
-  {
-    title: 'What we never share',
-    body: 'We do not sell your information. We do not share your photos or session location with advertisers. We do not share your data so other companies can market to you on other apps or websites.',
-  },
-  {
-    title: 'Service providers only',
-    body: 'Our partners act as service providers. They may only use your information to help us run Clean Up - Give Back. They must protect your data and follow our instructions.',
-  },
-];
+import {
+  PRIVACY_POLICY_LAST_UPDATED,
+  WHO_WE_SHARE_IT_WITH_SECTIONS,
+} from '@/features/figma-screens/content/privacyPolicyContent';
 
 export default function PrivacyWhoWeShareRoute() {
   const [fontsLoaded] = useFonts({
@@ -70,7 +39,11 @@ export default function PrivacyWhoWeShareRoute() {
 
   return (
     <SafeAreaProvider>
-      <PrivacyPolicyDetailScreen sectionTitle="Who we share it with" sections={SECTIONS} />
+      <PrivacyPolicyDetailScreen
+        sectionTitle="Who we share it with"
+        sections={WHO_WE_SHARE_IT_WITH_SECTIONS}
+        lastUpdated={PRIVACY_POLICY_LAST_UPDATED}
+      />
     </SafeAreaProvider>
   );
 }

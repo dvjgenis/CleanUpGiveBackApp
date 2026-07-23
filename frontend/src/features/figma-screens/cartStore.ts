@@ -79,7 +79,13 @@ export function addCartItem(input: CartProductInput, quantity = 1) {
     const existing = prev.find((item) => item.id === input.id);
     if (existing) {
       return prev.map((item) =>
-        item.id === input.id ? { ...item, quantity: item.quantity + qty } : item,
+        item.id === input.id
+          ? {
+              ...item,
+              quantity: item.quantity + qty,
+              description: item.description || input.description || '',
+            }
+          : item,
       );
     }
     return [

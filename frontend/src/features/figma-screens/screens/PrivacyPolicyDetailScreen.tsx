@@ -9,18 +9,18 @@ import { SessionSetupTopAppBar } from '@/components/session-setup/SessionSetupTo
 import { useLiveSession } from '@/features/session-tracking/liveSessionStore';
 
 import { AccountChevronIcon } from '../components/AccountIcons';
+import { LinkedPolicyText } from '../components/LinkedPolicyText';
+import type { PrivacySection } from '../content/privacyPolicyContent';
 import { layout, colors, fontFamilies, shadows } from '../tokens';
 
-
-export type PrivacySection = {
-  title: string;
-  body: string;
-};
+export type { PrivacySection };
 
 type Props = {
   /** Section title displayed inline below the top bar (e.g. "What we collect"). */
   sectionTitle: string;
   sections: PrivacySection[];
+  /** Display date string, e.g. "July 23, 2026". */
+  lastUpdated: string;
 };
 
 /**
@@ -28,7 +28,7 @@ type Props = {
  * Figma: `what-we-collect` (728:1295), `how-we-use-it` (735:101),
  *        `who-we-share-it-with` (735:160), `how-we-protect-it` (735:219).
  */
-export function PrivacyPolicyDetailScreen({ sectionTitle, sections }: Props) {
+export function PrivacyPolicyDetailScreen({ sectionTitle, sections, lastUpdated }: Props) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { isActive } = useLiveSession();
@@ -90,13 +90,13 @@ export function PrivacyPolicyDetailScreen({ sectionTitle, sections }: Props) {
           <Text style={s.sectionTitle}>{sectionTitle}</Text>
         </AnimatedPressable>
 
-        <Text style={s.lastUpdated}>Last updated: June 30, 2026</Text>
+        <Text style={s.lastUpdated}>Last updated: {lastUpdated}</Text>
 
         <View style={s.body}>
           {sections.map((section) => (
             <View key={section.title} style={s.section}>
               <Text style={s.sectionHeading}>{section.title}</Text>
-              <Text style={s.sectionBody}>{section.body}</Text>
+              <LinkedPolicyText style={s.sectionBody}>{section.body}</LinkedPolicyText>
             </View>
           ))}
         </View>
