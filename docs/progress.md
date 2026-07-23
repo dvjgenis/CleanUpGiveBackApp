@@ -2,6 +2,20 @@
 
 ---
 
+## [2026-07-23] — Expand live-tracker Weather Icons
+
+**R:** Figma MCP timed out on community Weather Icons node `2:78993`; that Figma file is the react-icons/wi set, so paths were extracted from `react-icons@5.5.0`.
+
+**A:** Unified all 27 live weather glyphs on Weather Icons (`react-icons/wi`), scaled 30→24 to match Figma extract viewBox; live pill uses `WeatherConditionIcon` + `weatherIcon` from `useLiveWeather`.
+
+**L:** Prefer react-icons/wi when Figma community MCP is unavailable — same source as the Ultimate React Icons library.
+
+**P:** Live pill icons track WMO codes with day/night variants; full ~220 wi catalog still out of scope.
+
+**H:** All live weather glyphs share Weather Icons + viewBox `0 0 24 24` (scaled from wi 30×30). Keep `WEATHER_ICON_VIEWBOX` in sync if the source size changes.
+
+---
+
 ## [2026-07-22] — Admin Today bento redesign
 
 **A:** Rebuilt dashboard as sparse bento grid: hero Review tile, 4 metric tiles, Court + Jump-to tiles; removed feed/bulk/sticky/TodayFocus clutter; Insights (charts+map) one collapsed block.

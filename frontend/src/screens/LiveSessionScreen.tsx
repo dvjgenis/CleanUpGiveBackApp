@@ -35,7 +35,7 @@ import { TrackerEndSessionIcon } from '@/features/session-tracking/components/ic
 import { TrackerLayersIcon } from '@/features/session-tracking/components/icons/TrackerLayersIcon';
 import { TrackerMapDarkIcon, TrackerMapLightIcon } from '@/features/session-tracking/components/icons/TrackerMapThemeIcons';
 import { TrackerMyLocationIcon } from '@/features/session-tracking/components/icons/TrackerMyLocationIcon';
-import { TrackerWeatherIcon } from '@/features/session-tracking/components/icons/TrackerWeatherIcon';
+import { WeatherConditionIcon } from '@/features/session-tracking/components/icons/WeatherConditionIcon';
 import {
   formatElapsed,
   formatCheckpointDue,
@@ -304,7 +304,12 @@ export function LiveSessionScreen() {
   );
   const selectedPhoto =
     selectedPhotoIndex !== null ? viewerPhotos[selectedPhotoIndex] ?? null : null;
-  const { placeLabel, temperatureLabel, isLoading: isWeatherLoading } = useLiveWeather();
+  const {
+    placeLabel,
+    temperatureLabel,
+    weatherIcon,
+    isLoading: isWeatherLoading,
+  } = useLiveWeather();
   const freeTrialRemaining = getFreeTrialSecondsRemaining(elapsedSeconds);
   const showFreeTrialCountdown = !getTrackerHasPaid();
 
@@ -431,7 +436,11 @@ export function LiveSessionScreen() {
                 </View>
                 <View style={[s.pillDivider, { backgroundColor: chrome.borderOutline }]} />
                 <View style={s.temperatureRow}>
-                  <TrackerWeatherIcon color={chrome.textTertiary} />
+                  <WeatherConditionIcon
+                    condition={weatherIcon}
+                    color={chrome.textTertiary}
+                    size={18}
+                  />
                   <Text style={[s.locationText, { color: chrome.textTertiary }]}>
                     {isWeatherLoading ? '…' : temperatureLabel}
                   </Text>

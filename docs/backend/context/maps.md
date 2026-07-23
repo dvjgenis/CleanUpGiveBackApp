@@ -25,7 +25,7 @@ Powers route display, GPS sampling, and distance stats during cleanup sessions. 
 - Live maps wait for first GPS fix (“Getting precise location…”) before mounting the basemap (no US overview flash)
 - When Always/background unavailable (`backgroundLocationEnabled === false`), session still starts foreground-only; **`AppState` active** → `resumeLiveSessionTrackingAfterForeground()` restarts GPS watch
 - Completed-session replay: `sliceRouteByDistanceProgress` (distance-scaled ~3–10s animation on detail/confirmation maps)
-- Live weather + reverse geocoding via [Open-Meteo](https://open-meteo.com/) — `useLiveWeather.ts`
+- Live weather + reverse geocoding via [Open-Meteo](https://open-meteo.com/) — `useLiveWeather.ts`; pill glyphs from Weather Icons (`weatherIconPaths.ts` / `weatherCodeToIconKey`, day/night + hail/sleet)
 - Location plugins in `app.json`: when-in-use + Always strings; `isIosBackgroundLocationEnabled` / `isAndroidBackgroundLocationEnabled`
 
 ### Map rendering (three tiers)
