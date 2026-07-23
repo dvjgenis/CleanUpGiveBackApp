@@ -2,6 +2,78 @@
 
 ---
 
+## [2026-07-22] — Admin Today bento redesign
+
+**A:** Rebuilt dashboard as sparse bento grid: hero Review tile, 4 metric tiles, Court + Jump-to tiles; removed feed/bulk/sticky/TodayFocus clutter; Insights (charts+map) one collapsed block.
+
+**P:** First screen is scannable in seconds — review, metrics, court, links.
+
+---
+
+## [2026-07-22] — Admin chart types (progressive disclosure)
+
+**A:** Added area trend (hours + submissions), queue-age bars, decision bars, court progress bars under collapsed Charts; helpers in `dashboard-charts.ts`. Doc: `docs/admin/chart-types-2026-07-22.md`.
+
+**P:** Today stays queue-first; richer analytics only when Donna expands Charts.
+
+---
+
+## [2026-07-22] — Admin dashboard UX audit (Donna)
+
+**A:** Research → action-first layout: TodayFocus + Review next, queue waiting age/court/bulk approve, KPIs after queue, map/charts collapsed, recent skips queue dupes, court urgency colors, mobile sticky CTA. Doc: `docs/admin/ux-audit-2026-07-22.md`.
+
+**P:** Dashboard home is a work queue for Donna, not an analytics wall.
+
+---
+
+## [2026-07-22] — Admin accessibility audit + fixes
+
+**A:** axe-core on dashboard/sessions; primary → AA-safe `#007536`; heatmap keyboard via list only; skip link; named actions/badges; sessions sort label + filter `aria-pressed`; docs in `docs/admin/a11y-audit-2026-07-22.md` + `brand-web.md`.
+
+**P:** Dashboard/Sessions report 0 axe violations after clean `.next` rebuild.
+
+---
+
+## [2026-07-22] — Admin metro neighborhood heatmap
+
+**A:** SVG choropleth of 8 mock metro neighborhoods; session counts/hours by period; click filters recent table; brand green heat scale.
+
+**P:** Dashboard shows Local metro activity map under court-risk strip.
+
+---
+
+## [2026-07-22] — Admin dashboard UX pass (all 9)
+
+**Session goal:** Implement queue-first UX: attention hierarchy, inline decisions, review drawer, nav badges, density, toasts, empty/loading honesty, a11y targets.
+
+**A:**
+- Thin mock strip; amber only on review queue; court risk neutral
+- First screen = period + KPIs + queue; charts behind “Show charts”; hours below fold
+- Inline Approve/Decline + reason sheet + undo toasts (mock local; live via server actions)
+- Review drawer (summary → decide) with J/K/A/D/Esc
+- Sidebar/mobile badges; Payments demoted to Coming soon
+- Denser recent table + status chips + mobile cards; court “C” icon
+- ToastProvider; KPI skeletons on period pending; empty donut copy; ≥44px targets + KPI chevrons
+
+**P:** Dashboard UX pass live at `localhost:3001` on mock data.
+
+---
+
+## [2026-07-22] — Admin dashboard: work-queue redesign
+
+**Session goal:** Turn the admin dashboard into Donna’s daily work surface while keeping mock data for empty DB.
+
+**A:**
+- Period toggle (This month / Last 30 days / All time) scopes KPIs + donuts
+- KPI mix: Under Review · Approved · Court hours at risk · Avg feedback (clickable); Approved hours callout with sparkline/delta
+- Review queue (oldest + court-first), court-risk strip, louder mock banner, Approve disabled on mock
+- Recent table: volunteer, age, court badge, Open/Approve; under-review sorted first
+- Quieter motion + KPI count-up; shared `dashboard-mock` / `dashboard-period` helpers
+
+**P:** Dashboard at `localhost:3001` serves the redesigned layout on mock data.
+
+---
+
 ## [2026-07-22] — Instant minimize to Home + down chevron
 
 **Session goal:** Remove blank flash before Home when minimizing the live tracker; point minimize chevron down.

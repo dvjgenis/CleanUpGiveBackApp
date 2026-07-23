@@ -1,0 +1,102 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-bg-app: #fcf9f8;
+  --color-bg-surface: #ffffff;
+  --color-bg-surface-elevated: #f6f3f2;
+  --color-text-primary: #1c1b1b;
+  --color-text-tertiary: #3e4a3d;
+  --color-text-on-primary: #ffffff;
+  --color-text-on-primary-soft: #fcf9f8;
+  --color-border-outline: #bdcaba;
+  --color-border-chip-selected: #e5e2e1;
+  /* Brand green #009540 fails WCAG AA for normal text/white-on-green (≈3.9:1).
+     Admin UI uses AA-safe #007536 (≈4.6:1 on white / white on green). */
+  --color-primary: #007536;
+  --color-primary-brand: #009540;
+  --color-accent-lime: #c2d832;
+  --color-status-approved-bg: #f7fff1;
+  --color-status-approved-text: #007536;
+  --color-status-approved-border: #007536;
+  --color-status-pending-bg: #ffddb5;
+  --color-status-pending-text: #835400;
+  --color-status-pending-border: #fcab29;
+  --color-status-declined-bg: #ffd9de;
+  --color-status-declined-text: #ba1a1a;
+  --color-status-declined-border: #ba1a1a;
+  --shadow-nav-bottom: 0 -4px 5px rgba(0, 0, 0, 0.02);
+  --shadow-bar-top: 0 4px 5px rgba(0, 0, 0, 0.15);
+  --color-overlay-scrim: rgba(28, 27, 27, 0.4);
+  --font-heading: var(--font-sanchez), Georgia, serif;
+  --font-body: var(--font-noto-sans), system-ui, sans-serif;
+  --font-data: var(--font-ibm-plex-sans), 'Courier New', monospace;
+}
+
+html,
+body {
+  background-color: var(--color-bg-app);
+  color: var(--color-text-primary);
+  font-family: var(--font-body);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.interactive {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.skip-link {
+  position: absolute;
+  left: 1rem;
+  top: -100px;
+  z-index: 200;
+  padding: 0.75rem 1rem;
+  background: var(--color-primary);
+  color: #fff;
+  font-family: var(--font-data);
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 8px;
+}
+
+.skip-link:focus {
+  top: 1rem;
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .table-row-hover:hover {
+    background-color: var(--color-bg-surface-elevated);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-outline);
+  border-radius: 3px;
+}

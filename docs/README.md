@@ -14,6 +14,9 @@ Living docs for the Clean Up - Give Back monorepo. Templates are copy-only.
 | [reports/](reports/) | Session / decision reports (e.g. dual-cam App Store stance) |
 | [admin/admin-portal-prd.md](admin/admin-portal-prd.md) | Admin portal PRD — Donna's session review, letterheads, orders, events, feedback |
 | [admin/brand-web.md](admin/brand-web.md) | Web brand guidelines for admin portal (CSS tokens, fonts, Tailwind config) |
+| [admin/a11y-audit-2026-07-22.md](admin/a11y-audit-2026-07-22.md) | Admin portal axe WCAG 2.1 AA audit + remediation |
+| [admin/ux-audit-2026-07-22.md](admin/ux-audit-2026-07-22.md) | Donna-persona dashboard UX audit + remediation |
+| [admin/chart-types-2026-07-22.md](admin/chart-types-2026-07-22.md) | Useful chart types for Today (behind Show charts) |
 
 ## Frontend
 
