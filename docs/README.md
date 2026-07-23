@@ -7,6 +7,7 @@ Living docs for the Clean Up - Give Back monorepo. Templates are copy-only.
 | Doc | Purpose |
 |-----|---------|
 | [current.md](current.md) | What runs today |
+| [architecture.md](architecture.md) | System Mermaid diagrams (frontend, backend, integrations) |
 | [progress.md](progress.md) | Session-by-session progress log |
 | [implementation-plan.md](implementation-plan.md) | Planned work and milestones |
 | [accounts-and-access.md](accounts-and-access.md) | Org accounts (no secrets in repo) |
@@ -69,6 +70,7 @@ Living docs for the Clean Up - Give Back monorepo. Templates are copy-only.
 
 | Path | Purpose |
 |------|---------|
+| [architecture.md](architecture.md) | Full-system Mermaid diagrams (clients, Fly, Supabase, integrations) |
 | [adr/](adr/) | Architecture decision records |
 | [agents/](agents/) | Agent instructions (`AGENTS.md`, `CLAUDE.md`) |
 

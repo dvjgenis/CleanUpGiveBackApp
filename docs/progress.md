@@ -2,6 +2,14 @@
 
 ---
 
+## [2026-07-23] — System architecture Mermaid diagrams
+
+**A:** Added `docs/architecture.md` with four Mermaid diagrams (system context, frontend structure, sessions API surface, live-session sequence) and linked from `docs/README.md`.
+
+**P:** Living system overview for frontend + backend + integrations.
+
+---
+
 ## [2026-07-23] — Expand live-tracker Weather Icons
 
 **R:** Figma MCP timed out on community Weather Icons node `2:78993`; that Figma file is the react-icons/wi set, so paths were extracted from `react-icons@5.5.0`.
