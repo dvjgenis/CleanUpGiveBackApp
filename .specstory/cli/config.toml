@@ -3,10 +3,17 @@
 # This is the project-level config file for SpecStory CLI.
 # All settings here apply to this project unless overridden by CLI flags.
 #
+# Project: CleanUpGiveBackApp — monorepo (frontend Expo, backend/sessions Fly API, admin Next.js).
+# Living docs: docs/README.md · session log: docs/progress.md · root PROGRESS.md
+# Latest milestone (2026-07-26): approved session service letter PDF — see
+#   .specstory/history/2026-07-26-approved-session-service-letter-pdf.md
+#
 # Uncomment (remove the #) the line and edit any setting below to change the default behavior.
 # For more information, see: https://docs.specstory.com/integrations/terminal-coding-agents/usage
 
 [local_sync]
+# Markdown session exports (default: ./.specstory/history)
+# enabled = true
 # Write markdown files locally. (default: true)
 # enabled = false # equivalent to --only-cloud-sync
 

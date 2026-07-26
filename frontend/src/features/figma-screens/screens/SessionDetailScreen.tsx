@@ -25,6 +25,8 @@ import { useSessionDetail } from '@/features/session-tracking/hooks/useSessionDe
 import { removeVolunteerSession } from '@/features/session-tracking/removeVolunteerSession';
 import { useSessionRouteCoordinates } from '@/features/session-tracking/hooks/useSessionRouteCoordinates';
 import { formatPhotoTimeLabel } from '@/features/session-tracking/utils/sessionFormat';
+import { isApiConfigured } from '@/lib/api';
+import { downloadServiceLetterPdf } from '@/lib/downloadServiceLetterPdf';
 
 import {
   SessionDetailBackIcon,
@@ -129,15 +131,23 @@ export function SessionDetailScreen() {
   const routeCoordinates = useSessionRouteCoordinates(sessionId);
 
   const [deleting, setDeleting] = useState(false);
+  const [pdfDownloading, setPdfDownloading] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
+
+  const canDownloadPdf =
+    Boolean(sessionId) && !loading && !error && detail.status === 'approved';
 
   const canDeleteSession =
     Boolean(sessionId) && !loading && !error && detail.status !== 'approved';
 
   const footerBottom = Math.max(insets.bottom, 12);
-  const footerContentHeight = canDeleteSession
-    ? SECONDARY_FOOTER_BTN_HEIGHT + FOOTER_ACTIONS_GAP + PRIMARY_FOOTER_BTN_HEIGHT
-    : PRIMARY_FOOTER_BTN_HEIGHT;
+  const stackedFooterActions =
+    (canDownloadPdf ? 1 : 0) + (canDeleteSession ? 1 : 0) + 1;
+  const footerContentHeight =
+    stackedFooterActions === 1
+      ? PRIMARY_FOOTER_BTN_HEIGHT
+      : stackedFooterActions * PRIMARY_FOOTER_BTN_HEIGHT +
+        (stackedFooterActions - 1) * FOOTER_ACTIONS_GAP;
   const scrollBottomPad = FOOTER_PAD_TOP + footerContentHeight + footerBottom + 16;
   const contentWidth = Math.min(windowWidth - 32, 358);
 
@@ -198,6 +208,30 @@ export function SessionDetailScreen() {
       ],
     );
   }, [deleting, detail.status, router, sessionId]);
+
+  const handleDownloadPdf = useCallback(() => {
+    if (!sessionId || pdfDownloading || !canDownloadPdf) {
+      return;
+    }
+
+    if (!isApiConfigured) {
+      Alert.alert('Download unavailable', 'Connect to the server to download the service letter.');
+      return;
+    }
+
+    void (async () => {
+      setPdfDownloading(true);
+      try {
+        await downloadServiceLetterPdf([sessionId]);
+      } catch (downloadError) {
+        const message =
+          downloadError instanceof Error ? downloadError.message : 'Could not download PDF';
+        Alert.alert('Download failed', message);
+      } finally {
+        setPdfDownloading(false);
+      }
+    })();
+  }, [canDownloadPdf, pdfDownloading, sessionId]);
 
   return (
     <View style={s.root}>
@@ -282,14 +316,32 @@ export function SessionDetailScreen() {
               )}
             </AnimatedPressable>
           ) : null}
+          {canDownloadPdf ? (
+            <AnimatedPressable
+              scaleTo={0.98}
+              onPress={handleDownloadPdf}
+              disabled={pdfDownloading}
+              accessibilityRole="button"
+              accessibilityLabel="Download service letter PDF"
+              style={s.newSessionBtn}
+            >
+              {pdfDownloading ? (
+                <ActivityIndicator color={colors.white} />
+              ) : (
+                <Text style={s.newSessionLabel}>Download PDF</Text>
+              )}
+            </AnimatedPressable>
+          ) : null}
           <AnimatedPressable
             scaleTo={0.98}
-            style={s.newSessionBtn}
+            style={canDownloadPdf ? s.secondaryOutlineBtn : s.newSessionBtn}
             onPress={() => router.push('/session-setup-guide' as Href)}
             accessibilityRole="button"
             accessibilityLabel="Start a new session"
           >
-            <Text style={s.newSessionLabel}>New Session</Text>
+            <Text style={canDownloadPdf ? s.secondaryOutlineLabel : s.newSessionLabel}>
+              New Session
+            </Text>
           </AnimatedPressable>
         </View>
       </View>
@@ -472,5 +524,18 @@ const s = StyleSheet.create({
     fontFamily: fontFamilies.notoSansSemiBold,
     fontSize: 14,
     color: colors.white,
+  },
+  secondaryOutlineBtn: {
+    height: SECONDARY_FOOTER_BTN_HEIGHT,
+    borderWidth: 1,
+    borderColor: colors.borderOutline,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  secondaryOutlineLabel: {
+    fontFamily: fontFamilies.notoSansSemiBold,
+    fontSize: 14,
+    color: colors.textPrimary,
   },
 });

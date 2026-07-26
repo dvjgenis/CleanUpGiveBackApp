@@ -24,6 +24,8 @@ Fastify service in `backend/sessions/` on Fly.io (`https://cleanup-sessions.fly.
 | GET | `/sessions/:id` | Session detail + checkpoints |
 | PATCH | `/sessions/:id/approval` | Admin status change |
 | DELETE | `/sessions/:id` | Volunteer delete (not when `approved`) |
+| GET | `/sessions/:id/service-letter.pdf` | Approved service letter PDF (letter + evidence) |
+| POST | `/sessions/service-letter.pdf` | Multi-session service letter PDF |
 | POST | `/emails/event-registration` | Event Register confirmation (Resend) |
 | POST | `/emails/email-change/request` | Send email-change OTP |
 | POST | `/emails/email-change/confirm` | Validate email-change OTP |
@@ -64,3 +66,4 @@ Full schema: [supabase.md](../../supabase.md) §2.
 - Frontend delete: `removeVolunteerSession.ts` / `removeVolunteerSessions` (bulk from Sessions list) + `sessionsApi.deleteSession`; client tombstones in `volunteerDeletedSessions.ts` (AsyncStorage)
 - Frontend stats: `sessionStatsStore.ts`, `utils/homeDashboardStats.ts`
 - Frontend spec: [session-tracking-expo-go.md](../../frontend/specs/session-tracking-expo-go.md)
+- Service letter PDF: [service-letter-pdf.md](../../frontend/specs/service-letter-pdf.md); local Prisma via `backend/sessions/.env` ([supabase.md](../../supabase.md) §3)

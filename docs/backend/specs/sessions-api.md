@@ -1,7 +1,7 @@
 # Backend spec: Sessions API
 
 **Date:** 2026-07-13  
-**Status:** Implemented — live on Fly (`https://cleanup-sessions.fly.dev`)  
+**Status:** Implemented (including service letter PDF — deploy Fly + set `SUPABASE_SERVICE_ROLE_KEY` for photo/name resolution)  
 **ADR:** [ADR-004](../../adr/ADR-004-sessions-backend-supabase-fly.md)  
 **Setup:** [supabase.md](../../supabase.md)  
 **Frontend:** [session-tracking-expo-go.md](../../frontend/specs/session-tracking-expo-go.md)
@@ -110,6 +110,26 @@ Volunteer-owned hard delete (removes session from admin review queue).
 - **Rejected when:** status is `approved` → `409 { "error": "Approved sessions cannot be deleted" }`
 - **Response:** `204` (no body); checkpoints cascade-delete via FK
 
+#### `GET /sessions/:id/service-letter.pdf`
+
+Approved-session **service letter** PDF (org letter + static route map + checkpoint photos).
+
+- **Auth:** volunteer JWT **or** header `x-admin-key: <ADMIN_API_KEY>`
+- **Guards:** session `status === approved`; volunteer must own session unless admin key
+- **Response:** `200` `application/pdf`, `Content-Disposition: attachment; filename="CGB-Service-Letter-YYYY-MM-DD.pdf"`
+- **Side effects:** sets `letterhead_generated_at` on the session
+
+#### `POST /sessions/service-letter.pdf`
+
+Combined letter PDF for multiple approved sessions (same volunteer when using JWT).
+
+- **Body:** `{ "sessionIds": ["<uuid>", …] }` (minimum one id)
+- **Auth / guards:** same as GET
+- **Response:** multi-session filename includes `-multi`
+- **Side effects:** sets `letterhead_generated_at` on all included sessions
+
+Spec: [service-letter-pdf.md](../../frontend/specs/service-letter-pdf.md).
+
 ## Data model
 
 ### `sessions`
@@ -127,6 +147,8 @@ Volunteer-owned hard delete (removes session from admin review queue).
 | `distance_miles` | numeric | |
 | `route` | jsonb | `[[lng, lat], …]` polyline |
 | `status` | enum | `active` → `under_review` → `approved` / `not_approved` / `invalid` |
+| `adjusted_hours` | numeric | optional admin override (letter PDF hours) |
+| `letterhead_generated_at` | timestamptz | set when service letter PDF is generated |
 | `created_at` | timestamptz | |
 
 ### `checkpoints`

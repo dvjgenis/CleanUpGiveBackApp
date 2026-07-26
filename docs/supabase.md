@@ -74,6 +74,23 @@ create policy "users_own_checkpoints" on public.checkpoints
 | `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Dashboard → Settings → API → **anon public** JWT (`eyJ…`) | Not the publishable `sb_publishable_…` key. Safe to ship in client |
 | `EXPO_PUBLIC_API_URL` | Fly app URL after deploy (e.g. `https://cleanup-sessions.fly.dev`) | Fly Fastify sessions API |
 
+### Backend local (`backend/sessions/.env` — gitignored)
+
+Used by **Prisma CLI** (`npm run db:push`) and local API dev — **not** read by the Expo app.
+
+| Variable | Source | Notes |
+|----------|--------|-------|
+| `DATABASE_URL` | Dashboard → **Database** → **Connect** → URI | From a **Mac/home network**, prefer **Session pooler** (port 5432, `*.pooler.supabase.com`). Direct `db.<ref>.supabase.co:5432` often fails with Prisma **P1001** (IPv6 / firewall). Append `?sslmode=require` if omitted. |
+| `SUPABASE_URL` | Same as frontend Project URL | Optional for local `npm run dev` when testing PDF routes |
+| `SUPABASE_SERVICE_ROLE_KEY` | Dashboard → Settings → API → **service_role** | Required locally to test service-letter PDF generation (signed photos + volunteer name) |
+
+Copy template: create `backend/sessions/.env` manually; do **not** commit. Keep `DATABASE_URL` out of `frontend/.env` (client bundle scope).
+
+```bash
+cd backend/sessions
+npm run db:push   # loads .env from this directory only
+```
+
 ### Fly secrets (server only — never in repo)
 
 Set after `fly auth login` and first deploy:
@@ -81,13 +98,17 @@ Set after `fly auth login` and first deploy:
 ```bash
 fly secrets set \
   SUPABASE_URL="https://YOUR_PROJECT_REF.supabase.co" \
-  DATABASE_URL="postgresql://postgres:YOUR_PASSWORD@db.YOUR_PROJECT_REF.supabase.co:5432/postgres"
+  DATABASE_URL="postgresql://postgres:YOUR_PASSWORD@db.YOUR_PROJECT_REF.supabase.co:5432/postgres" \
+  SUPABASE_SERVICE_ROLE_KEY="eyJ..." \
+  ADMIN_API_KEY="your-admin-proxy-key"
 ```
 
 | Secret | Source |
 |--------|--------|
 | `SUPABASE_URL` | Same as frontend Project URL — used for JWKS JWT verification |
-| `DATABASE_URL` | Settings → Database → Connection string → URI (Supabase Postgres) |
+| `DATABASE_URL` | Settings → Database → Connection string → URI (direct or pooler; Fly usually tolerates **direct**) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Settings → API → service_role — service letter PDFs, signed Storage URLs |
+| `ADMIN_API_KEY` | Generate locally; must match admin portal `ADMIN_API_KEY` for `/api/service-letter/*` proxy |
 
 Store real values in `credentials.local.md` (gitignored) or a password manager — **not** in `docs/`.
 

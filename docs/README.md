@@ -31,6 +31,7 @@ Living docs for the Clean Up - Give Back monorepo. Templates are copy-only.
 | [frontend/specs/session-tracking-expo-go.md](frontend/specs/session-tracking-expo-go.md) | Sessions + geolocation (Kalman, background-while-active, sync) |
 | [frontend/specs/home-dashboard-session-stats.md](frontend/specs/home-dashboard-session-stats.md) | Home Service Hours + impact from `sessionStatsStore` |
 | [frontend/specs/session-route-replay.md](frontend/specs/session-route-replay.md) | Play / Pause / Replay on completed route maps |
+| [frontend/specs/service-letter-pdf.md](frontend/specs/service-letter-pdf.md) | Approved session service letter PDF (volunteer + admin) |
 | [frontend/specs/event-calendar-export.md](frontend/specs/event-calendar-export.md) | Event detail → Apple / Google / device calendar |
 | [frontend/specs/photo-checkpoint-dual-capture.md](frontend/specs/photo-checkpoint-dual-capture.md) | Checkpoint capture (`expo-camera` sequential) |
 | [frontend/specs/expo-go-dev-networking.md](frontend/specs/expo-go-dev-networking.md) | Expo Go Metro LAN / tunnel / cellular testing |

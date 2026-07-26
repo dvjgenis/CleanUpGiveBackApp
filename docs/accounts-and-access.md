@@ -29,9 +29,11 @@ Required for native MapLibre maps and background route tracking during active se
 | File | Contents |
 |------|----------|
 | `frontend/.env.example` | Template for `EXPO_PUBLIC_SUPABASE_*`, `EXPO_PUBLIC_API_URL` |
-| `frontend/.env` | Local values (gitignored) |
+| `frontend/.env` | Local Expo values (gitignored) — **no** `DATABASE_URL` |
+| `backend/sessions/.env` | `DATABASE_URL` (session pooler for local Prisma), optional service role for PDF dev (gitignored) |
+| `admin/.env.local` | Supabase + `SESSIONS_API_URL` + `ADMIN_API_KEY` for letterhead proxy (gitignored) |
 | `credentials.local.md` | Optional local secret reference (gitignored) |
-| Fly secrets | `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_JWT_SECRET`, `DATABASE_URL` — set via `fly secrets set` |
+| Fly secrets | `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `ADMIN_API_KEY` — `fly secrets set` |
 
 See [supabase.md](supabase.md) for full env var table and rotation steps.
 

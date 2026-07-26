@@ -206,16 +206,26 @@ export function SessionActions({ session, volunteerId, volunteerName }: Props) {
       {/* PDF actions */}
       <div className="flex flex-col gap-sm border-t border-border-outline pt-lg">
         <p className="font-data text-[12px] text-text-tertiary tracking-[0.96px] uppercase">Letterhead</p>
+        {session.letterhead_generated_at ? (
+          <p className="font-body text-[13px] text-text-tertiary">
+            Last generated: {new Date(session.letterhead_generated_at).toLocaleDateString()}
+          </p>
+        ) : null}
         <a
-          href={`/api/letterhead/${session.id}`}
+          href={`/api/service-letter/${session.id}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="interactive inline-flex items-center justify-center h-9 px-md rounded-sm border border-border-outline bg-bg-surface font-data text-[12px] font-semibold text-text-primary hover:bg-bg-surface-elevated transition-colors"
+          aria-disabled={session.status !== 'approved'}
+          className={`interactive inline-flex items-center justify-center h-9 px-md rounded-sm border border-border-outline bg-bg-surface font-data text-[12px] font-semibold text-text-primary transition-colors ${
+            session.status === 'approved'
+              ? 'hover:bg-bg-surface-elevated'
+              : 'opacity-50 pointer-events-none'
+          }`}
         >
           Generate Letterhead (this session)
         </a>
         <a
-          href={`/api/letterhead/bulk/${volunteerId}`}
+          href={`/api/service-letter/bulk/${volunteerId}`}
           target="_blank"
           rel="noopener noreferrer"
           className="interactive inline-flex items-center justify-center h-9 px-md rounded-sm border border-border-outline bg-bg-surface font-data text-[12px] font-semibold text-text-primary hover:bg-bg-surface-elevated transition-colors"

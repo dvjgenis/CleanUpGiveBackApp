@@ -3,6 +3,37 @@
 Session-by-session progress log. Append a new dated block each session.
 Distinct from `notes/journey.md` (correction-loop log) and `IMPLEMENTATION_PLAN.md` (task list).
 
+Canonical detailed log: [`docs/progress.md`](docs/progress.md).
+
+---
+
+## [2026-07-26] — Approved session service letter PDF
+
+**Session goal:** Ship shared volunteer + admin PDF (letter page + per-session evidence maps/photos); sync Supabase schema for letterhead columns.
+
+### Tasks Completed
+
+| Task | Location | Status |
+|---|---|---|
+| PDF generator on Fly Sessions API | `backend/sessions/src/letterhead/` | ✅ |
+| PDF routes | `GET/POST …/service-letter.pdf` | ✅ |
+| Mobile download UX | `SessionDetailScreen`, `SessionsScreen`, `downloadServiceLetterPdf.ts` | ✅ |
+| Admin proxy routes | `admin/app/api/service-letter/` | ✅ |
+| Spec + docs | `docs/frontend/specs/service-letter-pdf.md`, `docs/supabase.md` env table | ✅ |
+| Prisma `db push` (session pooler) | `backend/sessions/.env` | ✅ |
+
+### Key Decisions
+
+- **One PDF generator** on Fly for volunteer JWT and admin `x-admin-key` (admin portal proxies).
+- **`DATABASE_URL` only in `backend/sessions/.env`** — not Expo `frontend/.env`.
+- **Local Prisma:** Supabase **session pooler** URI; direct host often unreachable (P1001) from dev machines.
+
+### Remaining for production
+
+- `fly deploy` from `backend/sessions/` with `SUPABASE_SERVICE_ROLE_KEY` (and verify `DATABASE_URL` on Fly).
+- Admin `.env.local`: `SESSIONS_API_URL`, `ADMIN_API_KEY`.
+- End-to-end QA on device + admin letterhead links.
+
 ---
 
 ## [2026-07-10 Session 4] — Figma Home Screen → Native (figma-screens feature scaffold + HomeScreen)

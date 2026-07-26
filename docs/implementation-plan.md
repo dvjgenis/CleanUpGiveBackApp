@@ -53,7 +53,7 @@ Docs complete — see [ADR-004](adr/ADR-004-sessions-backend-supabase-fly.md), [
 - [x] Sequential checkpoint capture (`expo-camera`) — [photo-checkpoint-dual-capture.md](frontend/specs/photo-checkpoint-dual-capture.md) (simultaneous dual out of scope)
 - [x] Home dashboard session stats — chart + impact from `sessionStatsStore` — [home-dashboard-session-stats.md](frontend/specs/home-dashboard-session-stats.md)
 - [x] Session route replay on detail maps — [session-route-replay.md](frontend/specs/session-route-replay.md)
-- [x] Event calendar export — [event-calendar-export.md](frontend/specs/event-calendar-export.md)
+- [x] Approved session service letter PDF — [service-letter-pdf.md](frontend/specs/service-letter-pdf.md) (Fly API + mobile download + admin proxy)
 - [ ] EAS dev-client builds — run `eas build --profile development` from `frontend/` (see [accounts-and-access.md](accounts-and-access.md); needed for background GPS + native MapLibre)
 
 ## Privacy & compliance

@@ -2,6 +2,23 @@
 
 ---
 
+## [2026-07-26] — Approved session service letter PDF + local DB sync
+
+**R:** Volunteers and admins need the same multi-page PDF (org letter + route map + checkpoint photos) for approved sessions; schema needs `adjusted_hours` / `letterhead_generated_at` on Supabase.
+
+**A:**
+- Fly Sessions API: `@react-pdf/renderer` letterhead module, OSM static route maps, `GET/POST …/service-letter.pdf`, assets in `backend/sessions/assets/`
+- Mobile: **Download PDF** on approved session detail; sessions list select approved → bulk download (`downloadServiceLetterPdf` + `expo-sharing`)
+- Admin: `/api/service-letter/[sessionId]` and `/api/service-letter/bulk/[volunteerId]` proxy to Fly with `x-admin-key`
+- Spec: [service-letter-pdf.md](frontend/specs/service-letter-pdf.md); living docs updated (`sessions-api.md`, `current.md`, `app.md`, admin PRD §7.6)
+- Local Prisma: `DATABASE_URL` in `backend/sessions/.env` (Supabase **session pooler**); `npm run db:push` succeeded — DB in sync with Prisma schema
+
+**L:** Prisma CLI only loads `.env` from `backend/sessions/`, not `frontend/.env`. Direct `db.<ref>.supabase.co:5432` from home networks often yields P1001; session pooler URI fixes local push.
+
+**P:** Feature code complete; **deploy Fly** with `SUPABASE_SERVICE_ROLE_KEY` + redeploy for PDFs in prod. Admin needs `SESSIONS_API_URL` + `ADMIN_API_KEY`. Manual QA: approve session → Download PDF; admin Generate Letterhead. Bulk admin date-range picker still TBD.
+
+---
+
 ## [2026-07-23] — Who-we-share processors sentence completed
 
 **A:** Expanded the last “We do not sell your data” body so the processors clause is a full sentence (services to CUGB only — not sale/own advertising).
@@ -192,7 +209,7 @@
 
 **P (Progression):**
 - Phase 1 ✅ (auth, dashboard, sessions, audit log scaffold)
-- Phase 2 pending: individual + bulk letterhead PDF via `@react-pdf/renderer` server actions
+- Phase 2 **service letter PDF:** ✅ code on Fly Sessions API (`@react-pdf/renderer` + OSM static maps); admin proxies `/api/service-letter/*`; Prisma schema synced locally (2026-07-26). **Deploy Fly + secrets** for production PDFs. Date-range picker for bulk admin export still TBD.
 - Phase 3 pending: volunteer directory, court-hours tracker, court-order CRUD
 - Phases 4–7 pending: feedback, events, orders, notifications, CSV export, security hardening
 

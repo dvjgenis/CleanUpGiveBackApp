@@ -276,43 +276,23 @@ Quick-action from Sessions List row: confirmation popover without full navigatio
 **Trigger:** "Generate Letterhead (this session)" on Session Detail.  
 **Output:** `CGB-Letterhead-{sessionId}-{YYYY-MM-DD}.pdf`
 
-PDF layout:
+PDF layout (volunteer + admin — same generator on Fly):
+
 ```
-[Org Logo]                                         [Date: today]
+Page 1: Org letter
+  [Logo]  address / phone / Tax ID
+  Date, Dear {volunteer}, hours from {start} to {end} total {hours}
+  Stewardship copy + Donna Adam signature PNG + Executive Director block
 
-CLEAN UP - GIVE BACK
-Volunteer Service Verification Letter
-501(c)(3) Nonprofit
-
-──────────────────────────────────────────────────────────
-
-This letter certifies that:
-
-  Volunteer:     {full_legal_name}
-  Activity:      {activity}
-  Date:          {started_at: MMMM DD, YYYY}
-  Start Time:    {started_at local time}
-  End Time:      {ended_at local time}
-  Duration:      {adjusted_hours ?? computed} hours {minutes} minutes
-  Distance:      {distance_miles} miles
-  Checkpoints:   {count} verified photo checkpoints
-  Court Ordered: {Yes / No}
-  Session ID:    {id}
-  Status:        APPROVED
-
-{admin_notes if set}
-
-This service was verified by GPS tracking and photo checkpoints
-through the Clean Up - Give Back mobile application.
-
-──────────────────────────────────────────────────────────
-Authorized by:
-
-________________________________
-[Donna's Name], Program Administrator
-Clean Up - Give Back
-[org email] | [org website]
+Pages 2–N: One page per session (chronological)
+  Activity title, start/end/duration/miles
+  Static OSM map with GPS route polyline
+  Checkpoint selfie + progress photos (signed URLs embedded)
 ```
+
+**Trigger (volunteer):** Session detail **Download PDF** or Sessions list multi-select **Download PDF**.  
+**Trigger (admin):** Session detail Letterhead links → `admin/app/api/service-letter/…` proxy.  
+**Output:** `CGB-Service-Letter-{YYYY-MM-DD}.pdf` (or `-multi` suffix).
 
 After generation: set `letterhead_generated_at = now()`. Show "Last generated: {date}" on session detail.
 

@@ -21,6 +21,7 @@ import {
   subscribeVolunteerSessionDeletes,
 } from '@/features/session-tracking/volunteerDeletedSessions';
 import { isApiConfigured } from '@/lib/api';
+import { downloadServiceLetterPdf } from '@/lib/downloadServiceLetterPdf';
 import { listSessions } from '@/lib/sessionsApi';
 import { mapApiSessionToListItem } from '@/lib/mapApiSessions';
 
@@ -91,6 +92,14 @@ function statusStyles(status: SessionApprovalStatus) {
 
 function canDeleteSessionStatus(status: SessionApprovalStatus): boolean {
   return status !== 'approved';
+}
+
+function canExportSessionStatus(status: SessionApprovalStatus): boolean {
+  return status === 'approved';
+}
+
+function isSessionSelectable(status: SessionApprovalStatus): boolean {
+  return canDeleteSessionStatus(status) || canExportSessionStatus(status);
 }
 
 function SessionsTopAppBar({
@@ -329,6 +338,7 @@ export function SessionsScreen() {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [pdfDownloading, setPdfDownloading] = useState(false);
   const [tombstoneRevision, setTombstoneRevision] = useState(0);
 
   const loadSessions = useCallback(() => {
@@ -402,16 +412,35 @@ export function SessionsScreen() {
   );
   const showViewMore = filteredSessions.length > visibleCount;
 
-  const deletableVisibleSessions = useMemo(
-    () => visibleSessions.filter((session) => canDeleteSessionStatus(session.status)),
+  const selectableVisibleSessions = useMemo(
+    () => visibleSessions.filter((session) => isSessionSelectable(session.status)),
     [visibleSessions],
   );
 
+  const selectedSessions = useMemo(
+    () => filteredSessions.filter((session) => selectedIds.has(session.id)),
+    [filteredSessions, selectedIds],
+  );
+
+  const selectedApprovedIds = useMemo(
+    () =>
+      selectedSessions
+        .filter((session) => canExportSessionStatus(session.status))
+        .map((session) => session.id),
+    [selectedSessions],
+  );
+
+  const selectedDeletableSessions = useMemo(
+    () => selectedSessions.filter((session) => canDeleteSessionStatus(session.status)),
+    [selectedSessions],
+  );
+
   const selectedCount = selectedIds.size;
-  const showBulkDeleteBar = selectionMode && selectedCount > 0;
+  const showBulkActionBar =
+    selectionMode && (selectedApprovedIds.length > 0 || selectedDeletableSessions.length > 0);
 
   const bottomInset = Math.max(insets.bottom, 0);
-  const bulkBarHeight = showBulkDeleteBar ? 56 : 0;
+  const bulkBarHeight = showBulkActionBar ? 56 : 0;
   const scrollBottomPad = bottomInset + layout.bottomNavHeight + bulkBarHeight + 24;
 
   const handleEnterSelection = useCallback(() => {
@@ -426,7 +455,7 @@ export function SessionsScreen() {
   }, []);
 
   const handleToggleSessionSelection = useCallback((session: SessionListItem) => {
-    if (!canDeleteSessionStatus(session.status)) {
+    if (!isSessionSelectable(session.status)) {
       return;
     }
     setSelectedIds((current) => {
@@ -441,15 +470,15 @@ export function SessionsScreen() {
   }, []);
 
   const handleSelectAllVisible = useCallback(() => {
-    setSelectedIds(new Set(deletableVisibleSessions.map((session) => session.id)));
-  }, [deletableVisibleSessions]);
+    setSelectedIds(new Set(selectableVisibleSessions.map((session) => session.id)));
+  }, [selectableVisibleSessions]);
 
   const handleBulkDelete = useCallback(() => {
     if (bulkDeleting || selectedCount === 0) {
       return;
     }
 
-    const targets = filteredSessions.filter((session) => selectedIds.has(session.id));
+    const targets = selectedDeletableSessions;
     const countLabel = targets.length === 1 ? '1 session' : `${targets.length} sessions`;
 
     Alert.alert(
@@ -495,7 +524,30 @@ export function SessionsScreen() {
         },
       ],
     );
-  }, [bulkDeleting, filteredSessions, selectedCount, selectedIds]);
+  }, [bulkDeleting, selectedCount, selectedDeletableSessions, selectedIds]);
+
+  const handleBulkDownloadPdf = useCallback(() => {
+    if (pdfDownloading || selectedApprovedIds.length === 0) {
+      return;
+    }
+
+    if (!isApiConfigured) {
+      Alert.alert('Download unavailable', 'Connect to the server to download service letters.');
+      return;
+    }
+
+    void (async () => {
+      setPdfDownloading(true);
+      try {
+        await downloadServiceLetterPdf(selectedApprovedIds);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Could not download PDF';
+        Alert.alert('Download failed', message);
+      } finally {
+        setPdfDownloading(false);
+      }
+    })();
+  }, [pdfDownloading, selectedApprovedIds]);
 
   function handleSelectSort(next: SessionSortOption) {
     setSort(next);
@@ -519,7 +571,7 @@ export function SessionsScreen() {
         selectionMode={selectionMode}
         onCancelSelection={handleCancelSelection}
         onSelectAll={handleSelectAllVisible}
-        selectAllEnabled={deletableVisibleSessions.length > 0}
+        selectAllEnabled={selectableVisibleSessions.length > 0}
       />
 
       {/* Stays visible while list scrolls */}
@@ -602,7 +654,7 @@ export function SessionsScreen() {
                 session={session}
                 selectionMode={selectionMode}
                 selected={selectedIds.has(session.id)}
-                selectable={canDeleteSessionStatus(session.status)}
+                selectable={isSessionSelectable(session.status)}
                 onPress={() => {
                   if (selectionMode) {
                     handleToggleSessionSelection(session);
@@ -629,23 +681,45 @@ export function SessionsScreen() {
       </ScrollView>
 
       <View style={[s.bottomStack, { paddingBottom: bottomInset }]}>
-        {showBulkDeleteBar && (
+        {showBulkActionBar && (
           <View style={s.bulkBar}>
-            <AnimatedPressable
-              scaleTo={0.98}
-              onPress={handleBulkDelete}
-              disabled={bulkDeleting}
-              accessibilityRole="button"
-              accessibilityLabel={`Delete ${selectedCount} selected sessions`}
-              accessibilityState={{ disabled: bulkDeleting }}
-              style={[s.bulkDeleteButton, bulkDeleting && s.bulkDeleteButtonDisabled]}
-            >
-              {bulkDeleting ? (
-                <ActivityIndicator color={colors.white} />
-              ) : (
-                <Text style={s.bulkDeleteLabel}>Delete ({selectedCount})</Text>
-              )}
-            </AnimatedPressable>
+            {selectedApprovedIds.length > 0 ? (
+              <AnimatedPressable
+                scaleTo={0.98}
+                onPress={handleBulkDownloadPdf}
+                disabled={pdfDownloading}
+                accessibilityRole="button"
+                accessibilityLabel={`Download PDF for ${selectedApprovedIds.length} approved sessions`}
+                style={[s.bulkDownloadButton, pdfDownloading && s.bulkDeleteButtonDisabled]}
+              >
+                {pdfDownloading ? (
+                  <ActivityIndicator color={colors.white} />
+                ) : (
+                  <Text style={s.bulkDeleteLabel}>
+                    Download PDF ({selectedApprovedIds.length})
+                  </Text>
+                )}
+              </AnimatedPressable>
+            ) : null}
+            {selectedDeletableSessions.length > 0 ? (
+              <AnimatedPressable
+                scaleTo={0.98}
+                onPress={handleBulkDelete}
+                disabled={bulkDeleting}
+                accessibilityRole="button"
+                accessibilityLabel={`Delete ${selectedDeletableSessions.length} selected sessions`}
+                accessibilityState={{ disabled: bulkDeleting }}
+                style={[s.bulkDeleteButton, bulkDeleting && s.bulkDeleteButtonDisabled]}
+              >
+                {bulkDeleting ? (
+                  <ActivityIndicator color={colors.white} />
+                ) : (
+                  <Text style={s.bulkDeleteLabel}>
+                    Delete ({selectedDeletableSessions.length})
+                  </Text>
+                )}
+              </AnimatedPressable>
+            ) : null}
           </View>
         )}
         <BottomNavBar
@@ -948,9 +1022,20 @@ const s = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.borderOutline,
     backgroundColor: colors.white,
+    flexDirection: 'row',
+    gap: 10,
+  },
+  bulkDownloadButton: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: R.sm,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
   },
   bulkDeleteButton: {
-    minHeight: 44,
+    flex: 1,
     borderRadius: R.sm,
     backgroundColor: colors.statusDeclinedText,
     alignItems: 'center',

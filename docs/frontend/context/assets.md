@@ -21,7 +21,8 @@ Static media and bundled prototype HTML.
 | `frontend/assets/figma/feedback-screen/` | `FeedbackScreen` assets (Figma `1126:1516`) — rating glyphs `very-sad`/`sad`/`neutral`/`happy`/`excited.svg` shown L→R negative→positive (`fill="#BDCABA"`; `very-sad` hand-authored); header `chat.svg` + typing dots `big-bubble`/`medium-bubble`/`small-bubble.svg`; unused PNG exports (`chat-bubble.png`, `sparkle-*.png`) also live here |
 | `frontend/assets/figma/shared/` | Cross-screen brand mark / leftover vectors |
 | `frontend/assets/figma/{photo-checkpoint,photo-submitted,missed-checkpoint,submission-confirmation,permissions}/` | Pointers to raster/animation companions |
-| `frontend/assets/images/` | App icons, logos, product/scene images (`scenes/volunteers.png` + `screens/session-detail/photo-*.png` reused as Upcoming Events card thumbs) |
+| `frontend/assets/images/logos/` | Org logos for letterhead/PDF — includes `logo-icon-78x94.jpg`, `DonnaAdamSignature.png` (canonical); copies deployed with Fly API in `backend/sessions/assets/` |
+| `frontend/assets/images/` | App icons, product/scene images (`scenes/volunteers.png` + `screens/session-detail/photo-*.png` reused as Upcoming Events card thumbs) |
 | `frontend/assets/images/screens/<screen>/` | Per-flow rasters — `session-setup/`, `permissions/`, `photo-checkpoint/`, `photo-submitted/`, `missed-checkpoint/`, `submission-confirmation/`, `session-detail/` |
 | `frontend/assets/animations/` | Motion exports — `photo-submitted.lottie` (Camera Pop-Up, repeater-baked for RN; Metro `assetExts` includes `lottie`), `missed-checkpoint.json`, `hourglass.json` (free-trial paywall), plus alt JSON/GIF sources |
 | `frontend/assets/sounds/` | Short UI alert clips — `photo-checkpoint-alert.wav` (played when the 30-min checkpoint popup appears) |
