@@ -2,6 +2,7 @@ import cors from '@fastify/cors';
 import Fastify from 'fastify';
 
 import { registerEmailRoutes } from './routes/emails.js';
+import { registerServiceLetterRoutes } from './routes/serviceLetter.js';
 import { registerSessionRoutes } from './routes/sessions.js';
 
 const PORT = Number(process.env.PORT ?? 8080);
@@ -18,6 +19,7 @@ async function main() {
 
   app.get('/health', async () => ({ status: 'ok' }));
 
+  await registerServiceLetterRoutes(app);
   await registerSessionRoutes(app);
   await registerEmailRoutes(app);
 

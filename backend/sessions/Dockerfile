@@ -8,6 +8,7 @@ RUN npm install
 COPY prisma ./prisma
 COPY tsconfig.json ./
 COPY src ./src
+COPY assets ./assets
 
 RUN npx prisma generate
 RUN npm run build
@@ -27,6 +28,7 @@ COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/assets ./assets
 
 EXPOSE 8080
 

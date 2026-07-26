@@ -27,6 +27,8 @@ model Session {
   distanceMiles    Decimal?      @map("distance_miles") @db.Decimal
   route            Json?
   status           SessionStatus @default(active)
+  adjustedHours    Decimal?      @map("adjusted_hours") @db.Decimal
+  letterheadGeneratedAt DateTime? @map("letterhead_generated_at") @db.Timestamptz(6)
   createdAt        DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
   checkpoints      Checkpoint[]
 
