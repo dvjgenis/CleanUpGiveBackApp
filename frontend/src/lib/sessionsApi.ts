@@ -91,7 +91,7 @@ export async function listSessions(): Promise<ApiSession[]> {
   }
 
   const data = await apiFetch<{ sessions: ApiSession[] }>('/sessions');
-  return data.sessions;
+  return data.sessions ?? [];
 }
 
 export async function getSession(sessionId: string): Promise<{

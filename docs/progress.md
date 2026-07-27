@@ -2,6 +2,22 @@
 
 ---
 
+## [2026-07-27] — Sessions list empty CTA for new users
+
+**R:** New volunteers with zero logged sessions were hitting a hard "Unable to load sessions / Try again" empty/error path instead of a clear first-action prompt.
+
+**A:**
+- `SessionsScreen`: empty list copy is **No sessions logged yet.** with **Log session?** → `/session-setup-guide`
+- First-load API failures with no cached rows fall through to the same empty CTA (preserve previously loaded rows when a refresh fails)
+- `listSessions` returns `[]` when the payload omits `sessions`
+- Docs: `current.md`, `components.md`
+
+**L:** Brand-new accounts often surface list-fetch failures before auth settles; treating empty/first-load failure as the onboarding empty state is clearer than a retry-only error.
+
+**P:** Empty CTA shipped in `SessionsScreen`. Smoke: open `/sessions-list` as a user with no sessions → tap **Log session?** → session setup guide.
+
+---
+
 ## [2026-07-26] — Approved session service letter PDF + local DB sync
 
 **R:** Volunteers and admins need the same multi-page PDF (org letter + route map + checkpoint photos) for approved sessions; schema needs `adjusted_hours` / `letterhead_generated_at` on Supabase.

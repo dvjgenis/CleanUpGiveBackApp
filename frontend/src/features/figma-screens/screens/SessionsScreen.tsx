@@ -332,7 +332,7 @@ export function SessionsScreen() {
   const [query, setQuery] = useState('');
   const [visibleCount, setVisibleCount] = useState(SESSIONS_PAGE_SIZE);
   const [apiSessions, setApiSessions] = useState<SessionListItem[] | null>(null);
-  const [loadState, setLoadState] = useState<'idle' | 'loading' | 'error' | 'ready'>(
+  const [loadState, setLoadState] = useState<'idle' | 'loading' | 'ready'>(
     isApiConfigured ? 'loading' : 'ready',
   );
   const [selectionMode, setSelectionMode] = useState(false);
@@ -363,8 +363,11 @@ export function SessionsScreen() {
       })
       .catch((error) => {
         console.warn('[sessions] list fetch failed:', error);
-        setApiSessions([]);
-        setLoadState('error');
+        // Preserve any previously loaded rows. First-load failures (common for
+        // brand-new accounts) fall through to the empty "Log session?" CTA
+        // instead of a hard "Unable to load" error.
+        setApiSessions((current) => (current && current.length > 0 ? current : []));
+        setLoadState('ready');
       });
   }, []);
 
@@ -627,25 +630,23 @@ export function SessionsScreen() {
             <ActivityIndicator color={colors.primary} />
             <Text style={s.emptyText}>Loading sessions…</Text>
           </View>
-        ) : loadState === 'error' ? (
-          <View style={s.loadingWrap}>
-            <Text style={s.emptyText}>Unable to load sessions.</Text>
-            <AnimatedPressable
-              scaleTo={0.98}
-              onPress={loadSessions}
-              accessibilityRole="button"
-              accessibilityLabel="Retry loading sessions"
-              style={s.retryButton}
-            >
-              <Text style={s.retryLabel}>Try again</Text>
-            </AnimatedPressable>
-          </View>
         ) : filteredSessions.length === 0 ? (
-          <Text style={s.emptyText}>
-            {sessionSource.length === 0
-              ? 'No sessions yet.'
-              : 'No sessions match your filter.'}
-          </Text>
+          sessionSource.length === 0 ? (
+            <View style={s.emptyCtaWrap}>
+              <Text style={s.emptyCtaText}>No sessions logged yet.</Text>
+              <AnimatedPressable
+                scaleTo={0.98}
+                onPress={() => router.push('/session-setup-guide')}
+                accessibilityRole="button"
+                accessibilityLabel="Log session"
+                style={s.retryButton}
+              >
+                <Text style={s.retryLabel}>Log session?</Text>
+              </AnimatedPressable>
+            </View>
+          ) : (
+            <Text style={s.emptyText}>No sessions match your filter.</Text>
+          )
         ) : (
           <View style={s.rows}>
             {visibleSessions.map((session) => (
@@ -983,6 +984,17 @@ const s = StyleSheet.create({
     color: colors.textNavInactive,
     textAlign: 'center',
     paddingVertical: 24,
+  },
+  emptyCtaWrap: {
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 24,
+  },
+  emptyCtaText: {
+    fontFamily: fontFamilies.notoSansRegular,
+    fontSize: 14,
+    color: colors.textNavInactive,
+    textAlign: 'center',
   },
   loadingWrap: {
     alignItems: 'center',
