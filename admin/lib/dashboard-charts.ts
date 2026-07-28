@@ -6,7 +6,8 @@ import {
   startOfWeek,
   differenceInCalendarDays,
 } from 'date-fns';
-import type { DashboardPeriod } from '@/lib/dashboard-period';
+import type { DashboardPeriod, PeriodSelection } from '@/lib/dashboard-period';
+import { periodTrendGranularity } from '@/lib/dashboard-period';
 import { computedHours } from '@/lib/format';
 
 export type TrendPoint = {
@@ -47,15 +48,17 @@ function bucketLabel(d: Date, granularity: 'day' | 'week'): string {
 
 /**
  * Build a time series of submissions + approved hours for the selected period.
- * Week buckets for month/all; day buckets for last 30 days.
+ * Day buckets for short windows; week buckets for longer ones.
  */
 export function buildTrendSeries(
   sessions: SessionLike[],
-  period: DashboardPeriod,
+  period: DashboardPeriod | PeriodSelection,
   now: Date,
   interval: { start: Date; end: Date } | null,
 ): TrendPoint[] {
-  const granularity: 'day' | 'week' = period === '30d' ? 'day' : 'week';
+  const selection: PeriodSelection =
+    typeof period === 'string' ? { period, from: null, to: null } : period;
+  const granularity = periodTrendGranularity(selection, interval);
 
   let start: Date;
   let end: Date;
@@ -122,7 +125,7 @@ export function buildTrendSeries(
   return [...map.values()].sort((a, b) => a.key.localeCompare(b.key));
 }
 
-/** How long under-review items have been waiting — backlog health for Donna. */
+/** Days under-review items have been waiting — backlog health for Donna ("Days waiting" chart). */
 export function buildQueueAgeBars(
   underReview: { created_at: string }[],
   now = new Date(),

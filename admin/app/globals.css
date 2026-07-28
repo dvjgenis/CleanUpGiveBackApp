@@ -77,6 +77,22 @@ body {
   }
 }
 
+/* Native date inputs ignore min-width via Tailwind alone in WebKit/Blink. */
+.period-date-input {
+  display: block;
+  min-width: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.period-date-input::-webkit-calendar-picker-indicator {
+  margin-left: 0;
+  flex-shrink: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

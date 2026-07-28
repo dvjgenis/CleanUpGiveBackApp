@@ -34,12 +34,13 @@ import {
   EventYouTubeIcon,
 } from '../components/EventIcons';
 import { RegisterButton } from '../components/RegisterButton';
-import { getEventDetail, type WhatToBringIcon } from '../mocks/eventDetail';
+import { getEventDetail, type EventDetail, type WhatToBringIcon } from '../mocks/eventDetail';
 import { layout, colors, fontFamilies, radius, shadows } from '../tokens';
 import { promptAddEventToCalendar } from '../utils/addEventToCalendar';
 import { mapsLinkForLocation, openLocationInMaps } from '../utils/openLocationInMaps';
 import { getEmail } from '@/features/onboarding/onboardingStore';
 import { sendEventRegistrationEmail } from '@/lib/emailsApi';
+import { fetchPublishedEventById } from '@/lib/eventsApi';
 
 const HERO_HEIGHT = 195;
 const FOOTER_PAD_TOP = 18;
@@ -119,7 +120,8 @@ export function EventDetailScreen() {
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
   const params = useLocalSearchParams<{ id?: string }>();
-  const event = getEventDetail(typeof params.id === 'string' ? params.id : undefined);
+  const eventId = typeof params.id === 'string' ? params.id : undefined;
+  const [event, setEvent] = useState<EventDetail>(() => getEventDetail(eventId));
 
   const [imageIndex, setImageIndex] = useState(0);
   const [registered, setRegistered] = useState(false);
@@ -128,6 +130,29 @@ export function EventDetailScreen() {
 
   const footerBottom = Math.max(insets.bottom, 12);
   const scrollBottomPad = FOOTER_PAD_TOP + 38 + 15 + 50 + footerBottom + 24;
+
+  useEffect(() => {
+    let cancelled = false;
+    setEvent(getEventDetail(eventId));
+    setImageIndex(0);
+    setRegistered(false);
+
+    if (!eventId) {
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    void fetchPublishedEventById(eventId).then((remote) => {
+      if (!cancelled && remote) {
+        setEvent(remote);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [eventId]);
 
   useEffect(() => {
     if (!copyToastVisible) return undefined;

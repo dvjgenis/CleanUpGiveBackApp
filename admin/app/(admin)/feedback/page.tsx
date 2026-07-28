@@ -41,9 +41,6 @@ export default function FeedbackPage() {
     <div className="max-w-5xl mx-auto">
       <div className="flex items-center justify-between mb-lg">
         <h1 className="font-heading text-[28px] leading-[36px] text-text-primary">Feedback</h1>
-        <span className="font-data text-[11px] tracking-[0.88px] uppercase text-text-tertiary bg-bg-surface-elevated border border-border-outline rounded-sm px-sm py-xs">
-          Mock data
-        </span>
       </div>
 
       {/* Summary */}

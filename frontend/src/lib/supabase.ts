@@ -79,3 +79,38 @@ export async function getUserId(): Promise<string | null> {
   const session = (await ensureAnonymousAuth()) ?? (await supabase.auth.getSession()).data.session;
   return session?.user?.id ?? null;
 }
+
+/**
+ * Best-effort sync of the onboarding display name (and optionally email) into
+ * `user_metadata`, so the admin dashboard can resolve real volunteer names.
+ * Never throws — safe to fire-and-forget from UI code.
+ */
+export async function syncVolunteerProfile(details: {
+  preferredName?: string;
+  email?: string;
+}): Promise<void> {
+  if (!supabase) {
+    return;
+  }
+
+  const trimmedName = details.preferredName?.trim() ?? '';
+  if (!trimmedName) {
+    return;
+  }
+
+  try {
+    await ensureAnonymousAuth();
+
+    const data: Record<string, string> = { full_name: trimmedName };
+    if (details.email?.trim()) {
+      data.email = details.email.trim();
+    }
+
+    const { error } = await supabase.auth.updateUser({ data });
+    if (error) {
+      console.warn('[supabase] volunteer profile sync failed:', error.message);
+    }
+  } catch (error) {
+    console.warn('[supabase] volunteer profile sync failed:', error);
+  }
+}

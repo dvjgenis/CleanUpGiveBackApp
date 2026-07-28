@@ -40,7 +40,7 @@ import {
   TimeIcon,
 } from '../components/HomeIcons';
 import { firstTimeHomeDashboard } from '../mocks/home';
-import type { HomeDashboardData, ImpactStat } from '../mocks/home.types';
+import type { HomeDashboardData, ImpactStat, UpcomingEventSummary } from '../mocks/home.types';
 import { getTimeOfDayGreeting } from '../utils/getTimeOfDayGreeting';
 import { formatEventMonthLabel } from '../utils/eventFormat';
 import {
@@ -50,6 +50,10 @@ import {
   parseIsoDate,
 } from '../utils/weekCalendar';
 import { layout, colors, fontFamilies, radius as R, shadows } from '../tokens';
+import {
+  fetchPublishedEventsCatalog,
+  fetchPublishedUpcomingEvents,
+} from '@/lib/eventsApi';
 
 const CHART_H = 168;
 const LIVE_BAR_HEIGHT = LIVE_SESSION_PILL_MIN_HEIGHT + 16;
@@ -495,15 +499,35 @@ export function HomeScreen() {
   const [selectedWeekStartIso, setSelectedWeekStartIso] = useState(
     () => getCurrentWeekMeta().weekStartIso,
   );
+  const [liveUpcomingEvents, setLiveUpcomingEvents] = useState<UpcomingEventSummary[] | null>(null);
+  const [liveAllEvents, setLiveAllEvents] = useState<UpcomingEventSummary[] | null>(null);
 
   useFocusEffect(
     useCallback(() => {
       void hydrateSessionStatsFromApi();
+      let cancelled = false;
+      void (async () => {
+        const [upcoming, catalog] = await Promise.all([
+          fetchPublishedUpcomingEvents(),
+          fetchPublishedEventsCatalog(),
+        ]);
+        if (cancelled) return;
+        // Prefer live published events whenever Supabase returns any.
+        if (catalog.length > 0 || upcoming.length > 0) {
+          setLiveUpcomingEvents(upcoming);
+          setLiveAllEvents(catalog.length > 0 ? catalog : upcoming);
+        }
+      })();
+      return () => {
+        cancelled = true;
+      };
     }, []),
   );
 
   const data = useMemo(() => {
     const selectedWeekStart = parseIsoDate(selectedWeekStartIso);
+    const recentEvents = liveUpcomingEvents ?? firstTimeHomeDashboard.recentEvents;
+    const allEvents = liveAllEvents ?? firstTimeHomeDashboard.allEvents;
 
     return {
       ...firstTimeHomeDashboard,
@@ -515,11 +539,20 @@ export function HomeScreen() {
       weeklyStreakHours: computeWeeklyStreakHours(sessionStats),
       impactStats: buildImpactStats(sessionStats),
       recentSessions,
+      recentEvents: recentEvents.slice(0, 3),
+      allEvents,
       homeUser: {
         firstName: preferredName || firstTimeHomeDashboard.homeUser.firstName,
       },
     };
-  }, [preferredName, recentSessions, selectedWeekStartIso, sessionStats]);
+  }, [
+    liveAllEvents,
+    liveUpcomingEvents,
+    preferredName,
+    recentSessions,
+    selectedWeekStartIso,
+    sessionStats,
+  ]);
 
   return (
     <HomeScreenWithData data={data} onWeekStartChange={setSelectedWeekStartIso} />

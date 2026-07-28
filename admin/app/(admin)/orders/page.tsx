@@ -1,3 +1,5 @@
+import { ChevronRightIcon } from '@/components/ui/Icons';
+
 const MOCK_ORDERS = [
   { id: 'o1', volunteer: 'Jordan Kim', email: 'jordan.k@email.com', items: 'Water Bottle × 1, Cap × 1', totalCents: 3499, status: 'shipped', tracking: '9400111202550035000000', carrier: 'USPS', createdAt: '2026-07-15T10:22:00Z' },
   { id: 'o2', volunteer: 'Devon Okafor', email: 'devon.o@email.com', items: 'Tote Bag × 2', totalCents: 2998, status: 'delivered', tracking: '9400111202550035111111', carrier: 'USPS', createdAt: '2026-07-12T14:05:00Z' },
@@ -33,9 +35,6 @@ export default function OrdersPage() {
     <div className="max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-lg">
         <h1 className="font-heading text-[28px] leading-[36px] text-text-primary">Shop Orders</h1>
-        <span className="font-data text-[11px] tracking-[0.88px] uppercase text-text-tertiary bg-bg-surface-elevated border border-border-outline rounded-sm px-sm py-xs">
-          Mock data
-        </span>
       </div>
 
       {/* Summary */}
@@ -90,9 +89,10 @@ export default function OrdersPage() {
           href="https://dashboard.stripe.com"
           target="_blank"
           rel="noopener noreferrer"
-          className="interactive h-10 px-lg rounded-sm bg-primary text-white font-data text-[13px] font-semibold hover:bg-[#007d35] transition-colors flex items-center gap-sm shrink-0"
+          className="interactive h-10 px-lg rounded-sm bg-primary text-white font-data text-[13px] font-semibold hover:bg-[#007d35] transition-colors inline-flex items-center gap-sm shrink-0"
         >
-          Open Stripe →
+          Open Stripe
+          <ChevronRightIcon className="w-4 h-4" color="currentColor" />
         </a>
       </div>
     </div>

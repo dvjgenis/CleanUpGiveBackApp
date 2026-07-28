@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { Sidebar } from '@/components/nav/Sidebar';
 import { MobileNav } from '@/components/nav/MobileNav';
+import { MainScrollReset } from '@/components/nav/MainScrollReset';
 import { ToastProvider } from '@/components/ui/ToastProvider';
 import { getNavBadges } from '@/lib/nav-badges';
 
@@ -32,6 +33,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <ToastProvider>
+      <MainScrollReset />
       <a href="#main-content" className="skip-link">
         Skip to main content
       </a>

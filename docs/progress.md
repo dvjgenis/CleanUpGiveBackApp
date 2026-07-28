@@ -2,6 +2,230 @@
 
 ---
 
+## [2026-07-27] — US heat map drill-down (state → county → neighborhood)
+
+**R:** Schematic metro map was too local; Donna wants national visibility with drill-down.
+
+**A:** Replaced metro heatmap with `UsHeatmap` (Census us-atlas TopoJSON + d3-geo): nation states → county map → Cook County neighborhood schematic; session rollups by `state_fips` / `county_fips` / `neighborhood_id`.
+
+**P:** Today/Insights — click Illinois → counties → Cook County neighborhoods. Live sessions currently default to IL/Cook until GPS geocoding ships.
+
+---
+
+## [2026-07-27] — Today: metro map + hours trend instead of list tiles
+
+**R:** Donna needs location + hours trend on Today without opening Insights; Court Hours and Recent Decisions lists were lower-signal in that slot.
+
+**A:** Replaced Court Hours / Recent Decisions bento tiles with `TrendAreaChart` (hours & submissions) and `MetroHeatmap`; Court Hours remains at `/court-hours`, fuller charts at `/insights`.
+
+**P:** Open admin Today — below Review/metrics, hours trend then metro heatmap.
+
+---
+
+## [2026-07-27] — Collapsible icon-rail sidebar
+
+**R:** Donna needs more main-content width on laptop without losing nav affordances.
+
+**A:** Sidebar toggles between full (`w-60`) and icon-only (`w-[4.5rem]`); labels become `title`/`aria-label` tooltips when collapsed; preference persisted in `localStorage` (`cugb-admin-sidebar-collapsed`). Collapse control at bottom of rail.
+
+**P:** Desktop (≥lg): click Collapse → icons remain; Expand restores labels. Preference survives refresh.
+
+---
+
+## [2026-07-27] — Admin icons → react-icons (Lucide)
+
+**R:** Admin UI mixed custom SVG paths, emoji bottom-nav glyphs, and a hand-rolled `Icons.tsx`. User asked to standardize on react-icons.
+
+**A:**
+- Added `react-icons@5.5.0`; rewrote `admin/components/ui/Icons.tsx` as Lucide (`react-icons/lu`) wrappers with stable named exports + aliases
+- Sidebar, MobileNav (incl. hamburger/close + tab bar), PeriodToggle, Sessions filters/actions, PhotoPlaceholder now use the shared set
+- Left chart/map SVGs (Sparkline, MiniDonut, MetroHeatmap, WalkingPath) and feedback sentiment emoji as non-chrome visuals
+
+**P:** Admin `tsc --noEmit` clean. Spot-check sidebar, mobile bottom nav, and session detail placeholders.
+
+---
+
+## [2026-07-27] — Admin Events CRUD + mobile feed sync (Phase 5)
+
+**R:** Events tab was mock-only; Donna needs to open an event for details and create events that appear in the volunteer app.
+
+**A:**
+- Wired `/events` to `public.events` (upcoming/past, Published/Draft chips); cards link to `/events/[id]`
+- Create/edit forms (`/events/new`, `/events/[id]/edit`) upsert via server actions + audit log; publish toggle + delete on detail
+- Mobile Home refetches published events from Supabase on focus; Event detail loads by id when published (`frontend/src/lib/eventsApi.ts`); falls back to mocks when DB empty
+
+**P:** Confirm `admin/db/001_admin_portal_migration.sql` created `public.events`. Create + publish an event in admin → reopen Home in Expo Go → event shows; tap → detail.
+
+---
+
+## [2026-07-27] — Admin Payments summary (PRD §7.12)
+
+**R:** Payments was demoted under “Coming soon” with only a Stripe link-out. Donna needs the Phase 6 summary: donations + shop revenue this month, 6-month trend, Stripe manage link.
+
+**A:**
+- Built `/payments` with KPI cards (donations / shop / total), stacked `RevenueBarChart` (recharts), and Stripe CTA
+- Mock monthly series in `payments-mock.ts`; `loadPaymentsSummary` overlays live `shop_orders` for the current month when rows exist
+- Promoted Payments in sidebar + mobile nav; removed demoted “Coming soon” section
+
+**P:** Admin `tsc --noEmit` clean. Open `/payments` — should show July KPIs + 6-month bars; shop KPI links to `/orders`.
+
+---
+
+## [2026-07-27] — Admin nav polish, volunteer profiles, remove mock badges
+
+**R:** Page-to-page navigation felt buggy (scroll position carried over, sidebar shared-layout animation glitches, mobile menu stayed open). Volunteers/Court Hours needed full-row/card click-through to account profiles. Mock preview badges cluttered the UI.
+
+**A:**
+- Added `MainScrollReset`, `(admin)/loading.tsx`, CSS-only sidebar active state (removed Framer `layoutId`), mobile menu closes on route change
+- Volunteers list: entire row links to `/volunteers/[id]`; profile expanded with Account Information + Court Order sections (`InfoRow`)
+- Court Hours: each card links to volunteer profile
+- Removed visible “Mock preview” / “Mock data” / “(demo)” tags across admin pages
+
+**P:** Admin `tsc --noEmit` clean. Restart dev server and spot-check Volunteers → profile and Court Hours → profile.
+
+---
+
+## [2026-07-27] — Metric-tile donuts + feedback emoji strip on Today
+
+**R:** Waiting / Approved / Hours / Feedback tiles looked bare with only a number + hint (and optional sparkline). Asked for compact visualizations — donuts for the first three, emoji distribution for feedback.
+
+**A:**
+- Added `MiniDonut` (pure SVG, no recharts) and `FeedbackEmojiStrip` (emoji + scaled bars)
+- `page.tsx` builds `metricVisuals`: Waiting = queue vs cleared; Approved = approved/declined/reviewing; Hours = court vs voluntary hours; Feedback = rating emoji counts (mock distribution when DB empty)
+- `DashboardWorkbench` MetricTiles render donut or emoji strip beside the KPI value; Snapshot sparkline unchanged
+
+**L:** Full `DonutChart` (recharts) is too heavy for 2×2 tiles — mini SVG matches Sparkline’s server-safe pattern.
+
+**P:** Admin `tsc --noEmit` clean. Refresh Today — four tiles should show visuals; Feedback falls back to muted emojis when no ratings in period.
+
+---
+
+## [2026-07-27] — Wire admin dashboard reads to live mobile sessions via service role
+
+**R:** Admin and mobile already shared the same Supabase project URL/anon key, and the DB had 23 real `sessions` (+ 18 checkpoints). Dashboard pages still showed **Mock preview** because list/detail reads used the cookie/anon `createClient()` while `BYPASS_AUTH=true` left no admin JWT — volunteer RLS (`auth.uid() = user_id`) returned zero rows and flipped every surface into fixtures. Adding `SUPABASE_SERVICE_ROLE_KEY` alone was not enough until reads preferred that client.
+
+**A:**
+- Added `createDataClient()` in `admin/lib/supabase/server.ts` — prefers service role, falls back to anon/cookie client
+- Routed Today / Insights (`dashboard-data`), Sessions list + detail, Volunteers list + profile, Court Hours, nav badges, Audit Log, and dashboard feedback/orders queries through `createDataClient()`
+- Fixed session-detail photo signing bucket: `checkpoints` → `session-photos` (matches mobile upload + Fly letterhead)
+
+**L:** Anon-without-user sees `*/0` sessions; service role sees `23`. Admin JWT `role` claim is Postgres `authenticated`, not `user_metadata.role`, so the migration's `auth.jwt() ->> 'role' = 'admin'` policies would not unlock volunteer-owned `sessions` even after real login — service-role data client is the correct admin data plane. `court_orders` table is still missing on this project (PGRST205); Court Hours stays on mock until `admin/db/001_admin_portal_migration.sql` is applied.
+
+**P:** Admin `tsc --noEmit` clean. Restart `admin` (`npm run dev`) and open `/sessions` — expect live rows (no “Mock preview” badge) and volunteer names from Auth. Court Hours remains mock until `court_orders` exists.
+
+---
+
+## [2026-07-27] — Session detail: Walking Path + Photos placeholders always shown
+
+**R:** Clicking View on a session only ever showed photos when live checkpoints had successfully signed URLs, and mock sessions explicitly said photos/checkpoints were unavailable — no walking-path/map section existed anywhere, even though `sessions.route` (jsonb) already exists in the schema for exactly this. Asked to always show both a walking path and photos on session detail, as placeholders for now.
+
+**A:**
+- Added `admin/app/(admin)/sessions/[id]/WalkingPath.tsx` — a bordered map-preview placeholder (dashed SVG path + start/end pins, "Map view — coming soon") that reports whether `sessions.route` actually has data (`Array.isArray(session.route)` point count) vs. not, so it's honest about state instead of decorative-only
+- Added `admin/app/(admin)/sessions/[id]/PhotoPlaceholder.tsx` — a 3-tile dashed camera-icon grid (Selfie/Progress/Selfie) shown whenever real signed photos aren't available
+- `sessions/[id]/page.tsx`: both mock and live branches now always render a Walking Path section and a Photos section. Live sessions show real `PhotoGrid` when signed URLs exist, otherwise `PhotoPlaceholder` with a caption explaining why (needs `SUPABASE_SERVICE_ROLE_KEY`, or simply no photos yet); mock sessions always show the placeholder with a "mock session" caption
+
+**L:** `sessions.route` (jsonb) is already captured by the mobile app but has no renderer yet — the placeholder is intentionally data-aware (point count when present) so wiring up a real map later is just swapping the placeholder's inner content, not re-plumbing the page.
+
+**P:** Admin `tsc --noEmit` clean (one pre-existing, unrelated error in an untracked `account/page.tsx` not touched by this change), no new lint errors. Verified in-browser: mock session detail (`/sessions/m3`) shows "Map view — coming soon" + "No GPS route recorded for this session" and three dashed Selfie/Progress/Selfie placeholder tiles with the mock caption.
+
+---
+
+## [2026-07-27] — Admin sidebar Account tab, real logo, Donna greeting
+
+**R:** Donna needs a clear personal entry point in the admin chrome (account details at the bottom of the sidebar), the placeholder hexagon mark should be the real Clean Up – Give Back logo, and the home headline should greet her by name instead of saying “Today.”
+
+**A:**
+- Copied brand `logo-main.png` → `admin/public/logo.png`; wired it into Sidebar, MobileNav header, and login
+- Added bottom **Account** link (avatar initials + Donna Adam) in Sidebar and mobile menu; new `/account` page shows Executive Director profile fields (name, title, role, org, email/phone/address, last sign-in when available) + sign-out
+- Dashboard home `h1`: **Welcome back Donna!**
+
+**L:** Org constants already define Donna as Executive Director with `donnaadam@cleanupgiveback.org` — account page reuses that identity; live auth email overrides the default when signed in.
+
+**P:** Smoke: sidebar shows real logo; bottom Account opens `/account`; home reads “Welcome back Donna!”; login uses the same logo mark.
+
+---
+
+## [2026-07-27] — Sessions list: Approve/Decline merged into one Actions dropdown, View always shown
+
+**R:** The Sessions table's Actions column packed up to three separate buttons (Approve, Decline, View) into one cell, and View only had room to breathe when a row wasn't `under_review`. Asked to consolidate Approve/Decline into a single control and guarantee View is always present and consistent.
+
+**A:** In `SessionsClientShell`'s `SessionRow`, replaced the two standalone Approve/Decline buttons with one **Actions ▾** dropdown (only rendered for `under_review` rows) that opens a small menu with Approve and Decline items; picking Decline swaps the menu content to the existing reason textarea + Back/Decline confirm (same `declineSession` call as before, just relocated). Added click-outside-to-close via a `menuRef` + `mousedown` listener. `View` is now unconditional and un-crowded — it renders in the same slot for every row regardless of status.
+
+**L:** Reusing the same `showDecline`/`declineReason` state inside the dropdown (instead of a second popover) kept the change to markup + one new `menuOpen` state — no new data flow needed.
+
+**P:** Admin `tsc --noEmit` and lints clean. Smoke: open `/sessions`, a row with **Under Review** status shows only an **Actions** button (no bare Approve/Decline); clicking it opens Approve/Decline, Decline swaps to the reason form in place; every row (any status, live or mock) shows **View** linking to `/sessions/[id]`.
+
+---
+
+## [2026-07-27] — Session/volunteer detail pages degrade gracefully without SUPABASE_SERVICE_ROLE_KEY
+
+**R:** The new click-through work (session deep-links, volunteer profile links) assumed a real, non-mock session or volunteer would always resolve cleanly. Two pages still called the throwing `createServiceClient()` instead of the graceful `tryCreateServiceClient()` used everywhere else (Sessions list, Court Hours, Today, Volunteers list): `sessions/[id]/page.tsx`'s live branch and `volunteers/[id]/page.tsx`. Any live session or volunteer visited before `SUPABASE_SERVICE_ROLE_KEY` is set in `admin/.env.local` would hard-crash instead of showing a friendly limited state — undermining the very links this session's work just wired up. `SessionsClientShell`'s inline row Approve/Decline also lacked the try/catch + toast pattern already used in `DashboardWorkbench`/`SessionActions`, so a failed write (e.g. missing key) would throw unhandled inside a transition.
+
+**A:**
+- `sessions/[id]/page.tsx`: swapped to `tryCreateServiceClient()`; without it, volunteer name falls back to `Volunteer {shortId}` (matches `resolveVolunteerName`'s own fallback) and photos are skipped with a "needs SUPABASE_SERVICE_ROLE_KEY" note instead of throwing on `.auth.admin.getUserById` / `.storage...createSignedUrl`
+- `volunteers/[id]/page.tsx`: swapped to `tryCreateServiceClient()`; without it, renders a short explanatory panel (same copy pattern as the Volunteers list banner) instead of crashing on `.auth.admin.getUserById`
+- `SessionsClientShell`'s `SessionRow.handleApprove`/`handleDecline` (live path) now wrap the server action in try/catch and surface failures via `pushToast`, same as the Today dashboard's queue actions
+
+**L:** Real-data readiness isn't just "does the mock/live branch pick the right data" — every page reachable via the new deep-links also needs the same graceful-degradation contract for the service-role key, or the click-through features regress into crashes the moment they hit a real row without the key configured. No code changes were needed for volunteer *name resolution* itself (`getVolunteerDirectory`/`getVolunteerName` were already conditionally wired everywhere and just start returning real names the moment the key is filled in — no caching to worry about since these are dynamic, cookie-based server components).
+
+**P:** Admin `tsc --noEmit` clean. Smoke once `SUPABASE_SERVICE_ROLE_KEY` is added to `admin/.env.local`: `/sessions/[id]` and `/volunteers/[id]` show real Auth names/photos automatically; with the key still empty, both pages render a short "needs SUPABASE_SERVICE_ROLE_KEY" message instead of a 500, and inline Approve/Decline on the Sessions list shows an error toast instead of crashing on a real row.
+
+---
+
+## [2026-07-27] — Recent decisions tile, session deep-links everywhere, distinct court badge
+
+**R:** The Today "Jump to / Common work" tile duplicated sidebar nav and added nothing. Separately, clicking a session almost anywhere except the live Sessions list dead-ended (mock rows, Today queue/recent, ReviewDrawer), and the `COURT` marker reused Under Review's amber so a court session in the queue looked like a second warning chip.
+
+**A:**
+- `DashboardWorkbench`: replaced the Jump to tile with **Recent decisions** (last approved/declined sessions this period, `props.recent` filtered + sorted), each row linking to `/sessions/[id]`
+- Today Review queue rows: activity/duration line now links to `/sessions/[id]`; `ReviewDrawer` gained an **Open full session →** link
+- `sessions/[id]/page.tsx`: falls back to `MOCK_SESSIONS` when no live row matches the id, rendering a **Mock preview** detail view with local-only `MockSessionActions` (approve/decline update local state + toast, nothing persisted)
+- `SessionsClientShell`: removed the mock-mode toast stubs on View/activity/cards — they now always link to `/sessions/[id]`
+- Added `admin/components/ui/CourtBadge.tsx` (cool slate, not amber) and swapped it in for every amber court marker on session rows: Today queue + Recent decisions, Sessions list (table + mobile card, replacing the amber ⚖️ circle), `ReviewDrawer`'s Type stat, and session detail headers (live + mock)
+
+**L:** Under Review amber is a status signal (`StatusChip`) and a deadline-risk signal (Court Hours "Behind"/"Soon") — both stay amber/red by design. Court-ordered is a session-type signal and needed its own palette so the two never collide on the same row.
+
+**P:** Admin `tsc --noEmit` clean, no new lint errors. Smoke: open `/` — click a queue row's activity line, a Recent decisions row, and a Sessions list row (including under mock preview) → all open `/sessions/[id]`; court-ordered rows show a slate **Court** badge, not amber.
+
+---
+
+## [2026-07-27] — Rename Insights "Queue age" → "Days waiting"
+
+**R:** "Queue age" was jargon; admins need a plain label for how long under-review sessions have been waiting.
+
+**A:** Insights chart title → **Days waiting**; empty state → "Nothing waiting for review"; docs (`chart-types`, `ux-audit`) updated. Internal helper `buildQueueAgeBars` / `queueAge` key unchanged.
+
+**P:** Reload `/insights` to confirm the bar chart title.
+
+---
+
+## [2026-07-27] — Admin Court Hours mock preview when no orders
+
+**R:** Court Hours showed an empty state with no `court_orders`, so the tracker couldn’t be demoed alongside Sessions mock preview.
+
+**A:**
+- Expanded `MOCK_COURT_HOURS` / `MOCK_COURT_AT_RISK` to 8 volunteers (at risk / in progress / completed)
+- `/court-hours` falls back to fixtures + **Mock preview** badge when `court_orders` is empty; volunteer deep-links disabled in mock mode
+- Nav badge uses mock at-risk count when no live orders
+
+**P:** Admin `tsc --noEmit` clean. Open `http://localhost:3001/court-hours` with empty `court_orders`.
+
+---
+
+## [2026-07-27] — Admin Sessions page mock preview when DB empty
+
+**R:** With no live `sessions` rows, the admin Sessions list was empty and hard to demo filters/approve/decline.
+
+**A:**
+- `/sessions` probes live count; when empty, serves `MOCK_SESSIONS` with in-memory filter/sort/pagination and a **Mock preview** badge
+- `SessionsClientShell` `isMock` mode: local-only Approve/Decline + toast; View/volunteer deep-links disabled so fake ids don’t 404
+
+**L:** Mock approve/decline must not call server actions with fixture ids (`m1`…).
+
+**P:** Admin `tsc --noEmit` clean. Open `http://localhost:3001/sessions` with an empty sessions table to see demo rows.
+
+---
+
 ## [2026-07-27] — Sessions list empty CTA for new users
 
 **R:** New volunteers with zero logged sessions were hitting a hard "Unable to load sessions / Try again" empty/error path instead of a clear first-action prompt.
@@ -15,6 +239,24 @@
 **L:** Brand-new accounts often surface list-fetch failures before auth settles; treating empty/first-load failure as the onboarding empty state is clearer than a retry-only error.
 
 **P:** Empty CTA shipped in `SessionsScreen`. Smoke: open `/sessions-list` as a user with no sessions → tap **Log session?** → session setup guide.
+
+---
+
+## [2026-07-27] — Wire admin dashboard to live sessions + participant profiles + Insights
+
+**R:** Sessions logged in the app already land in the shared Supabase `sessions` table, but Today fell back to mock names, Volunteers/Court Hours were 100% fixtures, Insights were buried behind a closed disclosure, and there was no real participant click-through.
+
+**A:**
+- Frontend: `syncVolunteerProfile` writes onboarding preferred name to `user_metadata.full_name` at Setup Complete; Personal Details screen now lets testers edit display name and sync the same way
+- Admin helpers: `lib/volunteers.ts` (Auth directory + name resolution), `lib/court-risk.ts` (court_ordered-only hours, at-risk = overdue or due ≤14d), `lib/dashboard-data.ts` / `lib/dashboard-insights.ts` (shared period-scoped load + composition)
+- Today: real volunteer names on Review queue, sparklines on Approved/Hours, always-visible Snapshot tile; heavy charts moved to new `/insights` (sidebar + mobile nav)
+- Volunteers list/detail rewritten against Auth user UUIDs; Sessions list/detail + Review drawer + Court Hours link through to `/volunteers/[id]`
+- Court Hours + nav badges use real `court_orders` + `buildCourtRisk` (empty state when no orders, no mock fallback)
+- Docs: `current.md`, `chart-types-2026-07-22.md`, `ux-audit-2026-07-22.md`
+
+**L:** Concurrent agent writes in `admin/` can silently revert each other — verify with grep after multi-agent sessions. Anonymous Auth identity is not durable across reinstalls (accepted limitation this phase).
+
+**P:** Admin + frontend `tsc --noEmit` clean. Dev servers: admin `localhost:3001`, Expo Go Metro on `8081` (tunnel). Manual smoke: log a session → reload Today → click volunteer profile → check Court Hours / Insights.
 
 ---
 

@@ -42,11 +42,13 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         {/* Logo mark */}
         <div className="mb-8 text-center">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-md bg-primary mb-4">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M12 2L4 7v10l8 5 8-5V7L12 2z" stroke="#fff" strokeWidth="2" strokeLinejoin="round"/>
-            </svg>
-          </div>
+          <img
+            src="/logo.png"
+            alt="Clean Up – Give Back"
+            width={56}
+            height={56}
+            className="inline-block w-14 h-14 rounded-md mb-4 object-cover"
+          />
           <h1 className="font-heading text-[28px] leading-[36px] text-text-primary">
             CleanUpGiveBack
           </h1>
@@ -74,7 +76,7 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="h-11 px-md rounded-sm border border-border-outline bg-bg-surface text-text-primary font-body text-base placeholder:text-text-tertiary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
-              placeholder="donna@cleanupgiveback.org"
+              placeholder="donnaadam@cleanupgiveback.org"
             />
           </div>
 

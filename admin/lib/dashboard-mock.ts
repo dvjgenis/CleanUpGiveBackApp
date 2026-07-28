@@ -1,5 +1,7 @@
 /** Shared dashboard / court mock fixtures for local preview when DB is empty. */
 
+import { COOK_COUNTY_FIPS, ILLINOIS_FIPS } from '@/lib/us-heatmap';
+
 export type MockSession = {
   id: string;
   user_id: string;
@@ -13,8 +15,22 @@ export type MockSession = {
   started_at: string;
   ended_at: string;
   created_at: string;
-  /** Mock neighborhood for metro heatmap */
+  /** Mock neighborhood for county drill-down */
   neighborhood_id: string;
+  /** US state FIPS (2-digit) */
+  state_fips: string;
+  /** US county FIPS (5-digit) */
+  county_fips: string;
+};
+
+const COOK = { state_fips: ILLINOIS_FIPS, county_fips: COOK_COUNTY_FIPS };
+/** Extra IL counties + nearby states so the nation/state heat maps are non-trivial. */
+const GEO_BY_SESSION: Record<string, { state_fips: string; county_fips: string }> = {
+  m8: { state_fips: ILLINOIS_FIPS, county_fips: '17043' }, // DuPage
+  m9: { state_fips: ILLINOIS_FIPS, county_fips: '17097' }, // Lake
+  m12: { state_fips: '18', county_fips: '18089' }, // Lake County, IN
+  m13: { state_fips: '55', county_fips: '55079' }, // Milwaukee, WI
+  m14: { state_fips: '26', county_fips: '26163' }, // Wayne, MI
 };
 
 export type MockCourtVolunteer = {
@@ -28,7 +44,8 @@ export type MockCourtVolunteer = {
   dueDate: string;
 };
 
-export const MOCK_SESSIONS: MockSession[] = [
+export const MOCK_SESSIONS: MockSession[] = (
+  [
   {
     id: 'm1',
     user_id: 'u1',
@@ -239,7 +256,11 @@ export const MOCK_SESSIONS: MockSession[] = [
     created_at: '2026-06-12T09:35:00Z',
     neighborhood_id: 'harbor',
   },
-];
+] as Omit<MockSession, 'state_fips' | 'county_fips'>[]
+).map((s) => ({
+  ...s,
+  ...(GEO_BY_SESSION[s.id] ?? COOK),
+}));
 
 export const MOCK_COURT_AT_RISK: MockCourtVolunteer[] = [
   {
@@ -263,6 +284,16 @@ export const MOCK_COURT_AT_RISK: MockCourtVolunteer[] = [
     dueDate: '2026-07-28',
   },
   {
+    id: 'c2',
+    name: 'Jordan Lee',
+    email: 'jordan.lee@email.com',
+    requiredHours: 40,
+    completedHours: 18.0,
+    sessions: 6,
+    status: 'at_risk',
+    dueDate: '2026-07-20',
+  },
+  {
     id: 'c3',
     name: 'Aaliyah Brooks',
     email: 'aaliyah.b@email.com',
@@ -270,9 +301,52 @@ export const MOCK_COURT_AT_RISK: MockCourtVolunteer[] = [
     completedHours: 9.5,
     sessions: 4,
     status: 'in_progress',
-    dueDate: '2026-08-01',
+    dueDate: '2026-09-15',
+  },
+  {
+    id: 'c6',
+    name: 'Marcus Webb',
+    email: 'marcus.w@email.com',
+    requiredHours: 30,
+    completedHours: 14.0,
+    sessions: 5,
+    status: 'in_progress',
+    dueDate: '2026-10-01',
+  },
+  {
+    id: 'c1',
+    name: 'Maya Chen',
+    email: 'maya.chen@email.com',
+    requiredHours: 15,
+    completedHours: 15.0,
+    sessions: 4,
+    status: 'completed',
+    dueDate: '2026-08-15',
+  },
+  {
+    id: 'c9',
+    name: 'Devon Park',
+    email: 'devon.p@email.com',
+    requiredHours: 50,
+    completedHours: 52.0,
+    sessions: 12,
+    status: 'completed',
+    dueDate: '2026-07-15',
+  },
+  {
+    id: 'c4',
+    name: 'Sofia Alvarez',
+    email: 'sofia.a@email.com',
+    requiredHours: 35,
+    completedHours: 6.0,
+    sessions: 2,
+    status: 'at_risk',
+    dueDate: '2026-07-25',
   },
 ];
+
+/** Full court-hours tracker fixtures (same set as dashboard strip). */
+export const MOCK_COURT_HOURS = MOCK_COURT_AT_RISK;
 
 export const MOCK_FEEDBACK_AVG = 4.2;
 export const MOCK_OPEN_ORDERS = 4;

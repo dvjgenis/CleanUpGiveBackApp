@@ -39,7 +39,9 @@ import {
   getPreferredName,
   usePersonalDetails,
   setEmail as persistEmail,
+  setPreferredName,
 } from '@/features/onboarding/onboardingStore';
+import { syncVolunteerProfile } from '@/lib/supabase';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const FOOTER_PAD_TOP = 18;
@@ -53,15 +55,16 @@ function validateEmail(value: string): string | undefined {
 }
 
 /**
- * Account → Personal Details. Only email is editable (verified via email code).
- * Legal name, phone, birthday, and service type are read-only.
+ * Account → Personal Details. Display name and email are editable (email
+ * requires a verification code); phone, birthday, and service type are read-only.
  */
 export function PersonalDetailsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const stored = usePersonalDetails();
 
-  const [name] = useState(() => getPreferredName());
+  const [name, setName] = useState(() => getPreferredName());
+  const [initialName] = useState(() => getPreferredName());
   const [email, setEmail] = useState(() => getEmail());
   const [initialEmail] = useState(() => getEmail().trim().toLowerCase());
   const [country] = useState<Country>(
@@ -91,6 +94,14 @@ export function PersonalDetailsScreen() {
 
   const dismissKeyboard = () => Keyboard.dismiss();
 
+  function persistNameIfChanged(): string {
+    const trimmedName = name.trim();
+    if (trimmedName !== initialName) {
+      setPreferredName(trimmedName);
+    }
+    return trimmedName;
+  }
+
   async function handleSave() {
     dismissKeyboard();
     setSubmitted(true);
@@ -101,6 +112,8 @@ export function PersonalDetailsScreen() {
 
     const nextEmail = email.trim();
     if (nextEmail.toLowerCase() === initialEmail) {
+      const finalName = persistNameIfChanged();
+      void syncVolunteerProfile({ preferredName: finalName, email: nextEmail });
       setSaveSuccessVisible(true);
       return;
     }
@@ -127,6 +140,8 @@ export function PersonalDetailsScreen() {
       await confirmEmailChangeCode({ to: pendingEmail, code });
       persistEmail(pendingEmail);
       setEmail(pendingEmail);
+      const finalName = persistNameIfChanged();
+      void syncVolunteerProfile({ preferredName: finalName, email: pendingEmail });
       setVerifyVisible(false);
       setSaveSuccessVisible(true);
     } catch {
@@ -169,26 +184,25 @@ export function PersonalDetailsScreen() {
           <Pressable style={s.content} onPress={dismissKeyboard}>
             <View style={s.form}>
               <Text style={s.pageNotice}>
-                To change personal details other than email, contact admin.
+                To change details other than name and email, contact admin.
               </Text>
 
               <View style={s.fieldSection}>
-                <Text style={[s.fieldLabel, s.fieldLabelDisabled]}>Full legal name</Text>
+                <Text style={s.fieldLabel}>Display name</Text>
                 <View>
-                  <View style={[s.textField, s.fieldDisabled]}>
+                  <View style={s.textField}>
                     <TextInput
-                      style={[s.textInput, s.textInputDisabled]}
+                      style={s.textInput}
                       value={name}
-                      editable={false}
-                      placeholder="Full legal name"
+                      onChangeText={setName}
+                      placeholder="Display name"
                       placeholderTextColor={colors.textNavInactive}
-                      accessibilityLabel="Full legal name"
-                      accessibilityState={{ disabled: true }}
+                      autoCorrect={false}
+                      returnKeyType="done"
+                      textContentType="name"
+                      accessibilityLabel="Display name"
                     />
                   </View>
-                  <Text style={s.helperText}>
-                    Contact admin to change legal name.
-                  </Text>
                 </View>
               </View>
 

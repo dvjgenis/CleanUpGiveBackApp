@@ -961,20 +961,21 @@ Each phase is assigned specific agent `subagent_type` values to spawn via the `A
 - [ ] Flag server action: toggle `volunteer_feedback.flagged`, audit log
 
 ### Phase 5 — Events
-- [ ] `/events`: list with published/draft chip, edit + publish/unpublish + delete
-- [ ] `/events/new` + `/events/[id]/edit`: full form with all fields
-- [ ] Hero image upload → Supabase Storage `event-images/` bucket
-- [ ] Geocode address → lat/lng (or manual lat/lng fields for v1)
-- [ ] Publish toggle: `is_published = true` → visible in mobile app
-- [ ] Confirm mobile event feed reads from `public.events`
-- [ ] Delete with confirmation dialog, audit log
+- [x] `/events`: list with published/draft chip, edit + publish/unpublish + delete
+- [x] `/events/new` + `/events/[id]/edit`: full form with all fields
+- [ ] Hero image upload → Supabase Storage `event-images/` bucket (v1: paste image URL)
+- [x] Geocode address → lat/lng (or manual lat/lng fields for v1)
+- [x] Publish toggle: `is_published = true` → visible in mobile app
+- [x] Confirm mobile event feed reads from `public.events`
+- [x] Delete with confirmation dialog, audit log
 
 ### Phase 6 — Orders + Payments
 - [ ] **Blocker**: `backend/payments/` service + `shop_orders` table
 - [ ] `/orders`: list with status chips, date range, search, pagination
 - [ ] `/orders/[id]`: line items, shipping address, status dropdown, tracking input
 - [ ] Order status update + tracking save → audit log
-- [ ] `/payments`: donation + shop revenue cards, 6-month bar chart, Stripe link-out
+- [x] `/payments`: donation + shop revenue cards, 6-month bar chart, Stripe link-out
+  (mock donations + shop fixtures; live `shop_orders` overlay for current-month shop revenue when rows exist; full Stripe deferred to v2)
 
 ### Phase 7 — Notifications, Export, Hardening
 - [ ] Push token: mobile app saves `push_token` to `user_metadata` on permission grant

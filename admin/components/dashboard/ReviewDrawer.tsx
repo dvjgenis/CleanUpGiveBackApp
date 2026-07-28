@@ -1,7 +1,10 @@
 'use client';
 
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useState, type ReactNode } from 'react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
+import { CourtBadge } from '@/components/ui/CourtBadge';
+import { ChevronRightIcon } from '@/components/ui/Icons';
 import type { ReviewableSession } from '@/components/dashboard/types';
 
 interface ReviewDrawerProps {
@@ -93,6 +96,22 @@ export function ReviewDrawer({
             <p className="font-body text-[13px] text-text-tertiary truncate">
               {session.activity ?? 'Cleanup session'} · {session.ageLabel}
             </p>
+            <div className="flex items-center gap-md">
+              <Link
+                href={`/volunteers/${session.user_id}`}
+                className="font-data text-[11px] font-semibold text-primary hover:underline inline-flex items-center gap-2"
+              >
+                View profile
+                <ChevronRightIcon className="w-3.5 h-3.5" color="currentColor" />
+              </Link>
+              <Link
+                href={`/sessions/${session.id}`}
+                className="font-data text-[11px] font-semibold text-primary hover:underline inline-flex items-center gap-2"
+              >
+                Open full session
+                <ChevronRightIcon className="w-3.5 h-3.5" color="currentColor" />
+              </Link>
+            </div>
           </div>
           <button
             type="button"
@@ -134,7 +153,7 @@ export function ReviewDrawer({
                   label="Distance"
                   value={session.distance_miles != null ? `${session.distance_miles.toFixed(1)} mi` : '—'}
                 />
-                <Stat label="Type" value={session.court_ordered ? 'Court-ordered' : 'Voluntary'} />
+                <Stat label="Type" value={session.court_ordered ? <CourtBadge /> : 'Voluntary'} />
                 <Stat label="Submitted" value={session.ageLabel} />
               </div>
               <div>
@@ -149,11 +168,6 @@ export function ReviewDrawer({
                     Progress
                   </div>
                 </div>
-                {isMock && (
-                  <p className="mt-sm font-body text-[12px] text-text-tertiary">
-                    Photo placeholders — live sessions show signed Storage URLs.
-                  </p>
-                )}
               </div>
               <Button type="button" onClick={() => setStep('decide')}>
                 Continue to decide
@@ -166,11 +180,6 @@ export function ReviewDrawer({
                 <kbd className="font-data">A</kbd> approve · <kbd className="font-data">D</kbd> decline ·{' '}
                 <kbd className="font-data">Esc</kbd> close
               </p>
-              {isMock ? (
-                <p className="font-body text-[14px] text-text-tertiary bg-bg-surface-elevated border border-border-outline rounded-md px-md py-md">
-                  Demo mode — decisions update the queue locally only.
-                </p>
-              ) : null}
               <div className="flex flex-col gap-sm">
                 <Button
                   type="button"
@@ -199,7 +208,7 @@ export function ReviewDrawer({
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="rounded-md border border-border-outline bg-bg-surface-elevated px-md py-sm">
       <p className="font-data text-[10px] uppercase tracking-[0.8px] text-text-tertiary">{label}</p>

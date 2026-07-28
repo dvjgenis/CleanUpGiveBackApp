@@ -87,11 +87,9 @@ export function RecentSessionsTable({ sessions, isMock = false }: RecentSessions
                     type="button"
                     disabled={!canApprove}
                     title={
-                      isMock
-                        ? 'Approve disabled while viewing mock data'
-                        : canApprove
-                          ? 'Open session to approve'
-                          : 'Only under-review sessions can be approved'
+                      canApprove
+                        ? 'Open session to approve'
+                        : 'Only under-review sessions can be approved'
                     }
                     className="font-data text-[12px] font-semibold px-sm py-xs rounded-sm border border-border-outline text-text-tertiary disabled:opacity-40 disabled:cursor-not-allowed"
                   >

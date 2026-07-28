@@ -34,7 +34,8 @@ export type EventDetail = {
   locationAddress: string;
   /** WGS84 pin for the location map + Apple/Google Maps deep link. */
   coordinate: MapCoordinate;
-  headerImages: number[];
+  /** Local `require()` id or remote URI (admin-published events). */
+  headerImages: Array<number | { uri: string }>;
 };
 
 const HEADER = require('@/assets/figma/event-detail/header.png');

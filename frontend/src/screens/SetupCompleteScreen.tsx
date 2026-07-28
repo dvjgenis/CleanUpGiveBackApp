@@ -5,8 +5,13 @@ import {
   SuccessBlobTopLeft,
 } from '@/components/onboarding/OnboardingIcons';
 import { prefetchTourGraphics } from '@/components/onboarding/tourAssets';
-import { markOnboardingComplete } from '@/features/onboarding/onboardingStore';
+import {
+  getEmail,
+  getPreferredName,
+  markOnboardingComplete,
+} from '@/features/onboarding/onboardingStore';
 import { colors as C, radius } from '@/features/figma-screens/tokens';
+import { syncVolunteerProfile } from '@/lib/supabase';
 import { durations, easing, enterFrom, modalSpring, popSpring } from '@/motion';
 import { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -178,6 +183,7 @@ export function SetupCompleteScreen() {
             style={s.continueBtn}
             onPress={() => {
               markOnboardingComplete();
+              void syncVolunteerProfile({ preferredName: getPreferredName(), email: getEmail() });
               router.push('/home-tour');
             }}
             accessibilityRole="button"

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ChevronRightIcon } from '@/components/ui/Icons';
 
 export type ReviewQueueItem = {
   id: string;
@@ -25,9 +26,10 @@ export function ReviewQueue({ items, isMock }: ReviewQueueProps) {
         </h2>
         <Link
           href="/sessions?status=under_review"
-          className="font-data text-[12px] font-semibold text-primary hover:underline underline-offset-2"
+          className="font-data text-[12px] font-semibold text-primary hover:underline underline-offset-2 inline-flex items-center gap-2"
         >
-          View all under review →
+          View all under review
+          <ChevronRightIcon className="w-3.5 h-3.5" color="currentColor" />
         </Link>
       </div>
 
@@ -60,7 +62,7 @@ export function ReviewQueue({ items, isMock }: ReviewQueueProps) {
                 <button
                   type="button"
                   disabled
-                  title={isMock ? 'Approve disabled while viewing mock data' : 'Approve from session detail'}
+                  title={isMock ? 'Approve unavailable' : 'Approve from session detail'}
                   className="font-data text-[12px] font-semibold px-md py-xs rounded-sm border border-border-outline text-text-tertiary opacity-50 cursor-not-allowed"
                 >
                   Approve
@@ -76,11 +78,6 @@ export function ReviewQueue({ items, isMock }: ReviewQueueProps) {
           );
         })}
       </ul>
-      {isMock && (
-        <p className="mt-sm font-body text-[12px] text-text-tertiary">
-          Mock sessions — Approve is disabled; Open goes to the sessions list.
-        </p>
-      )}
     </section>
   );
 }

@@ -1,28 +1,12 @@
-import { createClient } from '@/lib/supabase/server';
+import { createDataClient } from '@/lib/supabase/server';
 import { DashboardWorkbench } from '@/components/dashboard/DashboardWorkbench';
-import {
-  MOCK_COURT_AT_RISK,
-  MOCK_FEEDBACK_AVG,
-  MOCK_OPEN_ORDERS,
-  MOCK_SESSIONS,
-  type MockSession,
-} from '@/lib/dashboard-mock';
-import {
-  inInterval,
-  parsePeriod,
-  periodInterval,
-  periodLabel,
-  previousPeriodInterval,
-  type DashboardPeriod,
-} from '@/lib/dashboard-period';
+import type { MetricVisuals } from '@/components/dashboard/types';
+import { FEEDBACK_EMOJI_ORDER } from '@/components/ui/FeedbackEmojiStrip';
+import { loadScopedDashboardData } from '@/lib/dashboard-data';
+import { computeDashboardInsights } from '@/lib/dashboard-insights';
+import { MOCK_FEEDBACK_AVG, MOCK_OPEN_ORDERS, type MockSession } from '@/lib/dashboard-mock';
+import { inInterval } from '@/lib/dashboard-period';
 import { computedHours } from '@/lib/format';
-import { METRO_NEIGHBORHOODS, type NeighborhoodStats } from '@/lib/metro-heatmap';
-import {
-  buildCourtProgressBars,
-  buildDecisionBars,
-  buildQueueAgeBars,
-  buildTrendSeries,
-} from '@/lib/dashboard-charts';
 import { differenceInHours, differenceInDays, parseISO } from 'date-fns';
 
 const RATING_SCORES: Record<string, number> = {
@@ -32,6 +16,25 @@ const RATING_SCORES: Record<string, number> = {
   sad: 2,
   very_sad: 1,
 };
+
+/** Matches admin/app/(admin)/feedback/page.tsx mock distribution. */
+const MOCK_FEEDBACK_RATING_COUNTS: Record<string, number> = {
+  excited: 4,
+  happy: 4,
+  neutral: 2,
+  sad: 1,
+  very_sad: 1,
+};
+
+const COLOR = {
+  waiting: '#835400',
+  cleared: '#c9c4b8',
+  approved: '#007536',
+  declined: '#ba1a1a',
+  reviewing: '#e0b87a',
+  court: '#243447',
+  free: '#4a9e6e',
+} as const;
 
 function ageLabel(iso: string | null | undefined, now: Date): string {
   if (!iso) return '—';
@@ -53,112 +56,61 @@ function sessionHours(s: { adjusted_hours: number | null; duration_seconds: numb
   return computedHours(s.duration_seconds, s.adjusted_hours);
 }
 
-function filterByEndedAt<T extends { ended_at?: string | null; started_at?: string | null }>(
-  rows: T[],
-  period: DashboardPeriod,
-  now: Date,
-): T[] {
-  const interval = periodInterval(period, now);
-  return rows.filter((r) => inInterval(r.ended_at ?? r.started_at, interval));
+function buildFeedbackEmojiCounts(ratings: (string | null | undefined)[]) {
+  const tally: Record<string, number> = {};
+  for (const r of ratings) {
+    if (!r) continue;
+    tally[r] = (tally[r] ?? 0) + 1;
+  }
+  return FEEDBACK_EMOJI_ORDER.map((row) => ({
+    ...row,
+    count: tally[row.key] ?? 0,
+  }));
 }
 
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ period?: string }>;
+  searchParams: Promise<{ period?: string; from?: string; to?: string }>;
 }) {
   const params = await searchParams;
-  const period = parsePeriod(params.period);
-  const supabase = await createClient();
-  const now = new Date();
-  const interval = periodInterval(period, now);
-  const prevInterval = previousPeriodInterval(period, now);
+  const supabase = await createDataClient();
 
-  const [{ data: allSessions }, { data: feedbackRows }, { count: openOrdersCount }] =
-    await Promise.all([
-      supabase
-        .from('sessions')
-        .select(
-          'id, user_id, activity, started_at, ended_at, created_at, status, duration_seconds, adjusted_hours, court_ordered, distance_miles',
-        )
-        .order('created_at', { ascending: false }),
-      supabase.from('volunteer_feedback').select('rating, submitted_at'),
-      supabase
-        .from('shop_orders')
-        .select('*', { count: 'exact', head: true })
-        .in('status', ['pending', 'paid', 'shipped']),
-    ]);
+  const data = await loadScopedDashboardData(params);
+  const {
+    useMock,
+    selection,
+    periodLabelText,
+    now,
+    interval,
+    prevInterval,
+    scoped,
+    prevScoped,
+    underReviewAll,
+    courtAtRisk,
+  } = data;
 
-  const useMock = !allSessions || allSessions.length === 0;
-  const sessions: MockSession[] = useMock
-    ? MOCK_SESSIONS
-    : (allSessions as MockSession[]).map((s) => ({
-        ...s,
-        volunteer_name: s.volunteer_name ?? 'Volunteer',
-        started_at: s.started_at ?? s.created_at,
-        ended_at: s.ended_at ?? s.started_at ?? s.created_at,
-        created_at: s.created_at ?? s.started_at ?? now.toISOString(),
-        neighborhood_id: s.neighborhood_id ?? 'midtown',
-      }));
-
-  const scoped = filterByEndedAt(sessions, period, now);
-  const prevScoped = prevInterval
-    ? sessions.filter((s) => inInterval(s.ended_at ?? s.started_at, prevInterval))
-    : [];
-
-  const statusCounts = {
-    under_review: scoped.filter((s) => s.status === 'under_review').length,
-    approved: scoped.filter((s) => s.status === 'approved').length,
-    not_approved: scoped.filter((s) => s.status === 'not_approved').length,
-    active: scoped.filter((s) => s.status === 'active').length,
-    invalid: scoped.filter((s) => s.status === 'invalid').length,
-  };
-  const totalSessions = scoped.length;
-
-  const statusSlices = [
-    { name: 'Approved', value: statusCounts.approved, color: '#007536' },
-    { name: 'Under Review', value: statusCounts.under_review, color: '#fcab29' },
-    { name: 'Declined', value: statusCounts.not_approved, color: '#ba1a1a' },
-    { name: 'Active', value: statusCounts.active, color: '#5a8f3a' },
-    { name: 'Invalid', value: statusCounts.invalid, color: '#6e7a6c' },
-  ].filter((s) => s.value > 0);
-
-  const activityMap: Record<string, number> = {};
-  scoped.forEach((s) => {
-    const key = s.activity?.trim() || 'Other';
-    activityMap[key] = (activityMap[key] ?? 0) + 1;
-  });
-  const ACTIVITY_COLORS = ['#007536', '#5a8f3a', '#835400', '#3d8f5c', '#6e7a6c'];
-  const sortedActivities = Object.entries(activityMap).sort((a, b) => b[1] - a[1]);
-  const topActivities = sortedActivities.slice(0, 4);
-  const otherCount = sortedActivities.slice(4).reduce((sum, [, v]) => sum + v, 0);
-  const activitySlices = [
-    ...topActivities.map(([name, value], i) => ({
-      name,
-      value,
-      color: ACTIVITY_COLORS[i] ?? '#6e7a6c',
-    })),
-    ...(otherCount > 0 ? [{ name: 'Other', value: otherCount, color: '#6e7a6c' }] : []),
-  ];
+  const [{ data: feedbackRows }, { count: openOrdersCount }] = await Promise.all([
+    supabase.from('volunteer_feedback').select('rating, submitted_at'),
+    supabase
+      .from('shop_orders')
+      .select('*', { count: 'exact', head: true })
+      .in('status', ['pending', 'paid', 'shipped']),
+  ]);
 
   const approvedScoped = scoped.filter((s) => s.status === 'approved');
   const courtOrdered = approvedScoped.filter((r) => r.court_ordered).length;
-  const voluntary = approvedScoped.filter((r) => !r.court_ordered).length;
-  const courtSlices = [
-    { name: 'Voluntary', value: voluntary, color: '#007536' },
-    { name: 'Court-ordered', value: courtOrdered, color: '#835400' },
-  ].filter((s) => s.value > 0);
-
-  const underReviewAll = sessions
-    .filter((s) => s.status === 'under_review')
-    .sort((a, b) => {
-      if (a.court_ordered !== b.court_ordered) return a.court_ordered ? -1 : 1;
-      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-    });
 
   const approvedThisPeriod = approvedScoped.length;
   const declinedThisPeriod = scoped.filter((s) => s.status === 'not_approved').length;
+  const reviewingThisPeriod = scoped.filter((s) => s.status === 'under_review').length;
+  const clearedThisPeriod = approvedThisPeriod + declinedThisPeriod;
+
+  const courtHours = approvedScoped
+    .filter((s) => s.court_ordered)
+    .reduce((sum, s) => sum + sessionHours(s), 0);
   const totalApprovedHours = approvedScoped.reduce((sum, s) => sum + sessionHours(s), 0);
+  const freeHours = Math.max(0, totalApprovedHours - courtHours);
   const prevApprovedHours = prevScoped
     .filter((s) => s.status === 'approved')
     .reduce((sum, s) => sum + sessionHours(s), 0);
@@ -180,11 +132,16 @@ export default async function DashboardPage({
   ];
 
   let ratingDisplay = '—';
+  let feedbackEmoji = buildFeedbackEmojiCounts([]);
   if (useMock) {
     ratingDisplay = MOCK_FEEDBACK_AVG.toFixed(1);
+    feedbackEmoji = FEEDBACK_EMOJI_ORDER.map((row) => ({
+      ...row,
+      count: MOCK_FEEDBACK_RATING_COUNTS[row.key] ?? 0,
+    }));
   } else if (feedbackRows && feedbackRows.length > 0) {
-    const inPeriod = (feedbackRows as { rating: string | null; submitted_at: string }[]).filter(
-      (f) => inInterval(f.submitted_at, interval),
+    const inPeriod = (feedbackRows as { rating: string | null; submitted_at: string }[]).filter((f) =>
+      inInterval(f.submitted_at, interval),
     );
     if (inPeriod.length > 0) {
       const avg =
@@ -192,10 +149,45 @@ export default async function DashboardPage({
         inPeriod.length;
       ratingDisplay = avg.toFixed(1);
     }
+    feedbackEmoji = buildFeedbackEmojiCounts(inPeriod.map((f) => f.rating));
   }
 
-  const courtAtRisk = MOCK_COURT_AT_RISK;
-  const periodLabelText = periodLabel(period, now);
+  const insights = computeDashboardInsights({
+    scoped,
+    underReviewAll,
+    courtAtRisk,
+    period: selection,
+    now,
+    interval,
+  });
+  const approvedSparkline = insights.chartExtras.trend.map((p) => p.approved);
+
+  const metricVisuals: MetricVisuals = {
+    waiting: {
+      slices: [
+        { value: underReviewAll.length, color: COLOR.waiting, label: 'Waiting' },
+        {
+          value: clearedThisPeriod || (underReviewAll.length === 0 ? 1 : 0),
+          color: COLOR.cleared,
+          label: 'Cleared',
+        },
+      ],
+    },
+    approved: {
+      slices: [
+        { value: approvedThisPeriod, color: COLOR.approved, label: 'Approved' },
+        { value: declinedThisPeriod, color: COLOR.declined, label: 'Declined' },
+        { value: reviewingThisPeriod, color: COLOR.reviewing, label: 'Still reviewing' },
+      ],
+    },
+    hours: {
+      slices: [
+        { value: Number(courtHours.toFixed(2)), color: COLOR.court, label: 'Court-ordered' },
+        { value: Number(freeHours.toFixed(2)), color: COLOR.free, label: 'Voluntary' },
+      ],
+    },
+    feedback: feedbackEmoji,
+  };
 
   const kpis = [
     {
@@ -210,6 +202,7 @@ export default async function DashboardPage({
       value: approvedThisPeriod,
       subtext: `${declinedThisPeriod} declined · ${periodLabelText}`,
       href: '/sessions?status=approved',
+      sparkline: approvedSparkline.length > 1 ? approvedSparkline : undefined,
     },
     {
       label: 'Court hours at risk',
@@ -247,7 +240,7 @@ export default async function DashboardPage({
     adjusted_hours: s.adjusted_hours,
     distance_miles: s.distance_miles,
     started_at: s.started_at,
-    neighborhood_id: s.neighborhood_id,
+    user_id: s.user_id,
   });
 
   const queue = underReviewAll.map(toReviewable);
@@ -261,47 +254,19 @@ export default async function DashboardPage({
 
   const recent = recentSorted.slice(0, 10).map(toReviewable);
 
-  const neighborhoodStats: NeighborhoodStats[] = METRO_NEIGHBORHOODS.map((n) => {
-    const rows = scoped.filter((s) => s.neighborhood_id === n.id);
-    const hours = rows.reduce((sum, s) => sum + sessionHours(s), 0);
-    const underReview = rows.filter((s) => s.status === 'under_review').length;
-    return {
-      id: n.id,
-      name: n.name,
-      sessionCount: rows.length,
-      hours,
-      underReview,
-    };
-  });
-
-  const chartExtras = {
-    trend: buildTrendSeries(scoped, period, now, interval),
-    queueAge: buildQueueAgeBars(underReviewAll, now),
-    decisions: buildDecisionBars(scoped),
-    courtProgress: buildCourtProgressBars(courtAtRisk),
-  };
-
   return (
     <DashboardWorkbench
-      period={period}
+      selection={selection}
       periodLabelText={periodLabelText}
       isMock={useMock}
       kpis={kpis}
       hoursKpi={hoursKpi}
       queue={queue}
       recent={recent}
-      courtRisk={courtAtRisk}
-      neighborhoodStats={neighborhoodStats}
-      chartExtras={chartExtras}
-      donuts={[
-        { title: 'Session Status', data: statusSlices, total: totalSessions },
-        { title: 'Activity Types', data: activitySlices, total: totalSessions },
-        {
-          title: 'Approved — Session Type',
-          data: courtSlices,
-          total: courtOrdered + voluntary,
-        },
-      ]}
+      snapshot={insights.snapshot}
+      metricVisuals={metricVisuals}
+      hoursTrend={insights.chartExtras.trend}
+      geoActivity={insights.geoActivity}
     />
   );
 }

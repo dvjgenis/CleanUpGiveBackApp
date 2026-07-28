@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ChevronRightIcon } from '@/components/ui/Icons';
 import type { MockCourtVolunteer } from '@/lib/dashboard-mock';
 
 interface CourtRiskStripProps {
@@ -17,9 +18,10 @@ export function CourtRiskStrip({ volunteers }: CourtRiskStripProps) {
         </h2>
         <Link
           href="/court-hours"
-          className="font-data text-[12px] font-semibold text-primary hover:underline underline-offset-2"
+          className="font-data text-[12px] font-semibold text-primary hover:underline underline-offset-2 inline-flex items-center gap-2"
         >
-          View court hours →
+          View court hours
+          <ChevronRightIcon className="w-3.5 h-3.5" color="currentColor" />
         </Link>
       </div>
 

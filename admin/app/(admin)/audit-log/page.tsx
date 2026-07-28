@@ -1,6 +1,7 @@
-import { createClient } from '@/lib/supabase/server';
+import { createDataClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import { formatDate } from '@/lib/format';
+import { ChevronLeftIcon, ChevronRightIcon } from '@/components/ui/Icons';
 
 const PAGE_SIZE = 50;
 
@@ -12,7 +13,7 @@ interface SearchParams {
 export default async function AuditLogPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const params = await searchParams;
   const page = Math.max(1, parseInt(params.page ?? '1'));
-  const supabase = await createClient();
+  const supabase = await createDataClient();
 
   let query = supabase
     .from('admin_audit_log')
@@ -109,9 +110,10 @@ export default async function AuditLogPage({ searchParams }: { searchParams: Pro
           {page > 1 && (
             <Link
               href={`/audit-log?page=${page - 1}`}
-              className="h-9 px-md rounded-sm border border-border-outline font-data text-[12px] font-semibold text-text-tertiary hover:bg-bg-surface-elevated transition-colors flex items-center"
+              className="h-9 px-md rounded-sm border border-border-outline font-data text-[12px] font-semibold text-text-tertiary hover:bg-bg-surface-elevated transition-colors inline-flex items-center gap-2"
             >
-              ← Previous
+              <ChevronLeftIcon className="w-3.5 h-3.5" color="currentColor" />
+              Previous
             </Link>
           )}
           <span className="font-data text-[12px] text-text-tertiary">
@@ -120,9 +122,10 @@ export default async function AuditLogPage({ searchParams }: { searchParams: Pro
           {page < totalPages && (
             <Link
               href={`/audit-log?page=${page + 1}`}
-              className="h-9 px-md rounded-sm border border-border-outline font-data text-[12px] font-semibold text-text-tertiary hover:bg-bg-surface-elevated transition-colors flex items-center"
+              className="h-9 px-md rounded-sm border border-border-outline font-data text-[12px] font-semibold text-text-tertiary hover:bg-bg-surface-elevated transition-colors inline-flex items-center gap-2"
             >
-              Next →
+              Next
+              <ChevronRightIcon className="w-3.5 h-3.5" color="currentColor" />
             </Link>
           )}
         </div>

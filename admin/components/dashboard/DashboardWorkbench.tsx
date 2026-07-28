@@ -12,38 +12,42 @@ import {
   type ReactNode,
 } from 'react';
 import { useRouter } from 'next/navigation';
-import { DonutChart } from '@/components/ui/DonutChart';
-import { TrendAreaChart } from '@/components/ui/TrendAreaChart';
-import { HorizontalBarChart } from '@/components/ui/HorizontalBarChart';
-import { CourtProgressChart } from '@/components/ui/CourtProgressChart';
 import { PeriodToggle } from '@/components/ui/PeriodToggle';
+import { Sparkline } from '@/components/ui/Sparkline';
+import { MiniDonut } from '@/components/ui/MiniDonut';
+import { FeedbackEmojiStrip } from '@/components/ui/FeedbackEmojiStrip';
+import { TrendAreaChart } from '@/components/ui/TrendAreaChart';
+import { ChevronRightIcon } from '@/components/ui/Icons';
 import { Button } from '@/components/ui/Button';
+import { CourtBadge } from '@/components/ui/CourtBadge';
 import { useToast } from '@/components/ui/ToastProvider';
 import { ReviewDrawer } from '@/components/dashboard/ReviewDrawer';
-import { MetroHeatmap } from '@/components/dashboard/MetroHeatmap';
+import { UsHeatmap } from '@/components/dashboard/UsHeatmap';
 import type {
-  ChartExtras,
-  CourtRiskItem,
   DashboardKpi,
-  DonutPayload,
-  NeighborhoodStats,
+  MetricDonut,
+  MetricVisuals,
   ReviewableSession,
+  FeedbackEmojiCount,
+  GeoActivityBundle,
 } from '@/components/dashboard/types';
+import type { DashboardSnapshot } from '@/lib/dashboard-insights';
+import type { TrendPoint } from '@/lib/dashboard-charts';
 import { approveSession, declineSession } from '@/actions/sessions';
-import type { DashboardPeriod } from '@/lib/dashboard-period';
+import type { PeriodSelection } from '@/lib/dashboard-period';
 
 type Props = {
-  period: DashboardPeriod;
+  selection: PeriodSelection;
   periodLabelText: string;
   isMock: boolean;
   kpis: DashboardKpi[];
   hoursKpi: DashboardKpi;
   queue: ReviewableSession[];
   recent: ReviewableSession[];
-  courtRisk: CourtRiskItem[];
-  donuts: DonutPayload[];
-  chartExtras: ChartExtras;
-  neighborhoodStats: NeighborhoodStats[];
+  snapshot: DashboardSnapshot;
+  metricVisuals: MetricVisuals;
+  hoursTrend: TrendPoint[];
+  geoActivity: GeoActivityBundle;
 };
 
 function formatDurationShort(seconds: number | null, adjusted: number | null): string {
@@ -53,14 +57,6 @@ function formatDurationShort(seconds: number | null, adjusted: number | null): s
   const m = Math.floor((seconds % 3600) / 60);
   if (h > 0) return `${h}h ${m}m`;
   return `${m}m`;
-}
-
-function daysUntilDue(dueDate: string): number {
-  const due = new Date(dueDate);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  due.setHours(0, 0, 0, 0);
-  return Math.ceil((due.getTime() - today.getTime()) / 86_400_000);
 }
 
 function Bento({
@@ -85,7 +81,7 @@ function Bento({
 
 /**
  * Bento Today — sparse grid: one job per tile.
- * Primary: Review. Secondary: metrics + court. Tertiary: insights (collapsed).
+ * Primary: Review. Secondary: metrics. Location + hours trend below.
  */
 export function DashboardWorkbench(props: Props) {
   const { pushToast } = useToast();
@@ -97,7 +93,6 @@ export function DashboardWorkbench(props: Props) {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [declineId, setDeclineId] = useState<string | null>(null);
   const [declineReason, setDeclineReason] = useState('');
-  const [insightsOpen, setInsightsOpen] = useState(false);
 
   useEffect(() => {
     setQueue(props.queue);
@@ -111,7 +106,6 @@ export function DashboardWorkbench(props: Props) {
 
   const underReviewKpi = props.kpis.find((k) => k.label === 'Under Review');
   const approvedKpi = props.kpis.find((k) => k.label === 'Approved');
-  const courtKpi = props.kpis.find((k) => k.label === 'Court hours at risk');
   const feedbackKpi = props.kpis.find((k) => k.label === 'Avg feedback');
 
   const removeFromQueue = useCallback((id: string, nextStatus: string) => {
@@ -230,29 +224,20 @@ export function DashboardWorkbench(props: Props) {
 
   return (
     <div className={`max-w-6xl mx-auto ${isPending ? 'opacity-70' : ''}`}>
-      {props.isMock && (
-        <p
-          role="status"
-          className="mb-md font-data text-[11px] uppercase tracking-[0.5px] text-text-tertiary"
-        >
-          Mock preview — decisions stay local
-        </p>
-      )}
-
-      <header className="flex flex-col gap-md sm:flex-row sm:items-center sm:justify-between mb-lg">
-        <h1 className="font-heading text-[32px] leading-[40px] text-text-primary">Today</h1>
-        <Suspense fallback={<div className="h-11 w-52 bg-bg-surface-elevated rounded-md animate-pulse" />}>
-          <PeriodToggle period={props.period} pending={isPending} />
+      <header className="flex flex-col gap-md mb-lg">
+        <h1 className="font-heading text-[32px] leading-[40px] text-text-primary">Welcome back Donna!</h1>
+        <Suspense fallback={<div className="h-11 w-full bg-bg-surface-elevated rounded-md animate-pulse" />}>
+          <PeriodToggle selection={props.selection} pending={isPending} />
         </Suspense>
       </header>
 
-      {/* Bento grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-md auto-rows-fr">
+      {/* Bento grid — sibling columns share height so bottoms align */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-md items-stretch">
         {/* Hero — Review */}
         <Bento
           as="section"
           aria-labelledby="bento-review-heading"
-          className="col-span-2 lg:col-span-2 lg:row-span-2 flex flex-col min-h-[22rem]"
+          className="flex h-full flex-col"
         >
           <div className="px-lg pt-lg pb-md flex items-start justify-between gap-md">
             <div>
@@ -276,8 +261,8 @@ export function DashboardWorkbench(props: Props) {
           </div>
 
           {queue.length === 0 ? (
-            <div className="flex-1 flex items-center justify-center px-lg pb-lg">
-              <p className="font-body text-[14px] text-text-tertiary text-center max-w-xs">
+            <div className="px-lg pb-lg flex-1 flex items-center">
+              <p className="font-body text-[14px] text-text-tertiary max-w-xs">
                 Nothing waiting. New submissions will show up here.
               </p>
             </div>
@@ -289,35 +274,28 @@ export function DashboardWorkbench(props: Props) {
                   className="px-lg py-md flex flex-col sm:flex-row sm:items-center gap-sm sm:gap-md"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="font-body text-[14px] font-semibold text-text-primary truncate">
-                      {item.volunteer_name}
-                      {item.court_ordered ? (
-                        <span className="ml-xs font-data text-[10px] font-bold text-[#835400]">
-                          COURT
-                        </span>
-                      ) : null}
-                    </p>
-                    <p className="font-body text-[12px] text-text-tertiary truncate">
+                    <div className="flex items-center gap-xs">
+                      <Link
+                        href={`/volunteers/${item.user_id}`}
+                        className="font-body text-[14px] font-semibold text-text-primary truncate hover:text-primary hover:underline inline-block max-w-full"
+                      >
+                        {item.volunteer_name}
+                      </Link>
+                      {item.court_ordered && <CourtBadge className="shrink-0" />}
+                    </div>
+                    <Link
+                      href={`/sessions/${item.id}`}
+                      className="font-body text-[12px] text-text-tertiary hover:text-primary hover:underline truncate block"
+                    >
                       {item.activity ?? 'Cleanup'} ·{' '}
                       {formatDurationShort(item.duration_seconds, item.adjusted_hours)} ·{' '}
                       {item.ageLabel}
-                    </p>
+                    </Link>
                   </div>
                   <div className="flex gap-xs shrink-0">
                     <Button
                       type="button"
                       size="sm"
-                      className="min-h-11"
-                      disabled={busyId === item.id}
-                      aria-label={`Approve ${item.volunteer_name}`}
-                      onClick={() => handleApprove(item.id)}
-                    >
-                      Approve
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="secondary"
                       className="min-h-11"
                       aria-label={`Review ${item.volunteer_name}`}
                       onClick={() => setDrawerId(item.id)}
@@ -331,200 +309,111 @@ export function DashboardWorkbench(props: Props) {
           )}
 
           {hasMoreQueue && (
-            <div className="px-lg py-md border-t border-border-outline">
+            <div className="px-lg py-md border-t border-border-outline mt-auto">
               <Link
                 href="/sessions?status=under_review"
-                className="font-data text-[12px] font-semibold text-primary hover:underline"
+                className="font-data text-[12px] font-semibold text-primary hover:underline inline-flex items-center gap-2"
               >
-                +{queue.length - 5} more in Sessions →
+                +{queue.length - 5} more in Sessions
+                <ChevronRightIcon className="w-3.5 h-3.5" color="currentColor" />
               </Link>
             </div>
           )}
         </Bento>
 
-        {/* Metric tiles */}
-        <MetricTile
-          label="Waiting"
-          value={underReviewKpi?.value ?? queue.length}
-          hint={queue.length > 0 ? 'Open queue' : 'Caught up'}
-          href="/sessions?status=under_review"
-          accent={queue.length > 0}
-        />
-        <MetricTile
-          label="Approved"
-          value={approvedKpi?.value ?? '—'}
-          hint={props.periodLabelText}
-          href="/sessions?status=approved"
-        />
-        <MetricTile
-          label="Hours"
-          value={props.hoursKpi.value}
-          hint={props.hoursKpi.delta ?? props.hoursKpi.subtext}
-          href="/sessions?status=approved"
-        />
-        <MetricTile
-          label="Feedback"
-          value={feedbackKpi?.value ?? '—'}
-          hint="Average rating"
-          href="/feedback"
-        />
-
-        {/* Court tile */}
-        <Bento
-          as="section"
-          aria-labelledby="bento-court-heading"
-          className="col-span-2 lg:col-span-2"
-        >
-          <div className="px-lg pt-lg pb-sm flex items-center justify-between gap-md">
-            <div>
-              <p className="font-data text-[11px] uppercase tracking-[0.88px] text-text-tertiary mb-xs">
-                Deadlines
-              </p>
-              <h2
-                id="bento-court-heading"
-                className="font-heading text-[20px] leading-[26px] text-text-primary"
-              >
-                Court hours
-              </h2>
-            </div>
-            <Link
-              href="/court-hours"
-              className="font-data text-[12px] font-semibold text-primary hover:underline min-h-11 inline-flex items-center"
-            >
-              All →
-            </Link>
-          </div>
-          {props.courtRisk.length === 0 ? (
-            <p className="px-lg pb-lg font-body text-[14px] text-text-tertiary">
-              No one at risk right now.
-            </p>
-          ) : (
-            <ul role="list" className="divide-y divide-border-outline border-t border-border-outline">
-              {props.courtRisk.slice(0, 3).map((v) => {
-                const remaining = Math.max(0, v.requiredHours - v.completedHours);
-                const daysLeft = daysUntilDue(v.dueDate);
-                const behind = v.status === 'at_risk';
-                return (
-                  <li key={v.id}>
-                    <Link
-                      href={`/volunteers/${v.id}`}
-                      className="flex items-center justify-between gap-md px-lg py-md hover:bg-bg-app transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
-                    >
-                      <div className="min-w-0">
-                        <p className="font-body text-[14px] font-semibold text-text-primary truncate">
-                          {v.name}
-                        </p>
-                        <p className="font-data text-[12px] text-text-tertiary">
-                          {remaining.toFixed(1)}h left
-                          {Number.isFinite(daysLeft)
-                            ? ` · ${daysLeft < 0 ? `${Math.abs(daysLeft)}d overdue` : `${daysLeft}d`}`
-                            : ''}
-                        </p>
-                      </div>
-                      <span
-                        className={`font-data text-[10px] uppercase font-semibold shrink-0 ${
-                          behind ? 'text-[#ba1a1a]' : 'text-[#835400]'
-                        }`}
-                      >
-                        {behind ? 'Behind' : 'Soon'}
-                      </span>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </Bento>
-
-        {/* Shortcut tile */}
-        <Bento className="col-span-2 lg:col-span-2 flex flex-col justify-between p-lg gap-md">
-          <div>
-            <p className="font-data text-[11px] uppercase tracking-[0.88px] text-text-tertiary mb-xs">
-              Jump to
-            </p>
-            <h2 className="font-heading text-[20px] leading-[26px] text-text-primary mb-md">
-              Common work
-            </h2>
-            <ul className="flex flex-col gap-xs" role="list">
-              {(
-                [
-                  ['/sessions?status=under_review', 'Sessions under review'],
-                  ['/court-hours', 'Court progress'],
-                  ['/orders', 'Shop orders'],
-                  ['/feedback', 'Volunteer feedback'],
-                ] as const
-              ).map(([href, label]) => (
-                <li key={href}>
-                  <Link
-                    href={href}
-                    className="font-body text-[14px] text-primary hover:underline underline-offset-2 min-h-11 inline-flex items-center"
-                  >
-                    {label} →
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-          {courtKpi && (
-            <p className="font-data text-[12px] text-text-tertiary">
-              {String(courtKpi.value)} court volunteers flagged · {props.periodLabelText}
-            </p>
-          )}
-        </Bento>
+        {/* Metric tiles — fill Review column height, equal cells */}
+        <div className="grid grid-cols-2 grid-rows-2 gap-md h-full min-h-0">
+          <MetricTile
+            label="Waiting"
+            value={underReviewKpi?.value ?? queue.length}
+            hint={queue.length > 0 ? 'Open queue' : 'Caught up'}
+            href="/sessions?status=under_review"
+            accent={queue.length > 0}
+            donut={props.metricVisuals.waiting}
+          />
+          <MetricTile
+            label="Approved"
+            value={approvedKpi?.value ?? '—'}
+            hint={props.periodLabelText}
+            href="/sessions?status=approved"
+            donut={props.metricVisuals.approved}
+          />
+          <MetricTile
+            label="Hours"
+            value={props.hoursKpi.value}
+            hint={props.hoursKpi.delta ?? props.hoursKpi.subtext}
+            href="/sessions?status=approved"
+            donut={props.metricVisuals.hours}
+          />
+          <MetricTile
+            label="Feedback"
+            value={feedbackKpi?.value ?? '—'}
+            hint="Average rating"
+            href="/feedback"
+            emojiStrip={props.metricVisuals.feedback}
+          />
+        </div>
       </div>
 
-      {/* Single insights drawer — charts + map */}
-      <details
-        className="mt-lg group"
-        open={insightsOpen}
-        onToggle={(e) => setInsightsOpen((e.target as HTMLDetailsElement).open)}
-      >
-        <summary className="cursor-pointer list-none min-h-11 flex items-center justify-between rounded-md border border-border-outline bg-bg-surface px-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
-          <span className="font-heading text-[18px] text-text-primary">Insights</span>
-          <span className="font-data text-[12px] text-primary" aria-hidden>
-            {insightsOpen ? 'Hide' : 'Show charts & map'}
-          </span>
-        </summary>
-        {/* Mount charts only when open — avoids SSR hydration mismatches from motion prefs */}
-        {insightsOpen ? (
-          <div className="mt-md flex flex-col gap-md">
-            <TrendAreaChart
-              title="Hours & submissions"
-              subtitle={props.periodLabelText}
-              data={props.chartExtras.trend}
-              index={0}
-            />
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-md">
-              <HorizontalBarChart
-                title="Queue age"
-                data={props.chartExtras.queueAge}
-                emptyLabel="Queue is empty"
-                index={1}
-              />
-              <HorizontalBarChart
-                title="Decisions"
-                data={props.chartExtras.decisions}
-                index={2}
-              />
-              <CourtProgressChart
-                title="Court progress"
-                data={props.chartExtras.courtProgress}
-                index={3}
-              />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-md">
-              {props.donuts.map((d, i) => (
-                <DonutChart key={d.title} title={d.title} data={d.data} total={d.total} index={i + 4} />
-              ))}
-            </div>
-            <MetroHeatmap
-              stats={props.neighborhoodStats}
-              periodLabel={props.periodLabelText}
-              isMock={props.isMock}
-            />
+      {/* Location + hours trend — replaces court / recent-decisions list tiles */}
+      <div className="grid grid-cols-1 gap-md mt-md">
+        <TrendAreaChart
+          title="Hours & submissions"
+          subtitle={props.periodLabelText}
+          data={props.hoursTrend}
+          index={0}
+        />
+        <UsHeatmap
+          activity={props.geoActivity}
+          periodLabel={props.periodLabelText}
+          isMock={props.isMock}
+        />
+      </div>
+
+      {/* Snapshot — glanceable composition; deeper breakdowns on /insights */}
+      <Bento as="section" aria-labelledby="bento-snapshot-heading" className="mt-md">
+        <div className="px-lg py-lg flex flex-col sm:flex-row sm:items-center gap-lg">
+          <div className="flex-1 min-w-0">
+            <p className="font-data text-[11px] uppercase tracking-[0.88px] text-text-tertiary mb-xs">
+              This period
+            </p>
+            <h2 id="bento-snapshot-heading" className="font-heading text-[20px] leading-[26px] text-text-primary">
+              Snapshot
+            </h2>
           </div>
-        ) : null}
-      </details>
+
+          <div className="flex flex-wrap items-center gap-lg">
+            <div>
+              <p className="font-data text-[11px] uppercase tracking-[0.5px] text-text-tertiary">Approval rate</p>
+              <p className="font-data text-[22px] font-semibold text-text-primary">
+                {props.snapshot.approvalRatePct != null ? `${props.snapshot.approvalRatePct}%` : '—'}
+              </p>
+            </div>
+            <div>
+              <p className="font-data text-[11px] uppercase tracking-[0.5px] text-text-tertiary">Top activity</p>
+              <p className="font-body text-[16px] font-medium text-text-primary truncate max-w-[10rem]">
+                {props.snapshot.topActivityLabel ?? '—'}
+              </p>
+            </div>
+            {props.snapshot.hoursSparkline.length > 1 && (
+              <div>
+                <p className="font-data text-[11px] uppercase tracking-[0.5px] text-text-tertiary mb-xs">
+                  Approved hours
+                </p>
+                <Sparkline data={props.snapshot.hoursSparkline} />
+              </div>
+            )}
+          </div>
+
+          <Link
+            href="/insights"
+            className="font-data text-[12px] font-semibold text-primary hover:underline min-h-11 inline-flex items-center gap-2 shrink-0"
+          >
+            More charts
+            <ChevronRightIcon className="w-3.5 h-3.5" color="currentColor" />
+          </Link>
+        </div>
+      </Bento>
 
       <ReviewDrawer
         open={drawerId != null}
@@ -595,30 +484,41 @@ function MetricTile({
   hint,
   href,
   accent,
+  donut,
+  emojiStrip,
 }: {
   label: string;
   value: string | number;
   hint?: string | null;
   href: string;
   accent?: boolean;
+  donut?: MetricDonut;
+  emojiStrip?: FeedbackEmojiCount[];
 }) {
   return (
-    <Bento as="article" className="col-span-1">
+    <Bento as="article" className="h-full min-h-0">
       <Link
         href={href}
-        className="block h-full p-lg no-underline text-inherit hover:bg-bg-app/60 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary min-h-[7.5rem]"
+        className="flex h-full flex-col justify-center p-md no-underline text-inherit hover:bg-bg-app/60 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
         aria-label={`${label}: ${value}`}
       >
-        <p className="font-data text-[11px] uppercase tracking-[0.88px] text-text-tertiary mb-sm">
+        <p className="font-data text-[11px] uppercase tracking-[0.88px] text-text-tertiary mb-xs">
           {label}
         </p>
-        <p
-          className={`font-data text-[28px] leading-[34px] font-semibold ${
-            accent ? 'text-[#835400]' : 'text-text-primary'
-          }`}
-        >
-          {value}
-        </p>
+        <div className="flex items-end justify-between gap-sm">
+          <p
+            className={`font-data text-[28px] leading-[34px] font-semibold ${
+              accent ? 'text-[#835400]' : 'text-text-primary'
+            }`}
+          >
+            {value}
+          </p>
+          {donut ? (
+            <MiniDonut slices={donut.slices} size={48} thickness={6} className="mb-0.5" />
+          ) : emojiStrip ? (
+            <FeedbackEmojiStrip counts={emojiStrip} className="mb-0.5" />
+          ) : null}
+        </div>
         {hint ? (
           <p className="mt-xs font-body text-[12px] text-text-tertiary line-clamp-2">{hint}</p>
         ) : null}

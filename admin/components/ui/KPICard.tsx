@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useHasMounted } from '@/hooks/useHasMounted';
+import { ChevronRightIcon } from '@/components/ui/Icons';
 
 interface KPICardProps {
   label: string;
@@ -106,9 +107,7 @@ export function KPICard({
         <div className="flex items-center gap-xs shrink-0">
           {sparkline && sparkline.length > 1 && <MiniSparkline values={sparkline} />}
           {showChevron && href && (
-            <span className="text-primary font-data text-[14px]" aria-hidden>
-              →
-            </span>
+            <ChevronRightIcon className="w-2 h-3.5 text-primary" color="currentColor" />
           )}
         </div>
       </div>

@@ -1,7 +1,12 @@
 import type { NamedBar, TrendPoint } from '@/lib/dashboard-charts';
+import type { FeedbackEmojiCount } from '@/components/ui/FeedbackEmojiStrip';
+import type { GeoActivityBundle, NeighborhoodStats } from '@/lib/us-heatmap';
+
+export type { GeoActivityBundle, NeighborhoodStats };
 
 export type ReviewableSession = {
   id: string;
+  user_id: string;
   volunteer_name: string;
   activity: string | null;
   court_ordered: boolean;
@@ -12,7 +17,6 @@ export type ReviewableSession = {
   adjusted_hours: number | null;
   distance_miles: number | null;
   started_at: string | null;
-  neighborhood_id?: string | null;
 };
 
 export type DashboardKpi = {
@@ -23,6 +27,20 @@ export type DashboardKpi = {
   href?: string;
   delta?: string | null;
   sparkline?: number[];
+};
+
+/** Compact composition for Today metric-tile MiniDonuts. */
+export type MetricDonut = {
+  slices: { value: number; color: string; label: string }[];
+};
+
+export type { FeedbackEmojiCount };
+
+export type MetricVisuals = {
+  waiting: MetricDonut;
+  approved: MetricDonut;
+  hours: MetricDonut;
+  feedback: FeedbackEmojiCount[];
 };
 
 export type DonutPayload = {
@@ -52,5 +70,3 @@ export type CourtRiskItem = {
   status: 'in_progress' | 'at_risk' | 'completed';
   dueDate: string;
 };
-
-export type { NeighborhoodStats } from '@/lib/metro-heatmap';
