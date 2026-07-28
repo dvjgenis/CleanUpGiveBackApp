@@ -7,6 +7,8 @@ import { computeDashboardInsights } from '@/lib/dashboard-insights';
 import { MOCK_FEEDBACK_AVG, MOCK_OPEN_ORDERS, type MockSession } from '@/lib/dashboard-mock';
 import { inInterval } from '@/lib/dashboard-period';
 import { computedHours } from '@/lib/format';
+import { loadPaymentsSummary } from '@/lib/payments-data';
+import { loadOrdersSummary, loadOpenOrdersPreview } from '@/lib/orders-data';
 import { differenceInHours, differenceInDays, parseISO } from 'date-fns';
 
 const RATING_SCORES: Record<string, number> = {
@@ -90,13 +92,25 @@ export default async function DashboardPage({
     courtAtRisk,
   } = data;
 
-  const [{ data: feedbackRows }, { count: openOrdersCount }] = await Promise.all([
+  const [{ data: feedbackRows }, { count: openOrdersCount }, paymentsSummary] = await Promise.all([
     supabase.from('volunteer_feedback').select('rating, submitted_at'),
     supabase
       .from('shop_orders')
       .select('*', { count: 'exact', head: true })
       .in('status', ['pending', 'paid', 'shipped']),
+    loadPaymentsSummary(),
   ]);
+  const ordersSummary = loadOrdersSummary();
+  const openOrdersPreview = loadOpenOrdersPreview(4);
+  const commerce = {
+    paymentsThisMonthCents: paymentsSummary.totalThisMonthCents,
+    paymentsMonthLabel: paymentsSummary.monthLabel,
+    paymentsMonthly: paymentsSummary.monthly,
+    // Orders page still uses fixtures — keep the Today card count aligned with the preview table.
+    openOrders: ordersSummary.open,
+    ordersRevenueCents: ordersSummary.totalRevenueCents,
+    openOrdersPreview,
+  };
 
   const approvedScoped = scoped.filter((s) => s.status === 'approved');
   const courtOrdered = approvedScoped.filter((r) => r.court_ordered).length;
@@ -209,7 +223,7 @@ export default async function DashboardPage({
       value: courtAtRisk.filter((v) => v.status === 'at_risk').length,
       accent: courtAtRisk.some((v) => v.status === 'at_risk'),
       subtext: `${courtAtRisk.length} due soon or behind`,
-      href: '/court-hours',
+      href: '/users?filter=court',
     },
     {
       label: 'Avg feedback',
@@ -266,7 +280,9 @@ export default async function DashboardPage({
       snapshot={insights.snapshot}
       metricVisuals={metricVisuals}
       hoursTrend={insights.chartExtras.trend}
+      queueAge={insights.chartExtras.queueAge}
       geoActivity={insights.geoActivity}
+      commerce={commerce}
     />
   );
 }

@@ -17,9 +17,10 @@ const STATUS_MAP: Record<SessionStatus, { label: string; className: string }> = 
     label: 'Declined',
     className: 'bg-[#ffd9de] text-[#ba1a1a] border-[#ba1a1a]',
   },
+  // Legacy DB rows only — "Invalid" is not a product status.
   invalid: {
-    label: 'Invalid',
-    className: 'bg-[#f6f3f2] text-[#3e4a3d] border-[#bdcaba]',
+    label: 'Declined',
+    className: 'bg-[#ffd9de] text-[#ba1a1a] border-[#ba1a1a]',
   },
 };
 

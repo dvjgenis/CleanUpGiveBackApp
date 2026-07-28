@@ -84,42 +84,13 @@ export async function declineSession(sessionId: string, reason?: string) {
   revalidateSessionPaths(sessionId);
 }
 
-export async function markInvalid(sessionId: string) {
-  const user = await getAdminUser();
-  const supabase = await createServiceClient();
-
-  const { data: before } = await supabase
-    .from('sessions')
-    .select('status')
-    .eq('id', sessionId)
-    .single();
-
-  const { error } = await supabase
-    .from('sessions')
-    .update({ status: 'invalid' })
-    .eq('id', sessionId);
-
-  if (error) throw new Error(error.message);
-
-  await writeAuditLog(supabase, {
-    adminUserId: user.id,
-    action: 'marked session invalid',
-    targetTable: 'sessions',
-    targetId: sessionId,
-    beforeValue: before,
-    afterValue: { status: 'invalid' },
-  });
-
-  revalidateSessionPaths(sessionId);
-}
-
 export async function adjustHours(sessionId: string, hours: number) {
   const user = await getAdminUser();
   const supabase = await createServiceClient();
 
   const { data: before } = await supabase
     .from('sessions')
-    .select('adjusted_hours, duration_seconds')
+    .select('adjusted_hours, duration_seconds, user_id')
     .eq('id', sessionId)
     .single();
 
@@ -140,7 +111,12 @@ export async function adjustHours(sessionId: string, hours: number) {
   });
 
   revalidatePath(`/sessions/${sessionId}`);
+  revalidatePath('/sessions');
   revalidatePath('/');
+  if (before?.user_id) {
+    revalidatePath(`/volunteers/${before.user_id}`);
+    revalidatePath('/users');
+  }
 }
 
 export async function saveAdminNotes(sessionId: string, notes: string) {

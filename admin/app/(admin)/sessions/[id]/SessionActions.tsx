@@ -4,7 +4,8 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
-import { approveSession, declineSession, markInvalid, adjustHours, saveAdminNotes } from '@/actions/sessions';
+import { approveSession, declineSession, adjustHours, saveAdminNotes } from '@/actions/sessions';
+import { useSessionHours } from './SessionHoursContext';
 import type { Session } from '@/types/database';
 
 interface Props {
@@ -14,12 +15,15 @@ interface Props {
 }
 
 export function SessionActions({ session, volunteerId, volunteerName }: Props) {
+  const router = useRouter();
+  const { adjustedHours, setAdjustedHours } = useSessionHours();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState('');
   const [declineReason, setDeclineReason] = useState(session.admin_notes ?? '');
   const [showDeclineConfirm, setShowDeclineConfirm] = useState(false);
-  const [showInvalidConfirm, setShowInvalidConfirm] = useState(false);
-  const [hoursInput, setHoursInput] = useState(String(session.adjusted_hours ?? ''));
+  const [hoursInput, setHoursInput] = useState(
+    String(adjustedHours ?? session.adjusted_hours ?? ''),
+  );
   const [notesInput, setNotesInput] = useState(session.admin_notes ?? '');
   const [notesSaved, setNotesSaved] = useState(false);
 
@@ -45,17 +49,17 @@ export function SessionActions({ session, volunteerId, volunteerName }: Props) {
     });
   }
 
-  async function handleMarkInvalid() {
-    run(async () => {
-      await markInvalid(session.id);
-      setShowInvalidConfirm(false);
-    });
-  }
-
   async function handleAdjustHours() {
     const h = parseFloat(hoursInput);
-    if (isNaN(h) || h < 0) { setError('Enter a valid number of hours (e.g. 1.5)'); return; }
-    run(() => adjustHours(session.id, h));
+    if (isNaN(h) || h < 0) {
+      setError('Enter a valid number of hours (e.g. 1.5)');
+      return;
+    }
+    run(async () => {
+      await adjustHours(session.id, h);
+      setAdjustedHours(h);
+      router.refresh();
+    });
   }
 
   async function handleSaveNotes() {
@@ -68,7 +72,6 @@ export function SessionActions({ session, volunteerId, volunteerName }: Props) {
 
   const canApprove = session.status === 'under_review' || session.status === 'not_approved';
   const canDecline = session.status === 'under_review' || session.status === 'approved';
-  const canInvalid = session.status !== 'invalid';
 
   return (
     <div className="bg-bg-surface border border-border-outline rounded-md p-lg flex flex-col gap-lg sticky top-6">
@@ -80,7 +83,6 @@ export function SessionActions({ session, volunteerId, volunteerName }: Props) {
         </div>
       )}
 
-      {/* Status actions */}
       <div className="flex flex-col gap-sm">
         <p className="font-data text-[12px] text-text-tertiary tracking-[0.96px] uppercase">Status</p>
 
@@ -133,40 +135,8 @@ export function SessionActions({ session, volunteerId, volunteerName }: Props) {
             </motion.div>
           )}
         </AnimatePresence>
-
-        {canInvalid && (
-          <Button
-            variant="secondary"
-            onClick={() => setShowInvalidConfirm(!showInvalidConfirm)}
-            disabled={isPending}
-            className="w-full justify-center"
-            size="sm"
-          >
-            Mark Invalid
-          </Button>
-        )}
-
-        <AnimatePresence>
-          {showInvalidConfirm && (
-            <motion.div
-              initial={{ opacity: 0, y: -4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.15 }}
-              className="flex gap-sm"
-            >
-              <Button variant="secondary" onClick={handleMarkInvalid} disabled={isPending} size="sm" className="flex-1 justify-center">
-                {isPending ? 'Updating…' : 'Confirm Invalid'}
-              </Button>
-              <Button variant="ghost" onClick={() => setShowInvalidConfirm(false)} size="sm">
-                Cancel
-              </Button>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
 
-      {/* Adjust hours */}
       <div className="flex flex-col gap-sm border-t border-border-outline pt-lg">
         <p className="font-data text-[12px] text-text-tertiary tracking-[0.96px] uppercase">Adjust Hours</p>
         <div className="flex gap-sm">
@@ -183,12 +153,11 @@ export function SessionActions({ session, volunteerId, volunteerName }: Props) {
             Save
           </Button>
         </div>
-        {session.adjusted_hours != null && (
-          <p className="font-body text-[13px] text-primary">Adjusted to {session.adjusted_hours}h</p>
+        {adjustedHours != null && (
+          <p className="font-body text-[13px] text-primary">Adjusted to {adjustedHours}h</p>
         )}
       </div>
 
-      {/* Admin notes */}
       <div className="flex flex-col gap-sm border-t border-border-outline pt-lg">
         <p className="font-data text-[12px] text-text-tertiary tracking-[0.96px] uppercase">Admin Notes</p>
         <textarea
@@ -203,7 +172,6 @@ export function SessionActions({ session, volunteerId, volunteerName }: Props) {
         </Button>
       </div>
 
-      {/* PDF actions */}
       <div className="flex flex-col gap-sm border-t border-border-outline pt-lg">
         <p className="font-data text-[12px] text-text-tertiary tracking-[0.96px] uppercase">Letterhead</p>
         {session.letterhead_generated_at ? (

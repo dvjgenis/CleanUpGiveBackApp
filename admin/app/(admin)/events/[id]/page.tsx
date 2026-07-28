@@ -1,22 +1,55 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { createDataClient } from '@/lib/supabase/server';
+import { createDataClient, tryCreateServiceClient } from '@/lib/supabase/server';
+import { getVolunteerDirectory } from '@/lib/volunteers';
+import { buildCourtRisk } from '@/lib/court-risk';
 import { InfoRow } from '@/components/ui/InfoRow';
 import { ChevronLeftIcon } from '@/components/ui/Icons';
 import { formatEventWhen } from '@/lib/events';
 import { EventDetailActions } from './EventDetailActions';
-import type { Event } from '@/types/database';
+import { NotifyAtRiskVolunteers, type NotifyCandidate } from './NotifyAtRiskVolunteers';
+import type { CourtOrder, Event } from '@/types/database';
+
+async function loadAtRiskCandidates(): Promise<NotifyCandidate[]> {
+  const supabase = await createDataClient();
+  const serviceClient = await tryCreateServiceClient();
+
+  const [{ data: courtOrders }, { data: sessions }, directory] = await Promise.all([
+    supabase.from('court_orders').select('*'),
+    supabase.from('sessions').select('user_id, status, court_ordered, duration_seconds, adjusted_hours'),
+    serviceClient ? getVolunteerDirectory(serviceClient) : Promise.resolve(new Map()),
+  ]);
+
+  const risk = buildCourtRisk((courtOrders ?? []) as CourtOrder[], sessions ?? [], directory, new Date());
+  return risk
+    .filter((r) => r.status === 'at_risk')
+    .map((r) => ({
+      id: r.id,
+      name: r.name,
+      email: directory.get(r.id)?.email ?? null,
+      remainingHours: Math.max(0, r.requiredHours - r.completedHours),
+    }));
+}
 
 export default async function EventDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createDataClient();
 
-  const { data } = await supabase.from('events').select('*').eq('id', id).single();
+  const [{ data }, atRiskCandidates] = await Promise.all([
+    supabase.from('events').select('*').eq('id', id).single(),
+    loadAtRiskCandidates(),
+  ]);
   if (!data) notFound();
 
   const event = data as Event;
   const when = formatEventWhen(event.starts_at, event.ends_at);
   const isPast = new Date(event.starts_at).getTime() < Date.now();
+  const gallery =
+    event.image_urls?.length > 0
+      ? event.image_urls
+      : event.image_url
+        ? [event.image_url]
+        : [];
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -81,20 +114,27 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
             </p>
           </section>
 
-          {event.image_url ? (
+          {gallery.length > 0 ? (
             <section className="bg-bg-surface border border-border-outline rounded-md p-lg">
-              <h2 className="font-heading text-[20px] leading-[28px] text-text-primary mb-md">Hero image</h2>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={event.image_url}
-                alt=""
-                className="w-full max-h-72 object-cover rounded-sm border border-border-outline"
-              />
+              <h2 className="font-heading text-[20px] leading-[28px] text-text-primary mb-md">
+                Event photos
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-sm">
+                {gallery.map((url, index) => (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    key={`${url}-${index}`}
+                    src={url}
+                    alt=""
+                    className="w-full max-h-72 object-cover rounded-sm border border-border-outline"
+                  />
+                ))}
+              </div>
             </section>
           ) : null}
         </div>
 
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 flex flex-col gap-lg">
           <section className="bg-bg-surface border border-border-outline rounded-md p-lg sticky top-6">
             <h2 className="font-heading text-[18px] leading-[26px] text-text-primary mb-md">Actions</h2>
             <EventDetailActions eventId={event.id} isPublished={event.is_published} />
@@ -104,6 +144,8 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
                 : 'Publish this event to show it in the mobile app.'}
             </p>
           </section>
+
+          <NotifyAtRiskVolunteers eventId={event.id} candidates={atRiskCandidates} />
         </div>
       </div>
     </div>

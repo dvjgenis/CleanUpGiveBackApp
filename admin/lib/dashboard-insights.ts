@@ -97,9 +97,8 @@ export function computeDashboardInsights(params: {
   const statusCounts = {
     under_review: scoped.filter((s) => s.status === 'under_review').length,
     approved: scoped.filter((s) => s.status === 'approved').length,
-    not_approved: scoped.filter((s) => s.status === 'not_approved').length,
+    not_approved: scoped.filter((s) => s.status === 'not_approved' || s.status === 'invalid').length,
     active: scoped.filter((s) => s.status === 'active').length,
-    invalid: scoped.filter((s) => s.status === 'invalid').length,
   };
   const totalSessions = scoped.length;
 
@@ -108,7 +107,6 @@ export function computeDashboardInsights(params: {
     { name: 'Under Review', value: statusCounts.under_review, color: '#fcab29' },
     { name: 'Declined', value: statusCounts.not_approved, color: '#ba1a1a' },
     { name: 'Active', value: statusCounts.active, color: '#5a8f3a' },
-    { name: 'Invalid', value: statusCounts.invalid, color: '#6e7a6c' },
   ].filter((s) => s.value > 0);
 
   const activityMap: Record<string, number> = {};

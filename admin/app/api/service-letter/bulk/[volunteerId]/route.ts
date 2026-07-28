@@ -1,26 +1,14 @@
 import { NextResponse } from 'next/server';
 
 import { getAdminApiKey, getSessionsApiUrl } from '@/lib/sessionsApiConfig';
-import { createClient, createServiceClient } from '@/lib/supabase/server';
-
-async function assertAdmin() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user || user.user_metadata?.role !== 'admin') {
-    return null;
-  }
-
-  return user;
-}
+import { createServiceClient } from '@/lib/supabase/server';
+import { assertAdminRequest } from '@/lib/assertAdmin';
 
 export async function GET(
   request: Request,
   context: { params: Promise<{ volunteerId: string }> },
 ) {
-  const user = await assertAdmin();
+  const user = await assertAdminRequest();
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }

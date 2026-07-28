@@ -1,23 +1,24 @@
 'use client';
 
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, useTransition } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { StatusChip } from '@/components/ui/StatusChip';
 import { CourtBadge } from '@/components/ui/CourtBadge';
 import { ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon } from '@/components/ui/Icons';
+import { AdminSearchBar } from '@/components/ui/AdminSearchBar';
 import { useToast } from '@/components/ui/ToastProvider';
 import { formatDate, formatDuration, formatMiles, shortId } from '@/lib/format';
 import { approveSession, declineSession } from '@/actions/sessions';
 import type { Session, SessionStatus } from '@/types/database';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 const STATUS_FILTERS = [
   { value: 'all', label: 'All' },
   { value: 'under_review', label: 'Under Review' },
   { value: 'approved', label: 'Approved' },
   { value: 'not_approved', label: 'Declined' },
-  { value: 'invalid', label: 'Invalid' },
 ];
 
 type SessionWithVolunteer = Session & { volunteer_name: string };
@@ -74,6 +75,13 @@ export function SessionsClientShell({
     <div>
       {/* Filters */}
       <div className="flex flex-wrap gap-sm mb-lg">
+        <AdminSearchBar
+          value={currentQ}
+          onChange={(v) => updateParams({ q: v })}
+          placeholder="Search by volunteer, activity, or ID…"
+          className="w-full sm:w-64"
+        />
+
         <div
           className="flex gap-xs overflow-x-auto pb-xs"
           role="group"
@@ -221,23 +229,73 @@ function SessionRow({
   const [showDecline, setShowDecline] = useState(false);
   const [declineReason, setDeclineReason] = useState('');
   const [isPending, startTransition] = useTransition();
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const canModerate = session.status === 'under_review';
 
   function closeMenu() {
     setMenuOpen(false);
+    setMenuPos(null);
+  }
+
+  function closeDecline() {
     setShowDecline(false);
     setDeclineReason('');
   }
 
+  useLayoutEffect(() => {
+    if (!menuOpen || !buttonRef.current) {
+      setMenuPos(null);
+      return;
+    }
+    function place() {
+      const btn = buttonRef.current;
+      if (!btn) return;
+      const rect = btn.getBoundingClientRect();
+      const menuWidth = 256;
+      const left = Math.min(
+        Math.max(8, rect.right - menuWidth),
+        window.innerWidth - menuWidth - 8,
+      );
+      setMenuPos({ top: rect.bottom + 4, left });
+    }
+    place();
+    window.addEventListener('scroll', place, true);
+    window.addEventListener('resize', place);
+    return () => {
+      window.removeEventListener('scroll', place, true);
+      window.removeEventListener('resize', place);
+    };
+  }, [menuOpen]);
+
   useEffect(() => {
     if (!menuOpen) return;
     function handleClickOutside(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) closeMenu();
+      const target = e.target as Node;
+      if (buttonRef.current?.contains(target)) return;
+      if (menuRef.current?.contains(target)) return;
+      closeMenu();
+    }
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') closeMenu();
     }
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKey);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKey);
+    };
   }, [menuOpen]);
+
+  useEffect(() => {
+    if (!showDecline) return;
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') closeDecline();
+    }
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [showDecline]);
 
   function handleApprove() {
     startTransition(async () => {
@@ -261,20 +319,116 @@ function SessionRow({
       if (isMock) {
         onLocalStatusChange(session.id, 'not_approved');
         onToast({ message: 'Declined (demo — not saved)', kind: 'info' });
-        closeMenu();
+        closeDecline();
         return;
       }
       try {
         await declineSession(session.id, declineReason || undefined);
-        closeMenu();
+        closeDecline();
       } catch (err) {
         onToast({ message: err instanceof Error ? err.message : 'Decline failed', kind: 'error' });
       }
     });
   }
 
+  const actionsMenu =
+    menuOpen && menuPos
+      ? createPortal(
+          <motion.div
+            ref={menuRef}
+            role="menu"
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.15, ease: [0.23, 1, 0.32, 1] }}
+            className="fixed z-[80] w-64 bg-bg-surface border border-border-outline rounded-md p-sm shadow-bar-top"
+            style={{ top: menuPos.top, left: menuPos.left, transformOrigin: 'top right' }}
+          >
+            <div className="flex flex-col gap-xs">
+              <button
+                type="button"
+                role="menuitem"
+                onClick={handleApprove}
+                disabled={isPending}
+                className="w-full text-left h-9 px-sm rounded-sm text-primary font-data text-[12px] font-semibold hover:bg-[#f7fff1] transition-colors disabled:opacity-50"
+              >
+                Approve
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  closeMenu();
+                  setShowDecline(true);
+                }}
+                disabled={isPending}
+                className="w-full text-left h-9 px-sm rounded-sm text-[#ba1a1a] font-data text-[12px] font-semibold hover:bg-[#ffd9de] transition-colors disabled:opacity-50"
+              >
+                Decline
+              </button>
+            </div>
+          </motion.div>,
+          document.body,
+        )
+      : null;
+
+  const declineModal =
+    showDecline
+      ? createPortal(
+          <div
+            className="fixed inset-0 z-[90] flex items-end sm:items-center justify-center p-lg"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={`decline-title-${session.id}`}
+          >
+            <button
+              type="button"
+              className="absolute inset-0 bg-[var(--color-overlay-scrim)]"
+              aria-label="Cancel decline"
+              onClick={closeDecline}
+            />
+            <div className="relative w-full max-w-md rounded-md bg-bg-surface border border-border-outline p-lg shadow-bar-top">
+              <h3
+                id={`decline-title-${session.id}`}
+                className="font-heading text-[20px] text-text-primary mb-sm"
+              >
+                Decline session
+              </h3>
+              <p className="font-body text-[13px] text-text-tertiary mb-sm">
+                {session.volunteer_name} · {session.activity ?? 'Cleanup session'}
+              </p>
+              <textarea
+                value={declineReason}
+                onChange={(e) => setDeclineReason(e.target.value)}
+                placeholder="Reason (optional)"
+                rows={3}
+                autoFocus
+                className="w-full rounded-sm border border-border-outline bg-bg-app px-md py-sm font-body text-[14px] mb-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary resize-none"
+              />
+              <div className="flex gap-sm justify-end">
+                <button
+                  type="button"
+                  onClick={closeDecline}
+                  className="h-9 px-md font-data text-[12px] font-semibold text-text-tertiary hover:bg-bg-surface-elevated rounded-sm transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDecline}
+                  disabled={isPending}
+                  className="h-9 px-md font-data text-[12px] font-semibold bg-[#ffd9de] border border-[#ba1a1a] text-[#ba1a1a] rounded-sm hover:bg-[#ffc5ca] transition-colors disabled:opacity-50"
+                >
+                  {isPending ? 'Declining…' : 'Decline'}
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )
+      : null;
+
   return (
-    <tr className="table-row-hover transition-colors relative">
+    <tr className="table-row-hover transition-colors">
       <td className="px-lg py-md font-body text-[14px] text-text-tertiary whitespace-nowrap">
         {formatDate(session.started_at)}
       </td>
@@ -311,10 +465,11 @@ function SessionRow({
         {session.court_ordered && <CourtBadge />}
       </td>
       <td className="px-lg py-md">
-        <div className="flex items-center gap-sm relative">
+        <div className="flex items-center gap-sm">
           {canModerate && (
-            <div ref={menuRef} className="relative">
+            <>
               <button
+                ref={buttonRef}
                 type="button"
                 onClick={() => setMenuOpen((v) => !v)}
                 disabled={isPending}
@@ -328,69 +483,9 @@ function SessionRow({
                   aria-hidden
                 />
               </button>
-
-              <AnimatePresence>
-                {menuOpen && (
-                  <motion.div
-                    role="menu"
-                    initial={{ scale: 0.95, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 0.95, opacity: 0 }}
-                    transition={{ duration: 0.15, ease: [0.23, 1, 0.32, 1] }}
-                    className="absolute top-full left-0 z-20 mt-xs w-64 bg-bg-surface border border-border-outline rounded-md p-sm shadow-lg"
-                    style={{ transformOrigin: 'top left' }}
-                  >
-                    {!showDecline ? (
-                      <div className="flex flex-col gap-xs">
-                        <button
-                          role="menuitem"
-                          onClick={handleApprove}
-                          disabled={isPending}
-                          className="w-full text-left h-9 px-sm rounded-sm text-primary font-data text-[12px] font-semibold hover:bg-[#f7fff1] transition-colors disabled:opacity-50"
-                        >
-                          Approve
-                        </button>
-                        <button
-                          role="menuitem"
-                          onClick={() => setShowDecline(true)}
-                          disabled={isPending}
-                          className="w-full text-left h-9 px-sm rounded-sm text-[#ba1a1a] font-data text-[12px] font-semibold hover:bg-[#ffd9de] transition-colors disabled:opacity-50"
-                        >
-                          Decline
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="p-xs">
-                        <p className="font-body text-base font-medium text-text-primary mb-sm">Decline session</p>
-                        <textarea
-                          value={declineReason}
-                          onChange={(e) => setDeclineReason(e.target.value)}
-                          placeholder="Reason (optional)"
-                          rows={2}
-                          autoFocus
-                          className="w-full rounded-sm border border-border-outline p-sm font-body text-[14px] text-text-primary focus:outline-none focus:border-primary resize-none mb-sm"
-                        />
-                        <div className="flex gap-sm justify-end">
-                          <button
-                            onClick={() => setShowDecline(false)}
-                            className="h-8 px-md font-data text-[12px] font-semibold text-text-tertiary hover:bg-bg-surface-elevated rounded-sm transition-colors"
-                          >
-                            Back
-                          </button>
-                          <button
-                            onClick={handleDecline}
-                            disabled={isPending}
-                            className="h-8 px-md font-data text-[12px] font-semibold bg-[#ffd9de] border border-[#ba1a1a] text-[#ba1a1a] rounded-sm hover:bg-[#ffc5ca] transition-colors disabled:opacity-50"
-                          >
-                            {isPending ? 'Declining…' : 'Decline'}
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+              {actionsMenu}
+              {declineModal}
+            </>
           )}
           <Link href={`/sessions/${session.id}`} className="h-8 px-sm rounded-sm border border-border-outline text-text-tertiary font-data text-[11px] font-semibold hover:bg-bg-surface-elevated transition-colors flex items-center">
             View

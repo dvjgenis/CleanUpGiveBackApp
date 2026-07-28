@@ -74,7 +74,7 @@ export function PeriodToggle({
     setTo('');
     setOpen(false);
     pushParams({
-      period: next === 'month' ? null : next,
+      period: next === 'day' ? null : next,
       from: null,
       to: null,
     });

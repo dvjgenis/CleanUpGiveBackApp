@@ -83,7 +83,10 @@ export interface Database {
           ends_at: string | null;
           what_to_bring: string | null;
           organizer: string | null;
+          /** Primary/first hero — kept in sync with image_urls[0] for older clients. */
           image_url: string | null;
+          /** Full gallery for event registration detail carousel. */
+          image_urls: string[];
           is_published: boolean;
           created_at: string;
           updated_at: string;

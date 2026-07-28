@@ -21,7 +21,7 @@ function displayOrDash(value: string | null | undefined) {
   return trimmed || '—';
 }
 
-function BackLink({ href = '/volunteers' }: { href?: string }) {
+function BackLink({ href = '/users' }: { href?: string }) {
   return (
     <Link href={href} className="font-data text-[12px] text-primary hover:underline mb-lg inline-flex items-center gap-2">
       <ChevronLeftIcon className="w-3.5 h-3.5" color="currentColor" />
@@ -73,7 +73,7 @@ function VolunteerProfileView({
   sessionCount,
   approvedHours,
   sessions,
-  backHref = '/volunteers',
+  backHref = '/users',
 }: ProfileViewProps) {
   return (
     <div className="max-w-4xl mx-auto">
@@ -218,7 +218,7 @@ export default async function VolunteerProfilePage({ params }: { params: Promise
         sessionCount={fixture.sessions}
         approvedHours={fixture.completedHours}
         sessions={[]}
-        backHref="/court-hours"
+        backHref="/users?filter=court"
       />
     );
   }

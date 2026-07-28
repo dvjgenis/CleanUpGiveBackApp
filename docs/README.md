@@ -18,6 +18,8 @@ Living docs for the Clean Up - Give Back monorepo. Templates are copy-only.
 | [admin/a11y-audit-2026-07-22.md](admin/a11y-audit-2026-07-22.md) | Admin portal axe WCAG 2.1 AA audit + remediation |
 | [admin/ux-audit-2026-07-22.md](admin/ux-audit-2026-07-22.md) | Donna-persona dashboard UX audit + remediation |
 | [admin/chart-types-2026-07-22.md](admin/chart-types-2026-07-22.md) | Useful chart types for Today (behind Show charts) |
+| [admin/admin-feature-batch-2026-07-28.md](admin/admin-feature-batch-2026-07-28.md) | Search, PDF fix, notify-at-risk email, payments breakdown, Users merge, multi event photos/address upload, dashboard commerce cards |
+| [admin/mobile-responsiveness-audit-2026-07-28.md](admin/mobile-responsiveness-audit-2026-07-28.md) | Mobile viewport audit (375/768/1024) + P0/P1 fixes |
 
 ## Frontend
 

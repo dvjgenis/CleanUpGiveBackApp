@@ -29,6 +29,12 @@ import {
   LuCamera,
   LuPanelLeftClose,
   LuPanelLeftOpen,
+  LuSearch,
+  LuMapPin,
+  LuUpload,
+  LuMail,
+  LuZoomIn,
+  LuZoomOut,
 } from 'react-icons/lu';
 
 export interface IconProps {
@@ -82,3 +88,9 @@ export const CloseIcon = makeIcon(LuX);
 export const CameraIcon = makeIcon(LuCamera);
 export const PanelCollapseIcon = makeIcon(LuPanelLeftClose);
 export const PanelExpandIcon = makeIcon(LuPanelLeftOpen);
+export const SearchIcon = makeIcon(LuSearch);
+export const MapPinIcon = makeIcon(LuMapPin);
+export const UploadIcon = makeIcon(LuUpload);
+export const MailIcon = makeIcon(LuMail);
+export const ZoomInIcon = makeIcon(LuZoomIn);
+export const ZoomOutIcon = makeIcon(LuZoomOut);

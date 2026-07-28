@@ -2,6 +2,76 @@
 
 ---
 
+## [2026-07-28] — Payments preview bar hover amounts
+
+**R:** Donna needed exact donation/shop/total numbers on the Today payments stacked bars without opening Payments.
+
+**A:** `PaymentsPreviewCard` shows a hover/focus tooltip (donations, shop, total) above each month bar; header still links to `/payments`.
+
+**P:** Home → hover a payments bar.
+
+---
+
+## [2026-07-28] — Shop order detail (shipping + status)
+
+**R:** Donna needs to open a shop order from the list (or home open-orders preview) and see who to ship to, fulfillment status, and tracking.
+
+**A:** Extended `orders-data` with shipping/line items/tracking helpers; built `/orders/[id]` detail page; linked list rows + homepage preview people to that page.
+
+**P:** Orders → click a volunteer; or Today → Open orders → click a name. Confirm address, status chip, carrier/tracking.
+
+---
+
+## [2026-07-28] — Admin photo lightbox zoom
+
+**R:** Donna needs to inspect checkpoint details (faces, litter, signs) beyond fit-to-screen.
+
+**A:** Session `PhotoGrid` lightbox: zoom in/out controls, scroll-wheel, double-click toggle, drag-to-pan when zoomed; `+/-` / `0` keyboard; arrows disabled while zoomed.
+
+**P:** Open a session with photos → lightbox → zoom / pan / reset.
+
+---
+
+## [2026-07-28] — Admin polish: payments preview, search, invalid, live hours, photo lightbox
+
+**R:** Donna needed a payments bar preview on Today, clearer search chrome, no “Invalid” admin status, instant duration feedback when adjusting hours, and photo navigation with date stamps.
+
+**A:** `PaymentsPreviewCard` on home; `AdminSearchBar` flex+gap; removed Mark Invalid / filter / chart slice; `SessionHoursProvider` updates Duration live; `PhotoGrid` lightbox with arrows + date stamp.
+
+**P:** Open Today (payments bars), Sessions filters (no Invalid), session detail adjust hours + photo lightbox.
+
+---
+
+## [2026-07-28] — Mobile responsiveness audit + P0 fixes
+
+**R:** Closing out the 11-item admin feature batch required a mobile audit per the plan; manual Chrome-emulation testing at 375×812 surfaced real regressions, not just polish items.
+
+**A:** Found and fixed a P0 where `PaymentsBreakdownSection.tsx` (client component) imported the `formatCents` runtime value from the server-only `lib/payments-data.ts`, breaking the dev build for every route except a few precompiled ones (500s on Payments/Orders/Insights/Feedback/Account/Users-redirects/Audit Log) — moved the import to the client-safe `lib/payments-mock.ts`. Also fixed a clipped Orders "Revenue" stat card (`grid-cols-3` → `grid-cols-2 sm:grid-cols-3`), added `scroll-padding-bottom` so the fixed mobile bottom nav doesn't swallow a form's trailing submit button on native scroll-into-view, and labeled the two bare dates in the Users mobile card view (Joined vs Last active). Report: [mobile-responsiveness-audit-2026-07-28.md](admin/mobile-responsiveness-audit-2026-07-28.md).
+
+**P:** All 13 admin routes verified returning 200; `npx tsc --noEmit` clean. Event detail (`NotifyAtRiskVolunteers`) and the photo lightbox weren't visually verified live (empty dev DB) — reviewed via code only, flagged as a follow-up if a real event/session-with-photos becomes available to test against.
+
+---
+
+## [2026-07-28] — Event registration multi-photo upload
+
+**R:** Donna needed more than one hero for event registration; the mobile detail screen already had a carousel but was fed a duplicated single `image_url`.
+
+**A:** Added `events.image_urls text[]` (`admin/db/003_event_image_urls.sql`); `EventPhotoUpload` multi-select (up to 8) with remove + URL paste; server action uploads all `photo_files` and syncs `image_url` = first; mobile `eventsApi` maps real gallery into `headerImages`.
+
+**P:** Run `003_event_image_urls.sql` on Supabase, then create/edit an event with multiple photos and confirm the app carousel.
+
+---
+
+## [2026-07-28] — Home: “How long sessions wait” chart
+
+**R:** Queue-age bars lived only on Insights under the jargon-ish “Days waiting” label; Donna needs that backlog signal on Today with a plain title.
+
+**A:** Passed `queueAge` into `DashboardWorkbench`; placed `HorizontalBarChart` beside hours trend on home. Renamed title → **How long sessions wait** (subtitle “Under review, by age”) on Today + Insights; empty → “No sessions waiting for review.” Docs: `chart-types`, `current`.
+
+**P:** Open `localhost:3001/` — under Review/metrics, wait bars + hours trend side-by-side, then US heat map.
+
+---
+
 ## [2026-07-27] — US heat map drill-down (state → county → neighborhood)
 
 **R:** Schematic metro map was too local; Donna wants national visibility with drill-down.

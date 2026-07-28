@@ -144,6 +144,17 @@ export default async function SessionsPage({
   if (courtOnly) {
     query = query.eq('court_ordered', true);
   }
+  if (q.trim()) {
+    const needle = q.trim().replace(/[%,()]/g, '');
+    const matchingUserIds = [...directory.entries()]
+      .filter(([, v]) => v.name.toLowerCase().includes(q.trim().toLowerCase()))
+      .map(([id]) => id);
+    const orClauses = [`activity.ilike.%${needle}%`, `id.ilike.%${needle}%`];
+    if (matchingUserIds.length > 0) {
+      orClauses.push(`user_id.in.(${matchingUserIds.join(',')})`);
+    }
+    query = query.or(orClauses.join(','));
+  }
 
   switch (sort) {
     case 'oldest':

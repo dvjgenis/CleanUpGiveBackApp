@@ -9,13 +9,11 @@ import {
   HomeIcon,
   SessionIcon,
   VolunteerIcon,
-  CourtIcon,
   InsightsIcon,
   FeedbackIcon,
   EventIcon,
   OrderIcon,
   PaymentIcon,
-  AuditIcon,
   AccountIcon,
   SignOutIcon,
   PanelCollapseIcon,
@@ -35,14 +33,12 @@ type NavItem = {
 const NAV_ITEMS: NavItem[] = [
   { href: '/', label: 'Dashboard', icon: HomeIcon },
   { href: '/sessions', label: 'Sessions', icon: SessionIcon, badgeKey: 'sessionsUnderReview' },
-  { href: '/volunteers', label: 'Volunteers', icon: VolunteerIcon },
-  { href: '/court-hours', label: 'Court Hours', icon: CourtIcon, badgeKey: 'courtAtRisk' },
+  { href: '/users', label: 'Users', icon: VolunteerIcon, badgeKey: 'courtAtRisk' },
   { href: '/insights', label: 'Insights', icon: InsightsIcon },
   { href: '/feedback', label: 'Feedback', icon: FeedbackIcon },
   { href: '/events', label: 'Events', icon: EventIcon },
   { href: '/orders', label: 'Orders', icon: OrderIcon, badgeKey: 'openOrders' },
   { href: '/payments', label: 'Payments', icon: PaymentIcon },
-  { href: '/audit-log', label: 'Audit Log', icon: AuditIcon },
 ];
 
 function Badge({ count, label }: { count: number; label: string }) {

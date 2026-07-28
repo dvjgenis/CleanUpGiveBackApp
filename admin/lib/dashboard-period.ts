@@ -43,7 +43,7 @@ export function parsePeriod(raw: string | string[] | undefined): DashboardPeriod
     case 'custom':
       return value;
     default:
-      return 'month';
+      return 'day';
   }
 }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
 import Link from 'next/link';
 import {
   createEvent,
@@ -9,12 +9,9 @@ import {
 } from '@/actions/events';
 import { toDatetimeLocalValue } from '@/lib/events';
 import type { Event } from '@/types/database';
-
-const FIELD =
-  'w-full h-10 px-md rounded-sm border border-border-outline bg-bg-app font-body text-[14px] text-text-primary focus:outline-none focus:border-primary';
-const TEXTAREA =
-  'w-full min-h-[96px] px-md py-sm rounded-sm border border-border-outline bg-bg-app font-body text-[14px] text-text-primary focus:outline-none focus:border-primary resize-y';
-const LABEL = 'font-data text-[11px] tracking-[0.88px] uppercase text-text-tertiary mb-xs block';
+import { AddressAutocomplete } from './AddressAutocomplete';
+import { EventPhotoUpload } from './EventPhotoUpload';
+import { FIELD, TEXTAREA, LABEL } from './formStyles';
 
 type EventFormProps =
   | { mode: 'create'; event?: undefined }
@@ -29,6 +26,7 @@ export function EventForm({ mode, event }: EventFormProps) {
       : createEvent;
 
   const [state, formAction, pending] = useActionState(boundUpdate, initialState);
+  const [addressValid, setAddressValid] = useState(true);
 
   return (
     <form action={formAction} className="bg-bg-surface border border-border-outline rounded-md p-lg flex flex-col gap-md">
@@ -92,18 +90,12 @@ export function EventForm({ mode, event }: EventFormProps) {
         </div>
       </div>
 
-      <div>
-        <label htmlFor="address" className={LABEL}>
-          Address
-        </label>
-        <input
-          id="address"
-          name="address"
-          defaultValue={event?.address ?? ''}
-          className={FIELD}
-          placeholder="600 E Algonquin Rd, Des Plaines, IL 60018"
-        />
-      </div>
+      <AddressAutocomplete
+        defaultAddress={event?.address ?? ''}
+        defaultLat={event?.lat ?? null}
+        defaultLng={event?.lng ?? null}
+        onValidityChange={setAddressValid}
+      />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-md">
         <div>
@@ -133,40 +125,9 @@ export function EventForm({ mode, event }: EventFormProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-md">
-        <div>
-          <label htmlFor="lat" className={LABEL}>
-            Latitude
-          </label>
-          <input
-            id="lat"
-            name="lat"
-            type="number"
-            step="any"
-            defaultValue={event?.lat ?? ''}
-            className={FIELD}
-            placeholder="42.0417"
-          />
-        </div>
-        <div>
-          <label htmlFor="lng" className={LABEL}>
-            Longitude
-          </label>
-          <input
-            id="lng"
-            name="lng"
-            type="number"
-            step="any"
-            defaultValue={event?.lng ?? ''}
-            className={FIELD}
-            placeholder="-87.887"
-          />
-        </div>
-      </div>
-
       <div>
         <label htmlFor="what_to_bring" className={LABEL}>
-          What to bring
+          What to bring (optional)
         </label>
         <textarea
           id="what_to_bring"
@@ -177,22 +138,15 @@ export function EventForm({ mode, event }: EventFormProps) {
         />
       </div>
 
-      <div>
-        <label htmlFor="image_url" className={LABEL}>
-          Hero image URL
-        </label>
-        <input
-          id="image_url"
-          name="image_url"
-          type="url"
-          defaultValue={event?.image_url ?? ''}
-          className={FIELD}
-          placeholder="https://…"
-        />
-        <p className="font-body text-[12px] text-text-tertiary mt-xs">
-          Optional. Published events without an image use the app default photo.
-        </p>
-      </div>
+      <EventPhotoUpload
+        defaultUrls={
+          event?.image_urls?.length
+            ? event.image_urls
+            : event?.image_url
+              ? [event.image_url]
+              : []
+        }
+      />
 
       <label className="flex items-center gap-sm font-body text-[14px] text-text-primary cursor-pointer select-none">
         <input
@@ -211,7 +165,8 @@ export function EventForm({ mode, event }: EventFormProps) {
       <div className="flex items-center gap-md pt-sm">
         <button
           type="submit"
-          disabled={pending}
+          disabled={pending || !addressValid}
+          title={!addressValid ? 'Pick an address from the suggestions first' : undefined}
           className="interactive h-10 px-lg rounded-sm bg-primary text-white font-data text-[13px] font-semibold hover:bg-[#007d35] transition-colors disabled:opacity-60"
         >
           {pending ? 'Saving…' : mode === 'create' ? 'Create event' : 'Save changes'}

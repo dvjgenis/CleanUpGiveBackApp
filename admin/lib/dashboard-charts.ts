@@ -117,7 +117,7 @@ export function buildTrendSeries(
     if (s.status === 'approved') {
       point.approved += 1;
       point.approvedHours += sessionHours(s);
-    } else if (s.status === 'not_approved') {
+    } else if (s.status === 'not_approved' || s.status === 'invalid') {
       point.declined += 1;
     }
   }
@@ -125,7 +125,7 @@ export function buildTrendSeries(
   return [...map.values()].sort((a, b) => a.key.localeCompare(b.key));
 }
 
-/** Days under-review items have been waiting — backlog health for Donna ("Days waiting" chart). */
+/** Days under-review items have been waiting — backlog health ("How long sessions wait" chart). */
 export function buildQueueAgeBars(
   underReview: { created_at: string }[],
   now = new Date(),
@@ -149,7 +149,9 @@ export function buildQueueAgeBars(
 /** Period decision mix — approved / declined / still in review (scoped). */
 export function buildDecisionBars(scoped: SessionLike[]): NamedBar[] {
   const approved = scoped.filter((s) => s.status === 'approved').length;
-  const declined = scoped.filter((s) => s.status === 'not_approved').length;
+  const declined = scoped.filter(
+    (s) => s.status === 'not_approved' || s.status === 'invalid',
+  ).length;
   const review = scoped.filter((s) => s.status === 'under_review').length;
   return [
     { name: 'Approved', value: approved, color: '#007536' },

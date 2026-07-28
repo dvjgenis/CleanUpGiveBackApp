@@ -25,8 +25,43 @@ export type PublishedEventRow = {
   what_to_bring: string | null;
   organizer: string | null;
   image_url: string | null;
+  image_urls?: string[] | null;
   is_published: boolean;
 };
+
+const EVENT_SELECT =
+  'id, title, description, location, address, lat, lng, starts_at, ends_at, what_to_bring, organizer, image_url, image_urls, is_published';
+
+function galleryUrls(row: PublishedEventRow): string[] {
+  const fromArray = (row.image_urls ?? [])
+    .map((u) => (typeof u === 'string' ? u.trim() : ''))
+    .filter(Boolean);
+  if (fromArray.length > 0) {
+    return [...new Set(fromArray)];
+  }
+  const single = row.image_url?.trim();
+  return single ? [single] : [];
+}
+
+function eventImage(row: PublishedEventRow): number | { uri: string } {
+  const first = galleryUrls(row)[0];
+  if (first) {
+    return { uri: first };
+  }
+  const locationKey = row.address?.trim() || row.location?.trim() || '';
+  if (locationKey) {
+    return eventImageForLocation(locationKey);
+  }
+  return HEADER_IMAGE;
+}
+
+function eventHeaderImages(row: PublishedEventRow): EventDetail['headerImages'] {
+  const urls = galleryUrls(row);
+  if (urls.length > 0) {
+    return urls.map((uri) => ({ uri }));
+  }
+  return [eventImage(row)];
+}
 
 function formatTimeRange(startsAt: string, endsAt: string | null): string {
   const start = new Date(startsAt);
@@ -95,17 +130,6 @@ function parseWhatToBring(raw: string | null): WhatToBringItem[] {
   });
 }
 
-function eventImage(row: PublishedEventRow): number | { uri: string } {
-  if (row.image_url?.trim()) {
-    return { uri: row.image_url.trim() };
-  }
-  const locationKey = row.address?.trim() || row.location?.trim() || '';
-  if (locationKey) {
-    return eventImageForLocation(locationKey);
-  }
-  return HEADER_IMAGE;
-}
-
 export function mapRowToUpcomingSummary(row: PublishedEventRow): UpcomingEventSummary {
   const start = new Date(row.starts_at);
   return {
@@ -126,8 +150,7 @@ export function mapRowToEventDetail(row: PublishedEventRow): EventDetail {
   const start = new Date(row.starts_at);
   const end = row.ends_at ? new Date(row.ends_at) : new Date(start.getTime() + 2 * 60 * 60 * 1000);
   const address = row.address?.trim() || row.location?.trim() || 'Address TBA';
-  const header = eventImage(row);
-  const headerImages: EventDetail['headerImages'] = [header, header, header, header];
+  const headerImages = eventHeaderImages(row);
 
   const isUpcoming = start.getTime() >= Date.now();
 
@@ -169,9 +192,7 @@ export async function fetchPublishedUpcomingEvents(): Promise<UpcomingEventSumma
   const nowIso = new Date().toISOString();
   const { data, error } = await supabase
     .from('events')
-    .select(
-      'id, title, description, location, address, lat, lng, starts_at, ends_at, what_to_bring, organizer, image_url, is_published',
-    )
+    .select(EVENT_SELECT)
     .eq('is_published', true)
     .gte('starts_at', nowIso)
     .order('starts_at', { ascending: true });
@@ -192,9 +213,7 @@ export async function fetchPublishedEventsCatalog(): Promise<UpcomingEventSummar
 
   const { data, error } = await supabase
     .from('events')
-    .select(
-      'id, title, description, location, address, lat, lng, starts_at, ends_at, what_to_bring, organizer, image_url, is_published',
-    )
+    .select(EVENT_SELECT)
     .eq('is_published', true)
     .order('starts_at', { ascending: true });
 
@@ -213,9 +232,7 @@ export async function fetchPublishedEventById(id: string): Promise<EventDetail |
 
   const { data, error } = await supabase
     .from('events')
-    .select(
-      'id, title, description, location, address, lat, lng, starts_at, ends_at, what_to_bring, organizer, image_url, is_published',
-    )
+    .select(EVENT_SELECT)
     .eq('id', id)
     .eq('is_published', true)
     .maybeSingle();

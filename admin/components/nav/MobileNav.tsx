@@ -10,7 +10,7 @@ import {
   HomeIcon,
   SessionIcon,
   VolunteerIcon,
-  CourtIcon,
+  EventIcon,
   MoreIcon,
   MenuIcon,
   CloseIcon,
@@ -19,17 +19,15 @@ import {
 const PRIMARY_NAV = [
   { href: '/', label: 'Dashboard', badgeKey: null as null, icon: HomeIcon },
   { href: '/sessions', label: 'Sessions', badgeKey: 'sessionsUnderReview' as const, icon: SessionIcon },
-  { href: '/volunteers', label: 'Volunteers', badgeKey: null as null, icon: VolunteerIcon },
-  { href: '/court-hours', label: 'Court Hours', badgeKey: 'courtAtRisk' as const, icon: CourtIcon },
+  { href: '/users', label: 'Users', badgeKey: 'courtAtRisk' as const, icon: VolunteerIcon },
+  { href: '/events', label: 'Events', badgeKey: null as null, icon: EventIcon },
 ];
 
 const MORE_NAV = [
   { href: '/insights', label: 'Insights' },
   { href: '/feedback', label: 'Feedback' },
-  { href: '/events', label: 'Events' },
   { href: '/orders', label: 'Orders', badgeKey: 'openOrders' as const },
   { href: '/payments', label: 'Payments' },
-  { href: '/audit-log', label: 'Audit Log' },
 ];
 
 function MiniBadge({ count }: { count: number }) {

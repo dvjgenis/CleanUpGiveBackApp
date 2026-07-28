@@ -17,7 +17,7 @@ export function CourtRiskStrip({ volunteers }: CourtRiskStripProps) {
           Court hours at risk
         </h2>
         <Link
-          href="/court-hours"
+          href="/users?filter=court"
           className="font-data text-[12px] font-semibold text-primary hover:underline underline-offset-2 inline-flex items-center gap-2"
         >
           View court hours

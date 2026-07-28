@@ -18,7 +18,6 @@ const config: Config = {
           approved: { bg: '#f7fff1', text: '#007536', border: '#007536' },
           pending: { bg: '#ffddb5', text: '#835400', border: '#fcab29' },
           declined: { bg: '#ffd9de', text: '#ba1a1a', border: '#ba1a1a' },
-          invalid: { bg: '#f6f3f2', text: '#3e4a3d', border: '#bdcaba' },
         },
       },
       fontFamily: {

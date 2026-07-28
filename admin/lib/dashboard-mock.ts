@@ -216,7 +216,7 @@ export const MOCK_SESSIONS: MockSession[] = (
     user_id: 'u10',
     volunteer_name: 'Chris Park',
     activity: 'River Cleanup',
-    status: 'invalid',
+    status: 'not_approved',
     duration_seconds: 600,
     adjusted_hours: null,
     court_ordered: false,

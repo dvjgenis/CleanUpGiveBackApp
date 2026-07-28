@@ -41,6 +41,16 @@ body {
   font-family: var(--font-body);
 }
 
+/* Reserve space for the fixed mobile bottom nav (MobileNav.tsx, ~57px tall)
+   so native scroll-into-view (keyboard focus, anchor jumps) doesn't land a
+   focused field or submit button underneath it. Desktop uses a sidebar, not
+   a bottom nav, so this only applies below the lg breakpoint. */
+@media (max-width: 1023.98px) {
+  html {
+    scroll-padding-bottom: 76px;
+  }
+}
+
 :focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;

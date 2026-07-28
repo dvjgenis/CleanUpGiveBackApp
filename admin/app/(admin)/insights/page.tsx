@@ -45,9 +45,10 @@ export default async function InsightsPage({
         />
         <div className="grid grid-cols-1 md:grid-cols-3 gap-md">
           <HorizontalBarChart
-            title="Days waiting"
+            title="How long sessions wait"
+            subtitle="Under review, by age"
             data={insights.chartExtras.queueAge}
-            emptyLabel="Nothing waiting for review"
+            emptyLabel="No sessions waiting for review"
             index={1}
           />
           <HorizontalBarChart title="Decisions" data={insights.chartExtras.decisions} index={2} />

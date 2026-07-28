@@ -12,6 +12,7 @@ import { MockSessionActions } from './MockSessionActions';
 import { PhotoGrid } from './PhotoGrid';
 import { PhotoPlaceholder } from './PhotoPlaceholder';
 import { WalkingPath } from './WalkingPath';
+import { SessionDurationRow, SessionHoursProvider } from './SessionHoursContext';
 import type { SessionStatus } from '@/types/database';
 
 export default async function SessionDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -115,6 +116,12 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
               ? serviceClient.storage.from('session-photos').createSignedUrl(cp.progress_path, 3600)
               : null,
           ]);
+          if (selfieUrl?.error) {
+            console.warn(`[sessions/${id}] selfie signing failed:`, selfieUrl.error.message);
+          }
+          if (progressUrl?.error) {
+            console.warn(`[sessions/${id}] progress signing failed:`, progressUrl.error.message);
+          }
           return {
             ...cp,
             selfieSignedUrl: selfieUrl?.data?.signedUrl ?? null,
@@ -123,12 +130,15 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
         })
       )
     : [];
+  const hasSignedPhoto = signedCheckpoints.some((cp) => cp.selfieSignedUrl || cp.progressSignedUrl);
 
-  const isAdjusted = session.adjusted_hours != null;
-  const durationLabel = formatDuration(session.duration_seconds, session.adjusted_hours);
   const routePointCount = Array.isArray(session.route) ? session.route.length : null;
 
   return (
+    <SessionHoursProvider
+      durationSeconds={session.duration_seconds}
+      initialAdjustedHours={session.adjusted_hours}
+    >
     <div className="max-w-6xl mx-auto">
       <Link href="/sessions" className="font-data text-[12px] text-primary hover:underline mb-lg inline-flex items-center gap-2">
         <ChevronLeftIcon className="w-3.5 h-3.5" color="currentColor" />
@@ -170,11 +180,7 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
               <InfoRow label="Court Ordered" value={session.court_ordered ? 'Yes' : 'No'} />
               <InfoRow label="Started" value={formatDate(session.started_at, 'MMM dd, yyyy HH:mm')} />
               <InfoRow label="Ended" value={formatDate(session.ended_at, 'MMM dd, yyyy HH:mm')} />
-              <InfoRow
-                label="Duration"
-                value={durationLabel}
-                note={isAdjusted ? 'Adjusted by admin' : undefined}
-              />
+              <SessionDurationRow />
               <InfoRow label="Distance" value={formatMiles(session.distance_miles)} />
               <InfoRow label="Checkpoints" value={String(checkpoints?.length ?? 0)} />
               {session.letterhead_generated_at && (
@@ -198,7 +204,7 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
             <h2 className="font-heading text-[20px] leading-[28px] text-text-primary mb-md">
               Photos{checkpoints && checkpoints.length > 0 ? ` (${checkpoints.length} checkpoint${checkpoints.length !== 1 ? 's' : ''})` : ''}
             </h2>
-            {signedCheckpoints.length > 0 ? (
+            {hasSignedPhoto ? (
               <PhotoGrid checkpoints={signedCheckpoints} />
             ) : (
               <>
@@ -209,6 +215,12 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
                       {checkpoints!.length} checkpoint{checkpoints!.length !== 1 ? 's' : ''} logged — photo previews
                       need <span className="font-data">SUPABASE_SERVICE_ROLE_KEY</span> in{' '}
                       <span className="font-data">admin/.env.local</span>.
+                    </>
+                  ) : serviceClient && (checkpoints?.length ?? 0) > 0 ? (
+                    <>
+                      {checkpoints!.length} checkpoint{checkpoints!.length !== 1 ? 's' : ''} logged, but photo
+                      signing failed — check the server logs and the{' '}
+                      <span className="font-data">session-photos</span> Storage bucket policy.
                     </>
                   ) : (
                     'Placeholder — no photos captured for this session yet.'
@@ -229,6 +241,7 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
         </div>
       </div>
     </div>
+    </SessionHoursProvider>
   );
 }
 

@@ -17,9 +17,14 @@ import { Sparkline } from '@/components/ui/Sparkline';
 import { MiniDonut } from '@/components/ui/MiniDonut';
 import { FeedbackEmojiStrip } from '@/components/ui/FeedbackEmojiStrip';
 import { TrendAreaChart } from '@/components/ui/TrendAreaChart';
+import { HorizontalBarChart } from '@/components/ui/HorizontalBarChart';
 import { ChevronRightIcon } from '@/components/ui/Icons';
 import { Button } from '@/components/ui/Button';
 import { CourtBadge } from '@/components/ui/CourtBadge';
+import { KPICard } from '@/components/ui/KPICard';
+import { AdminSearchBar } from '@/components/ui/AdminSearchBar';
+import { PaymentsPreviewCard } from '@/components/ui/PaymentsPreviewCard';
+import { OrdersPreviewCard } from '@/components/ui/OrdersPreviewCard';
 import { useToast } from '@/components/ui/ToastProvider';
 import { ReviewDrawer } from '@/components/dashboard/ReviewDrawer';
 import { UsHeatmap } from '@/components/dashboard/UsHeatmap';
@@ -32,9 +37,20 @@ import type {
   GeoActivityBundle,
 } from '@/components/dashboard/types';
 import type { DashboardSnapshot } from '@/lib/dashboard-insights';
-import type { TrendPoint } from '@/lib/dashboard-charts';
+import type { NamedBar, TrendPoint } from '@/lib/dashboard-charts';
 import { approveSession, declineSession } from '@/actions/sessions';
 import type { PeriodSelection } from '@/lib/dashboard-period';
+import type { MonthlyRevenuePoint } from '@/lib/payments-mock';
+import type { OrderRow } from '@/lib/orders-data';
+
+type CommercePreview = {
+  paymentsThisMonthCents: number;
+  paymentsMonthLabel: string;
+  paymentsMonthly: MonthlyRevenuePoint[];
+  openOrders: number;
+  ordersRevenueCents: number;
+  openOrdersPreview: OrderRow[];
+};
 
 type Props = {
   selection: PeriodSelection;
@@ -47,7 +63,10 @@ type Props = {
   snapshot: DashboardSnapshot;
   metricVisuals: MetricVisuals;
   hoursTrend: TrendPoint[];
+  /** Under-review sessions bucketed by how long they've waited. */
+  queueAge: NamedBar[];
   geoActivity: GeoActivityBundle;
+  commerce: CommercePreview;
 };
 
 function formatDurationShort(seconds: number | null, adjusted: number | null): string {
@@ -93,6 +112,8 @@ export function DashboardWorkbench(props: Props) {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [declineId, setDeclineId] = useState<string | null>(null);
   const [declineReason, setDeclineReason] = useState('');
+  const [queueSearch, setQueueSearch] = useState('');
+  const [courtOnlyFilter, setCourtOnlyFilter] = useState(false);
 
   useEffect(() => {
     setQueue(props.queue);
@@ -103,6 +124,18 @@ export function DashboardWorkbench(props: Props) {
     () => queue.find((s) => s.id === drawerId) ?? null,
     [queue, drawerId],
   );
+
+  const filteredQueue = useMemo(() => {
+    const needle = queueSearch.trim().toLowerCase();
+    return queue.filter((item) => {
+      if (courtOnlyFilter && !item.court_ordered) return false;
+      if (!needle) return true;
+      return (
+        item.volunteer_name.toLowerCase().includes(needle) ||
+        (item.activity ?? '').toLowerCase().includes(needle)
+      );
+    });
+  }, [queue, queueSearch, courtOnlyFilter]);
 
   const underReviewKpi = props.kpis.find((k) => k.label === 'Under Review');
   const approvedKpi = props.kpis.find((k) => k.label === 'Approved');
@@ -171,8 +204,8 @@ export function DashboardWorkbench(props: Props) {
   );
 
   const openOldest = useCallback(() => {
-    if (queue[0]) setDrawerId(queue[0].id);
-  }, [queue]);
+    if (filteredQueue[0]) setDrawerId(filteredQueue[0].id);
+  }, [filteredQueue]);
 
   const submitDecline = useCallback(async () => {
     if (!declineId) return;
@@ -219,8 +252,9 @@ export function DashboardWorkbench(props: Props) {
     router,
   ]);
 
-  const visibleQueue = queue.slice(0, 5);
-  const hasMoreQueue = queue.length > 5;
+  const visibleQueue = filteredQueue.slice(0, 5);
+  const hasMoreQueue = filteredQueue.length > 5;
+  const isFiltered = queueSearch.trim() !== '' || courtOnlyFilter;
 
   return (
     <div className={`max-w-6xl mx-auto ${isPending ? 'opacity-70' : ''}`}>
@@ -250,20 +284,51 @@ export function DashboardWorkbench(props: Props) {
               >
                 {queue.length === 0
                   ? 'All clear'
-                  : `${queue.length} to review`}
+                  : isFiltered
+                    ? `${filteredQueue.length} of ${queue.length}`
+                    : `${queue.length} to review`}
               </h2>
             </div>
-            {queue.length > 0 && (
+            {filteredQueue.length > 0 && (
               <Button type="button" className="min-h-11 shrink-0" onClick={openOldest}>
                 Start
               </Button>
             )}
           </div>
 
+          {queue.length > 0 && (
+            <div className="px-lg pb-md flex flex-wrap gap-sm">
+              <AdminSearchBar
+                value={queueSearch}
+                onChange={setQueueSearch}
+                placeholder="Search the queue…"
+                className="w-full sm:w-56"
+              />
+              <button
+                type="button"
+                aria-pressed={courtOnlyFilter}
+                onClick={() => setCourtOnlyFilter((v) => !v)}
+                className={`min-h-11 px-md rounded-full border font-data text-[12px] font-semibold whitespace-nowrap transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary ${
+                  courtOnlyFilter
+                    ? 'bg-primary text-white border-primary'
+                    : 'bg-bg-surface text-text-tertiary border-border-outline hover:border-primary hover:text-primary'
+                }`}
+              >
+                Court-ordered only
+              </button>
+            </div>
+          )}
+
           {queue.length === 0 ? (
             <div className="px-lg pb-lg flex-1 flex items-center">
               <p className="font-body text-[14px] text-text-tertiary max-w-xs">
                 Nothing waiting. New submissions will show up here.
+              </p>
+            </div>
+          ) : filteredQueue.length === 0 ? (
+            <div className="px-lg pb-lg flex-1 flex items-center">
+              <p className="font-body text-[14px] text-text-tertiary max-w-xs">
+                No queued sessions match this search.
               </p>
             </div>
           ) : (
@@ -314,7 +379,7 @@ export function DashboardWorkbench(props: Props) {
                 href="/sessions?status=under_review"
                 className="font-data text-[12px] font-semibold text-primary hover:underline inline-flex items-center gap-2"
               >
-                +{queue.length - 5} more in Sessions
+                +{filteredQueue.length - 5} more in Sessions
                 <ChevronRightIcon className="w-3.5 h-3.5" color="currentColor" />
               </Link>
             </div>
@@ -355,18 +420,41 @@ export function DashboardWorkbench(props: Props) {
         </div>
       </div>
 
-      {/* Location + hours trend — replaces court / recent-decisions list tiles */}
-      <div className="grid grid-cols-1 gap-md mt-md">
+      {/* Backlog age + hours trend — how stale is the queue, then period activity */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-md mt-md">
+        <HorizontalBarChart
+          title="How long sessions wait"
+          subtitle="Under review, by age"
+          data={props.queueAge}
+          emptyLabel="No sessions waiting for review"
+          index={0}
+        />
         <TrendAreaChart
           title="Hours & submissions"
           subtitle={props.periodLabelText}
           data={props.hoursTrend}
-          index={0}
+          index={1}
         />
+      </div>
+      <div className="grid grid-cols-1 gap-md mt-md">
         <UsHeatmap
           activity={props.geoActivity}
           periodLabel={props.periodLabelText}
           isMock={props.isMock}
+        />
+      </div>
+
+      {/* Commerce preview — payments + orders at a glance, deeper detail on their own tabs */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-md mt-md">
+        <PaymentsPreviewCard
+          totalCents={props.commerce.paymentsThisMonthCents}
+          monthLabel={props.commerce.paymentsMonthLabel}
+          monthly={props.commerce.paymentsMonthly}
+        />
+        <OrdersPreviewCard
+          openCount={props.commerce.openOrders}
+          revenueCents={props.commerce.ordersRevenueCents}
+          preview={props.commerce.openOrdersPreview}
         />
       </div>
 
