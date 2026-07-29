@@ -1,7 +1,11 @@
+import { formatDate } from '@/lib/format';
+import type { Checkpoint } from '@/types/database';
+
 interface Props {
   distanceMiles: number | null;
   /** Point count from `sessions.route` (jsonb) when it's an array; null when unknown/absent. */
   pointCount: number | null;
+  checkpoints?: Checkpoint[];
 }
 
 /**
@@ -9,8 +13,9 @@ interface Props {
  * breadcrumb points from the mobile app, but no map renderer is wired up yet — this
  * shows an honest "coming soon" state instead of silently omitting the section.
  */
-export function WalkingPath({ distanceMiles, pointCount }: Props) {
+export function WalkingPath({ distanceMiles, pointCount, checkpoints = [] }: Props) {
   const hasRoute = pointCount != null && pointCount > 0;
+  const hasCheckpoints = checkpoints.length > 0;
 
   return (
     <section className="bg-bg-surface border border-border-outline rounded-md p-lg">
@@ -49,6 +54,40 @@ export function WalkingPath({ distanceMiles, pointCount }: Props) {
           </div>
         </div>
       </div>
+
+      {!hasRoute && hasCheckpoints && (
+        <div className="mt-md">
+          <h3 className="font-data text-[12px] text-text-tertiary tracking-[0.96px] uppercase mb-sm">
+            Checkpoint Evidence
+          </h3>
+          <div className="rounded-sm border border-border-outline overflow-hidden">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-border-outline bg-bg-surface-elevated">
+                  <th className="px-md py-sm font-data text-[11px] font-medium tracking-[0.88px] text-text-tertiary uppercase">#</th>
+                  <th className="px-md py-sm font-data text-[11px] font-medium tracking-[0.88px] text-text-tertiary uppercase">Captured At</th>
+                  <th className="px-md py-sm font-data text-[11px] font-medium tracking-[0.88px] text-text-tertiary uppercase">Early Submit</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border-outline">
+                {checkpoints.map((cp, i) => (
+                  <tr key={cp.id}>
+                    <td className="px-md py-sm font-data text-[12px] text-text-tertiary">
+                      {i + 1}
+                    </td>
+                    <td className="px-md py-sm font-body text-[13px] text-text-primary">
+                      {cp.captured_at ? formatDate(cp.captured_at, 'MMM dd, yyyy · HH:mm') : '—'}
+                    </td>
+                    <td className="px-md py-sm font-data text-[12px] text-text-tertiary">
+                      {cp.submitted_early ? 'Yes' : 'No'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

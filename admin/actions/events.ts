@@ -343,7 +343,17 @@ export async function notifyAtRiskVolunteers(
     });
 
     if (error) failed += 1;
-    else sent += 1;
+    else {
+      sent += 1;
+      await supabase.from('event_volunteer_notices').upsert(
+        {
+          event_id: eventId,
+          user_id: userId,
+          notified_at: new Date().toISOString(),
+        } as never,
+        { onConflict: 'event_id,user_id' },
+      );
+    }
   }
 
   await writeAuditLog(supabase, {

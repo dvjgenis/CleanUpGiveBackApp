@@ -2,6 +2,20 @@
 
 ---
 
+## [2026-07-28] — Admin refinements full batch (execute)
+
+**R:** Ship the full admin refinement plan: notifications, live feedback, CSV, polish, court/orders writes, auth, Wave 3 correctness + UX — keep US heatmap and hours-wait bars on home.
+
+**A:** Contracts + `004_admin_refinements.sql`; `credentials.local.md`; Resend/Expo notify on approve/decline + Donna on finalize; `POST /feedback` + mobile submit + live Feedback admin; CSV exports; nav badges, bulk approve, sticky Review next, SampleDataBanner, Cmd-K; court upsert + order fulfillment forms; letterhead stamp + bulk date range; middleware admin claim; security headers; `check:imports`; decline_reason; session date filter; audit deep links; notify-at-risk last-emailed; Account PII via env.
+
+**L:** Cross-repo feedback needs Fly deploy + migration 004 applied; donations still fixtures.
+
+**P:** Run `admin/db/004_admin_refinements.sql` on Supabase; set `RESEND_API_KEY`/`DONNA_EMAIL`; create Donna admin user from credentials.local.md; redeploy Fly sessions API for `/feedback` + finalize email.
+
+**H:** Heatmap + wait bars stay on `/`; Stripe refunds / map replay / multi-admin still out of scope.
+
+---
+
 ## [2026-07-28] — Payments preview bar hover amounts
 
 **R:** Donna needed exact donation/shop/total numbers on the Today payments stacked bars without opening Payments.

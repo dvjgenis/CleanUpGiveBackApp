@@ -1,3 +1,8 @@
+import { createDataClient } from '@/lib/supabase/server';
+import { SampleDataBanner } from '@/components/ui/SampleDataBanner';
+import { FeedbackRow } from './FeedbackRow';
+import type { VolunteerFeedback } from '@/types/database';
+
 const EMOJI_MAP: Record<string, { emoji: string; label: string; score: number; color: string }> = {
   excited: { emoji: '🤩', label: 'Excited', score: 5, color: '#007536' },
   happy: { emoji: '😊', label: 'Happy', score: 4, color: '#4a9e6e' },
@@ -25,23 +30,93 @@ function formatTime(iso: string) {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
-export default function FeedbackPage() {
-  const avg =
-    MOCK_FEEDBACK.reduce((sum, f) => sum + (EMOJI_MAP[f.rating]?.score ?? 0), 0) / MOCK_FEEDBACK.length;
+type FeedbackWithVolunteer = VolunteerFeedback & {
+  volunteer_name?: string;
+  volunteer_email?: string;
+  activity?: string;
+};
+
+export default async function FeedbackPage() {
+  const supabase = await createDataClient();
+  
+  // Fetch feedback from database
+  const { data: feedbackData } = await supabase
+    .from('volunteer_feedback')
+    .select('*')
+    .order('submitted_at', { ascending: false });
+
+  // Enrich with user directory and session data
+  const enrichedFeedback: FeedbackWithVolunteer[] = [];
+  
+  if (feedbackData && feedbackData.length > 0) {
+    const userIds = [...new Set(feedbackData.map(f => f.user_id).filter(Boolean))];
+    const sessionIds = [...new Set(feedbackData.map(f => f.session_id).filter(Boolean))];
+    
+    // Fetch user directory names and emails
+    const { data: users } = await supabase.auth.admin.listUsers();
+    const userMap = new Map(
+      users?.users.map(u => [
+        u.id,
+        {
+          name: u.user_metadata?.full_name || 'Unknown',
+          email: u.email,
+        },
+      ]) ?? []
+    );
+    
+    // Fetch session activities
+    const { data: sessions } = await supabase
+      .from('sessions')
+      .select('id, activity')
+      .in('id', sessionIds);
+    
+    const sessionMap = new Map(sessions?.map(s => [s.id, s.activity]) ?? []);
+    
+    for (const fb of feedbackData) {
+      const userInfo = fb.user_id ? userMap.get(fb.user_id) : undefined;
+      const activity = fb.session_id ? sessionMap.get(fb.session_id) : undefined;
+      
+      enrichedFeedback.push({
+        ...fb,
+        volunteer_name: userInfo?.name,
+        volunteer_email: userInfo?.email,
+        activity,
+      });
+    }
+  }
+
+  const feedback = enrichedFeedback.length > 0 ? enrichedFeedback : MOCK_FEEDBACK.map(m => ({
+    id: m.id,
+    user_id: null,
+    session_id: null,
+    source: 'session' as const,
+    rating: m.rating as VolunteerFeedback['rating'],
+    comment: m.comment,
+    flagged: (m as typeof m & { flagged?: boolean }).flagged ?? false,
+    submitted_at: m.submittedAt,
+    volunteer_name: m.volunteer,
+    activity: m.activity,
+  }));
+  
+  const useMock = enrichedFeedback.length === 0;
+
+  const avg = feedback.reduce((sum, f) => sum + (EMOJI_MAP[f.rating ?? 'neutral']?.score ?? 0), 0) / feedback.length;
 
   const distribution = Object.entries(EMOJI_MAP).map(([key, val]) => ({
     ...val,
     key,
-    count: MOCK_FEEDBACK.filter((f) => f.rating === key).length,
+    count: feedback.filter((f) => f.rating === key).length,
   }));
 
-  const flagged = MOCK_FEEDBACK.filter((f) => (f as typeof f & { flagged?: boolean }).flagged).length;
+  const flagged = feedback.filter((f) => f.flagged).length;
 
   return (
     <div className="max-w-5xl mx-auto">
       <div className="flex items-center justify-between mb-lg">
         <h1 className="font-heading text-[28px] leading-[36px] text-text-primary">Feedback</h1>
       </div>
+      
+      {useMock && <SampleDataBanner />}
 
       {/* Summary */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-md mb-xl">
@@ -51,7 +126,7 @@ export default function FeedbackPage() {
         </div>
         <div className="bg-bg-surface border border-border-outline rounded-md p-lg">
           <p className="font-data text-[11px] tracking-[0.88px] uppercase text-text-tertiary mb-sm">Total</p>
-          <p className="font-data text-[28px] font-semibold text-text-primary">{MOCK_FEEDBACK.length}</p>
+          <p className="font-data text-[28px] font-semibold text-text-primary">{feedback.length}</p>
         </div>
         <div className="bg-bg-surface border border-border-outline rounded-md p-lg">
           <p className="font-data text-[11px] tracking-[0.88px] uppercase text-text-tertiary mb-sm">Flagged</p>
@@ -59,7 +134,7 @@ export default function FeedbackPage() {
         </div>
         <div className="bg-bg-surface border border-border-outline rounded-md p-lg">
           <p className="font-data text-[11px] tracking-[0.88px] uppercase text-text-tertiary mb-sm">With Comment</p>
-          <p className="font-data text-[28px] font-semibold text-text-primary">{MOCK_FEEDBACK.filter((f) => f.comment).length}</p>
+          <p className="font-data text-[28px] font-semibold text-text-primary">{feedback.filter((f) => f.comment).length}</p>
         </div>
       </div>
 
@@ -79,36 +154,9 @@ export default function FeedbackPage() {
 
       {/* Feedback list */}
       <div className="flex flex-col gap-sm">
-        {MOCK_FEEDBACK.map((fb) => {
-          const meta = EMOJI_MAP[fb.rating];
-          const isFlagged = (fb as typeof fb & { flagged?: boolean }).flagged;
-          return (
-            <div
-              key={fb.id}
-              className={`bg-bg-surface border rounded-md p-lg ${isFlagged ? 'border-[#ba1a1a]/40 bg-[#ffd9de]/20' : 'border-border-outline'}`}
-            >
-              <div className="flex items-start justify-between gap-md">
-                <div className="flex items-center gap-sm">
-                  <span className="text-xl" title={meta?.label}>{meta?.emoji}</span>
-                  <div>
-                    <p className="font-body text-[14px] font-semibold text-text-primary">{fb.volunteer}</p>
-                    <p className="font-data text-[12px] text-text-tertiary">{fb.activity} · {formatTime(fb.submittedAt)}</p>
-                  </div>
-                </div>
-                {isFlagged && (
-                  <span className="font-data text-[11px] font-semibold text-[#ba1a1a] bg-[#ffd9de] rounded-xs px-sm py-xs shrink-0">
-                    Flagged
-                  </span>
-                )}
-              </div>
-              {fb.comment && (
-                <p className="font-body text-[14px] text-text-primary mt-md pl-[calc(1.25rem+8px)] border-l-2 border-border-outline ml-[10px]">
-                  {fb.comment}
-                </p>
-              )}
-            </div>
-          );
-        })}
+        {feedback.map((fb) => (
+          <FeedbackRow key={fb.id} feedback={fb} emojiMap={EMOJI_MAP} formatTime={formatTime} />
+        ))}
       </div>
     </div>
   );

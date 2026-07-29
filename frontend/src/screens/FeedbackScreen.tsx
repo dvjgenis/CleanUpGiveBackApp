@@ -11,6 +11,7 @@ import {
   TextInput,
   TouchableWithoutFeedback,
   View,
+  Alert,
 } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -28,6 +29,7 @@ import { useFadeUpEnter } from '@/components/motion/hooks';
 import { staggerDelay } from '@/motion';
 
 import { colors as tokens } from '@/constants/tokens';
+import { submitFeedback, type FeedbackRating } from '@/lib/feedbackApi';
 
 const C = {
   bgApp: tokens.bgApp,
@@ -56,12 +58,12 @@ const FEEDBACK_MAX_LENGTH = 1000;
  * SVGs plus a hand-authored `very-sad.svg` (same style/viewBox) for the 5th slot, which
  * has no Figma source. Left-to-right order is Very Sad → Excited (negative → positive).
  */
-const EMOJIS = [
-  { key: 'verySad', source: require('../../assets/figma/feedback-screen/very-sad.svg'), label: 'Very sad' },
-  { key: 'sad', source: require('../../assets/figma/feedback-screen/sad.svg'), label: 'Sad' },
-  { key: 'neutral', source: require('../../assets/figma/feedback-screen/neutral.svg'), label: 'Neutral' },
-  { key: 'happy', source: require('../../assets/figma/feedback-screen/happy.svg'), label: 'Happy' },
-  { key: 'excited', source: require('../../assets/figma/feedback-screen/excited.svg'), label: 'Excited' },
+const EMOJIS: Array<{ key: string; rating: FeedbackRating; source: number; label: string }> = [
+  { key: 'verySad', rating: 'very_sad', source: require('../../assets/figma/feedback-screen/very-sad.svg'), label: 'Very sad' },
+  { key: 'sad', rating: 'sad', source: require('../../assets/figma/feedback-screen/sad.svg'), label: 'Sad' },
+  { key: 'neutral', rating: 'neutral', source: require('../../assets/figma/feedback-screen/neutral.svg'), label: 'Neutral' },
+  { key: 'happy', rating: 'happy', source: require('../../assets/figma/feedback-screen/happy.svg'), label: 'Happy' },
+  { key: 'excited', rating: 'excited', source: require('../../assets/figma/feedback-screen/excited.svg'), label: 'Excited' },
 ] as const;
 
 const BUBBLE_TIMING = { duration: 180, easing: Easing.out(Easing.ease) };
@@ -176,7 +178,25 @@ export function FeedbackScreen({
     return <View style={s.root} />;
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
+    if (selectedRating !== null && feedbackText.trim()) {
+      const rating = EMOJIS[selectedRating]?.rating;
+      if (rating) {
+        try {
+          await submitFeedback({
+            source,
+            rating,
+            comment: feedbackText.trim(),
+          });
+        } catch (error) {
+          Alert.alert(
+            'Feedback not sent',
+            "We couldn't send your feedback right now, but we appreciate your input.",
+          );
+        }
+      }
+    }
+
     switch (source) {
       case 'account':
         router.push({ pathname: '/feedback-thank-you', params: { returnTo: 'account' } });
@@ -258,7 +278,7 @@ export function FeedbackScreen({
 
             {/* Emoji rating row */}
             <Animated.View style={[s.emojiRow, emojiStyle]}>
-              {EMOJIS.map(({ key, source, label }, index) => (
+              {EMOJIS.map(({ key, rating, source, label }, index) => (
                 <EmojiRatingButton
                   key={key}
                   source={source}

@@ -71,6 +71,17 @@ export async function GET(
     upstream.headers.get('Content-Disposition') ??
     `attachment; filename="CGB-Service-Letter-bulk.pdf"`;
 
+  // Stamp letterhead generation for all sessions - soft fail
+  const now = new Date().toISOString();
+  try {
+    await serviceClient
+      .from('sessions')
+      .update({ letterhead_generated_at: now })
+      .in('id', sessionIds);
+  } catch (err) {
+    console.error('Failed to mark bulk letterhead generated:', err);
+  }
+
   return new NextResponse(buffer, {
     headers: {
       'Content-Type': 'application/pdf',

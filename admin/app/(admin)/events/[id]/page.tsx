@@ -10,15 +10,20 @@ import { EventDetailActions } from './EventDetailActions';
 import { NotifyAtRiskVolunteers, type NotifyCandidate } from './NotifyAtRiskVolunteers';
 import type { CourtOrder, Event } from '@/types/database';
 
-async function loadAtRiskCandidates(): Promise<NotifyCandidate[]> {
+async function loadAtRiskCandidates(eventId: string): Promise<NotifyCandidate[]> {
   const supabase = await createDataClient();
   const serviceClient = await tryCreateServiceClient();
 
-  const [{ data: courtOrders }, { data: sessions }, directory] = await Promise.all([
+  const [{ data: courtOrders }, { data: sessions }, { data: notices }, directory] = await Promise.all([
     supabase.from('court_orders').select('*'),
     supabase.from('sessions').select('user_id, status, court_ordered, duration_seconds, adjusted_hours'),
+    supabase.from('event_volunteer_notices').select('user_id, notified_at').eq('event_id', eventId),
     serviceClient ? getVolunteerDirectory(serviceClient) : Promise.resolve(new Map()),
   ]);
+
+  const lastByUser = new Map(
+    (notices ?? []).map((n: { user_id: string; notified_at: string }) => [n.user_id, n.notified_at]),
+  );
 
   const risk = buildCourtRisk((courtOrders ?? []) as CourtOrder[], sessions ?? [], directory, new Date());
   return risk
@@ -28,6 +33,7 @@ async function loadAtRiskCandidates(): Promise<NotifyCandidate[]> {
       name: r.name,
       email: directory.get(r.id)?.email ?? null,
       remainingHours: Math.max(0, r.requiredHours - r.completedHours),
+      lastNotifiedAt: lastByUser.get(r.id) ?? null,
     }));
 }
 
@@ -37,7 +43,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
 
   const [{ data }, atRiskCandidates] = await Promise.all([
     supabase.from('events').select('*').eq('id', id).single(),
-    loadAtRiskCandidates(),
+    loadAtRiskCandidates(id),
   ]);
   if (!data) notFound();
 

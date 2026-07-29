@@ -8,6 +8,7 @@ import { computedHours, formatDate, formatDuration, formatMiles, shortId } from 
 import { resolveVolunteerName } from '@/lib/volunteers';
 import { MOCK_COURT_HOURS } from '@/lib/dashboard-mock';
 import type { SessionStatus } from '@/types/database';
+import { CourtOrderForm } from './CourtOrderForm';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -148,12 +149,18 @@ function VolunteerProfileView({
               <InfoRow label="Order recorded" value={orderRecordedAt ? formatDate(orderRecordedAt) : '—'} />
             </dl>
           </div>
+          <CourtOrderForm
+            userId={userId}
+            requiredHours={requiredHours}
+            dueDate={courtDueDate}
+            caseReference={caseReference}
+          />
         </>
       )}
 
       <h2 className="font-heading text-[18px] leading-[26px] text-text-primary mb-md">Session History</h2>
       <div className="bg-bg-surface border border-border-outline rounded-md overflow-hidden">
-        <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-md px-lg py-sm bg-bg-surface-elevated border-b border-border-outline">
+        <div className="hidden lg:grid grid-cols-[1fr_auto_auto_auto_auto] gap-md px-lg py-sm bg-bg-surface-elevated border-b border-border-outline">
           {['Activity', 'Date', 'Duration', 'Distance', 'Status'].map((col) => (
             <span key={col} className="font-data text-[11px] tracking-[0.88px] uppercase text-text-tertiary">{col}</span>
           ))}
@@ -165,25 +172,29 @@ function VolunteerProfileView({
         ) : (
           <ul role="list" className="divide-y divide-border-outline">
             {sessions.map((s) => (
-              <li key={s.id} className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-md items-center px-lg py-md table-row-hover transition-colors">
-                {isUuid(s.id) ? (
-                  <Link
-                    href={`/sessions/${s.id}`}
-                    className="font-body text-[14px] font-medium text-text-primary hover:text-primary hover:underline"
-                  >
-                    {s.activity ?? 'Cleanup session'}
-                  </Link>
-                ) : (
-                  <span className="font-body text-[14px] font-medium text-text-primary">
-                    {s.activity ?? 'Cleanup session'}
-                  </span>
-                )}
-                <span className="font-data text-[13px] text-text-tertiary whitespace-nowrap">{formatDate(s.started_at)}</span>
-                <span className="font-data text-[13px] font-medium text-text-primary whitespace-nowrap">
-                  {formatDuration(s.duration_seconds, s.adjusted_hours)}
-                </span>
-                <span className="font-data text-[13px] text-text-tertiary whitespace-nowrap">{formatMiles(s.distance_miles)}</span>
-                <StatusChip status={s.status as SessionStatus} />
+              <li key={s.id} className="lg:grid lg:grid-cols-[1fr_auto_auto_auto_auto] gap-md items-center px-lg py-md table-row-hover transition-colors">
+                <div className="lg:contents flex flex-col gap-xs">
+                  {isUuid(s.id) ? (
+                    <Link
+                      href={`/sessions/${s.id}`}
+                      className="font-body text-[14px] font-medium text-text-primary hover:text-primary hover:underline"
+                    >
+                      {s.activity ?? 'Cleanup session'}
+                    </Link>
+                  ) : (
+                    <span className="font-body text-[14px] font-medium text-text-primary">
+                      {s.activity ?? 'Cleanup session'}
+                    </span>
+                  )}
+                  <div className="flex flex-wrap items-center gap-md lg:contents">
+                    <span className="font-data text-[13px] text-text-tertiary whitespace-nowrap">{formatDate(s.started_at)}</span>
+                    <span className="font-data text-[13px] font-medium text-text-primary whitespace-nowrap">
+                      {formatDuration(s.duration_seconds, s.adjusted_hours)}
+                    </span>
+                    <span className="font-data text-[13px] text-text-tertiary whitespace-nowrap">{formatMiles(s.distance_miles)}</span>
+                    <StatusChip status={s.status as SessionStatus} />
+                  </div>
+                </div>
               </li>
             ))}
           </ul>

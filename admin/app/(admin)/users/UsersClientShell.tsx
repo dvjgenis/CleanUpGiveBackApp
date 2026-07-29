@@ -58,6 +58,15 @@ export function UsersClientShell({
 
   return (
     <div>
+      <div className="flex items-center gap-sm mb-sm">
+        <a
+          href="/api/export/users"
+          download
+          className="ml-auto h-9 px-md rounded-sm border border-border-outline bg-bg-surface font-data text-[12px] font-semibold text-text-tertiary hover:bg-bg-surface-elevated transition-colors inline-flex items-center gap-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+        >
+          Export CSV
+        </a>
+      </div>
       <div className="flex flex-wrap gap-sm mb-lg">
         <AdminSearchBar value={q} onChange={setQ} placeholder="Search by name or email…" className="w-full sm:w-64" />
         <div className="flex gap-xs overflow-x-auto pb-xs" role="group" aria-label="Filter by volunteer type">

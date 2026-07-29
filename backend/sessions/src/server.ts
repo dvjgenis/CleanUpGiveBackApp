@@ -13,7 +13,7 @@ async function main() {
 
   await app.register(cors, {
     origin: true,
-    methods: ['GET', 'POST', 'PATCH', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Authorization', 'Content-Type', 'X-Admin-Key'],
   });
 

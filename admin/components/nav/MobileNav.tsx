@@ -31,15 +31,31 @@ const MORE_NAV = [
 ];
 
 function MiniBadge({ count }: { count: number }) {
-  // Temporarily hidden — re-enable when notification counts are product-ready.
-  void count;
-  return null;
+  if (count === 0) return null;
+  const displayCount = count > 99 ? '99+' : String(count);
+  return (
+    <span
+      className="absolute -top-1 -right-1 min-w-4 h-4 px-0.5 rounded-full bg-[#ffddb5] text-[#835400] font-data text-[9px] font-semibold border border-[#fcab29] flex items-center justify-center"
+      aria-label={`${count} items`}
+    >
+      {displayCount}
+    </span>
+  );
 }
 
 export function MobileNav({ badges }: { badges: NavBadges }) {
   const pathname = usePathname();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setPrefersReducedMotion(mediaQuery.matches);
+    const handleChange = () => setPrefersReducedMotion(mediaQuery.matches);
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []);
 
   useEffect(() => {
     setMenuOpen(false);
@@ -91,15 +107,15 @@ export function MobileNav({ badges }: { badges: NavBadges }) {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
+              transition={{ duration: prefersReducedMotion ? 0 : 0.15 }}
               className="lg:hidden fixed inset-0 z-40 bg-[var(--color-overlay-scrim)]"
               onClick={() => setMenuOpen(false)}
             />
             <motion.div
-              initial={{ x: '100%' }}
+              initial={{ x: prefersReducedMotion ? 0 : '100%' }}
               animate={{ x: 0 }}
-              exit={{ x: '100%' }}
-              transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
+              exit={{ x: prefersReducedMotion ? 0 : '100%' }}
+              transition={{ duration: prefersReducedMotion ? 0 : 0.3, ease: [0.32, 0.72, 0, 1] }}
               className="lg:hidden fixed top-0 right-0 bottom-0 z-50 w-64 bg-bg-surface flex flex-col"
             >
               <div className="h-14 flex items-center justify-between px-lg border-b border-border-outline">

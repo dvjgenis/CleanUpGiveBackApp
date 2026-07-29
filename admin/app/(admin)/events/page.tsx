@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { createDataClient } from '@/lib/supabase/server';
 import { formatEventWhen, withEventTiming, type EventListItem } from '@/lib/events';
+import { MapPinIcon, CalendarIcon } from '@/components/ui/Icons';
 import type { Event } from '@/types/database';
 
 function PublishChip({ published }: { published: boolean }) {
@@ -34,11 +35,17 @@ function EventCard({ event }: { event: EventListItem }) {
           {event.description ? (
             <p className="font-body text-[13px] text-text-tertiary mb-sm line-clamp-2">{event.description}</p>
           ) : null}
-          <div className="flex flex-wrap gap-md">
+          <div className="flex flex-wrap gap-md items-center">
             {event.location ? (
-              <span className="font-data text-[12px] text-text-tertiary">📍 {event.location}</span>
+              <span className="font-data text-[12px] text-text-tertiary inline-flex items-center gap-xs">
+                <MapPinIcon className="w-3.5 h-3.5" />
+                {event.location}
+              </span>
             ) : null}
-            <span className="font-data text-[12px] text-text-tertiary">📅 {when}</span>
+            <span className="font-data text-[12px] text-text-tertiary inline-flex items-center gap-xs">
+              <CalendarIcon className="w-3.5 h-3.5" />
+              {when}
+            </span>
           </div>
         </div>
         <div className="shrink-0 flex flex-col items-end gap-xs">
@@ -92,9 +99,9 @@ export default async function EventsPage() {
           </p>
           <Link
             href="/events/new"
-            className="interactive inline-flex h-10 px-lg rounded-sm bg-primary text-white font-data text-[13px] font-semibold hover:bg-[#007d35] transition-colors items-center"
+            className="interactive inline-flex h-10 px-lg rounded-sm bg-primary text-white font-data text-[13px] font-semibold hover:bg-[#007d35] transition-colors items-center gap-sm"
           >
-            Create first event
+            + Create event
           </Link>
         </div>
       ) : null}

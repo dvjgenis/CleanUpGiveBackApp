@@ -1,14 +1,16 @@
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { AccountSignOut } from './AccountSignOut';
 
+/** Org contact — override via env so the repo is not a PII store. */
 const ADMIN_PROFILE = {
-  name: 'Donna Adam',
-  title: 'Executive Director',
+  name: process.env.ADMIN_DISPLAY_NAME ?? 'Donna Adam',
+  title: process.env.ADMIN_DISPLAY_TITLE ?? 'Executive Director',
   role: 'Administrator',
-  organization: 'Clean Up – Give Back .Org',
-  email: 'donnaadam@cleanupgiveback.org',
-  phone: '847-224-8592',
-  address: '600 E. Algonquin Road, Des Plaines, IL 60016',
+  organization: process.env.ADMIN_ORG_NAME ?? 'Clean Up – Give Back .Org',
+  email: process.env.DONNA_EMAIL ?? 'donnaadam@cleanupgiveback.org',
+  phone: process.env.ADMIN_ORG_PHONE ?? '',
+  address: process.env.ADMIN_ORG_ADDRESS ?? '',
 } as const;
 
 export default async function AccountPage() {
@@ -42,9 +44,13 @@ export default async function AccountPage() {
     { label: 'Role', value: ADMIN_PROFILE.role },
     { label: 'Organization', value: ADMIN_PROFILE.organization },
     { label: 'Email', value: email },
-    { label: 'Phone', value: ADMIN_PROFILE.phone },
-    { label: 'Address', value: ADMIN_PROFILE.address },
   ];
+  if (ADMIN_PROFILE.phone) {
+    fields.push({ label: 'Phone', value: ADMIN_PROFILE.phone });
+  }
+  if (ADMIN_PROFILE.address) {
+    fields.push({ label: 'Address', value: ADMIN_PROFILE.address });
+  }
 
   if (lastSignIn) {
     fields.push({ label: 'Last sign-in', value: lastSignIn });
@@ -98,8 +104,14 @@ export default async function AccountPage() {
         </dl>
       </section>
 
-      <div className="mt-lg">
+      <div className="mt-lg flex flex-col gap-md">
         <AccountSignOut />
+        <Link
+          href="/audit-log"
+          className="font-data text-[12px] font-semibold text-text-tertiary hover:text-primary hover:underline inline-flex items-center gap-xs w-fit"
+        >
+          View audit log
+        </Link>
       </div>
     </div>
   );

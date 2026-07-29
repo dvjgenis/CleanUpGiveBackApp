@@ -63,14 +63,37 @@ export default async function AuditLogPage({ searchParams }: { searchParams: Pro
                     {log.action}
                   </td>
                   <td className="px-lg py-md">
-                    {log.target_id ? (
-                      <Link
-                        href={`/${log.target_table === 'sessions' ? 'sessions' : log.target_table}/${log.target_id}`}
-                        className="font-data text-[12px] text-primary hover:underline"
-                      >
-                        {log.target_table} / {log.target_id.slice(0, 8)}
-                      </Link>
-                    ) : (
+                    {log.target_id ? (() => {
+                      let href: string | null = null;
+                      switch (log.target_table) {
+                        case 'sessions':
+                          href = `/sessions/${log.target_id}`;
+                          break;
+                        case 'events':
+                          href = `/events/${log.target_id}`;
+                          break;
+                        case 'shop_orders':
+                          href = `/orders/${log.target_id}`;
+                          break;
+                        case 'users':
+                          href = `/users`;
+                          break;
+                        default:
+                          href = null;
+                      }
+                      return href ? (
+                        <Link
+                          href={href}
+                          className="font-data text-[12px] text-primary hover:underline"
+                        >
+                          {log.target_table} / {log.target_id.slice(0, 8)}
+                        </Link>
+                      ) : (
+                        <span className="font-data text-[12px] text-text-tertiary">
+                          {log.target_table} / {log.target_id.slice(0, 8)}
+                        </span>
+                      );
+                    })() : (
                       <span className="font-body text-[14px] text-text-tertiary">{log.target_table}</span>
                     )}
                   </td>

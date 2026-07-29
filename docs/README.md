@@ -20,6 +20,8 @@ Living docs for the Clean Up - Give Back monorepo. Templates are copy-only.
 | [admin/chart-types-2026-07-22.md](admin/chart-types-2026-07-22.md) | Useful chart types for Today (behind Show charts) |
 | [admin/admin-feature-batch-2026-07-28.md](admin/admin-feature-batch-2026-07-28.md) | Search, PDF fix, notify-at-risk email, payments breakdown, Users merge, multi event photos/address upload, dashboard commerce cards |
 | [admin/mobile-responsiveness-audit-2026-07-28.md](admin/mobile-responsiveness-audit-2026-07-28.md) | Mobile viewport audit (375/768/1024) + P0/P1 fixes |
+| [admin/refinement-contracts-2026-07-28.md](admin/refinement-contracts-2026-07-28.md) | Contracts for notify, feedback, court upsert, decline_reason, RLS claim path |
+| [admin/dulf-resend-supabase-fly.md](admin/dulf-resend-supabase-fly.md) | Runbook for Dulf — Resend, Supabase, Fly secrets + Donna admin user |
 
 ## Frontend
 

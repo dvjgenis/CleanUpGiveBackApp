@@ -32,8 +32,21 @@ Required for native MapLibre maps and background route tracking during active se
 | `frontend/.env` | Local Expo values (gitignored) — **no** `DATABASE_URL` |
 | `backend/sessions/.env` | `DATABASE_URL` (session pooler for local Prisma), optional service role for PDF dev (gitignored) |
 | `admin/.env.local` | Supabase + `SESSIONS_API_URL` + `ADMIN_API_KEY` for letterhead proxy (gitignored) |
-| `credentials.local.md` | Optional local secret reference (gitignored) |
-| Fly secrets | `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `ADMIN_API_KEY` — `fly secrets set` |
+| `credentials.local.md` | **Admin sample login** (gitignored) — email `donnaadam@cleanupgiveback.org`, password `LocalAdmin!2026`, plus `BYPASS_AUTH` instructions. See also [admin sample login](#admin-portal-sample-login) below. |
+| Fly secrets | `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `ADMIN_API_KEY`, `RESEND_API_KEY`, `DONNA_EMAIL` — `fly secrets set` |
+
+## Admin portal sample login
+
+Local admin portal: `cd admin && npm run dev` → http://localhost:3001
+
+| Mode | How |
+|------|-----|
+| Bypass | `BYPASS_AUTH=true` in `admin/.env.local` |
+| Real login | Email/password in **`credentials.local.md`** (gitignored). Create the Supabase user with `user_metadata.role = 'admin'` once. |
+
+Do not commit production passwords. Org phone/address for the Account page come from `ADMIN_ORG_PHONE` / `ADMIN_ORG_ADDRESS` / `DONNA_EMAIL` env vars.
+
+**Ops runbook (Resend + Supabase + Fly):** [admin/dulf-resend-supabase-fly.md](admin/dulf-resend-supabase-fly.md)
 
 See [supabase.md](supabase.md) for full env var table and rotation steps.
 

@@ -5,9 +5,11 @@ import {
   useEffect,
   useRef,
   useState,
+  useTransition,
   type PointerEvent as ReactPointerEvent,
   type WheelEvent as ReactWheelEvent,
 } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronLeftIcon,
@@ -293,6 +295,8 @@ function ZoomablePhoto({
 }
 
 export function PhotoGrid({ checkpoints }: { checkpoints: SignedCheckpoint[] }) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   const allPhotos: PhotoItem[] = checkpoints.flatMap((cp) => [
@@ -330,8 +334,24 @@ export function PhotoGrid({ checkpoints }: { checkpoints: SignedCheckpoint[] }) 
 
   const active = lightboxIndex != null ? allPhotos[lightboxIndex] : null;
 
+  function handleRefresh() {
+    startTransition(() => {
+      router.refresh();
+    });
+  }
+
   return (
     <>
+      <div className="flex items-center justify-between mb-sm">
+        <button
+          type="button"
+          onClick={handleRefresh}
+          disabled={isPending}
+          className="h-8 px-sm rounded-sm border border-border-outline bg-bg-surface text-text-primary font-data text-[11px] font-semibold hover:bg-bg-surface-elevated transition-colors disabled:opacity-50"
+        >
+          {isPending ? 'Refreshing…' : 'Refresh photos'}
+        </button>
+      </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-sm">
         {allPhotos.map((photo, i) => (
           <button

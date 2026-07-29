@@ -19,13 +19,21 @@ export function SessionActions({ session, volunteerId, volunteerName }: Props) {
   const { adjustedHours, setAdjustedHours } = useSessionHours();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState('');
-  const [declineReason, setDeclineReason] = useState(session.admin_notes ?? '');
+  const [declineReason, setDeclineReason] = useState(session.decline_reason ?? '');
   const [showDeclineConfirm, setShowDeclineConfirm] = useState(false);
+  const [showApproveConfirm, setShowApproveConfirm] = useState(false);
   const [hoursInput, setHoursInput] = useState(
     String(adjustedHours ?? session.adjusted_hours ?? ''),
   );
   const [notesInput, setNotesInput] = useState(session.admin_notes ?? '');
   const [notesSaved, setNotesSaved] = useState(false);
+  const [showBulkDateRange, setShowBulkDateRange] = useState(false);
+  
+  // Default bulk date range: first of current month to today
+  const today = new Date().toISOString().split('T')[0];
+  const firstOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+  const [bulkFrom, setBulkFrom] = useState(firstOfMonth);
+  const [bulkTo, setBulkTo] = useState(today);
 
   function run(fn: () => Promise<void>) {
     setError('');
@@ -39,7 +47,10 @@ export function SessionActions({ session, volunteerId, volunteerName }: Props) {
   }
 
   async function handleApprove() {
-    run(() => approveSession(session.id));
+    run(async () => {
+      await approveSession(session.id);
+      setShowApproveConfirm(false);
+    });
   }
 
   async function handleDecline() {
@@ -89,13 +100,35 @@ export function SessionActions({ session, volunteerId, volunteerName }: Props) {
         {canApprove && (
           <Button
             variant="primary"
-            onClick={handleApprove}
+            onClick={() => setShowApproveConfirm(!showApproveConfirm)}
             disabled={isPending}
             className="w-full justify-center"
           >
             Approve
           </Button>
         )}
+
+        <AnimatePresence>
+          {showApproveConfirm && (
+            <motion.div
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.15 }}
+              className="flex flex-col gap-sm p-sm rounded-sm bg-[#f7fff1] border border-primary/30"
+            >
+              <p className="font-body text-[14px] text-text-primary">Approve this session?</p>
+              <div className="flex gap-sm">
+                <Button variant="primary" onClick={handleApprove} disabled={isPending} size="sm" className="flex-1 justify-center">
+                  {isPending ? 'Approving…' : 'Confirm Approve'}
+                </Button>
+                <Button variant="ghost" onClick={() => setShowApproveConfirm(false)} size="sm">
+                  Cancel
+                </Button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {canDecline && (
           <Button
@@ -192,14 +225,62 @@ export function SessionActions({ session, volunteerId, volunteerName }: Props) {
         >
           Generate Letterhead (this session)
         </a>
-        <a
-          href={`/api/service-letter/bulk/${volunteerId}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="interactive inline-flex items-center justify-center h-9 px-md rounded-sm border border-border-outline bg-bg-surface font-data text-[12px] font-semibold text-text-primary hover:bg-bg-surface-elevated transition-colors"
+        
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setShowBulkDateRange(!showBulkDateRange)}
+          className="w-full justify-center"
         >
-          Generate Bulk Letterhead ({volunteerName})
-        </a>
+          {showBulkDateRange ? 'Hide' : 'Show'} Bulk Letterhead Options
+        </Button>
+
+        <AnimatePresence>
+          {showBulkDateRange && (
+            <motion.div
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.15 }}
+              className="flex flex-col gap-sm"
+            >
+              <div className="flex gap-sm">
+                <div className="flex-1">
+                  <label htmlFor="bulk-from" className="font-data text-[11px] text-text-tertiary block mb-xs">
+                    From
+                  </label>
+                  <input
+                    type="date"
+                    id="bulk-from"
+                    value={bulkFrom}
+                    onChange={(e) => setBulkFrom(e.target.value)}
+                    className="w-full h-9 px-sm rounded-sm border border-border-outline font-body text-[14px] text-text-primary focus:outline-none focus:border-primary"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label htmlFor="bulk-to" className="font-data text-[11px] text-text-tertiary block mb-xs">
+                    To
+                  </label>
+                  <input
+                    type="date"
+                    id="bulk-to"
+                    value={bulkTo}
+                    onChange={(e) => setBulkTo(e.target.value)}
+                    className="w-full h-9 px-sm rounded-sm border border-border-outline font-body text-[14px] text-text-primary focus:outline-none focus:border-primary"
+                  />
+                </div>
+              </div>
+              <a
+                href={`/api/service-letter/bulk/${volunteerId}?from=${bulkFrom}&to=${bulkTo}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="interactive inline-flex items-center justify-center h-9 px-md rounded-sm border border-border-outline bg-bg-surface font-data text-[12px] font-semibold text-text-primary hover:bg-bg-surface-elevated transition-colors"
+              >
+                Generate Bulk ({volunteerName})
+              </a>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

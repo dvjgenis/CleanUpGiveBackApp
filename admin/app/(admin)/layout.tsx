@@ -2,9 +2,11 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { Sidebar } from '@/components/nav/Sidebar';
 import { MobileNav } from '@/components/nav/MobileNav';
+import { CommandPalette } from '@/components/nav/CommandPalette';
 import { MainScrollReset } from '@/components/nav/MainScrollReset';
 import { ToastProvider } from '@/components/ui/ToastProvider';
 import { getNavBadges } from '@/lib/nav-badges';
+import { SessionExpiryBanner } from '@/components/SessionExpiryBanner';
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   if (process.env.BYPASS_AUTH !== 'true') {
@@ -33,7 +35,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <ToastProvider>
+      <SessionExpiryBanner />
       <MainScrollReset />
+      <CommandPalette />
       <a href="#main-content" className="skip-link">
         Skip to main content
       </a>

@@ -9,6 +9,7 @@ export type NotifyCandidate = {
   name: string;
   email: string | null;
   remainingHours: number;
+  lastNotifiedAt?: string | null;
 };
 
 export function NotifyAtRiskVolunteers({
@@ -79,6 +80,9 @@ export function NotifyAtRiskVolunteers({
                 <span className="block font-body text-[13px] text-text-primary truncate">{c.name}</span>
                 <span className="block font-data text-[11px] text-text-tertiary truncate">
                   {c.email ?? 'No email on file'} · {c.remainingHours.toFixed(1)}h remaining
+                  {c.lastNotifiedAt
+                    ? ` · emailed ${new Date(c.lastNotifiedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+                    : ''}
                 </span>
               </span>
             </label>

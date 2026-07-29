@@ -43,8 +43,19 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  if (user && pathname === '/login') {
-    return NextResponse.redirect(new URL('/', request.url));
+  if (user) {
+    if (pathname === '/login') {
+      return NextResponse.redirect(new URL('/', request.url));
+    }
+    // Enforce admin role - if user exists but is not admin, sign them out
+    if (user.user_metadata?.role !== 'admin') {
+      await supabase.auth.signOut();
+      const response = NextResponse.redirect(new URL('/login?error=access_denied', request.url));
+      // Clear all auth cookies
+      response.cookies.delete('sb-access-token');
+      response.cookies.delete('sb-refresh-token');
+      return response;
+    }
   }
 
   return supabaseResponse;

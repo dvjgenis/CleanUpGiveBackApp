@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { writeAuditLog } from '@/lib/audit';
+import { notifyVolunteerSessionDecision } from '@/lib/notify';
 
 async function getAdminUser() {
   if (process.env.BYPASS_AUTH === 'true') {
@@ -31,11 +32,21 @@ export async function approveSession(sessionId: string) {
   const user = await getAdminUser();
   const supabase = await createServiceClient();
 
-  const { data: before } = await supabase
+  const { data: before, error: fetchError } = await supabase
     .from('sessions')
-    .select('status')
+    .select('status, user_id, activity')
     .eq('id', sessionId)
     .single();
+
+  if (fetchError || !before) {
+    throw new Error(`Session not found: ${sessionId}`);
+  }
+
+  if (before.status !== 'under_review') {
+    throw new Error(
+      `Cannot approve session: status is "${before.status}", expected "under_review"`
+    );
+  }
 
   const { error } = await supabase
     .from('sessions')
@@ -53,6 +64,13 @@ export async function approveSession(sessionId: string) {
     afterValue: { status: 'approved' },
   });
 
+  await notifyVolunteerSessionDecision({
+    userId: before.user_id,
+    sessionId,
+    decision: 'approved',
+    activity: before.activity,
+  });
+
   revalidateSessionPaths(sessionId);
 }
 
@@ -60,14 +78,24 @@ export async function declineSession(sessionId: string, reason?: string) {
   const user = await getAdminUser();
   const supabase = await createServiceClient();
 
-  const { data: before } = await supabase
+  const { data: before, error: fetchError } = await supabase
     .from('sessions')
-    .select('status, admin_notes')
+    .select('status, user_id, activity')
     .eq('id', sessionId)
     .single();
 
+  if (fetchError || !before) {
+    throw new Error(`Session not found: ${sessionId}`);
+  }
+
+  if (before.status !== 'under_review') {
+    throw new Error(
+      `Cannot decline session: status is "${before.status}", expected "under_review"`
+    );
+  }
+
   const update: Record<string, unknown> = { status: 'not_approved' };
-  if (reason) update.admin_notes = reason;
+  if (reason) update.decline_reason = reason;
 
   const { error } = await supabase.from('sessions').update(update).eq('id', sessionId);
   if (error) throw new Error(error.message);
@@ -79,6 +107,14 @@ export async function declineSession(sessionId: string, reason?: string) {
     targetId: sessionId,
     beforeValue: before,
     afterValue: update,
+  });
+
+  await notifyVolunteerSessionDecision({
+    userId: before.user_id,
+    sessionId,
+    decision: 'declined',
+    declineReason: reason,
+    activity: before.activity,
   });
 
   revalidateSessionPaths(sessionId);
@@ -143,6 +179,105 @@ export async function saveAdminNotes(sessionId: string, notes: string) {
     targetId: sessionId,
     beforeValue: before,
     afterValue: { admin_notes: notes },
+  });
+
+  revalidatePath(`/sessions/${sessionId}`);
+}
+
+export async function approveSessionsBulk(sessionIds: string[]) {
+  const user = await getAdminUser();
+  const supabase = await createServiceClient();
+
+  const results: Array<{ sessionId: string; success: boolean; error?: string }> = [];
+
+  for (const sessionId of sessionIds) {
+    try {
+      const { data: before, error: fetchError } = await supabase
+        .from('sessions')
+        .select('status, user_id, activity')
+        .eq('id', sessionId)
+        .single();
+
+      if (fetchError || !before) {
+        results.push({ sessionId, success: false, error: 'Session not found' });
+        continue;
+      }
+
+      if (before.status !== 'under_review') {
+        results.push({
+          sessionId,
+          success: false,
+          error: `Status is "${before.status}", expected "under_review"`,
+        });
+        continue;
+      }
+
+      const { error } = await supabase
+        .from('sessions')
+        .update({ status: 'approved' })
+        .eq('id', sessionId);
+
+      if (error) {
+        results.push({ sessionId, success: false, error: error.message });
+        continue;
+      }
+
+      await writeAuditLog(supabase, {
+        adminUserId: user.id,
+        action: 'bulk approved session',
+        targetTable: 'sessions',
+        targetId: sessionId,
+        beforeValue: before,
+        afterValue: { status: 'approved' },
+      });
+
+      await notifyVolunteerSessionDecision({
+        userId: before.user_id,
+        sessionId,
+        decision: 'approved',
+        activity: before.activity,
+      });
+
+      revalidateSessionPaths(sessionId);
+      results.push({ sessionId, success: true });
+    } catch (err) {
+      results.push({
+        sessionId,
+        success: false,
+        error: err instanceof Error ? err.message : 'Unknown error',
+      });
+    }
+  }
+
+  return results;
+}
+
+export async function markLetterheadGenerated(sessionId: string) {
+  const user = await getAdminUser();
+  const supabase = await createServiceClient();
+
+  const { data: before } = await supabase
+    .from('sessions')
+    .select('letterhead_generated_at')
+    .eq('id', sessionId)
+    .single();
+
+  const now = new Date().toISOString();
+
+  const { error } = await supabase
+    .from('sessions')
+    .update({ letterhead_generated_at: now })
+    .eq('id', sessionId);
+
+  if (error) throw new Error(error.message);
+
+  await writeAuditLog(supabase, {
+    adminUserId: user.id,
+    action: 'marked letterhead generated',
+    targetTable: 'sessions',
+    targetId: sessionId,
+    beforeValue: before,
+    afterValue: { letterhead_generated_at: now },
   });
 
   revalidatePath(`/sessions/${sessionId}`);

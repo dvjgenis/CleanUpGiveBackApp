@@ -32,6 +32,8 @@ interface Props {
   currentQ: string;
   courtOnly: boolean;
   sort: string;
+  from: string;
+  to: string;
   isMock?: boolean;
 }
 
@@ -44,6 +46,8 @@ export function SessionsClientShell({
   currentQ,
   courtOnly,
   sort,
+  from,
+  to,
   isMock = false,
 }: Props) {
   const router = useRouter();
@@ -62,6 +66,8 @@ export function SessionsClientShell({
     if (currentQ) sp.set('q', currentQ);
     if (courtOnly) sp.set('court', '1');
     if (sort !== 'newest') sp.set('sort', sort);
+    if (from) sp.set('from', from);
+    if (to) sp.set('to', to);
     sp.set('page', '1');
     Object.entries(updates).forEach(([k, v]) => (v ? sp.set(k, v) : sp.delete(k)));
     startTransition(() => router.push(`${pathname}?${sp.toString()}`));
@@ -73,7 +79,17 @@ export function SessionsClientShell({
 
   return (
     <div>
-      {/* Filters */}
+      {/* Filters and Export */}
+      <div className="flex flex-wrap gap-sm mb-lg items-center">
+        <a
+          href="/api/export/sessions"
+          download
+          className="ml-auto h-9 px-md rounded-sm border border-border-outline bg-bg-surface font-data text-[12px] font-semibold text-text-tertiary hover:bg-bg-surface-elevated transition-colors inline-flex items-center gap-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+        >
+          Export CSV
+        </a>
+      </div>
+
       <div className="flex flex-wrap gap-sm mb-lg">
         <AdminSearchBar
           value={currentQ}
@@ -81,6 +97,26 @@ export function SessionsClientShell({
           placeholder="Search by volunteer, activity, or ID…"
           className="w-full sm:w-64"
         />
+        
+        <label className="inline-flex flex-col gap-xs">
+          <span className="font-data text-[11px] text-text-tertiary tracking-[0.88px] uppercase">From</span>
+          <input
+            type="date"
+            value={from}
+            onChange={(e) => updateParams({ from: e.target.value })}
+            className="h-11 px-md rounded-sm border border-border-outline bg-bg-surface font-data text-[12px] text-text-primary focus:outline-none focus:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+          />
+        </label>
+
+        <label className="inline-flex flex-col gap-xs">
+          <span className="font-data text-[11px] text-text-tertiary tracking-[0.88px] uppercase">To</span>
+          <input
+            type="date"
+            value={to}
+            onChange={(e) => updateParams({ to: e.target.value })}
+            className="h-11 px-md rounded-sm border border-border-outline bg-bg-surface font-data text-[12px] text-text-primary focus:outline-none focus:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+          />
+        </label>
 
         <div
           className="flex gap-xs overflow-x-auto pb-xs"
@@ -153,8 +189,21 @@ export function SessionsClientShell({
             <tbody className="divide-y divide-border-outline">
               {sessions.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-lg py-xl text-center font-body text-base text-text-tertiary">
-                    No sessions found.
+                  <td colSpan={8} className="px-lg py-xl text-center">
+                    <p className="font-body text-base text-text-tertiary mb-md">
+                      No sessions found.
+                    </p>
+                    {(currentStatus !== 'all' || currentQ || courtOnly || from || to) && (
+                      <button
+                        onClick={() => {
+                          const sp = new URLSearchParams();
+                          startTransition(() => router.push(`${pathname}?${sp.toString()}`));
+                        }}
+                        className="font-data text-[12px] text-primary hover:underline"
+                      >
+                        Clear filters
+                      </button>
+                    )}
                   </td>
                 </tr>
               )}
@@ -174,7 +223,20 @@ export function SessionsClientShell({
         {/* Mobile cards */}
         <div className="lg:hidden divide-y divide-border-outline">
           {sessions.length === 0 && (
-            <p className="px-lg py-xl text-center font-body text-base text-text-tertiary">No sessions found.</p>
+            <div className="px-lg py-xl text-center">
+              <p className="font-body text-base text-text-tertiary mb-md">No sessions found.</p>
+              {(currentStatus !== 'all' || currentQ || courtOnly || from || to) && (
+                <button
+                  onClick={() => {
+                    const sp = new URLSearchParams();
+                    startTransition(() => router.push(`${pathname}?${sp.toString()}`));
+                  }}
+                  className="font-data text-[12px] text-primary hover:underline"
+                >
+                  Clear filters
+                </button>
+              )}
+            </div>
           )}
           {sessions.map((session) => (
             <SessionCard key={session.id} session={session} />

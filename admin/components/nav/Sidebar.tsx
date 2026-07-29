@@ -42,10 +42,16 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 function Badge({ count, label }: { count: number; label: string }) {
-  // Temporarily hidden — re-enable when notification counts are product-ready.
-  void count;
-  void label;
-  return null;
+  if (count === 0) return null;
+  const displayCount = count > 99 ? '99+' : String(count);
+  return (
+    <span
+      className="ml-auto inline-flex items-center justify-center min-w-5 h-5 px-1 rounded-full bg-[#ffddb5] text-[#835400] font-data text-[11px] font-semibold border border-[#fcab29]"
+      aria-label={`${count} ${label}`}
+    >
+      {displayCount}
+    </span>
+  );
 }
 
 export function Sidebar({ badges }: { badges: NavBadges }) {

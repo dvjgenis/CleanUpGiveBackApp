@@ -21,8 +21,10 @@ import { useRouter } from 'expo-router';
 import { type ComponentType, useState } from 'react';
 import { Alert, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as Notifications from 'expo-notifications';
 
 import { requestSessionNotificationPermission } from '@/utils/notificationPermissions';
+import { supabase } from '@/lib/supabase';
 
 const PREFS: { key: string; label: string; Icon: ComponentType<{ color?: string }> }[] = [
   { key: 'approval', label: 'Approval Updates', Icon: NotifApprovalIcon },
@@ -86,6 +88,30 @@ export function NotificationPreferenceScreen() {
           ],
         );
         return;
+      }
+
+      // If permission granted, get and save push token
+      if (result.granted) {
+        try {
+          const pushToken = await Notifications.getExpoPushTokenAsync();
+          if (pushToken?.data && supabase) {
+            // Get current user metadata
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+              const existingMetadata = user.user_metadata || {};
+              // Merge push token into existing metadata
+              await supabase.auth.updateUser({
+                data: {
+                  ...existingMetadata,
+                  push_token: pushToken.data,
+                },
+              });
+            }
+          }
+        } catch (tokenErr) {
+          // Soft fail - don't block user from continuing
+          console.warn('Failed to save push token:', tokenErr);
+        }
       }
     } finally {
       setIsRequesting(false);

@@ -29,5 +29,8 @@ export async function writeAuditLog(
     before_value: beforeValue ?? null,
     after_value: afterValue ?? null,
   };
-  await supabase.from('admin_audit_log').insert(row as never);
+  const { error } = await supabase.from('admin_audit_log').insert(row as never);
+  if (error) {
+    console.error('[audit] Failed to write audit log:', error);
+  }
 }

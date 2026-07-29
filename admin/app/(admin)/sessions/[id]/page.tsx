@@ -68,7 +68,7 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
               </dl>
             </section>
 
-            <WalkingPath distanceMiles={mock.distance_miles} pointCount={null} />
+            <WalkingPath distanceMiles={mock.distance_miles} pointCount={null} checkpoints={[]} />
 
             <section className="bg-bg-surface border border-border-outline rounded-md p-lg">
               <h2 className="font-heading text-[20px] leading-[28px] text-text-primary mb-md">Photos</h2>
@@ -194,10 +194,19 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
                   <InfoRow label="Description" value={session.description} />
                 </div>
               )}
+              {session.decline_reason && (
+                <div className="col-span-2">
+                  <InfoRow label="Decline Reason" value={session.decline_reason} />
+                </div>
+              )}
             </dl>
           </section>
 
-          <WalkingPath distanceMiles={session.distance_miles} pointCount={routePointCount} />
+          <WalkingPath
+            distanceMiles={session.distance_miles}
+            pointCount={routePointCount}
+            checkpoints={checkpoints ?? []}
+          />
 
           {/* Photos */}
           <section className="bg-bg-surface border border-border-outline rounded-md p-lg">

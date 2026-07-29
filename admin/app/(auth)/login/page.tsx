@@ -58,6 +58,13 @@ export default function LoginPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="bg-bg-surface border border-border-outline rounded-md p-lg flex flex-col gap-md">
+          {process.env.NODE_ENV === 'development' && (
+            <div className="px-md py-sm rounded-sm bg-[#f7fff1] border border-primary text-text-tertiary text-[12px] font-body">
+              <strong className="text-primary font-semibold">Dev hint:</strong> donnaadam@cleanupgiveback.org ·
+              Password in credentials.local.md
+            </div>
+          )}
+
           {error && (
             <div className="px-md py-sm rounded-sm bg-[#ffd9de] border border-[#ba1a1a] text-[#ba1a1a] text-sm font-body">
               {error}

@@ -35,6 +35,7 @@ import {
   LuMail,
   LuZoomIn,
   LuZoomOut,
+  LuCopy,
 } from 'react-icons/lu';
 
 export interface IconProps {
@@ -94,3 +95,4 @@ export const UploadIcon = makeIcon(LuUpload);
 export const MailIcon = makeIcon(LuMail);
 export const ZoomInIcon = makeIcon(LuZoomIn);
 export const ZoomOutIcon = makeIcon(LuZoomOut);
+export const CopyIcon = makeIcon(LuCopy);

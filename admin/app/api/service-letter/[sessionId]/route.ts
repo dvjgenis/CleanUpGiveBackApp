@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { getAdminApiKey, getSessionsApiUrl } from '@/lib/sessionsApiConfig';
 import { assertAdminRequest } from '@/lib/assertAdmin';
+import { markLetterheadGenerated } from '@/actions/sessions';
 
 export async function GET(
   _request: Request,
@@ -32,6 +33,13 @@ export async function GET(
   const disposition =
     upstream.headers.get('Content-Disposition') ??
     `attachment; filename="CGB-Service-Letter-${sessionId}.pdf"`;
+
+  // Stamp letterhead generation - soft fail
+  try {
+    await markLetterheadGenerated(sessionId);
+  } catch (err) {
+    console.error(`Failed to mark letterhead generated for session ${sessionId}:`, err);
+  }
 
   return new NextResponse(buffer, {
     headers: {

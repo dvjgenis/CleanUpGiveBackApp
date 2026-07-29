@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { Prisma, SessionStatus } from '@prisma/client';
+import { Resend } from 'resend';
 
 import type { AuthenticatedRequest } from '../auth.js';
 import { verifyAuth } from '../auth.js';
@@ -30,6 +31,52 @@ type FinalizeBody = {
 type ApprovalBody = {
   status: 'approved' | 'not_approved' | 'invalid';
 };
+
+type FeedbackBody = {
+  source: 'session' | 'account';
+  rating: 'excited' | 'happy' | 'neutral' | 'sad' | 'very_sad';
+  comment?: string;
+  sessionId?: string;
+};
+
+function getResendClient(): Resend | null {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    return null;
+  }
+  return new Resend(apiKey);
+}
+
+function getFromAddress(): string {
+  return process.env.EMAIL_FROM ?? 'noreply@cleanupgiveback.org';
+}
+
+async function sendDonnaReviewEmail(sessionId: string, activity: string | null): Promise<void> {
+  const resend = getResendClient();
+  const donnaEmail = process.env.DONNA_EMAIL;
+  
+  if (!resend || !donnaEmail) {
+    return;
+  }
+
+  try {
+    await resend.emails.send({
+      from: getFromAddress(),
+      to: donnaEmail,
+      subject: 'Session ready for review',
+      text: [
+        'A volunteer session is ready for review.',
+        '',
+        `Session ID: ${sessionId}`,
+        `Activity: ${activity ?? 'Not specified'}`,
+        '',
+        'Please review in the admin portal.',
+      ].join('\n'),
+    });
+  } catch {
+    // Soft-fail: log only, don't throw
+  }
+}
 
 function serializeSession(session: {
   id: string;
@@ -177,6 +224,10 @@ export async function registerSessionRoutes(app: FastifyInstance) {
         },
       });
 
+      if (nextStatus === SessionStatus.under_review) {
+        void sendDonnaReviewEmail(updated.id, updated.activity);
+      }
+
       return reply.send({
         id: updated.id,
         status: updated.status,
@@ -295,6 +346,37 @@ export async function registerSessionRoutes(app: FastifyInstance) {
       });
 
       return reply.code(204).send();
+    },
+  );
+
+  app.post<{ Body: FeedbackBody }>(
+    '/feedback',
+    { preHandler: verifyAuth },
+    async (request, reply) => {
+      const { userId } = request as AuthenticatedRequest;
+      const body = request.body;
+
+      if (!body?.source || !body?.rating) {
+        return reply.code(400).send({ error: 'source and rating are required' });
+      }
+
+      if (!['session', 'account'].includes(body.source)) {
+        return reply.code(400).send({ error: 'source must be session or account' });
+      }
+
+      if (!['excited', 'happy', 'neutral', 'sad', 'very_sad'].includes(body.rating)) {
+        return reply.code(400).send({ error: 'Invalid rating value' });
+      }
+
+      const result = await prisma.$queryRaw<[{ id: string }]>`
+        INSERT INTO public.volunteer_feedback (user_id, session_id, source, rating, comment)
+        VALUES (${userId}::uuid, ${body.sessionId ?? null}::uuid, ${body.source}, ${body.rating}, ${body.comment ?? null})
+        RETURNING id
+      `;
+
+      const feedbackId = result[0]?.id;
+
+      return reply.code(201).send({ ok: true, id: feedbackId });
     },
   );
 }

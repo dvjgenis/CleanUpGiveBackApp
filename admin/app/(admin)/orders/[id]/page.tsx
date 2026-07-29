@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ChevronLeftIcon } from '@/components/ui/Icons';
+import { ChevronLeftIcon, CopyIcon } from '@/components/ui/Icons';
 import { InfoRow } from '@/components/ui/InfoRow';
 import {
   ORDER_STATUS_CONFIG,
@@ -10,6 +10,8 @@ import {
   getOrderById,
   trackingUrl,
 } from '@/lib/orders-data';
+import { OrderFulfillmentForm } from './OrderFulfillmentForm';
+import { CopyAddressButton } from './CopyAddressButton';
 
 export default async function OrderDetailPage({
   params,
@@ -56,10 +58,19 @@ export default async function OrderDetailPage({
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-lg">
         <div className="lg:col-span-3 flex flex-col gap-lg">
+          <OrderFulfillmentForm
+            orderId={order.id}
+            currentStatus={order.status}
+            currentTracking={order.tracking}
+            currentCarrier={order.carrier}
+          />
           <section className="bg-bg-surface border border-border-outline rounded-md p-lg">
-            <h2 className="font-heading text-[20px] leading-[28px] text-text-primary mb-md">
-              Shipping
-            </h2>
+            <div className="flex items-center justify-between mb-md">
+              <h2 className="font-heading text-[20px] leading-[28px] text-text-primary">
+                Shipping
+              </h2>
+              <CopyAddressButton address={shippingText} />
+            </div>
             <dl>
               <div className="flex flex-col sm:flex-row sm:items-start gap-xs sm:gap-md py-sm border-b border-border-outline">
                 <dt className="font-data text-[11px] tracking-[0.88px] uppercase text-text-tertiary sm:w-40 shrink-0 pt-0.5">

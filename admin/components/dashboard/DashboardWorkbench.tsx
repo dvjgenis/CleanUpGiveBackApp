@@ -18,7 +18,7 @@ import { MiniDonut } from '@/components/ui/MiniDonut';
 import { FeedbackEmojiStrip } from '@/components/ui/FeedbackEmojiStrip';
 import { TrendAreaChart } from '@/components/ui/TrendAreaChart';
 import { HorizontalBarChart } from '@/components/ui/HorizontalBarChart';
-import { ChevronRightIcon } from '@/components/ui/Icons';
+import { ChevronRightIcon, CloseIcon } from '@/components/ui/Icons';
 import { Button } from '@/components/ui/Button';
 import { CourtBadge } from '@/components/ui/CourtBadge';
 import { KPICard } from '@/components/ui/KPICard';
@@ -28,6 +28,7 @@ import { OrdersPreviewCard } from '@/components/ui/OrdersPreviewCard';
 import { useToast } from '@/components/ui/ToastProvider';
 import { ReviewDrawer } from '@/components/dashboard/ReviewDrawer';
 import { UsHeatmap } from '@/components/dashboard/UsHeatmap';
+import { SampleDataBanner } from '@/components/ui/SampleDataBanner';
 import type {
   DashboardKpi,
   MetricDonut,
@@ -42,6 +43,8 @@ import { approveSession, declineSession } from '@/actions/sessions';
 import type { PeriodSelection } from '@/lib/dashboard-period';
 import type { MonthlyRevenuePoint } from '@/lib/payments-mock';
 import type { OrderRow } from '@/lib/orders-data';
+
+const COACH_TIP_KEY = 'cugb-review-coach-tip-dismissed';
 
 type CommercePreview = {
   paymentsThisMonthCents: number;
@@ -114,11 +117,31 @@ export function DashboardWorkbench(props: Props) {
   const [declineReason, setDeclineReason] = useState('');
   const [queueSearch, setQueueSearch] = useState('');
   const [courtOnlyFilter, setCourtOnlyFilter] = useState(false);
+  const [coachTipDismissed, setCoachTipDismissed] = useState(true);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     setQueue(props.queue);
     setRecent(props.recent);
   }, [props.queue, props.recent]);
+
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(COACH_TIP_KEY);
+      setCoachTipDismissed(stored === '1');
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  function dismissCoachTip() {
+    setCoachTipDismissed(true);
+    try {
+      window.localStorage.setItem(COACH_TIP_KEY, '1');
+    } catch {
+      // ignore
+    }
+  }
 
   const drawerSession = useMemo(
     () => queue.find((s) => s.id === drawerId) ?? null,
@@ -187,7 +210,6 @@ export function DashboardWorkbench(props: Props) {
           pushToast({
             kind: 'success',
             message: `Approved ${session.volunteer_name}`,
-            action: { label: 'Audit log', onClick: () => router.push('/audit-log') },
           });
           startTransition(() => router.refresh());
         }
@@ -202,6 +224,37 @@ export function DashboardWorkbench(props: Props) {
     },
     [queue, recent, props.isMock, removeFromQueue, pushToast, restoreSession, router],
   );
+
+  const handleBulkApprove = useCallback(async () => {
+    if (selectedIds.size === 0) return;
+    const idsToApprove = Array.from(selectedIds);
+    setBusyId('bulk');
+    try {
+      if (props.isMock) {
+        idsToApprove.forEach((id) => removeFromQueue(id, 'approved'));
+        pushToast({
+          kind: 'success',
+          message: `Demo: approved ${idsToApprove.length} session${idsToApprove.length !== 1 ? 's' : ''}`,
+        });
+      } else {
+        await Promise.all(idsToApprove.map((id) => approveSession(id)));
+        idsToApprove.forEach((id) => removeFromQueue(id, 'approved'));
+        pushToast({
+          kind: 'success',
+          message: `Approved ${idsToApprove.length} session${idsToApprove.length !== 1 ? 's' : ''}`,
+        });
+        startTransition(() => router.refresh());
+      }
+      setSelectedIds(new Set());
+    } catch (err) {
+      pushToast({
+        kind: 'error',
+        message: err instanceof Error ? err.message : 'Bulk approve failed',
+      });
+    } finally {
+      setBusyId(null);
+    }
+  }, [selectedIds, props.isMock, removeFromQueue, pushToast, router]);
 
   const openOldest = useCallback(() => {
     if (filteredQueue[0]) setDrawerId(filteredQueue[0].id);
@@ -226,7 +279,6 @@ export function DashboardWorkbench(props: Props) {
         pushToast({
           kind: 'success',
           message: `Declined ${session.volunteer_name}`,
-          action: { label: 'Audit log', onClick: () => router.push('/audit-log') },
         });
         startTransition(() => router.refresh());
       }
@@ -258,8 +310,18 @@ export function DashboardWorkbench(props: Props) {
 
   return (
     <div className={`max-w-6xl mx-auto ${isPending ? 'opacity-70' : ''}`}>
-      <header className="flex flex-col gap-md mb-lg">
-        <h1 className="font-heading text-[32px] leading-[40px] text-text-primary">Welcome back Donna!</h1>
+      {props.isMock && <SampleDataBanner />}
+      <header className="flex flex-col gap-md mb-lg" aria-busy={isPending}>
+        {queue.length > 0 ? (
+          <>
+            <h1 className="font-heading text-[32px] leading-[40px] text-text-primary">
+              {queue.length} waiting for review
+            </h1>
+            <p className="font-body text-[16px] text-text-tertiary -mt-sm">Welcome back Donna</p>
+          </>
+        ) : (
+          <h1 className="font-heading text-[32px] leading-[40px] text-text-primary">Welcome back Donna!</h1>
+        )}
         <Suspense fallback={<div className="h-11 w-full bg-bg-surface-elevated rounded-md animate-pulse" />}>
           <PeriodToggle selection={props.selection} pending={isPending} />
         </Suspense>
@@ -316,6 +378,36 @@ export function DashboardWorkbench(props: Props) {
               >
                 Court-ordered only
               </button>
+              {selectedIds.size > 0 && (
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleBulkApprove}
+                  disabled={busyId === 'bulk'}
+                  className="min-h-11 ml-auto"
+                >
+                  Approve selected ({selectedIds.size})
+                </Button>
+              )}
+            </div>
+          )}
+
+          {!coachTipDismissed && queue.length > 0 && (
+            <div className="px-lg pb-md">
+              <div className="px-md py-sm rounded-sm bg-[#f7fff1] border border-primary text-[12px] font-body text-text-tertiary flex items-start gap-sm">
+                <span className="flex-1">
+                  <strong className="text-primary font-semibold">Tip:</strong> Select multiple sessions with
+                  checkboxes to approve in bulk. Click any row to review details.
+                </span>
+                <button
+                  type="button"
+                  onClick={dismissCoachTip}
+                  className="shrink-0 text-primary hover:text-text-primary transition-colors"
+                  aria-label="Dismiss tip"
+                >
+                  <CloseIcon className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
           )}
 
@@ -338,6 +430,25 @@ export function DashboardWorkbench(props: Props) {
                   key={item.id}
                   className="px-lg py-md flex flex-col sm:flex-row sm:items-center gap-sm sm:gap-md"
                 >
+                  <label className="flex items-center gap-sm shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(item.id)}
+                      onChange={(e) => {
+                        setSelectedIds((prev) => {
+                          const next = new Set(prev);
+                          if (e.target.checked) {
+                            next.add(item.id);
+                          } else {
+                            next.delete(item.id);
+                          }
+                          return next;
+                        });
+                      }}
+                      className="w-4 h-4 accent-primary"
+                      aria-label={`Select ${item.volunteer_name}`}
+                    />
+                  </label>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-xs">
                       <Link
@@ -379,7 +490,7 @@ export function DashboardWorkbench(props: Props) {
                 href="/sessions?status=under_review"
                 className="font-data text-[12px] font-semibold text-primary hover:underline inline-flex items-center gap-2"
               >
-                +{filteredQueue.length - 5} more in Sessions
+                View all {filteredQueue.length} in Sessions
                 <ChevronRightIcon className="w-3.5 h-3.5" color="currentColor" />
               </Link>
             </div>
@@ -560,6 +671,19 @@ export function DashboardWorkbench(props: Props) {
               </Button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Mobile sticky review bar */}
+      {queue.length > 0 && (
+        <div className="lg:hidden fixed bottom-14 left-0 right-0 z-20 bg-bg-surface border-t border-border-outline shadow-nav-bottom p-sm">
+          <Button
+            type="button"
+            className="w-full min-h-11"
+            onClick={openOldest}
+          >
+            Review next ({queue.length})
+          </Button>
         </div>
       )}
     </div>

@@ -23,6 +23,7 @@ export interface Database {
           created_at: string;
           adjusted_hours: number | null;
           admin_notes: string | null;
+          decline_reason: string | null;
           letterhead_generated_at: string | null;
         };
         Insert: Partial<Database['public']['Tables']['sessions']['Row']>;
@@ -119,6 +120,15 @@ export interface Database {
         };
         Insert: Partial<Database['public']['Tables']['admin_audit_log']['Row']>;
         Update: Partial<Database['public']['Tables']['admin_audit_log']['Row']>;
+      };
+      event_volunteer_notices: {
+        Row: {
+          event_id: string;
+          user_id: string;
+          notified_at: string;
+        };
+        Insert: Partial<Database['public']['Tables']['event_volunteer_notices']['Row']>;
+        Update: Partial<Database['public']['Tables']['event_volunteer_notices']['Row']>;
       };
     };
     Views: Record<string, never>;

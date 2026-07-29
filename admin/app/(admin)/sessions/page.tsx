@@ -12,6 +12,8 @@ interface SearchParams {
   q?: string;
   court?: string;
   sort?: string;
+  from?: string;
+  to?: string;
 }
 
 type SessionRow = Session & { volunteer_name: string };
@@ -32,6 +34,7 @@ function mockToSessionRow(m: (typeof MOCK_SESSIONS)[number]): SessionRow {
     created_at: m.created_at,
     adjusted_hours: m.adjusted_hours,
     admin_notes: null,
+    decline_reason: null,
     letterhead_generated_at: null,
     volunteer_name: m.volunteer_name,
   };
@@ -43,6 +46,8 @@ function filterMockSessions(params: {
   q: string;
   sort: string;
   page: number;
+  from: string;
+  to: string;
 }): { rows: SessionRow[]; totalCount: number; totalPages: number } {
   let rows = MOCK_SESSIONS.map(mockToSessionRow);
 
@@ -60,6 +65,15 @@ function filterMockSessions(params: {
         (s.activity ?? '').toLowerCase().includes(needle) ||
         s.id.toLowerCase().includes(needle),
     );
+  }
+  if (params.from) {
+    const fromDate = new Date(params.from);
+    rows = rows.filter((s) => new Date(s.started_at ?? s.created_at) >= fromDate);
+  }
+  if (params.to) {
+    const toDate = new Date(params.to);
+    toDate.setHours(23, 59, 59, 999);
+    rows = rows.filter((s) => new Date(s.started_at ?? s.created_at) <= toDate);
   }
 
   rows.sort((a, b) => {
@@ -89,6 +103,8 @@ export default async function SessionsPage({
   const q = params.q ?? '';
   const courtOnly = params.court === '1';
   const sort = params.sort ?? 'newest';
+  const fromDate = params.from ?? '';
+  const toDate = params.to ?? '';
 
   const supabase = await createDataClient();
 
@@ -105,6 +121,8 @@ export default async function SessionsPage({
       q,
       sort,
       page,
+      from: fromDate,
+      to: toDate,
     });
 
     return (
@@ -122,6 +140,8 @@ export default async function SessionsPage({
           currentQ={q}
           courtOnly={courtOnly}
           sort={sort}
+          from={fromDate}
+          to={toDate}
           isMock
         />
       </div>
@@ -155,6 +175,14 @@ export default async function SessionsPage({
     }
     query = query.or(orClauses.join(','));
   }
+  if (fromDate) {
+    query = query.gte('started_at', fromDate);
+  }
+  if (toDate) {
+    const toDateObj = new Date(toDate);
+    toDateObj.setHours(23, 59, 59, 999);
+    query = query.lte('started_at', toDateObj.toISOString());
+  }
 
   switch (sort) {
     case 'oldest':
@@ -177,6 +205,7 @@ export default async function SessionsPage({
     description: null,
     route: null,
     admin_notes: null,
+    decline_reason: null,
     letterhead_generated_at: null,
     volunteer_name: getVolunteerName(directory, s.user_id),
   }));
@@ -196,6 +225,8 @@ export default async function SessionsPage({
         currentQ={q}
         courtOnly={courtOnly}
         sort={sort}
+        from={fromDate}
+        to={toDate}
         isMock={false}
       />
     </div>
