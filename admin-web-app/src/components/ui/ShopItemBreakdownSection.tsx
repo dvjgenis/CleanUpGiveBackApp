@@ -103,33 +103,70 @@ export function ShopItemBreakdownSection({
                 return (
                   <li
                     key={row.id}
-                    className={`grid grid-cols-1 ${ITEM_TABLE_COLS} gap-xs lg:gap-md lg:items-center px-lg py-md lg:py-sm ${
+                    className={`px-md py-md first:rounded-t-md last:rounded-b-md lg:grid ${ITEM_TABLE_COLS} lg:gap-md lg:items-center lg:px-lg lg:py-sm ${
                       isTopShare
-                        ? 'bg-primary/5 outline outline-2 outline-primary outline-offset-[-2px] z-[1]'
+                        ? 'bg-primary/5 ring-2 ring-inset ring-primary z-[1]'
                         : ''
                     }`}
                   >
-                    <span className="font-body text-[14px] font-medium text-text-primary truncate">
+                    <div className="lg:hidden">
+                      <div className="flex items-baseline justify-between gap-md">
+                        <span className="min-w-0 truncate font-body text-[14px] font-medium text-text-primary">
+                          {row.label}
+                        </span>
+                        <span className="shrink-0 font-data text-[12px] text-text-tertiary">
+                          {row.qtySold} sold
+                        </span>
+                      </div>
+                      <dl className="mt-sm grid grid-cols-[minmax(0,1.25fr)_minmax(0,0.8fr)_minmax(0,0.65fr)] gap-x-md">
+                        <div className="min-w-0">
+                          <dt className="font-data text-[10px] uppercase tracking-[0.6px] text-text-tertiary">
+                            Revenue
+                          </dt>
+                          <dd className="mt-xs truncate font-data text-[14px] font-semibold tabular-nums text-text-primary">
+                            {formatCents(row.revenueCents)}
+                          </dd>
+                        </div>
+                        <div className="min-w-0">
+                          <dt className="font-data text-[10px] uppercase tracking-[0.6px] text-text-tertiary">
+                            Share
+                          </dt>
+                          <dd
+                            className={`mt-xs font-data text-[14px] tabular-nums ${
+                              isTopShare ? 'font-semibold text-primary' : 'text-text-primary'
+                            }`}
+                          >
+                            {row.sharePct}%
+                          </dd>
+                        </div>
+                        <div className="min-w-0 text-right">
+                          <dt className="font-data text-[10px] uppercase tracking-[0.6px] text-text-tertiary">
+                            Rank
+                          </dt>
+                          <dd className="mt-xs font-data text-[14px] tabular-nums text-text-primary">
+                            #{row.rankByShare}
+                          </dd>
+                        </div>
+                      </dl>
+                    </div>
+
+                    <span className="hidden truncate font-body text-[14px] font-medium text-text-primary lg:block">
                       {row.label}
                     </span>
-                    <span className="font-data text-[13px] text-text-tertiary whitespace-nowrap lg:text-center">
-                      <span className="lg:hidden text-text-tertiary/70">Sold </span>
+                    <span className="hidden whitespace-nowrap font-data text-[13px] text-text-tertiary lg:block lg:text-center">
                       {row.qtySold}
                     </span>
-                    <span className="font-data text-[13px] font-semibold text-text-primary whitespace-nowrap lg:text-center">
-                      <span className="lg:hidden text-text-tertiary/70 font-normal">Revenue </span>
+                    <span className="hidden whitespace-nowrap font-data text-[13px] font-semibold text-text-primary lg:block lg:text-center">
                       {formatCents(row.revenueCents)}
                     </span>
                     <span
-                      className={`font-data text-[13px] whitespace-nowrap lg:text-center ${
+                      className={`hidden whitespace-nowrap font-data text-[13px] lg:block lg:text-center ${
                         isTopShare ? 'font-semibold text-primary' : 'text-text-tertiary'
                       }`}
                     >
-                      <span className="lg:hidden text-text-tertiary/70">Share </span>
                       {row.sharePct}%
                     </span>
-                    <span className="font-data text-[13px] text-text-tertiary whitespace-nowrap lg:text-center">
-                      <span className="lg:hidden text-text-tertiary/70">Rank </span>
+                    <span className="hidden whitespace-nowrap font-data text-[13px] text-text-tertiary lg:block lg:text-center">
                       #{row.rankByShare}
                     </span>
                   </li>
@@ -139,17 +176,31 @@ export function ShopItemBreakdownSection({
           )}
           {hasSales ? (
             <div
-              className={`grid grid-cols-1 ${ITEM_TABLE_COLS} gap-xs lg:gap-md lg:items-center px-lg py-sm bg-bg-surface-elevated border-t border-border-outline`}
+              className={`px-md py-sm bg-bg-surface-elevated border-t border-border-outline lg:grid ${ITEM_TABLE_COLS} lg:gap-md lg:items-center lg:px-lg`}
             >
-              <span className="font-body text-[13px] font-semibold text-text-primary">Total</span>
-              <span className="font-data text-[13px] font-semibold text-text-primary lg:text-center">
+              <div className="flex items-center justify-between gap-md lg:hidden">
+                <span className="font-body text-[13px] font-semibold text-text-primary">Total</span>
+                <span className="font-data text-[12px] tabular-nums text-text-tertiary">
+                  {totalQty} sold
+                </span>
+                <span className="font-data text-[13px] font-semibold tabular-nums text-text-primary">
+                  {formatCents(totalRevenueCents)}
+                </span>
+                <span className="font-data text-[12px] tabular-nums text-text-tertiary">100%</span>
+              </div>
+              <span className="hidden font-body text-[13px] font-semibold text-text-primary lg:block">
+                Total
+              </span>
+              <span className="hidden font-data text-[13px] font-semibold text-text-primary lg:block lg:text-center">
                 {totalQty}
               </span>
-              <span className="font-data text-[13px] font-semibold text-text-primary lg:text-center">
+              <span className="hidden font-data text-[13px] font-semibold text-text-primary lg:block lg:text-center">
                 {formatCents(totalRevenueCents)}
               </span>
-              <span className="font-data text-[13px] text-text-tertiary lg:text-center">100%</span>
-              <span className="lg:text-center" aria-hidden>
+              <span className="hidden font-data text-[13px] text-text-tertiary lg:block lg:text-center">
+                100%
+              </span>
+              <span className="hidden lg:block lg:text-center" aria-hidden>
                 —
               </span>
             </div>

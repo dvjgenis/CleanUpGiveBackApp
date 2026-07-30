@@ -2,6 +2,16 @@
 
 ---
 
+## [2026-07-30] — Fix mobile shop-item breakdown spacing
+
+**R:** The desktop five-column product table leaked into mobile, leaving Revenue / Share / Rank labels and values unevenly spaced.
+
+**A:** Added a dedicated mobile card layout: item + sold count on the first row, then a stable three-column Revenue / Share / Rank definition grid. The total row now has its own compact mobile layout; desktop table columns are unchanged. Product rows inherit the card's top/bottom corner radius, and the top-share highlight uses an inset ring so its green border is not clipped on mobile.
+
+**P:** Payments → Shop items at mobile width has consistent metadata alignment without collisions or irregular gaps.
+
+---
+
 ## [2026-07-30] — Fix mobile walking-path control collision
 
 **R:** The floating fullscreen control overlapped MapLibre's top-right zoom control on narrow maps, especially after expanding the walking path.
