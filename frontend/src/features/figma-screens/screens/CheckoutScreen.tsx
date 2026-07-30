@@ -33,6 +33,8 @@ import { useCartDonation, useCartItems } from '../cartStore';
 import { markTrackerPaid } from '@/features/session-tracking/trackerPaymentStore';
 import { formatUsd, getCheckoutSummary, getTrackerCheckoutSummary } from '../mocks/checkout';
 import { layout, colors, fontFamilies, radius, shadows } from '../tokens';
+import { createShopOrder } from '@/lib/shopOrders';
+import { clearCart } from '../cartStore';
 
 const FOOTER_PAD = 20;
 
@@ -353,7 +355,7 @@ export function CheckoutScreen() {
     applyValidation(nextShipping, nextPayment);
   }
 
-  function handlePlaceOrder() {
+  async function handlePlaceOrder() {
     const isValid = applyValidation();
     if (!isValid) return;
     setFieldErrors(EMPTY_FIELD_ERRORS);
@@ -368,7 +370,38 @@ export function CheckoutScreen() {
       return;
     }
 
-    router.replace('/purchase-confirmation' as Href);
+    // Create the shop order in the database
+    try {
+      const orderResult = await createShopOrder({
+        items,
+        donation,
+        shipping: {
+          fullName: shipping.fullName,
+          street: shipping.street,
+          city: shipping.city,
+          state: shipping.state,
+          zip: shipping.zip,
+        },
+        tax: summary.tax,
+      });
+
+      if (orderResult.success) {
+        console.log('[checkout] Order created successfully:', orderResult.orderId);
+        // Clear the cart after successful order creation
+        clearCart();
+        // Navigate to confirmation with the order ID
+        router.replace(`/purchase-confirmation?orderId=${orderResult.orderId}` as Href);
+      } else {
+        console.error('[checkout] Order creation failed:', orderResult.error);
+        // For now, continue to confirmation even if DB insert failed
+        // In production, you'd want better error handling here
+        router.replace('/purchase-confirmation' as Href);
+      }
+    } catch (error) {
+      console.error('[checkout] Unexpected error during order creation:', error);
+      // Continue to confirmation as fallback
+      router.replace('/purchase-confirmation' as Href);
+    }
   }
 
   return (

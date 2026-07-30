@@ -153,7 +153,7 @@ export function PurchaseConfirmationScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const reducedMotion = useReducedMotion();
-  const params = useLocalSearchParams<{ mode?: string; amount?: string; returnTo?: string }>();
+  const params = useLocalSearchParams<{ mode?: string; amount?: string; returnTo?: string; orderId?: string }>();
   const isDonation = params.mode === 'donation';
   const isTracker = params.mode === 'tracker';
   const screenOpacity = useSharedValue(1);
@@ -285,6 +285,12 @@ export function PurchaseConfirmationScreen() {
                     <Text style={s.detailValue}>{row.value}</Text>
                   </View>
                 ))}
+                {params.orderId && (
+                  <View style={s.detailRow}>
+                    <Text style={s.detailLabel}>Order ID</Text>
+                    <Text style={s.detailValue}>{params.orderId}</Text>
+                  </View>
+                )}
               </View>
 
               <View style={s.totalBlock}>
