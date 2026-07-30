@@ -2,6 +2,18 @@
 
 ---
 
+## [2026-07-30] — Web-app session drawer: live walking path + photos
+
+**R:** Session preview showed dashed "coming soon" Walking Path / Photos placeholders even when live Supabase rows had a GPS `route` polyline and `session-photos` checkpoints.
+
+**A:** Added `loadSessionEvidence` (`lib/session-evidence.ts` + server action) to read `sessions.route` and sign checkpoint selfie/progress URLs. Wired `SessionPreviewDrawer` to fetch on open; `SessionWalkingPathMap` (MapLibre + Carto Voyager raster, green start / red end) and `SessionPhotoGrid` (thumbs + lightbox) render when data exists; mock mode keeps placeholders.
+
+**L:** Need ≥2 route points for a LineString; photo signing still requires `SUPABASE_SERVICE_ROLE_KEY` (same as admin PhotoGrid).
+
+**P:** Open a live session on `/sessions` → drawer shows real path/photos when the mobile app finalized a route and uploaded checkpoints.
+
+---
+
 ## [2026-07-30] — Event map Opens Google Maps by address, not bare coords
 
 **R:** Tapping the location map opened `query=lat,lng`, so Google showed coordinates with no readable place name.

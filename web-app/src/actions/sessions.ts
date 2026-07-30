@@ -5,11 +5,20 @@
  * `/sessions/[id]` detail page, so `adjustHours`/`saveAdminNotes`/letterhead
  * live in `SessionPreviewDrawer.tsx` instead, and bulk-approve lives on the
  * `SessionsPage.tsx` list (checkbox selection) rather than a Review Queue widget.
+ *
+ * `loadSessionEvidence` hydrates Walking Path + Photos in the same drawer from
+ * live `sessions.route` + `checkpoints` (signed via `session-photos` bucket).
  */
 import { revalidatePath } from 'next/cache';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { writeAuditLog } from '@/lib/audit';
 import { notifyVolunteerSessionDecision } from '@/lib/notify';
+import {
+  fetchSessionEvidence,
+  type SessionEvidence,
+} from '@/lib/session-evidence';
+
+export type { SessionEvidence, SessionPhoto } from '@/lib/session-evidence';
 
 async function getAdminUser() {
   if (process.env.BYPASS_AUTH === 'true') {
@@ -260,4 +269,9 @@ export async function markLetterheadGenerated(sessionId: string) {
   });
 
   revalidatePath('/sessions');
+}
+
+/** GPS route + signed checkpoint photos for the session preview drawer. */
+export async function loadSessionEvidence(sessionId: string): Promise<SessionEvidence | null> {
+  return fetchSessionEvidence(sessionId);
 }

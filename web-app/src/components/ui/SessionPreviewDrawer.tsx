@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Session detail drawer for web-app's mock Sessions page.
+ * Session detail drawer for web-app's Sessions page.
  * Mirrors the admin session detail page (`admin/app/(admin)/sessions/[id]/page.tsx`)
  * in a slide-over — Session Info, Admin Actions, Walking Path, Photos —
  * with an expand control that grows the panel to full screen.
@@ -11,12 +11,22 @@
  * actions and the `/api/service-letter` routes when `isMock` is false; in
  * mock mode they update local-only state, matching the existing
  * approve/decline "demo — not saved" pattern in this file.
+ *
+ * Live Walking Path + Photos hydrate via `loadSessionEvidence` when the
+ * session has a GPS `route` and/or signed `session-photos` checkpoints.
  */
 import { useEffect, useId, useState, useTransition } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { CourtBadge } from "@/components/ui/CourtBadge";
 import { CameraIcon, CloseIcon, CollapseIcon, ExpandIcon } from "@/components/ui/Icons";
-import { adjustHours, saveAdminNotes } from "@/actions/sessions";
+import { SessionPhotoGrid } from "@/components/sessions/SessionPhotoGrid";
+import { SessionWalkingPathMap } from "@/components/sessions/SessionWalkingPathMap";
+import {
+  adjustHours,
+  loadSessionEvidence,
+  saveAdminNotes,
+  type SessionEvidence,
+} from "@/actions/sessions";
 import {
   formatDateTime,
   formatDuration,
@@ -53,7 +63,67 @@ function StatusChip({ status }: { status: SessionStatus }) {
   );
 }
 
-function WalkingPathSection({ distanceMiles }: { distanceMiles: number | null }) {
+function WalkingPathPlaceholder({
+  distanceMiles,
+  pointCount,
+  loading,
+}: {
+  distanceMiles: number | null;
+  pointCount: number | null;
+  loading?: boolean;
+}) {
+  const hasRoute = pointCount != null && pointCount > 0;
+  return (
+    <div className="relative aspect-[16/9] rounded-sm border border-dashed border-border-outline bg-bg-surface-elevated overflow-hidden">
+      <svg
+        viewBox="0 0 320 160"
+        preserveAspectRatio="none"
+        className="absolute inset-0 w-full h-full opacity-50"
+        fill="none"
+        aria-hidden="true"
+      >
+        <path
+          d="M24 130 C 70 40, 120 150, 165 70 S 250 20, 296 60"
+          stroke="#009540"
+          strokeWidth="3"
+          strokeDasharray="7 7"
+          strokeLinecap="round"
+        />
+        <circle cx="24" cy="130" r="5" fill="#009540" />
+        <circle cx="296" cy="60" r="5" fill="#ba1a1a" />
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center px-lg">
+        <div className="text-center bg-bg-surface/90 rounded-sm px-md py-sm">
+          <p className="font-data text-[11px] tracking-[0.88px] uppercase text-text-tertiary">
+            {loading ? "Loading map…" : "Walking path"}
+          </p>
+          <p className="font-body text-[13px] text-text-tertiary mt-xs">
+            {loading
+              ? "Fetching GPS route…"
+              : hasRoute
+                ? `GPS route logged (${pointCount} point${pointCount !== 1 ? "s" : ""})`
+                : distanceMiles != null && distanceMiles > 0
+                  ? "Distance logged — no GPS polyline stored for this session"
+                  : "No GPS route recorded for this session"}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function WalkingPathSection({
+  distanceMiles,
+  evidence,
+  loading,
+}: {
+  distanceMiles: number | null;
+  evidence: SessionEvidence | null;
+  loading: boolean;
+}) {
+  const route = evidence?.route;
+  const hasLiveRoute = (route?.length ?? 0) >= 2;
+
   return (
     <section className="bg-bg-surface border border-border-outline rounded-md p-lg">
       <div className="flex items-center justify-between mb-md gap-md">
@@ -64,56 +134,89 @@ function WalkingPathSection({ distanceMiles }: { distanceMiles: number | null })
           </span>
         )}
       </div>
-      <div className="relative aspect-[16/9] rounded-sm border border-dashed border-border-outline bg-bg-surface-elevated overflow-hidden">
-        <svg
-          viewBox="0 0 320 160"
-          preserveAspectRatio="none"
-          className="absolute inset-0 w-full h-full opacity-50"
-          fill="none"
-          aria-hidden="true"
-        >
-          <path
-            d="M24 130 C 70 40, 120 150, 165 70 S 250 20, 296 60"
-            stroke="#009540"
-            strokeWidth="3"
-            strokeDasharray="7 7"
-            strokeLinecap="round"
-          />
-          <circle cx="24" cy="130" r="5" fill="#009540" />
-          <circle cx="296" cy="60" r="5" fill="#ba1a1a" />
-        </svg>
-        <div className="absolute inset-0 flex items-center justify-center px-lg">
-          <div className="text-center bg-bg-surface/90 rounded-sm px-md py-sm">
-            <p className="font-data text-[11px] tracking-[0.88px] uppercase text-text-tertiary">
-              Map view — coming soon
-            </p>
-            <p className="font-body text-[13px] text-text-tertiary mt-xs">
-              No GPS route recorded for this session
-            </p>
-          </div>
-        </div>
-      </div>
+      {hasLiveRoute && route ? (
+        <SessionWalkingPathMap route={route} />
+      ) : (
+        <WalkingPathPlaceholder
+          distanceMiles={distanceMiles}
+          pointCount={route && route.length > 0 ? route.length : evidence ? 0 : null}
+          loading={loading}
+        />
+      )}
+      {hasLiveRoute && route && (
+        <p className="mt-sm font-data text-[11px] text-text-tertiary">
+          {route.length} GPS point{route.length !== 1 ? "s" : ""} · green start · red end
+        </p>
+      )}
     </section>
   );
 }
 
-function PhotosSection() {
+function PhotosPlaceholder() {
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 gap-sm">
+      {PHOTO_LABELS.map((label, i) => (
+        <div
+          key={`${label}-${i}`}
+          className="aspect-square rounded-sm border border-dashed border-border-outline bg-bg-surface-elevated flex flex-col items-center justify-center gap-xs"
+        >
+          <CameraIcon className="w-[26px] h-[26px] text-text-tertiary" aria-hidden />
+          <span className="font-data text-[10px] uppercase tracking-[0.5px] text-text-tertiary">
+            {label}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function PhotosSection({
+  evidence,
+  loading,
+  isMock,
+}: {
+  evidence: SessionEvidence | null;
+  loading: boolean;
+  isMock: boolean;
+}) {
+  const photos = evidence?.photos ?? [];
+  const checkpointCount = evidence?.checkpointCount ?? 0;
+  const titleSuffix =
+    photos.length > 0
+      ? ` (${photos.length})`
+      : checkpointCount > 0
+        ? ` (${checkpointCount} checkpoint${checkpointCount !== 1 ? "s" : ""})`
+        : "";
+
   return (
     <section className="bg-bg-surface border border-border-outline rounded-md p-lg">
-      <h2 className="font-heading text-[20px] leading-[28px] text-text-primary mb-md">Photos</h2>
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-sm">
-        {PHOTO_LABELS.map((label, i) => (
-          <div
-            key={`${label}-${i}`}
-            className="aspect-square rounded-sm border border-dashed border-border-outline bg-bg-surface-elevated flex flex-col items-center justify-center gap-xs"
-          >
-            <CameraIcon className="w-[26px] h-[26px] text-text-tertiary" aria-hidden />
-            <span className="font-data text-[10px] uppercase tracking-[0.5px] text-text-tertiary">
-              {label}
-            </span>
-          </div>
-        ))}
-      </div>
+      <h2 className="font-heading text-[20px] leading-[28px] text-text-primary mb-md">
+        Photos{titleSuffix}
+      </h2>
+      {loading ? (
+        <p className="font-body text-[13px] text-text-tertiary">Loading photos…</p>
+      ) : photos.length > 0 ? (
+        <SessionPhotoGrid photos={photos} />
+      ) : evidence?.photoSignFailed ? (
+        <p className="font-body text-[13px] text-text-tertiary">
+          {checkpointCount} checkpoint{checkpointCount !== 1 ? "s" : ""} logged, but photo signing
+          failed — check <span className="font-data">SUPABASE_SERVICE_ROLE_KEY</span> and the{" "}
+          <span className="font-data">session-photos</span> bucket policy.
+        </p>
+      ) : isMock || !evidence ? (
+        <>
+          <PhotosPlaceholder />
+          <p className="font-body text-[13px] text-text-tertiary mt-md">
+            {isMock
+              ? "Demo placeholders — live sessions show checkpoint photos when available."
+              : "No photos captured for this session yet."}
+          </p>
+        </>
+      ) : (
+        <p className="font-body text-[13px] text-text-tertiary">
+          No photos captured for this session yet.
+        </p>
+      )}
     </section>
   );
 }
@@ -334,6 +437,8 @@ function SessionDrawerPanel({
   const [status, setStatus] = useState<SessionStatus>(session.status);
   const [adjustedHours, setAdjustedHours] = useState<number | null>(session.adjusted_hours);
   const [adminNotes, setAdminNotes] = useState(session.admin_notes ?? "");
+  const [evidence, setEvidence] = useState<SessionEvidence | null>(null);
+  const [evidenceLoading, setEvidenceLoading] = useState(!isMock);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -355,6 +460,34 @@ function SessionDrawerPanel({
     };
   }, [onClose, expanded]);
 
+  useEffect(() => {
+    if (isMock) {
+      setEvidence(null);
+      setEvidenceLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setEvidenceLoading(true);
+    setEvidence(null);
+
+    loadSessionEvidence(session.id)
+      .then((result) => {
+        if (!cancelled) setEvidence(result);
+      })
+      .catch((err) => {
+        console.warn("[SessionPreviewDrawer] evidence load failed:", err);
+        if (!cancelled) setEvidence(null);
+      })
+      .finally(() => {
+        if (!cancelled) setEvidenceLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session.id, isMock]);
+
   const canApprove = status !== "approved";
   const canDecline = status !== "not_approved";
 
@@ -363,6 +496,17 @@ function SessionDrawerPanel({
   const contentTransition = prefersReduced
     ? { duration: 0 }
     : { duration: 0.4, delay: 0.06, ease: EASE_OUT };
+
+  const pathSection = (
+    <WalkingPathSection
+      distanceMiles={session.distance_miles}
+      evidence={evidence}
+      loading={evidenceLoading}
+    />
+  );
+  const photosSection = (
+    <PhotosSection evidence={evidence} loading={evidenceLoading} isMock={isMock} />
+  );
 
   return (
     <motion.div
@@ -463,8 +607,8 @@ function SessionDrawerPanel({
                   </dl>
                 </section>
 
-                {expanded && <WalkingPathSection distanceMiles={session.distance_miles} />}
-                {expanded && <PhotosSection />}
+                {expanded && pathSection}
+                {expanded && photosSection}
               </div>
 
               <div className={`flex flex-col gap-lg ${expanded ? "lg:col-span-2" : ""}`}>
@@ -489,8 +633,8 @@ function SessionDrawerPanel({
 
             {!expanded && (
               <>
-                <WalkingPathSection distanceMiles={session.distance_miles} />
-                <PhotosSection />
+                {pathSection}
+                {photosSection}
               </>
             )}
           </div>
