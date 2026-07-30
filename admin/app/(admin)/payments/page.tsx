@@ -3,10 +3,12 @@ import { ChevronRightIcon } from '@/components/ui/Icons';
 import { KPICard } from '@/components/ui/KPICard';
 import { PeriodToggle } from '@/components/ui/PeriodToggle';
 import { PaymentsBreakdownSection } from '@/components/ui/PaymentsBreakdownSection';
+import { ShopItemBreakdownSection } from '@/components/ui/ShopItemBreakdownSection';
 import {
   breakdownGranularityForPeriod,
   formatCents,
   loadPaymentsBreakdown,
+  loadShopItemBreakdown,
 } from '@/lib/payments-data';
 import { parsePeriodSelection, periodInterval, periodLabel } from '@/lib/dashboard-period';
 
@@ -21,7 +23,10 @@ export default async function PaymentsPage({
   const interval = periodInterval(selection, now);
   const granularity = breakdownGranularityForPeriod(selection.period, interval);
 
-  const breakdown = await loadPaymentsBreakdown(interval, granularity, now);
+  const [breakdown, itemBreakdown] = await Promise.all([
+    loadPaymentsBreakdown(interval, granularity, now),
+    loadShopItemBreakdown(interval, now),
+  ]);
   const totalCents = breakdown.totalDonationsCents + breakdown.totalShopCents;
 
   return (
@@ -42,7 +47,7 @@ export default async function PaymentsPage({
         <KPICard
           label="Donations"
           value={formatCents(breakdown.totalDonationsCents)}
-          subtext={periodLabel(selection, now)}
+          subtext={breakdown.donationsFromDb ? 'From donations' : periodLabel(selection, now)}
           index={0}
         />
         <KPICard
@@ -58,6 +63,10 @@ export default async function PaymentsPage({
 
       <div className="mb-xl">
         <PaymentsBreakdownSection rows={breakdown.rows} />
+      </div>
+
+      <div className="mb-xl">
+        <ShopItemBreakdownSection breakdown={itemBreakdown} />
       </div>
 
       <div className="bg-bg-surface border border-border-outline rounded-md p-lg flex flex-col sm:flex-row sm:items-center justify-between gap-md">

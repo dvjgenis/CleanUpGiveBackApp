@@ -1,6 +1,6 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
+import { createClient as createSupabaseClient, type SupabaseClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
-import type { SupabaseClient } from '@supabase/supabase-js';
 
 function cookieHandlers(cookieStore: Awaited<ReturnType<typeof cookies>>) {
   return {
@@ -15,6 +15,20 @@ function cookieHandlers(cookieStore: Awaited<ReturnType<typeof cookies>>) {
       }
     },
   };
+}
+
+/**
+ * Cookie-free service-role client for use inside `unstable_cache` (cookies/headers
+ * are disallowed in cached callbacks). Prefer `createDataClient` / `tryCreateServiceClient`
+ * for normal Server Components.
+ */
+export function createServiceRoleClient(): SupabaseClient | null {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  if (!url || !key) return null;
+  return createSupabaseClient(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
 }
 
 export async function createClient() {

@@ -43,7 +43,15 @@ function MiniBadge({ count }: { count: number }) {
   );
 }
 
-export function MobileNav({ badges }: { badges: NavBadges }) {
+export function MobileNav({
+  badges,
+  accountName = 'Donna Adam',
+  accountInitials = 'DA',
+}: {
+  badges: NavBadges;
+  accountName?: string;
+  accountInitials?: string;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -77,13 +85,15 @@ export function MobileNav({ badges }: { badges: NavBadges }) {
     <>
       <header className="lg:hidden h-14 bg-bg-surface-elevated border-b border-border-outline flex items-center justify-between px-lg shadow-bar-top">
         <Link href="/" className="flex items-center gap-sm min-w-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary rounded-sm">
-          <img
-            src="/logo.png"
-            alt="Clean Up – Give Back"
-            width={28}
-            height={28}
-            className="w-7 h-7 rounded shrink-0 object-cover"
-          />
+          <span className="block size-7 shrink-0 overflow-hidden rounded">
+            <img
+              src="/logo.png"
+              alt="Clean Up – Give Back"
+              width={28}
+              height={28}
+              className="size-full max-w-none object-cover object-center"
+            />
+          </span>
           <span className="font-heading text-[16px] text-text-primary">Admin</span>
         </Link>
         <button
@@ -160,11 +170,11 @@ export function MobileNav({ badges }: { badges: NavBadges }) {
                       className="w-7 h-7 rounded-full bg-primary text-white font-data text-[10px] font-semibold inline-flex items-center justify-center shrink-0"
                       aria-hidden
                     >
-                      DA
+                      {accountInitials}
                     </span>
                     <span className="min-w-0">
                       <span className="block">Account</span>
-                      <span className="block font-normal text-[10px] text-text-tertiary">Donna Adam</span>
+                      <span className="block font-normal text-[10px] text-text-tertiary">{accountName}</span>
                     </span>
                   </Link>
                   <button

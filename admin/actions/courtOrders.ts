@@ -1,8 +1,9 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { writeAuditLog } from '@/lib/audit';
+import { NAV_BADGES_TAG } from '@/lib/nav-badges';
 
 async function getAdminUser() {
   if (process.env.BYPASS_AUTH === 'true') {
@@ -65,4 +66,5 @@ export async function upsertCourtOrder({
 
   revalidatePath('/users');
   revalidatePath(`/volunteers/${userId}`);
+  revalidateTag(NAV_BADGES_TAG);
 }

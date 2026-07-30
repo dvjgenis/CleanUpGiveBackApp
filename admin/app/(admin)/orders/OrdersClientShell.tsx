@@ -7,6 +7,7 @@ import {
   ORDER_STATUS_CONFIG,
   formatOrderCents,
   formatOrderDate,
+  normalizeOrderStatus,
   type OrderRow,
   type OrderStatus,
 } from '@/lib/orders-data';
@@ -16,9 +17,11 @@ const STATUS_FILTERS: { value: 'all' | OrderStatus; label: string }[] = [
   { value: 'pending', label: 'Pending' },
   { value: 'paid', label: 'Paid' },
   { value: 'shipped', label: 'Shipped' },
-  { value: 'delivered', label: 'Delivered' },
   { value: 'cancelled', label: 'Cancelled' },
 ];
+
+/** Shared tracks so header + rows size the same columns. */
+const ORDER_TABLE_COLS = 'sm:grid-cols-[1.4fr_1fr_7.5rem_5rem_6.5rem]';
 
 export function OrdersClientShell({ orders }: { orders: OrderRow[] }) {
   const [q, setQ] = useState('');
@@ -27,7 +30,7 @@ export function OrdersClientShell({ orders }: { orders: OrderRow[] }) {
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
     return orders.filter((order) => {
-      if (status !== 'all' && order.status !== status) return false;
+      if (status !== 'all' && normalizeOrderStatus(order.status) !== status) return false;
       if (!needle) return true;
       return (
         order.volunteer.toLowerCase().includes(needle) ||
@@ -47,14 +50,14 @@ export function OrdersClientShell({ orders }: { orders: OrderRow[] }) {
           placeholder="Search by volunteer, email, or order ID…"
           className="w-full sm:w-64"
         />
-        <div className="flex gap-xs overflow-x-auto pb-xs" role="group" aria-label="Filter by status">
+        <div className="flex items-center gap-xs overflow-x-auto" role="group" aria-label="Filter by status">
           {STATUS_FILTERS.map((f) => (
             <button
               key={f.value}
               type="button"
               aria-pressed={status === f.value}
               onClick={() => setStatus(f.value)}
-              className={`min-h-11 px-md rounded-full border font-data text-[12px] font-semibold whitespace-nowrap transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary ${
+              className={`h-11 shrink-0 inline-flex items-center px-md rounded-full border font-data text-[12px] font-semibold whitespace-nowrap transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary ${
                 status === f.value
                   ? 'bg-primary text-white border-primary'
                   : 'bg-bg-surface text-text-tertiary border-border-outline hover:border-primary hover:text-primary'
@@ -70,9 +73,16 @@ export function OrdersClientShell({ orders }: { orders: OrderRow[] }) {
       </div>
 
       <div className="bg-bg-surface border border-border-outline rounded-md overflow-hidden">
-        <div className="hidden sm:grid grid-cols-[1fr_auto_auto_auto_auto] gap-md px-lg py-sm bg-bg-surface-elevated border-b border-border-outline">
+        <div
+          className={`hidden sm:grid ${ORDER_TABLE_COLS} gap-md px-lg py-sm bg-bg-surface-elevated border-b border-border-outline`}
+        >
           {['Volunteer', 'Items', 'Date', 'Total', 'Status'].map((col) => (
-            <span key={col} className="font-data text-[11px] tracking-[0.88px] uppercase text-text-tertiary">
+            <span
+              key={col}
+              className={`font-data text-[11px] tracking-[0.88px] uppercase text-text-tertiary ${
+                col === 'Volunteer' || col === 'Items' ? 'text-left' : 'text-center'
+              }`}
+            >
               {col}
             </span>
           ))}
@@ -82,12 +92,12 @@ export function OrdersClientShell({ orders }: { orders: OrderRow[] }) {
         ) : (
           <ul role="list" className="divide-y divide-border-outline">
             {filtered.map((order) => {
-              const cfg = ORDER_STATUS_CONFIG[order.status];
+              const cfg = ORDER_STATUS_CONFIG[normalizeOrderStatus(order.status)];
               return (
                 <li key={order.id}>
                   <Link
                     href={`/orders/${order.id}`}
-                    className="grid grid-cols-1 sm:grid-cols-[1fr_auto_auto_auto_auto] gap-xs sm:gap-md items-center px-lg py-md table-row-hover transition-colors no-underline text-inherit"
+                    className={`grid grid-cols-1 ${ORDER_TABLE_COLS} gap-xs sm:gap-md items-center px-lg py-md table-row-hover transition-colors no-underline text-inherit`}
                     aria-label={`View order for ${order.volunteer}`}
                   >
                     <div className="min-w-0">
@@ -96,20 +106,22 @@ export function OrdersClientShell({ orders }: { orders: OrderRow[] }) {
                       </p>
                       <p className="font-body text-[12px] text-text-tertiary">{order.email}</p>
                     </div>
-                    <span className="font-data text-[13px] text-text-tertiary sm:whitespace-nowrap sm:max-w-[180px] sm:truncate">
+                    <span className="font-data text-[13px] text-text-tertiary sm:whitespace-nowrap sm:truncate min-w-0">
                       {order.items}
                     </span>
-                    <span className="font-data text-[13px] text-text-tertiary whitespace-nowrap">
+                    <span className="font-data text-[13px] text-text-tertiary whitespace-nowrap sm:text-center">
                       {formatOrderDate(order.createdAt)}
                     </span>
-                    <span className="font-data text-[13px] font-semibold text-text-primary whitespace-nowrap">
+                    <span className="font-data text-[13px] font-semibold text-text-primary whitespace-nowrap sm:text-center">
                       {formatOrderCents(order.totalCents)}
                     </span>
-                    <span
-                      className={`inline-flex font-data text-[11px] font-semibold px-sm py-xs rounded-xs border whitespace-nowrap w-fit ${cfg.className}`}
-                    >
-                      {cfg.label}
-                    </span>
+                    <div className="sm:flex sm:justify-center">
+                      <span
+                        className={`inline-flex font-data text-[11px] font-semibold px-sm py-xs rounded-xs border whitespace-nowrap w-fit ${cfg.className}`}
+                      >
+                        {cfg.label}
+                      </span>
+                    </div>
                   </Link>
                 </li>
               );

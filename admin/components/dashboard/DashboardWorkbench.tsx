@@ -370,7 +370,7 @@ export function DashboardWorkbench(props: Props) {
                 type="button"
                 aria-pressed={courtOnlyFilter}
                 onClick={() => setCourtOnlyFilter((v) => !v)}
-                className={`min-h-11 px-md rounded-full border font-data text-[12px] font-semibold whitespace-nowrap transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary ${
+                className={`h-11 shrink-0 inline-flex items-center px-md rounded-full border font-data text-[12px] font-semibold whitespace-nowrap transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary ${
                   courtOnlyFilter
                     ? 'bg-primary text-white border-primary'
                     : 'bg-bg-surface text-text-tertiary border-border-outline hover:border-primary hover:text-primary'

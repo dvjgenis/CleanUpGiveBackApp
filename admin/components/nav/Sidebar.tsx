@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, type FocusEvent, type ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { motion, useReducedMotion } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
 import type { NavBadges } from '@/lib/nav-badges';
 import {
@@ -16,17 +17,16 @@ import {
   PaymentIcon,
   AccountIcon,
   SignOutIcon,
-  PanelCollapseIcon,
-  PanelExpandIcon,
   type IconProps,
 } from '@/components/ui/Icons';
 
-const STORAGE_KEY = 'cugb-admin-sidebar-collapsed';
+const COLLAPSED_W = 72; // 4.5rem — icon rail
+const EXPANDED_W = 240; // 15rem / w-60
 
 type NavItem = {
   href: string;
   label: string;
-  icon: (props: IconProps) => React.ReactNode;
+  icon: (props: IconProps) => ReactNode;
   badgeKey?: keyof Pick<NavBadges, 'sessionsUnderReview' | 'courtAtRisk' | 'openOrders'>;
 };
 
@@ -54,30 +54,43 @@ function Badge({ count, label }: { count: number; label: string }) {
   );
 }
 
-export function Sidebar({ badges }: { badges: NavBadges }) {
+/**
+ * Label fade — Aceternity SidebarLink pattern (opacity + display),
+ * adapted for flex children (badges) without adopting Aceternity styles.
+ */
+function NavLabel({ expanded, children }: { expanded: boolean; children: ReactNode }) {
+  const prefersReduced = useReducedMotion() ?? false;
+  return (
+    <motion.span
+      initial={false}
+      animate={{
+        display: expanded ? 'inline-flex' : 'none',
+        opacity: expanded ? 1 : 0,
+      }}
+      transition={prefersReduced ? { duration: 0 } : undefined}
+      aria-hidden={!expanded}
+      className="min-w-0 items-center gap-sm whitespace-nowrap !p-0 !m-0"
+      style={{ pointerEvents: expanded ? 'auto' : 'none' }}
+    >
+      {children}
+    </motion.span>
+  );
+}
+
+export function Sidebar({
+  badges,
+  accountName = 'Donna Adam',
+  accountInitials = 'DA',
+}: {
+  badges: NavBadges;
+  accountName?: string;
+  accountInitials?: string;
+}) {
   const pathname = usePathname();
   const router = useRouter();
-  const [collapsed, setCollapsed] = useState(false);
-
-  useEffect(() => {
-    try {
-      setCollapsed(window.localStorage.getItem(STORAGE_KEY) === '1');
-    } catch {
-      // ignore private-mode / blocked storage
-    }
-  }, []);
-
-  function toggleCollapsed() {
-    setCollapsed((prev) => {
-      const next = !prev;
-      try {
-        window.localStorage.setItem(STORAGE_KEY, next ? '1' : '0');
-      } catch {
-        // ignore
-      }
-      return next;
-    });
-  }
+  const prefersReduced = useReducedMotion() ?? false;
+  /** Collapsed icon rail by default; opens on hover or keyboard focus (Aceternity open state). */
+  const [open, setOpen] = useState(false);
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -91,45 +104,60 @@ export function Sidebar({ badges }: { badges: NavBadges }) {
     return pathname.startsWith(href);
   }
 
+  function handleBlur(e: FocusEvent<HTMLElement>) {
+    if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+      setOpen(false);
+    }
+  }
+
   const linkBase =
-    'flex items-center min-h-11 rounded-sm font-data text-[12px] font-semibold leading-[18px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary';
+    'flex items-center min-h-11 rounded-sm font-data text-[12px] font-semibold leading-[18px] transition-[color,background-color,padding,gap] duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary';
   const linkActive = 'bg-[#f7fff1] text-primary border border-primary/30';
   const linkIdle = 'text-text-tertiary hover:text-text-primary hover:bg-bg-app border border-transparent';
 
   return (
-    <aside
-      className={`hidden lg:flex flex-col h-screen sticky top-0 bg-bg-surface-elevated border-r border-border-outline shrink-0 overflow-hidden transition-[width] duration-200 ease-out ${
-        collapsed ? 'w-[4.5rem]' : 'w-60'
-      }`}
-      data-collapsed={collapsed ? 'true' : 'false'}
+    <motion.aside
+      initial={false}
+      animate={{ width: open ? EXPANDED_W : COLLAPSED_W }}
+      transition={prefersReduced ? { duration: 0 } : undefined}
+      className="hidden lg:flex flex-col h-screen sticky top-0 shrink-0 bg-bg-surface-elevated border-r border-border-outline overflow-hidden"
+      data-collapsed={open ? 'false' : 'true'}
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+      onFocus={() => setOpen(true)}
+      onBlur={handleBlur}
     >
       <div
-        className={`h-16 flex items-center border-b border-border-outline shrink-0 ${
-          collapsed ? 'justify-center px-sm' : 'px-lg gap-sm'
+        className={`min-h-16 py-md flex items-center border-b border-border-outline shrink-0 ${
+          open ? 'px-lg gap-sm' : 'justify-center px-sm'
         }`}
       >
         <Link
           href="/"
           className={`flex items-center min-w-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary rounded-sm ${
-            collapsed ? 'justify-center' : 'gap-sm flex-1'
+            open ? 'gap-sm flex-1' : 'justify-center'
           }`}
-          title={collapsed ? 'Clean Up – Give Back Admin' : undefined}
+          title={open ? undefined : 'Clean Up – Give Back Admin'}
         >
-          <img
-            src="/logo.png"
-            alt="Clean Up – Give Back"
-            width={32}
-            height={32}
-            className="w-8 h-8 rounded shrink-0 object-cover"
-          />
-          {!collapsed && (
-            <div className="min-w-0">
-              <p className="font-heading text-[14px] leading-[18px] text-text-primary truncate">
+          <span className="block size-8 shrink-0 overflow-hidden rounded">
+            <img
+              src="/logo.png"
+              alt="Clean Up – Give Back"
+              width={32}
+              height={32}
+              className="size-full max-w-none object-cover object-center"
+            />
+          </span>
+          <NavLabel expanded={open}>
+            <span className="min-w-0">
+              <span className="block font-heading text-[14px] leading-[18px] text-text-primary truncate">
                 CleanUpGiveBack
-              </p>
-              <p className="font-data text-[10px] text-text-tertiary tracking-widest uppercase">Admin</p>
-            </div>
-          )}
+              </span>
+              <span className="block font-data text-[10px] text-text-tertiary tracking-widest uppercase">
+                Admin
+              </span>
+            </span>
+          </NavLabel>
         </Link>
       </div>
 
@@ -154,96 +182,62 @@ export function Sidebar({ badges }: { badges: NavBadges }) {
               <li key={item.href}>
                 <Link
                   href={item.href}
-                  title={collapsed ? item.label : undefined}
-                  aria-label={collapsed ? item.label : undefined}
+                  title={open ? undefined : item.label}
+                  aria-label={open ? undefined : item.label}
                   className={`${linkBase} ${active ? linkActive : linkIdle} ${
-                    collapsed ? 'justify-center px-0' : 'gap-sm px-md'
+                    open ? 'gap-sm px-md' : 'justify-center px-0'
                   }`}
                   aria-current={active ? 'page' : undefined}
                 >
                   <item.icon className="w-4 h-4 shrink-0" aria-hidden />
-                  {!collapsed && (
-                    <>
-                      {item.label}
-                      <Badge count={count} label={badgeLabel} />
-                    </>
-                  )}
+                  <NavLabel expanded={open}>
+                    {item.label}
+                    <Badge count={count} label={badgeLabel} />
+                  </NavLabel>
                 </Link>
               </li>
             );
           })}
         </ul>
+      </nav>
 
-        <div className="mt-md pt-md border-t border-border-outline flex flex-col gap-xs">
+      {/* Full-bleed divider — outside padded nav so the rule spans the rail */}
+      <div className="shrink-0 border-t border-border-outline">
+        <div className="px-sm py-md flex flex-col gap-xs">
           <Link
             href="/account"
-            title={collapsed ? 'Account — Donna Adam' : undefined}
-            aria-label={collapsed ? 'Account — Donna Adam' : undefined}
+            title={open ? undefined : accountName}
+            aria-label={open ? undefined : accountName}
             className={`${linkBase} ${
               isActive('/account') ? linkActive : 'text-text-tertiary hover:text-text-primary hover:bg-bg-app'
-            } ${collapsed ? 'justify-center px-0' : 'gap-sm px-md'}`}
+            } ${open ? 'gap-sm px-md' : 'justify-center px-0'}`}
             aria-current={isActive('/account') ? 'page' : undefined}
           >
-            {collapsed ? (
-              <span
-                className="w-7 h-7 rounded-full bg-primary text-white font-data text-[10px] font-semibold inline-flex items-center justify-center shrink-0"
-                aria-hidden
-              >
-                DA
-              </span>
-            ) : (
-              <>
-                <span
-                  className="w-7 h-7 rounded-full bg-primary text-white font-data text-[10px] font-semibold inline-flex items-center justify-center shrink-0"
-                  aria-hidden
-                >
-                  DA
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate">Account</span>
-                  <span className="block font-normal text-[10px] text-text-tertiary truncate">Donna Adam</span>
-                </span>
-                <AccountIcon className="w-4 h-4 shrink-0 opacity-70" />
-              </>
-            )}
+            <span
+              className="w-7 h-7 rounded-full bg-primary text-white font-data text-[10px] font-semibold inline-flex items-center justify-center shrink-0"
+              aria-hidden
+            >
+              {accountInitials}
+            </span>
+            <NavLabel expanded={open}>
+              <span className="min-w-0 flex-1 truncate">{accountName}</span>
+              <AccountIcon className="w-4 h-4 shrink-0 opacity-70" />
+            </NavLabel>
           </Link>
           <button
             type="button"
             onClick={handleSignOut}
-            title={collapsed ? 'Sign out' : undefined}
-            aria-label={collapsed ? 'Sign out' : undefined}
+            title={open ? undefined : 'Sign out'}
+            aria-label={open ? undefined : 'Sign out'}
             className={`w-full ${linkBase} text-text-tertiary hover:text-text-primary hover:bg-bg-app ${
-              collapsed ? 'justify-center px-0' : 'gap-sm px-md'
+              open ? 'gap-sm px-md' : 'justify-center px-0'
             }`}
           >
             <SignOutIcon className="w-4 h-4 shrink-0" />
-            {!collapsed && 'Sign out'}
+            <NavLabel expanded={open}>Sign out</NavLabel>
           </button>
         </div>
-      </nav>
-
-      <div className={`shrink-0 border-t border-border-outline p-sm ${collapsed ? 'flex justify-center' : ''}`}>
-        <button
-          type="button"
-          onClick={toggleCollapsed}
-          aria-expanded={!collapsed}
-          aria-controls="admin-sidebar-nav"
-          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          className={`interactive min-h-11 rounded-sm text-text-tertiary hover:text-text-primary hover:bg-bg-app transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary inline-flex items-center ${
-            collapsed ? 'justify-center w-11' : 'w-full gap-sm px-md font-data text-[12px] font-semibold'
-          }`}
-        >
-          {collapsed ? (
-            <PanelExpandIcon className="w-4 h-4" aria-hidden />
-          ) : (
-            <>
-              <PanelCollapseIcon className="w-4 h-4 shrink-0" aria-hidden />
-              Collapse
-            </>
-          )}
-        </button>
       </div>
-    </aside>
+    </motion.aside>
   );
 }

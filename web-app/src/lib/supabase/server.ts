@@ -1,0 +1,86 @@
+/**
+ * Server-side Supabase clients — ported from `admin/lib/supabase/server.ts`.
+ * web-app shares the same Supabase project as `admin/` and the mobile app
+ * (`frontend/`), so this is the same client shape wired to `NEXT_PUBLIC_SUPABASE_*`
+ * / `SUPABASE_SERVICE_ROLE_KEY` in `web-app/.env.local`.
+ */
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
+import { createClient as createSupabaseClient, type SupabaseClient } from '@supabase/supabase-js';
+import { cookies } from 'next/headers';
+
+function cookieHandlers(cookieStore: Awaited<ReturnType<typeof cookies>>) {
+  return {
+    getAll() {
+      return cookieStore.getAll();
+    },
+    setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
+      try {
+        cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options));
+      } catch {
+        // Ignore in Server Components — middleware handles refresh.
+      }
+    },
+  };
+}
+
+/** Cookie-free service-role client for use outside request scope (e.g. `unstable_cache`). */
+export function createServiceRoleClient(): SupabaseClient | null {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  if (!url || !key) return null;
+  return createSupabaseClient(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
+
+export async function createClient() {
+  const cookieStore = await cookies();
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { cookies: cookieHandlers(cookieStore) },
+  );
+}
+
+/** True when web-app/.env.local has a non-empty service-role key. */
+export function hasServiceRoleKey(): boolean {
+  return Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY?.trim());
+}
+
+/**
+ * Service-role client for Auth Admin API (listUsers / getUserById) and for
+ * reading volunteer-owned rows without RLS. Returns null when
+ * `SUPABASE_SERVICE_ROLE_KEY` is missing so pages can degrade to mock data
+ * instead of crashing.
+ */
+export async function tryCreateServiceClient(): Promise<SupabaseClient | null> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  if (!url || !key) return null;
+
+  const cookieStore = await cookies();
+  return createServerClient(url, key, { cookies: cookieHandlers(cookieStore) });
+}
+
+export async function createServiceClient(): Promise<SupabaseClient> {
+  const client = await tryCreateServiceClient();
+  if (!client) {
+    throw new Error(
+      'Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in web-app/.env.local. ' +
+        'Copy the service_role secret from Supabase Dashboard → Project Settings → API.',
+    );
+  }
+  return client;
+}
+
+/**
+ * Data-plane client for reads. Prefers service role so pages can read
+ * volunteer-owned rows (sessions / feedback / orders) even without a logged-in
+ * admin JWT; falls back to the cookie/anon client, then to mock data upstream
+ * when both come back empty.
+ */
+export async function createDataClient(): Promise<SupabaseClient> {
+  const service = await tryCreateServiceClient();
+  if (service) return service;
+  return createClient();
+}

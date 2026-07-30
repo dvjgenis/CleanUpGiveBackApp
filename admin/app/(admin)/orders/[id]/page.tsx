@@ -8,6 +8,7 @@ import {
   formatOrderDate,
   formatShippingAddress,
   getOrderById,
+  normalizeOrderStatus,
   trackingUrl,
 } from '@/lib/orders-data';
 import { OrderFulfillmentForm } from './OrderFulfillmentForm';
@@ -22,7 +23,7 @@ export default async function OrderDetailPage({
   const order = getOrderById(id);
   if (!order) notFound();
 
-  const cfg = ORDER_STATUS_CONFIG[order.status];
+  const cfg = ORDER_STATUS_CONFIG[normalizeOrderStatus(order.status)];
   const trackHref = trackingUrl(order.carrier, order.tracking);
   const shippingText = formatShippingAddress(order.shipping);
 
@@ -60,7 +61,7 @@ export default async function OrderDetailPage({
         <div className="lg:col-span-3 flex flex-col gap-lg">
           <OrderFulfillmentForm
             orderId={order.id}
-            currentStatus={order.status}
+            currentStatus={normalizeOrderStatus(order.status)}
             currentTracking={order.tracking}
             currentCarrier={order.carrier}
           />

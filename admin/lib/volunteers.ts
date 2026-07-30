@@ -1,4 +1,6 @@
+import { cache } from 'react';
 import type { SupabaseClient, User } from '@supabase/supabase-js';
+import { tryCreateServiceClient } from '@/lib/supabase/server';
 
 export type VolunteerDirectoryEntry = {
   id: string;
@@ -24,11 +26,7 @@ export function resolveVolunteerName(user: Pick<User, 'id' | 'email' | 'user_met
   return `Volunteer ${user.id.slice(0, 8).toUpperCase()}`;
 }
 
-/**
- * Loads every Supabase Auth user once per request into an id-keyed map.
- * Requires the service-role client (`createServiceClient`) — Admin API only.
- */
-export async function getVolunteerDirectory(serviceClient: SupabaseClient): Promise<VolunteerDirectory> {
+async function fetchVolunteerDirectory(serviceClient: SupabaseClient): Promise<VolunteerDirectory> {
   const directory: VolunteerDirectory = new Map();
   let page = 1;
 
@@ -53,6 +51,26 @@ export async function getVolunteerDirectory(serviceClient: SupabaseClient): Prom
   }
 
   return directory;
+}
+
+/** Zero-arg so React.cache always hits within a single RSC request. */
+const loadVolunteerDirectoryOnce = cache(async (): Promise<VolunteerDirectory> => {
+  const client = await tryCreateServiceClient();
+  if (!client) return new Map();
+  return fetchVolunteerDirectory(client);
+});
+
+/**
+ * Loads every Supabase Auth user once per request into an id-keyed map.
+ * Requires the service-role key — Admin API only.
+ *
+ * Per-request memoized via React `cache()` (argument ignored for cache keying)
+ * so layout helpers + page loaders share one `listUsers` round-trip.
+ */
+export async function getVolunteerDirectory(
+  _serviceClient?: SupabaseClient | null,
+): Promise<VolunteerDirectory> {
+  return loadVolunteerDirectoryOnce();
 }
 
 export function getVolunteerName(directory: VolunteerDirectory, userId: string): string {

@@ -1,37 +1,67 @@
+import { Suspense } from 'react';
 import { ChevronRightIcon } from '@/components/ui/Icons';
-import { MOCK_ORDERS, formatOrderCents, loadOrdersSummary } from '@/lib/orders-data';
+import { KPICard } from '@/components/ui/KPICard';
+import { PeriodToggle } from '@/components/ui/PeriodToggle';
+import { OrdersBreakdownSection } from '@/components/ui/OrdersBreakdownSection';
+import {
+  MOCK_ORDERS,
+  formatOrderCents,
+  loadOrdersBreakdown,
+  ordersBreakdownGranularity,
+} from '@/lib/orders-data';
+import { parsePeriodSelection, periodInterval, periodLabel } from '@/lib/dashboard-period';
 import { OrdersClientShell } from './OrdersClientShell';
 
-export default function OrdersPage() {
-  const summary = loadOrdersSummary();
+export default async function OrdersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ period?: string; from?: string; to?: string }>;
+}) {
+  const params = await searchParams;
+  const selection = parsePeriodSelection(params);
+  const now = new Date();
+  const interval = periodInterval(selection, now);
+  const granularity = ordersBreakdownGranularity(selection.period, interval);
+  const breakdown = loadOrdersBreakdown(interval, granularity, now);
+  const rangeLabel = periodLabel(selection, now);
 
   return (
     <div className="max-w-6xl mx-auto">
-      <div className="flex items-center justify-between mb-lg">
-        <h1 className="font-heading text-[28px] leading-[36px] text-text-primary">Shop Orders</h1>
+      <header className="flex flex-col gap-md mb-lg">
+        <div>
+          <h1 className="font-heading text-[28px] leading-[36px] text-text-primary">Shop Orders</h1>
+          <p className="mt-xs font-body text-[14px] text-text-tertiary">
+            Fulfillment and shop revenue for {rangeLabel}. Refunds stay in Stripe.
+          </p>
+        </div>
+        <Suspense fallback={<div className="h-11 w-full sm:w-96 bg-bg-surface-elevated rounded-sm animate-pulse" />}>
+          <PeriodToggle selection={selection} />
+        </Suspense>
+      </header>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-md mb-xl">
+        <KPICard label="Open Orders" value={breakdown.open} subtext={rangeLabel} index={0} />
+        <KPICard label="Total Orders" value={breakdown.total} subtext={rangeLabel} index={1} />
+        <KPICard
+          label="Revenue"
+          value={formatOrderCents(breakdown.totalRevenueCents)}
+          subtext="Excludes cancelled"
+          index={2}
+        />
       </div>
 
-      {/* Summary */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-md mb-xl">
-        {[
-          { label: 'Open Orders', value: summary.open },
-          { label: 'Total Orders', value: summary.total },
-          { label: 'Revenue', value: formatOrderCents(summary.totalRevenueCents) },
-        ].map((stat) => (
-          <div key={stat.label} className="bg-bg-surface border border-border-outline rounded-md p-lg">
-            <p className="font-data text-[11px] tracking-[0.88px] uppercase text-text-tertiary mb-sm">{stat.label}</p>
-            <p className="font-data text-[28px] font-semibold text-text-primary">{stat.value}</p>
-          </div>
-        ))}
+      <div className="mb-xl">
+        <OrdersBreakdownSection rows={breakdown.rows} statusBars={breakdown.statusBars} />
       </div>
 
       <OrdersClientShell orders={MOCK_ORDERS} />
 
-      {/* Stripe link */}
       <div className="mt-lg bg-bg-surface border border-border-outline rounded-md p-lg flex flex-col sm:flex-row sm:items-center justify-between gap-md">
         <div>
           <p className="font-body text-[14px] font-medium text-text-primary">Stripe Dashboard</p>
-          <p className="font-body text-[13px] text-text-tertiary">Refunds, disputes, and payment details are managed in Stripe.</p>
+          <p className="font-body text-[13px] text-text-tertiary">
+            Refunds, disputes, and payment details are managed in Stripe.
+          </p>
         </div>
         <a
           href="https://dashboard.stripe.com"

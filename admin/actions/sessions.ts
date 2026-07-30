@@ -1,9 +1,10 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { writeAuditLog } from '@/lib/audit';
 import { notifyVolunteerSessionDecision } from '@/lib/notify';
+import { NAV_BADGES_TAG } from '@/lib/nav-badges';
 
 async function getAdminUser() {
   if (process.env.BYPASS_AUTH === 'true') {
@@ -26,6 +27,7 @@ function revalidateSessionPaths(sessionId: string) {
   revalidatePath('/');
   revalidatePath('/sessions');
   revalidatePath(`/sessions/${sessionId}`);
+  revalidateTag(NAV_BADGES_TAG);
 }
 
 export async function approveSession(sessionId: string) {
@@ -149,6 +151,7 @@ export async function adjustHours(sessionId: string, hours: number) {
   revalidatePath(`/sessions/${sessionId}`);
   revalidatePath('/sessions');
   revalidatePath('/');
+  revalidateTag(NAV_BADGES_TAG);
   if (before?.user_id) {
     revalidatePath(`/volunteers/${before.user_id}`);
     revalidatePath('/users');

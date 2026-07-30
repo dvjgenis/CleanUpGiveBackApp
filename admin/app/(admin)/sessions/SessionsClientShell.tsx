@@ -79,18 +79,7 @@ export function SessionsClientShell({
 
   return (
     <div>
-      {/* Filters and Export */}
-      <div className="flex flex-wrap gap-sm mb-lg items-center">
-        <a
-          href="/api/export/sessions"
-          download
-          className="ml-auto h-9 px-md rounded-sm border border-border-outline bg-bg-surface font-data text-[12px] font-semibold text-text-tertiary hover:bg-bg-surface-elevated transition-colors inline-flex items-center gap-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
-        >
-          Export CSV
-        </a>
-      </div>
-
-      <div className="flex flex-wrap gap-sm mb-lg">
+      <div className="flex flex-wrap items-end gap-sm mb-lg">
         <AdminSearchBar
           value={currentQ}
           onChange={(v) => updateParams({ q: v })}
@@ -119,7 +108,7 @@ export function SessionsClientShell({
         </label>
 
         <div
-          className="flex gap-xs overflow-x-auto pb-xs"
+          className="flex items-center gap-xs overflow-x-auto"
           role="group"
           aria-label="Filter by status"
         >
@@ -129,7 +118,7 @@ export function SessionsClientShell({
               type="button"
               aria-pressed={currentStatus === f.value}
               onClick={() => updateParams({ status: f.value === 'all' ? '' : f.value, page: '1' })}
-              className={`min-h-11 px-md rounded-full border font-data text-[12px] font-semibold whitespace-nowrap transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary ${
+              className={`h-11 shrink-0 inline-flex items-center px-md rounded-full border font-data text-[12px] font-semibold whitespace-nowrap transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary ${
                 currentStatus === f.value
                   ? 'bg-primary text-white border-primary'
                   : 'bg-bg-surface text-text-tertiary border-border-outline hover:border-primary hover:text-primary'
@@ -167,7 +156,7 @@ export function SessionsClientShell({
           />
         </label>
 
-        <span className="ml-auto font-body text-[14px] text-text-tertiary self-center">
+        <span className="ml-auto font-body text-[14px] text-text-tertiary self-end h-11 inline-flex items-center">
           {totalCount} session{totalCount !== 1 ? 's' : ''}
         </span>
       </div>

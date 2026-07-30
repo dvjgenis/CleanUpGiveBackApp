@@ -26,10 +26,6 @@ const MOCK_FEEDBACK = [
   { id: 'f12', volunteer: 'Aaliyah Brooks', rating: 'very_sad', comment: 'Session was cancelled last minute with no notice. Very frustrating.', submittedAt: '2026-07-13T16:00:00Z', activity: 'River Cleanup', flagged: true },
 ];
 
-function formatTime(iso: string) {
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-}
-
 type FeedbackWithVolunteer = VolunteerFeedback & {
   volunteer_name?: string;
   volunteer_email?: string;
@@ -155,7 +151,7 @@ export default async function FeedbackPage() {
       {/* Feedback list */}
       <div className="flex flex-col gap-sm">
         {feedback.map((fb) => (
-          <FeedbackRow key={fb.id} feedback={fb} emojiMap={EMOJI_MAP} formatTime={formatTime} />
+          <FeedbackRow key={fb.id} feedback={fb} emojiMap={EMOJI_MAP} />
         ))}
       </div>
     </div>

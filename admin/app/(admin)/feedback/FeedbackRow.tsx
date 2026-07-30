@@ -19,10 +19,18 @@ type FeedbackWithVolunteer = {
 interface Props {
   feedback: FeedbackWithVolunteer;
   emojiMap: Record<string, { emoji: string; label: string; score: number; color: string }>;
-  formatTime: (iso: string) => string;
 }
 
-export function FeedbackRow({ feedback: fb, emojiMap, formatTime }: Props) {
+function formatTime(iso: string) {
+  return new Date(iso).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+export function FeedbackRow({ feedback: fb, emojiMap }: Props) {
   const [flagged, setFlagged] = useState(fb.flagged);
   const [isPending, startTransition] = useTransition();
   const meta = emojiMap[fb.rating ?? 'neutral'];

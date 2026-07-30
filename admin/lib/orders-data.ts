@@ -1,6 +1,26 @@
 /** Mock shop order fixtures for `/orders` until live checkout ships. */
 
-export type OrderStatus = 'pending' | 'paid' | 'shipped' | 'delivered' | 'cancelled';
+import {
+  addDays,
+  addWeeks,
+  addYears,
+  format,
+  isWithinInterval,
+  parseISO,
+  startOfDay,
+  startOfWeek,
+  startOfYear,
+  subYears,
+} from 'date-fns';
+
+export type OrderStatus = 'pending' | 'paid' | 'shipped' | 'cancelled';
+
+/** Map legacy `delivered` (same as shipped) and unknown values for display/forms. */
+export function normalizeOrderStatus(status: string): OrderStatus {
+  if (status === 'delivered' || status === 'shipped') return 'shipped';
+  if (status === 'pending' || status === 'paid' || status === 'cancelled') return status;
+  return 'pending';
+}
 
 export type OrderLineItem = {
   name: string;
@@ -79,7 +99,7 @@ export const MOCK_ORDERS: OrderRow[] = [
     items: 'Tote Bag × 2',
     lineItems: [{ name: 'Tote Bag', qty: 2, unitCents: 1499 }],
     totalCents: 2998,
-    status: 'delivered',
+    status: 'shipped',
     tracking: '9400111202550035111111',
     carrier: 'USPS',
     shipping: shipping('Devon Okafor', '2200 S Michigan Ave', 'Chicago', 'IL', '60616', {
@@ -141,7 +161,7 @@ export const MOCK_ORDERS: OrderRow[] = [
     items: 'Water Bottle × 1',
     lineItems: [{ name: 'Water Bottle', qty: 1, unitCents: 1999 }],
     totalCents: 1999,
-    status: 'delivered',
+    status: 'shipped',
     tracking: '9400111202550035333333',
     carrier: 'USPS',
     shipping: shipping('Miguel Santos', '1300 W Belmont Ave', 'Chicago', 'IL', '60657'),
@@ -185,7 +205,6 @@ export const ORDER_STATUS_CONFIG: Record<OrderStatus, { label: string; className
   pending: { label: 'Pending', className: 'bg-[#ffddb5] text-[#835400] border-[#fcab29]/40' },
   paid: { label: 'Paid', className: 'bg-[#f7fff1] text-primary border-primary/30' },
   shipped: { label: 'Shipped', className: 'bg-[#e8f4fe] text-[#1565c0] border-[#1565c0]/30' },
-  delivered: { label: 'Delivered', className: 'bg-[#f7fff1] text-primary border-primary/30' },
   cancelled: { label: 'Cancelled', className: 'bg-[#ffd9de] text-[#ba1a1a] border-[#ba1a1a]/30' },
 };
 
@@ -246,4 +265,161 @@ export function loadOpenOrdersPreview(limit = 4): OrderRow[] {
     .slice()
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     .slice(0, limit);
+}
+
+export type OrdersBreakdownGranularity = 'day' | 'week' | 'year';
+
+export type OrdersBreakdownRow = {
+  key: string;
+  label: string;
+  orderCount: number;
+  revenueCents: number;
+};
+
+export type OrdersStatusBar = {
+  name: string;
+  value: number;
+  color: string;
+};
+
+export type OrdersBreakdown = {
+  rows: OrdersBreakdownRow[];
+  statusBars: OrdersStatusBar[];
+  open: number;
+  total: number;
+  totalRevenueCents: number;
+};
+
+const STATUS_BAR_META: Record<OrderStatus, { name: string; color: string }> = {
+  pending: { name: 'Pending', color: '#fcab29' },
+  paid: { name: 'Paid', color: '#007536' },
+  shipped: { name: 'Shipped', color: '#1565c0' },
+  cancelled: { name: 'Cancelled', color: '#ba1a1a' },
+};
+
+function bucketStart(d: Date, granularity: OrdersBreakdownGranularity): Date {
+  if (granularity === 'day') return startOfDay(d);
+  if (granularity === 'week') return startOfWeek(d, { weekStartsOn: 1 });
+  return startOfYear(d);
+}
+
+function bucketKey(d: Date, granularity: OrdersBreakdownGranularity): string {
+  if (granularity === 'day') return format(d, 'yyyy-MM-dd');
+  if (granularity === 'week') return format(d, "yyyy-'W'II");
+  return format(d, 'yyyy');
+}
+
+function bucketLabel(d: Date, granularity: OrdersBreakdownGranularity): string {
+  if (granularity === 'day') return format(d, 'MMM d');
+  if (granularity === 'week') return `Wk of ${format(d, 'MMM d')}`;
+  return format(d, 'yyyy');
+}
+
+function nextBucket(d: Date, granularity: OrdersBreakdownGranularity): Date {
+  if (granularity === 'day') return addDays(d, 1);
+  if (granularity === 'week') return addWeeks(d, 1);
+  return addYears(d, 1);
+}
+
+export function ordersBreakdownGranularity(
+  period: string,
+  interval: { start: Date; end: Date } | null,
+): OrdersBreakdownGranularity {
+  switch (period) {
+    case 'day':
+      return 'day';
+    case 'month':
+    case '30d':
+      return 'week';
+    case 'year':
+    case 'all':
+      return 'year';
+    case 'custom': {
+      if (!interval) return 'week';
+      const days = Math.round((interval.end.getTime() - interval.start.getTime()) / 86_400_000) + 1;
+      if (days <= 14) return 'day';
+      if (days <= 120) return 'week';
+      return 'year';
+    }
+    default:
+      return 'week';
+  }
+}
+
+const MAX_BUCKETS = 366;
+
+/**
+ * Mock shop-order revenue + counts by day/week/year for the Orders page charts.
+ * Filters cancelled orders out of revenue (they still count in status bars).
+ */
+export function loadOrdersBreakdown(
+  interval: { start: Date; end: Date } | null,
+  granularity: OrdersBreakdownGranularity,
+  now = new Date(),
+): OrdersBreakdown {
+  const scoped = interval ?? { start: subYears(now, 1), end: now };
+  const inRange = MOCK_ORDERS.filter((o) => {
+    try {
+      return isWithinInterval(parseISO(o.createdAt), scoped);
+    } catch {
+      return false;
+    }
+  });
+
+  const buckets = new Map<string, OrdersBreakdownRow>();
+  let cursor = bucketStart(scoped.start, granularity);
+  let guard = 0;
+  while (cursor.getTime() <= scoped.end.getTime() && guard < MAX_BUCKETS) {
+    const key = bucketKey(cursor, granularity);
+    buckets.set(key, {
+      key,
+      label: bucketLabel(cursor, granularity),
+      orderCount: 0,
+      revenueCents: 0,
+    });
+    cursor = nextBucket(cursor, granularity);
+    guard += 1;
+  }
+
+  for (const order of inRange) {
+    const start = bucketStart(parseISO(order.createdAt), granularity);
+    const key = bucketKey(start, granularity);
+    const existing = buckets.get(key);
+    if (!existing) continue;
+    existing.orderCount += 1;
+    if (order.status !== 'cancelled') {
+      existing.revenueCents += order.totalCents;
+    }
+  }
+
+  const statusCounts: Record<OrderStatus, number> = {
+    pending: 0,
+    paid: 0,
+    shipped: 0,
+    cancelled: 0,
+  };
+  for (const order of inRange) {
+    statusCounts[normalizeOrderStatus(order.status)] += 1;
+  }
+
+  const statusBars: OrdersStatusBar[] = (Object.keys(STATUS_BAR_META) as OrderStatus[]).map(
+    (status) => ({
+      name: STATUS_BAR_META[status].name,
+      value: statusCounts[status],
+      color: STATUS_BAR_META[status].color,
+    }),
+  );
+
+  const open = inRange.filter((o) => OPEN_STATUSES.includes(o.status)).length;
+  const totalRevenueCents = inRange
+    .filter((o) => o.status !== 'cancelled')
+    .reduce((sum, o) => sum + o.totalCents, 0);
+
+  return {
+    rows: [...buckets.values()],
+    statusBars,
+    open,
+    total: inRange.length,
+    totalRevenueCents,
+  };
 }

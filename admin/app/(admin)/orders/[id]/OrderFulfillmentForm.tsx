@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { Button } from '@/components/ui/Button';
 import { updateOrderFulfillment } from '@/actions/orders';
-import type { OrderStatus } from '@/lib/orders-data';
+import { normalizeOrderStatus, type OrderStatus } from '@/lib/orders-data';
 
 type OrderFulfillmentFormProps = {
   orderId: string;
@@ -16,7 +16,6 @@ const STATUS_OPTIONS: { value: OrderStatus; label: string }[] = [
   { value: 'pending', label: 'Pending' },
   { value: 'paid', label: 'Paid' },
   { value: 'shipped', label: 'Shipped' },
-  { value: 'delivered', label: 'Delivered' },
   { value: 'cancelled', label: 'Cancelled' },
 ];
 
@@ -28,7 +27,7 @@ export function OrderFulfillmentForm({
   currentTracking,
   currentCarrier,
 }: OrderFulfillmentFormProps) {
-  const [status, setStatus] = useState<OrderStatus>(currentStatus);
+  const [status, setStatus] = useState<OrderStatus>(normalizeOrderStatus(currentStatus));
   const [tracking, setTracking] = useState(currentTracking ?? '');
   const [carrier, setCarrier] = useState(currentCarrier ?? '');
   const [error, setError] = useState<string | null>(null);

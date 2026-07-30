@@ -2,6 +2,294 @@
 
 ---
 
+## [2026-07-30] — Event geocode for any venue (not only Des Plaines)
+
+**R:** New events without Places-selected coords saved `address` but null `lat`/`lng`, so the MapLibre pin only appeared for the seeded Des Plaines row.
+
+**A:** Added `web-app/src/lib/geocode.ts` (Google Geocoding if key set, else Nominatim). `createEvent`/`updateEvent` geocode whenever address is present and lat/lng are missing. Detail page coerces numeric lat/lng from Postgres and shows an "Open in Google Maps" fallback when no pin. Address field copy is venue-agnostic.
+
+**P:** Create event with any US address + photos → saved row has coords → detail shows map + gallery. Works without Google Maps API key.
+
+---
+
+## [2026-07-30] — Real Supabase events row + event-photos bucket
+
+**R:** `public.events` already existed (from `001_admin_portal_migration.sql`) but was empty, so web-app/mobile fell back to mocks. `image_urls` and the `event-photos` storage bucket from later migrations were not applied.
+
+**A:** Via service-role REST: created public Storage bucket `event-photos`; inserted one published row — Downtown Riverfront Clean-up (`706b8f32-523d-4fdd-ae78-a24d5d9cf23f`, Des Plaines `42.0417,-87.887`, Unsplash `image_url`). Added `admin/db/005_events_image_urls_and_seed.sql` (adds `image_urls`, storage policies, gallery backfill) for SQL Editor. Web-app `eventListItemToDemoEvent` now falls back to `image_url` when `image_urls` is missing (matches mobile).
+
+**P:** `/events` should show the live published event (no Sample data banner for events). Still need to run `005_events_image_urls_and_seed.sql` in Supabase SQL Editor before multi-photo upload/create writes `image_urls`.
+
+---
+
+## [2026-07-30] — Donations revenue table
+
+**R:** Payments (`admin/` and `web-app/`) had donations pinned to deterministic fixtures forever because "no donations table exists anywhere in the repo" — confirmed by a repo-wide grep in the prior session. The user asked to add the table.
+
+**A:** Added `admin/db/006_donations.sql` (`public.donations`: `amount_cents`, `status` enum `pending|succeeded|failed|refunded`, `donor_name`/`donor_email`/`message`/`payment_reference`, admin-only RLS — same shape/convention as `shop_orders`). Wired `admin/lib/payments-data.ts` (`loadPaymentsSummary`, `loadPaymentsBreakdown`) and `web-app/src/lib/live-data.ts` (`loadLiveMonthlyRevenue`) to query it in parallel with `shop_orders`, preferring live rows per-source and falling back to the existing mock donation generator only when `donations` has zero rows in the window — mirrors the existing `shopFromDb` pattern with a new `donationsFromDb` flag (admin's Payments KPI subtext now reads "From donations" when live, same as "From shop orders").
+
+**L:** No table alone makes donations "live" — the mobile Donate flow (`frontend/src/app/donate.tsx`) has never persisted anywhere (no Stripe integration; `DonationHistoryScreen` is mock-only too), so this table has no writer yet. Documented that explicitly rather than implying donations are now real; the live-read path is ready for whenever a checkout writes to it (Stripe webhook, or manual seeding for now).
+
+**P:** `npx tsc --noEmit` clean for both apps; `admin`/`web-app` both `npm run build` clean (lint failures in both are pre-existing/unrelated — admin's `next lint` needs interactive ESLint config setup, web-app has known `set-state-in-effect` warnings from prior sessions). Docs updated: [web-app.md](web-app.md), [current.md](current.md), [admin/dulf-resend-supabase-fly.md](admin/dulf-resend-supabase-fly.md). Migration still needs to be run against the live Supabase project (Supabase MCP was unavailable this session — `serverStatus: error`), same manual-apply step as `004_admin_refinements.sql`.
+
+---
+
+## [2026-07-30] — web-app: bulk approve, admin notes, hours adjustment, letterhead PDF
+
+**R:** These four session-admin actions were called out as explicitly out of scope in the prior live-wiring session ("no web-app UI surface for these yet") because web-app has no `/sessions/[id]` detail page like admin's. The user asked to add them anyway.
+
+**A:** Ported `adjustHours`/`saveAdminNotes`/`approveSessionsBulk`/`markLetterheadGenerated` into `web-app/src/actions/sessions.ts`, plus `sessionsApiConfig.ts`/`assertAdmin.ts` and the two `/api/service-letter` proxy routes (all from `admin/`, unchanged besides import paths). Rather than building a full session detail page (photos/map/checkpoints — out of scope for this ask), attached Hours/Notes/Letterhead to the existing `SessionPreviewDrawer.tsx` (mock-safe local state when `isMock`, real actions otherwise) and added bulk-select checkboxes + an "Approve selected" action bar to `SessionsPage.tsx`'s list. Added `SESSIONS_API_URL`/`ADMIN_API_KEY` to `.env.local.example` and optional `admin_notes`/`decline_reason`/`letterhead_generated_at` fields to `MockSession`.
+
+**P:** `npx tsc --noEmit`, lint (only pre-existing `set-state-in-effect` warnings unrelated to this change), and `npm run build` all pass; `/api/service-letter/[sessionId]` and `/api/service-letter/bulk/[volunteerId]` show up as dynamic routes in the build output. Docs updated: [web-app.md](web-app.md), [current.md](current.md), [accounts-and-access.md](accounts-and-access.md).
+
+---
+
+## [2026-07-30] — Events sample: one mock + photos + MapLibre map
+
+**R:** Events page still showed five text-only mock fixtures with no photos or pin map, unlike the mobile event detail (MapLibre + header images).
+
+**A:** Collapsed `EVENTS` to a single Des Plaines sample (`Downtown Riverfront Clean-up`) matching mobile `downtownRiverfrontEvent` (Unsplash photo placeholders, `lat`/`lng`). Added `EventLocationMap` (MapLibre GL via CDN + Carto Voyager, same HTML pattern as mobile `EventLocationMapWebView`). Wired `lat`/`lng` through `DemoEvent` / `eventListItemToDemoEvent`; detail shows photo carousel + location map; list cards show a thumbnail when photos exist.
+
+**P:** Empty Supabase `events` → one sample on `/events`; detail `/events/e1` shows photos + tappable MapLibre pin map. Live rows with coords get the same map.
+
+---
+
+## [2026-07-30] — Home header: Welcome back Donna first
+
+**R:** Home header led with queue count; greeting should be the primary header.
+
+**A:** Home header is only `Welcome back Donna!` (`h1`, Donna in `text-primary-brand` #009540). Dropped the queue-count subtitle — it already appears in the Needs you / Review bento.
+
+**P:** Home `/` / `/dashboard` shows green Donna greeting as header; no duplicate review count above the period toggle.
+
+---
+
+## [2026-07-30] — Wired remaining web-app live features (moderation, events actions, insights)
+
+**R:** After the first live-data pass, four admin-only capabilities were still mock-only in `web-app/`: session approve/decline, events edit/publish/delete/notify-at-risk, and Insights/Analytics chart data. Donations revenue was confirmed to stay mock forever (no donations table exists anywhere in the repo — `admin/lib/payments-data.ts` itself keeps it on fixtures).
+
+**A:** Ported `admin/lib/audit.ts`, `resend.ts`, `notify.ts`, and `court-risk.ts` (`buildCourtRisk`) into `web-app/src/lib/`. Added `web-app/src/actions/sessions.ts` (`approveSession`/`declineSession`) and extended `web-app/src/actions/events.ts` with `updateEvent`/`setEventPublished`/`deleteEvent`/`notifyAtRiskVolunteers`. `SessionsPage.tsx` rows now show inline Approve/Decline (decline via a small reason modal); mock mode does a local-only optimistic update. `EventForm.tsx` now supports edit mode (bound to `updateEvent`), with a new `/events/[id]/edit` route. Added `EventDetailActions.tsx` (edit/publish/delete) and `NotifyAtRiskVolunteers.tsx` (email picker for at-risk court-ordered volunteers), wired into `EventDetailPage.tsx` for live events only. Added `loadLiveCourtProgress` to `live-data.ts` (refactored from an unused `loadLiveCourtVolunteers` to share `buildCourtRisk`) and wired `/insights` + `/analytics` to real `sessions`/`court_orders` data via new `sessions`/`courtProgress`/`isMock` props on `AnalyticsPage`.
+
+**L:** `resend`'s soft-fail pattern (return `null` client when `RESEND_API_KEY` is unset) matches admin exactly and let session/event notifications degrade gracefully without extra guards at call sites.
+
+**P:** `npx tsc --noEmit`, `npm run lint` (pre-existing `react-hooks/set-state-in-effect` pattern, same as `PeriodToggle`/`SampleDataBanner`/`UserPreviewDrawer`/`useHasMounted`, extended once more for the sessions prop-sync effect), and `npm run build` all pass. Docs updated: `web-app.md`, `current.md`.
+
+---
+
+## [2026-07-30] — Retired admin Vercel deployment, deployed web-app
+
+**R:** `web-app/` is now the primary desktop UI going forward; the old `admin/` Vercel project (`cleanupgiveback-admin`) was no longer needed as the deployed production surface.
+
+**A:** Deleted the `cleanupgiveback-admin` Vercel project via `vercel remove`. Linked and deployed a new project `cleanupgiveback-web-app` from `web-app/` (`vercel link` + `vercel --prod`), copying the same Supabase env vars (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`) and `BYPASS_AUTH=true` from `admin/.env.local` into Production + Development on the new project.
+
+**L:** The installed Vercel CLI (51.8.0 local / 58.1.0 build image) returns a `git_branch_required` action-required JSON for `vercel env add <name> preview --value ... --yes` even when omitting a branch — Preview env vars weren't set via CLI and need to be added manually in the Vercel dashboard.
+
+**P:** Live at https://cleanupgiveback-web-app.vercel.app (Production + Development env vars set; Preview env vars still pending). `admin/` no longer has a Vercel deployment — local dev only (`cd admin && npm run dev`) until/unless redeployed. Docs updated: `current.md`, `accounts-and-access.md`, `web-app.md`.
+
+---
+
+## [2026-07-30] — Web-app tablet responsiveness
+
+**R:** Web-app shell switched to the desktop icon rail at `md` (768px), which crowded iPad portrait and clipped Orders/Sessions/Users filter toolbars.
+
+**A:** Moved shell nav to `lg` (1024px) to match admin (hamburger + overlay below `lg`). Stacked search/filter toolbars until `lg`; KPI/chart grids use 2-col on tablet and 3–4-col on desktop; preview drawers widen to `md:max-w-lg`.
+
+**P:** Resize to ~768 portrait and ~1024 landscape — tablet shows top bar + drawer; desktop rail from 1024; Orders filters no longer clip.
+
+---
+
+## [2026-07-30] — Smoother volunteer / review drawers
+
+**R:** User preview and review drawers felt abrupt on open/close.
+
+**A:** Spring slide (`stiffness` 320 / `damping` 34), longer scrim fade, content fade-up; hold last row during exit. Applied to admin `UserPreviewDrawer` + `ReviewDrawer`, web-app `UserPreviewDrawer` + `SessionPreviewDrawer`.
+
+**P:** Users → View volunteer / court-ordered row — panel eases in/out; Escape reverses mid-spring.
+
+---
+
+## [2026-07-30] — Account settings: name, email, password
+
+**R:** Donna needed to change her own name, email, and password from Account instead of env-only read-only fields.
+
+**A:** Admin `/account` editable Profile + Password forms via `actions/account.ts` (Supabase `updateUser` + current-password check). Sidebar/MobileNav show live `full_name` initials. Web-app `/profile` mirrors the UI (local mock save). Docs: `accounts-and-access.md`.
+
+**P:** Sign in without BYPASS_AUTH → Account → save name/email or password; confirm email change if Supabase requires it.
+
+---
+
+## [2026-07-30] — Shop items: donut + top-share outline + most/least cards
+
+**R:** Shop item table buried most/least; highest revenue share needed a clear mark; empty space next to the list.
+
+**A:** Redesigned `ShopItemBreakdownSection` — Most/Least bought as large cards, revenue-share donut, table row with primary outline for top share %. Shop filter on Payments uses this view.
+
+**P:** Payments → Shop — donut + outlined top-share row + most/least cards.
+
+---
+
+## [2026-07-30] — Payments Shop filter → product bar chart
+
+**R:** Shop filter on Payments still showed period bars; needed per-product revenue in the bar graph.
+
+**A:** Added `ProductRevenueBarChart`; Shop filter swaps chart + table to catalog items (kit/tote/grabber/vests). Wired in web-app + admin.
+
+**P:** Payments → Shop — bars are Kit / Tote / Grabber / Adult vest / Child vest by revenue.
+
+---
+
+## [2026-07-30] — Orders: drop Delivered, keep Shipped
+
+**R:** Delivered and shipped meant the same thing in fulfillment UI.
+
+**A:** Removed `delivered` from order status filters/forms/charts in admin + web-app; legacy `delivered` normalizes to `shipped`. Mock rows updated.
+
+**P:** Orders filters show Pending / Paid / Shipped / Cancelled only.
+
+---
+
+## [2026-07-30] — Web-app Payments shop item breakdown
+
+**R:** Product breakdown was only on admin `/payments`; user viewing web-app did not see it.
+
+**A:** Ported `shop-catalog.ts` + `ShopItemBreakdownSection` into web-app and wired under the revenue table on `/payments`.
+
+**P:** Refresh web-app `/payments` — Shop items section with 5 catalog SKUs.
+
+---
+
+## [2026-07-30] — Court progress View more after 5
+
+**R:** Insights Court progress should collapse sooner so the page stays scannable.
+
+**A:** `VISIBLE_LIMIT` on web-app + admin `CourtProgressChart` is now 5 (was 20 on web-app; admin had no collapse). Docs updated.
+
+**P:** `/insights` Court progress shows 5 rows + View more.
+
+---
+
+## [2026-07-30] — Payments shop item breakdown
+
+**R:** Donna needs to see which shop SKUs sell most/least and how much revenue each contributes (kit, tote, grabber, adult/child vest).
+
+**A:** Added `shop-catalog.ts` + `loadShopItemBreakdown` (parses `shop_orders.items`, mock fallback). Wired `ShopItemBreakdownSection` under the existing revenue chart on `/payments` (horizontal qty bars + ranked table with share %).
+
+**P:** Open Payments — Shop items section shows most/least + totals for the five catalog products.
+
+---
+
+## [2026-07-29] — Web-app Insights matches admin + Court View more
+
+**R:** Insights was a simplified stub; needed the real admin Insights layout (trend, queue age, decisions, court progress, donuts, US heatmap). Court list needed a View more control past 20 rows.
+
+**A:** Ported `CourtProgressChart` + `DonutChart`; rewrote `AnalyticsPage` to mirror `admin/.../insights/page.tsx`. Added `MOCK_COURT_PROGRESS` (22 volunteers) and View more/less on Court progress when length > 20. `tsc --noEmit` clean.
+
+**P:** Open `/insights` — full Insights composition; Court progress shows first 20 + View more (2 more).
+
+---
+
+## [2026-07-29] — Sidebar: Donna Adams + brand logo
+
+**R:** Sidebar footer said “Account”; brand mark used a CG letter placeholder.
+
+**A:** Footer label is **Donna Adams** with **DA** initials (web-app + admin). Web-app `Logo` / `LogoIcon` / mobile header use `/logo.png` (copied from admin brand asset).
+
+**P:** Hover sidebar — name + DA avatar; collapsed/expanded/mobile show real logo, not CG.
+
+---
+
+## [2026-07-29] — Web-app Account page max-width collapse
+
+**R:** Account card rendered ~40px wide — unreadable labels/avatar.
+
+**A:** Tailwind v4 resolves `max-w-2xl` from `--spacing-2xl` (40px) when `--max-width-2xl` is unset. Added explicit `--max-width-2xl`…`7xl` in `web-app/src/app/globals.css`.
+
+**P:** Account/Settings (`max-w-2xl`) and other max-w-* pages should lay out at rem widths again.
+
+---
+
+## [2026-07-29] — Web-app sidebar nav order
+
+**R:** Align `web-app` sidebar with admin nav order.
+
+**A:** Reordered `sidebar-demo.tsx` to Home → Sessions → Users → Insights → Feedback → Events → Orders → Payment; added `/sessions`, `/users`, `/insights`, `/payments` routes (users/insights reuse existing page components).
+
+**P:** Sidebar matches admin order; sessions/payment pages are placeholders until ported.
+
+---
+
+## [2026-07-29] — Sidebar Aceternity animation only
+
+**R:** Match Aceternity sidebar hover expand/collapse motion without adopting its styles, layout chrome, or demo content.
+
+**A:** Desktop `Sidebar` uses immediate `onMouseEnter`/`onMouseLeave` open state, default Framer Motion width spring (72↔240), and label `opacity` + `display` fade; CUGB tokens, icons, badges, and mobile nav unchanged. `framer-motion` already present — no new Aceternity UI file.
+
+**P:** ≥1024px — hover rail expands with spring + labels fade in; leave collapses; Tab focus still expands.
+
+---
+
+## [2026-07-29] — Admin tab navigation performance
+
+**R:** Tab switches felt slow because `(admin)/layout` ran `getNavBadges()` on every hop — full sessions select + `auth.admin.listUsers` — then each page often repeated the same work.
+
+**A:** Slimmed badges to head counts + approved court-ordered sessions only (no directory for counts); 30s `unstable_cache` via cookie-free `createServiceRoleClient` + `revalidateTag('nav-badges')` from session/order/court actions; `getVolunteerDirectory` memoized with React `cache()` (zero-arg) so one RSC request shares a single `listUsers`.
+
+**L:** `unstable_cache` cannot touch `cookies()` — service-role client must be cookie-free for the badge cache path.
+
+**P:** Spot-check tab hops with service role set; badges should refresh within 30s or immediately after approve/fulfill/court upsert.
+
+---
+
+## [2026-07-29] — Admin portal on Vercel
+
+**R:** Host the admin Next.js app so Donna can use it without localhost.
+
+**A:** Linked `admin/` → Vercel project `cleanupgiveback-admin` (scope `sjp10-9620s-projects`). Production env from local (Supabase + sessions API; `BYPASS_AUTH=false`). Deployed production at https://cleanupgiveback-admin.vercel.app.
+
+**P:** Add Vercel URL to Supabase Auth redirect allowlist; optional custom domain; add missing `RESEND_API_KEY` / `ADMIN_API_KEY` in Vercel if those features are needed in prod.
+
+---
+
+## [2026-07-29] — Sidebar ease-bezier expand/collapse
+
+**R:** Sidebar spring felt abrupt; want a smooth cubic-bezier morph.
+
+**A:** Width + label maxWidth use Emil ease-in-out `cubic-bezier(0.77, 0, 0.175, 1)` at 280ms; labels still fade with ease-out; header/link padding eases in sync.
+
+**P:** Hover/leave sidebar at ≥1024px — should ease open/closed, not snap.
+
+---
+
+## [2026-07-29] — User side preview drawer
+
+**R:** Donna wants to glance at a volunteer from Users without leaving the list.
+
+**A:** Users rows open a right-side `UserPreviewDrawer` (stats, court progress, contact) via View / name click; Escape/scrim closes. Full profile still available via “Open full profile”.
+
+**P:** Users → View → preview → Open full profile optional.
+
+---
+
+## [2026-07-29] — Orders charts + sidebar polish
+
+**R:** Orders should mirror Payments visualizations; Account divider was inset; sidebar expand felt rigid.
+
+**A:** Orders page gets PeriodToggle, KPICards, revenue bar chart, status bars, and period table (`OrdersBreakdownSection` + `loadOrdersBreakdown`). Sidebar Account rule is full-bleed (outside nav padding). Expand/collapse uses Framer spring width + label fade (icons-only when collapsed).
+
+**P:** Spot-check `/orders` charts + hover sidebar spring.
+
+---
+
+## [2026-07-29] — Sidebar hover-to-expand
+
+**R:** Donna wants the admin sidebar collapsed by default and to open when she hovers it.
+
+**A:** Desktop sidebar starts as icon rail; expands to full labels on hover (and keyboard focus-within). Push layout (in-flow width) so main content shifts aside — no overlay. Width morph uses Emil ease-in-out `cubic-bezier(0.77, 0, 0.175, 1)` at 250ms; labels fade/slide with ease-out + short enter delay. Removed localStorage pin + Collapse toggle.
+
+**P:** Spot-check at ≥1024px: collapsed rail → hover opens (content pushes) → leave collapses; Tab into nav expands.
+
+---
+
 ## [2026-07-28] — Admin refinements full batch (execute)
 
 **R:** Ship the full admin refinement plan: notifications, live feedback, CSV, polish, court/orders writes, auth, Wave 3 correctness + UX — keep US heatmap and hours-wait bars on home.

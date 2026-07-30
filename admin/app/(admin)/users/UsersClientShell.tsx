@@ -1,10 +1,10 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import Link from 'next/link';
 import { AdminSearchBar } from '@/components/ui/AdminSearchBar';
 import { CourtBadge } from '@/components/ui/CourtBadge';
 import { formatDate } from '@/lib/format';
+import { UserPreviewDrawer } from './UserPreviewDrawer';
 
 export type UserRow = {
   id: string;
@@ -36,6 +36,10 @@ function ProgressBar({ pct }: { pct: number }) {
   );
 }
 
+/** Shared tracks so header + rows size the same columns (auto grids drift apart). */
+const USER_TABLE_COLS =
+  'lg:grid-cols-[1.5fr_7.5rem_6.5rem_4.5rem_11rem_7.5rem_4.5rem]';
+
 export function UsersClientShell({
   users,
   initialFilter,
@@ -45,6 +49,7 @@ export function UsersClientShell({
 }) {
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState(initialFilter);
+  const [previewId, setPreviewId] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -56,27 +61,20 @@ export function UsersClientShell({
     });
   }, [users, q, filter]);
 
+  const previewUser = previewId ? (users.find((u) => u.id === previewId) ?? null) : null;
+
   return (
     <div>
-      <div className="flex items-center gap-sm mb-sm">
-        <a
-          href="/api/export/users"
-          download
-          className="ml-auto h-9 px-md rounded-sm border border-border-outline bg-bg-surface font-data text-[12px] font-semibold text-text-tertiary hover:bg-bg-surface-elevated transition-colors inline-flex items-center gap-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
-        >
-          Export CSV
-        </a>
-      </div>
       <div className="flex flex-wrap gap-sm mb-lg">
         <AdminSearchBar value={q} onChange={setQ} placeholder="Search by name or email…" className="w-full sm:w-64" />
-        <div className="flex gap-xs overflow-x-auto pb-xs" role="group" aria-label="Filter by volunteer type">
+        <div className="flex items-center gap-xs overflow-x-auto" role="group" aria-label="Filter by volunteer type">
           {FILTERS.map((f) => (
             <button
               key={f.value}
               type="button"
               aria-pressed={filter === f.value}
               onClick={() => setFilter(f.value)}
-              className={`min-h-11 px-md rounded-full border font-data text-[12px] font-semibold whitespace-nowrap transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary ${
+              className={`h-11 shrink-0 inline-flex items-center px-md rounded-full border font-data text-[12px] font-semibold whitespace-nowrap transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary ${
                 filter === f.value
                   ? 'bg-primary text-white border-primary'
                   : 'bg-bg-surface text-text-tertiary border-border-outline hover:border-primary hover:text-primary'
@@ -92,9 +90,16 @@ export function UsersClientShell({
       </div>
 
       <div className="bg-bg-surface border border-border-outline rounded-md overflow-hidden">
-        <div className="hidden lg:grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-md px-lg py-sm bg-bg-surface-elevated border-b border-border-outline">
-          {['Name', 'Joined', 'Sessions', 'Hours', 'Type / Progress', 'Last Active'].map((col) => (
-            <span key={col} className="font-data text-[11px] tracking-[0.88px] uppercase text-text-tertiary">
+        <div
+          className={`hidden lg:grid ${USER_TABLE_COLS} gap-md px-lg py-sm bg-bg-surface-elevated border-b border-border-outline`}
+        >
+          {['Name', 'Joined', 'Sessions', 'Hours', 'Type / Progress', 'Last Active', 'Actions'].map((col) => (
+            <span
+              key={col}
+              className={`font-data text-[11px] tracking-[0.88px] uppercase text-text-tertiary ${
+                col === 'Name' ? 'text-left' : 'text-center'
+              }`}
+            >
               {col}
             </span>
           ))}
@@ -107,15 +112,18 @@ export function UsersClientShell({
           <ul role="list" className="divide-y divide-border-outline">
             {filtered.map((u) => (
               <li key={u.id}>
-                <Link
-                  href={`/volunteers/${u.id}`}
-                  className="grid grid-cols-1 lg:grid-cols-[1fr_auto_auto_auto_auto_auto] gap-xs lg:gap-md lg:items-center px-lg py-md table-row-hover transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:-outline-offset-2"
+                <div
+                  className={`grid grid-cols-1 ${USER_TABLE_COLS} gap-xs lg:gap-md lg:items-center px-lg py-md table-row-hover transition-colors`}
                 >
-                  <div>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewId(u.id)}
+                    className="text-left min-w-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary rounded-sm"
+                  >
                     <p className="font-body text-[14px] font-medium text-text-primary">{u.name}</p>
                     <p className="font-body text-[12px] text-text-tertiary">{u.email}</p>
-                  </div>
-                  <span className="font-data text-[13px] text-text-tertiary whitespace-nowrap">
+                  </button>
+                  <span className="font-data text-[13px] text-text-tertiary whitespace-nowrap lg:text-center">
                     <span className="lg:hidden text-text-tertiary/70">Joined </span>
                     {u.joinedAt ? formatDate(u.joinedAt) : '—'}
                   </span>
@@ -126,7 +134,7 @@ export function UsersClientShell({
                     {u.totalHours.toFixed(1)}h
                   </span>
                   {u.courtOrdered ? (
-                    <div className="flex items-center gap-sm">
+                    <div className="flex items-center gap-sm lg:justify-center min-w-0">
                       <CourtBadge />
                       {u.requiredHours != null && u.completedHours != null && (
                         <>
@@ -138,20 +146,37 @@ export function UsersClientShell({
                       )}
                     </div>
                   ) : (
-                    <span className="font-data text-[11px] font-semibold px-sm py-xs rounded-xs bg-[#f7fff1] text-primary whitespace-nowrap w-fit">
-                      Voluntary
-                    </span>
+                    <div className="lg:flex lg:justify-center">
+                      <span className="font-data text-[11px] font-semibold px-sm py-xs rounded-xs bg-[#f7fff1] text-primary whitespace-nowrap w-fit">
+                        Voluntary
+                      </span>
+                    </div>
                   )}
-                  <span className="font-data text-[13px] text-text-tertiary whitespace-nowrap">
+                  <span className="font-data text-[13px] text-text-tertiary whitespace-nowrap lg:text-center">
                     <span className="lg:hidden text-text-tertiary/70">Last active </span>
                     {u.lastActive ? formatDate(u.lastActive) : 'Never'}
                   </span>
-                </Link>
+                  <div className="lg:flex lg:justify-center">
+                    <button
+                      type="button"
+                      onClick={() => setPreviewId(u.id)}
+                      className="h-8 px-sm rounded-sm border border-border-outline text-text-tertiary font-data text-[11px] font-semibold hover:bg-bg-surface-elevated hover:text-text-primary transition-colors inline-flex items-center w-fit focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+                    >
+                      View
+                    </button>
+                  </div>
+                </div>
               </li>
             ))}
           </ul>
         )}
       </div>
+
+      <UserPreviewDrawer
+        user={previewUser}
+        open={previewId != null}
+        onClose={() => setPreviewId(null)}
+      />
     </div>
   );
 }

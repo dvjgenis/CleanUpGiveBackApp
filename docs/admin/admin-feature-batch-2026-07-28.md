@@ -10,6 +10,7 @@ Implementation notes for the 11-item feature batch + mobile audit (source plan: 
 | 2 | PDF generation fix | `lib/assertAdmin.ts` (`assertAdminRequest()` honors `BYPASS_AUTH`); `app/api/service-letter/**/route.ts` |
 | 3 | Notify at-risk volunteers | `actions/events.ts` (`notifyAtRiskVolunteers`), `app/(admin)/events/[id]/NotifyAtRiskVolunteers.tsx`, `lib/resend.ts` |
 | 4 | Payments breakdown | `lib/payments-data.ts` (`loadPaymentsBreakdown`); bucket size follows the page period (no Day/Week/Year UI); `PaymentsBreakdownSection.tsx` keeps All/Donations/Shop filters |
+| 4b | Shop item breakdown | `lib/shop-catalog.ts` + `loadShopItemBreakdown` in `payments-data.ts`; `ShopItemBreakdownSection.tsx` on `/payments` — qty/revenue/share/rank for kit, tote, grabber, adult/child vest |
 | 5 | Session photo preview fix | `app/(admin)/sessions/[id]/PhotoGrid.tsx` (plain `<img>` for signed URLs, surfaced signing errors) |
 | 6 | Audit Log removed from nav | `components/nav/Sidebar.tsx`, `components/nav/MobileNav.tsx` (page + `writeAuditLog` calls untouched) |
 | 7 | Event photo upload | `components/events/EventPhotoUpload.tsx` (multi-select, up to 8, **optional** — label + CTA make skip clear), `actions/events.ts` (`uploadEventPhoto` → `event-photos` bucket; persists `image_urls` + primary `image_url`), `db/003_event_image_urls.sql` |

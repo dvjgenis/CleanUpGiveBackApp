@@ -7,8 +7,15 @@ import { MainScrollReset } from '@/components/nav/MainScrollReset';
 import { ToastProvider } from '@/components/ui/ToastProvider';
 import { getNavBadges } from '@/lib/nav-badges';
 import { SessionExpiryBanner } from '@/components/SessionExpiryBanner';
+import {
+  defaultAdminDisplayName,
+  initialsFromName,
+  resolveAdminDisplayName,
+} from '@/lib/admin-account';
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  let accountName = defaultAdminDisplayName();
+
   if (process.env.BYPASS_AUTH !== 'true') {
     const supabase = await createClient();
     const {
@@ -29,9 +36,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </div>
       );
     }
+
+    accountName = resolveAdminDisplayName(user);
   }
 
   const badges = await getNavBadges();
+  const accountInitials = initialsFromName(accountName);
 
   return (
     <ToastProvider>
@@ -42,9 +52,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         Skip to main content
       </a>
       <div className="flex min-h-screen">
-        <Sidebar badges={badges} />
+        <Sidebar badges={badges} accountName={accountName} accountInitials={accountInitials} />
         <div className="flex-1 flex flex-col min-w-0">
-          <MobileNav badges={badges} />
+          <MobileNav badges={badges} accountName={accountName} accountInitials={accountInitials} />
           <main id="main-content" tabIndex={-1} className="flex-1 p-lg lg:p-xl pb-20 lg:pb-xl overflow-x-hidden outline-none">
             {children}
           </main>

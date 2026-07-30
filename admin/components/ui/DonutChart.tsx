@@ -20,12 +20,22 @@ interface DonutChartProps {
 const chartShellClassName =
   'bg-bg-surface border border-border-outline rounded-md p-lg flex flex-col gap-md';
 
-function CustomTooltip({ active, payload }: { active?: boolean; payload?: Array<{ name: string; value: number }> }) {
+function CustomTooltip({
+  active,
+  payload,
+}: {
+  active?: boolean;
+  payload?: Array<{ name?: string; value: number; payload?: DonutSlice }>;
+}) {
   if (!active || !payload?.length) return null;
+  const slice = payload[0]!;
+  const label = slice.payload?.name ?? slice.name ?? '';
   return (
-    <div className="bg-bg-surface border border-border-outline rounded-sm px-md py-sm shadow-bar-top">
-      <p className="font-data text-[12px] font-semibold text-text-primary">{payload[0].name}</p>
-      <p className="font-data text-[12px] text-text-tertiary">{payload[0].value}</p>
+    <div className="relative z-50 bg-bg-surface border border-border-outline rounded-sm px-md py-sm shadow-bar-top pointer-events-none">
+      <p className="font-data text-[12px] font-semibold text-text-primary leading-snug whitespace-nowrap">
+        {label}
+      </p>
+      <p className="font-data text-[12px] text-text-tertiary leading-snug mt-xs">{slice.value}</p>
     </div>
   );
 }
@@ -52,31 +62,39 @@ export function DonutChart({ title, data, total, index = 0 }: DonutChartProps) {
 
       <div className="flex items-center gap-lg">
         <div className="relative shrink-0" style={{ width: 96, height: 96 }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={data}
-                cx="50%"
-                cy="50%"
-                innerRadius={30}
-                outerRadius={44}
-                dataKey="value"
-                strokeWidth={0}
-                startAngle={90}
-                endAngle={-270}
-              >
-                {data.map((entry) => (
-                  <Cell key={entry.name} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip content={<CustomTooltip />} />
-            </PieChart>
-          </ResponsiveContainer>
-          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+          {/* Behind the chart so hover tooltips are not covered by the center label */}
+          <div className="absolute inset-0 z-0 flex flex-col items-center justify-center pointer-events-none">
             <span className="font-data text-[11px] text-text-tertiary leading-none">Total</span>
             <span className="font-data text-[18px] font-semibold text-text-primary leading-none mt-0.5">
               {total}
             </span>
+          </div>
+          <div className="relative z-10 h-full w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={data}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={30}
+                  outerRadius={44}
+                  dataKey="value"
+                  nameKey="name"
+                  strokeWidth={0}
+                  startAngle={90}
+                  endAngle={-270}
+                >
+                  {data.map((entry) => (
+                    <Cell key={entry.name} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  content={<CustomTooltip />}
+                  wrapperStyle={{ zIndex: 50, outline: 'none' }}
+                  allowEscapeViewBox={{ x: true, y: true }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
           </div>
         </div>
 

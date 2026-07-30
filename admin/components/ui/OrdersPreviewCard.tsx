@@ -5,6 +5,7 @@ import { ChevronRightIcon } from '@/components/ui/Icons';
 import {
   ORDER_STATUS_CONFIG,
   formatOrderCents,
+  normalizeOrderStatus,
   type OrderRow,
 } from '@/lib/orders-data';
 
@@ -55,7 +56,7 @@ export function OrdersPreviewCard({
           </div>
           <ul role="list" className="divide-y divide-border-outline">
             {preview.map((order) => {
-              const cfg = ORDER_STATUS_CONFIG[order.status];
+              const cfg = ORDER_STATUS_CONFIG[normalizeOrderStatus(order.status)];
               return (
                 <li key={order.id}>
                   <Link

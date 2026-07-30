@@ -1,8 +1,9 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { writeAuditLog } from '@/lib/audit';
+import { NAV_BADGES_TAG } from '@/lib/nav-badges';
 
 async function getAdminUser() {
   if (process.env.BYPASS_AUTH === 'true') {
@@ -47,6 +48,9 @@ export async function updateOrderFulfillment({
   const user = await getAdminUser();
   const supabase = await createServiceClient();
 
+  // `delivered` is treated as `shipped` — keep a single post-dispatch status.
+  const normalizedStatus = status === 'delivered' ? 'shipped' : status;
+
   const { data: before, error: fetchError } = await supabase
     .from('shop_orders')
     .select('status, tracking_number, carrier')
@@ -57,7 +61,7 @@ export async function updateOrderFulfillment({
     throw new Error(`Order not found: ${orderId}`);
   }
 
-  const update: Record<string, unknown> = { status };
+  const update: Record<string, unknown> = { status: normalizedStatus };
   if (trackingNumber !== undefined) update.tracking_number = trackingNumber?.trim() || null;
   if (carrier !== undefined) update.carrier = carrier?.trim() || null;
 
@@ -75,4 +79,5 @@ export async function updateOrderFulfillment({
 
   revalidatePath('/orders');
   revalidatePath(`/orders/${orderId}`);
+  revalidateTag(NAV_BADGES_TAG);
 }

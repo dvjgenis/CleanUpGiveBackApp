@@ -92,8 +92,15 @@ export default async function UsersPage({
 
   return (
     <div className="max-w-6xl mx-auto">
-      <div className="flex items-center justify-between mb-lg">
+      <div className="flex items-center justify-between mb-md gap-md flex-wrap">
         <h1 className="font-heading text-[28px] leading-[36px] text-text-primary">Users</h1>
+        <a
+          href="/api/export/users"
+          download
+          className="h-9 px-md rounded-sm border border-border-outline bg-bg-surface font-data text-[12px] font-semibold text-text-tertiary hover:bg-bg-surface-elevated transition-colors inline-flex items-center gap-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+        >
+          Export CSV
+        </a>
       </div>
       {!serviceClient && (
         <p role="status" className="mb-md font-body text-[13px] text-text-tertiary">
