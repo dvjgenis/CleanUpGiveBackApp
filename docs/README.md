@@ -22,6 +22,7 @@ Living docs for the Clean Up - Give Back monorepo. Templates are copy-only.
 | [admin/mobile-responsiveness-audit-2026-07-28.md](admin/mobile-responsiveness-audit-2026-07-28.md) | Mobile viewport audit (375/768/1024) + P0/P1 fixes |
 | [admin/refinement-contracts-2026-07-28.md](admin/refinement-contracts-2026-07-28.md) | Contracts for notify, feedback, court upsert, decline_reason, RLS claim path |
 | [admin/dulf-resend-supabase-fly.md](admin/dulf-resend-supabase-fly.md) | Runbook for Dulf — Resend, Supabase, Fly secrets + Donna admin user |
+| [admin/dulf-checkpoint-gps-fly-redeploy.md](admin/dulf-checkpoint-gps-fly-redeploy.md) | Dulf — redeploy Fly after checkpoint lat/lng migration (trail photo pins) |
 
 ## Frontend
 

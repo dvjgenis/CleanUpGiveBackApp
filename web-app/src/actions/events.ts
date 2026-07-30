@@ -119,8 +119,8 @@ async function eventFieldsFromForm(supabase: SupabaseClient, formData: FormData)
   let lat = parseOptionalNumber(formData.get('lat'));
   let lng = parseOptionalNumber(formData.get('lng'));
 
-  // Any venue: if the form has an address but no pin (no Places pick / no API key),
-  // geocode so EventLocationMap works for Chicago, Glenview, etc. — not only Des Plaines.
+  // Any venue: if the form has an address but no verified/selected pin,
+  // Census (then Google if keyed) geocodes so EventLocationMap works.
   if (address && (lat == null || lng == null)) {
     const geo = await geocodeAddress(address);
     if ('latitude' in geo) {

@@ -20,9 +20,14 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { CourtBadge } from "@/components/ui/CourtBadge";
 import { CameraIcon, CloseIcon, CollapseIcon, ExpandIcon } from "@/components/ui/Icons";
 import { SessionPhotoGrid } from "@/components/sessions/SessionPhotoGrid";
-import { SessionWalkingPathMap } from "@/components/sessions/SessionWalkingPathMap";
+import {
+  SessionWalkingPathMap,
+  WalkingPathLegend,
+} from "@/components/sessions/SessionWalkingPathMap";
 import {
   adjustHours,
+  approveSession,
+  declineSession,
   loadSessionEvidence,
   saveAdminNotes,
   type SessionEvidence,
@@ -122,6 +127,7 @@ function WalkingPathSection({
   loading: boolean;
 }) {
   const route = evidence?.route;
+  const photoPins = evidence?.photoPins ?? [];
   const hasLiveRoute = (route?.length ?? 0) >= 2;
 
   return (
@@ -129,13 +135,13 @@ function WalkingPathSection({
       <div className="flex items-center justify-between mb-md gap-md">
         <h2 className="font-heading text-[20px] leading-[28px] text-text-primary">Walking Path</h2>
         {distanceMiles != null && (
-          <span className="font-data text-[12px] text-text-tertiary">
+          <span className="font-data text-[13px] font-medium text-text-primary tabular-nums">
             {distanceMiles.toFixed(2)} mi logged
           </span>
         )}
       </div>
       {hasLiveRoute && route ? (
-        <SessionWalkingPathMap route={route} />
+        <SessionWalkingPathMap route={route} photoPins={photoPins} />
       ) : (
         <WalkingPathPlaceholder
           distanceMiles={distanceMiles}
@@ -144,9 +150,7 @@ function WalkingPathSection({
         />
       )}
       {hasLiveRoute && route && (
-        <p className="mt-sm font-data text-[11px] text-text-tertiary">
-          {route.length} GPS point{route.length !== 1 ? "s" : ""} · green start · red end
-        </p>
+        <WalkingPathLegend pointCount={route.length} photoPinCount={photoPins.length} />
       )}
     </section>
   );
@@ -225,12 +229,18 @@ function AdminActionsSection({
   status,
   canApprove,
   canDecline,
+  isMock,
+  isPending,
+  feedback,
   onApprove,
   onDecline,
 }: {
   status: SessionStatus;
   canApprove: boolean;
   canDecline: boolean;
+  isMock: boolean;
+  isPending: boolean;
+  feedback: string | null;
   onApprove: () => void;
   onDecline: () => void;
 }) {
@@ -248,7 +258,8 @@ function AdminActionsSection({
           <button
             type="button"
             onClick={onApprove}
-            className="w-full h-11 px-lg rounded-sm bg-primary text-white font-data text-[13px] font-semibold hover:bg-[#007d35] transition-colors"
+            disabled={isPending}
+            className="w-full h-11 px-lg rounded-sm bg-primary text-white font-data text-[13px] font-semibold hover:bg-[#007d35] transition-colors disabled:opacity-50"
           >
             Approve
           </button>
@@ -257,15 +268,22 @@ function AdminActionsSection({
           <button
             type="button"
             onClick={onDecline}
-            className="w-full h-11 px-lg rounded-sm border border-[#ba1a1a] bg-[#ffd9de] text-[#ba1a1a] font-data text-[13px] font-semibold hover:bg-[#ffc5ca] transition-colors"
+            disabled={isPending}
+            className="w-full h-11 px-lg rounded-sm border border-[#ba1a1a] bg-[#ffd9de] text-[#ba1a1a] font-data text-[13px] font-semibold hover:bg-[#ffc5ca] transition-colors disabled:opacity-50"
           >
             Decline
           </button>
         )}
       </div>
-      <p className="font-body text-[12px] text-text-tertiary">
-        Demo only — status changes stay in this preview and are not saved.
-      </p>
+      {feedback ? (
+        <p className="font-body text-[12px] text-primary">{feedback}</p>
+      ) : (
+        <p className="font-body text-[12px] text-text-tertiary">
+          {isMock
+            ? "Demo only — status changes stay in this preview and are not saved."
+            : "Approve or decline writes to the live sessions table and notifies the volunteer."}
+        </p>
+      )}
     </section>
   );
 }
@@ -439,6 +457,8 @@ function SessionDrawerPanel({
   const [adminNotes, setAdminNotes] = useState(session.admin_notes ?? "");
   const [evidence, setEvidence] = useState<SessionEvidence | null>(null);
   const [evidenceLoading, setEvidenceLoading] = useState(!isMock);
+  const [actionPending, startActionTransition] = useTransition();
+  const [actionFeedback, setActionFeedback] = useState<string | null>(null);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -490,6 +510,40 @@ function SessionDrawerPanel({
 
   const canApprove = status !== "approved";
   const canDecline = status !== "not_approved";
+
+  function handleApprove() {
+    startActionTransition(async () => {
+      if (isMock) {
+        setStatus("approved");
+        setActionFeedback("Approved (demo — not saved)");
+        return;
+      }
+      try {
+        await approveSession(session.id);
+        setStatus("approved");
+        setActionFeedback("Approved");
+      } catch (err) {
+        setActionFeedback(err instanceof Error ? err.message : "Approve failed");
+      }
+    });
+  }
+
+  function handleDecline() {
+    startActionTransition(async () => {
+      if (isMock) {
+        setStatus("not_approved");
+        setActionFeedback("Declined (demo — not saved)");
+        return;
+      }
+      try {
+        await declineSession(session.id);
+        setStatus("not_approved");
+        setActionFeedback("Declined");
+      } catch (err) {
+        setActionFeedback(err instanceof Error ? err.message : "Decline failed");
+      }
+    });
+  }
 
   const panelTransition = prefersReduced ? { duration: 0 } : DRAWER_SPRING;
   const scrimTransition = prefersReduced ? { duration: 0 } : { duration: 0.4, ease: EASE_OUT };
@@ -616,8 +670,11 @@ function SessionDrawerPanel({
                   status={status}
                   canApprove={canApprove}
                   canDecline={canDecline}
-                  onApprove={() => setStatus("approved")}
-                  onDecline={() => setStatus("not_approved")}
+                  isMock={isMock}
+                  isPending={actionPending}
+                  feedback={actionFeedback}
+                  onApprove={handleApprove}
+                  onDecline={handleDecline}
                 />
                 <HoursAndNotesSection
                   session={session}

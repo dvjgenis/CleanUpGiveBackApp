@@ -25,6 +25,9 @@ import {
   LuMessageSquare,
   LuMinimize2,
   LuMapPin,
+  LuPause,
+  LuPlay,
+  LuRotateCcw,
   LuShoppingBag,
   LuUpload,
   LuUser,
@@ -76,3 +79,6 @@ export const ExpandIcon = makeIcon(LuMaximize2);
 export const CollapseIcon = makeIcon(LuMinimize2);
 export const MailIcon = makeIcon(LuMail);
 export const CopyIcon = makeIcon(LuCopy);
+export const PlayIcon = makeIcon(LuPlay);
+export const PauseIcon = makeIcon(LuPause);
+export const ReplayIcon = makeIcon(LuRotateCcw);

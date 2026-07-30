@@ -2,6 +2,56 @@
 
 ---
 
+## [2026-07-30] — Census address verify + Google Maps fallback
+
+**R:** Photon/OSM miss or mis-match many US streets (e.g. Algonquin Rd). Wanted free Census accuracy with Google ready when a key exists.
+
+**A:** Dropped Photon. Default UX is free-text + Census verify-on-blur (`verifyEventAddress`). `forwardGeocodeAddress` = Census → Google Geocoding. When `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` is set, UI uses Places Autocomplete instead. Save path uses the same Census→Google chain.
+
+**P:** `/events/new` without key — blur to match Census; with key — Places suggestions. Either path fills lat/lng for the location map.
+
+---
+
+## [2026-07-30] — Free address autocomplete (Photon + Nominatim)
+
+**R:** Google Places for the new/edit event address field needs a paid API key; wanted a free alternative.
+
+**A:** Replaced `AddressAutocomplete` with Photon (`photon.komoot.io`) typeahead (Chicagoland bias, no key). Manual entry still allowed; `geocodeAddress` now calls Nominatim on save when lat/lng are missing. Dropped Google Maps script dependency for this flow. Updated `.env.local.example` (removed Maps key).
+
+**P:** `/events/new` — type an address → suggestions; pick one for pin, or save without pick and Nominatim fills coords.
+
+---
+
+## [2026-07-30] — Checkpoint GPS (lat/lng) for trail photo pins
+
+**R:** Web-app trail thumbs for older long sessions were missing or poorly placed — checkpoints had no coordinates, only time-based guesses along `sessions.route`.
+
+**A:** Added `checkpoints.latitude` / `longitude` (`admin/db/007_checkpoint_coordinates.sql`). Fly `POST /sessions/:id/checkpoints` accepts optional WGS84 coords; mobile `addPhotoCheckpoint` embeds the live tracker GPS (display/current/last route point) when syncing. Web-app `loadSessionEvidence` prefers stored GPS (snapped onto the polyline); legacy rows still use time-along-route. Prisma schema + GET session serialization updated.
+
+**P:** Supabase `007` applied (Shiv). Remaining: Dulf redeploys Fly per [dulf-checkpoint-gps-fly-redeploy.md](admin/dulf-checkpoint-gps-fly-redeploy.md), then a new cleanup with photos should show GPS pins. Older sessions remain time-estimated.
+
+---
+
+## [2026-07-30] — Walking path fullscreen, trail photo pins, clearer legend
+
+**R:** Donna needed fullscreen map review; photos weren’t shown on the trail; the “black Start · red End” legend was hard to read (tiny grey text).
+
+**A:** Fullscreen control portals the map above the drawer (Escape exits). Checkpoint photos are pinned along the GPS polyline by capture time between `started_at`/`ended_at` (stacked selfie+progress thumbs; tap to enlarge). Legend replaced with high-contrast swatches + 13px primary text. `photoPins` added to `loadSessionEvidence`.
+
+**P:** Open a multi-point session with checkpoints → green trail thumbs; expand icon for fullscreen; legend readable.
+
+---
+
+## [2026-07-30] — Web-app walking path route replay + Start/End labels
+
+**R:** Session drawer showed a static GPS polyline with tiny green/red dots — no Play/Pause/Replay like mobile, and Start/End were easy to miss.
+
+**A:** `SessionWalkingPathMap` now mirrors mobile `SessionRouteMapPanel`: distance-based polyline growth, tip marker while playing, Play/Pause/Replay + time pill, auto-replay once (respects reduced motion). Start/End use labeled badges (black Start / red End). Ghost full-route line under the live trail. Replay helpers in `session-route.ts`. Diagnosed live: 788-point route auto-replays with controls; photos sign correctly; 1-point routes correctly skip the map. Fixed drawer Approve/Decline still claiming “Demo only” on live sessions (now calls `approveSession`/`declineSession`).
+
+**P:** Open a live session with ≥2 route points → path auto-replays; Start/End labels; Play/Pause/Replay work. Production: https://cleanupgiveback-web-app.vercel.app/sessions
+
+---
+
 ## [2026-07-30] — Web-app session drawer: live walking path + photos
 
 **R:** Session preview showed dashed "coming soon" Walking Path / Photos placeholders even when live Supabase rows had a GPS `route` polyline and `session-photos` checkpoints.

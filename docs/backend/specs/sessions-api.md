@@ -161,6 +161,8 @@ Spec: [service-letter-pdf.md](../../frontend/specs/service-letter-pdf.md).
 | `progress_path` | text | Storage path |
 | `captured_at` | timestamptz | |
 | `submitted_early` | boolean | true if before 30-min countdown |
+| `latitude` | double precision | WGS84 at capture (nullable for legacy) |
+| `longitude` | double precision | WGS84 at capture (nullable for legacy) |
 
 ### Storage: `session-photos`
 
@@ -178,7 +180,8 @@ Private bucket. Path: `{user_id}/{session_id}/{checkpoint_id}-selfie.jpg`.
 - [x] **AC-8:** Session ends with `invalid` when client calls finalize with `status: "invalid"` (missed-checkpoint grace expiry)
 - [x] **AC-9:** `GET /health` returns 200 for Fly health checks
 - [x] **AC-10:** `GET /sessions` includes `checkpointCount` and `photoCount` per row for Home impact stats
-- [x] **AC-11:** `DELETE /sessions/:id` hard-deletes non-`approved` sessions owned by the caller; returns `409` when `approved`
+- [x] **AC-12:** `POST /sessions/:id/checkpoints` accepts optional `latitude` / `longitude` (WGS84) and persists them for admin/web-app trail photo pins; omitted on legacy clients
+
 
 ## Security & privacy
 

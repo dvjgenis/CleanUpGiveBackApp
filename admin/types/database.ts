@@ -37,6 +37,8 @@ export interface Database {
           progress_path: string | null;
           captured_at: string | null;
           submitted_early: boolean;
+          latitude: number | null;
+          longitude: number | null;
         };
         Insert: Partial<Database['public']['Tables']['checkpoints']['Row']>;
         Update: Partial<Database['public']['Tables']['checkpoints']['Row']>;

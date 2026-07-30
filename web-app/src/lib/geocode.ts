@@ -1,12 +1,11 @@
 /**
  * GPS → FIPS geocoding service for county/neighborhood heatmap tiers.
- * 
- * This is a simplified implementation that demonstrates the concept.
- * In production, this would use a real geocoding API like:
- * - Google Maps Geocoding API
- * - OpenCage Geocoder
- * - Census Bureau geocoding service
+ *
+ * Event address → lat/lng uses `forwardGeocodeAddress` (Census → Google).
+ * Point → FIPS remains a mock lookup for heatmap demos.
  */
+
+import { forwardGeocodeAddress } from './forward-geocode';
 
 export type GeoPoint = {
   latitude: number;
@@ -215,66 +214,39 @@ export type SessionWithGPS = {
 };
 
 /**
- * Geocode a text address to coordinates and FIPS codes.
- * This is a simplified implementation for demonstration.
+ * Geocode a text address for event pins (Census → Google fallback).
+ * Attaches mock FIPS via `geocodePoint` for heatmap helpers that expect that shape.
  */
-export async function geocodeAddress(address: string): Promise<(GeocodingResult & { latitude: number; longitude: number }) | GeocodingError> {
+export async function geocodeAddress(
+  address: string,
+): Promise<(GeocodingResult & { latitude: number; longitude: number }) | GeocodingError> {
   if (!address || address.trim().length < 3) {
     return {
       code: 'INVALID_COORDINATES',
-      message: 'Address is too short or empty'
+      message: 'Address is too short or empty',
     };
   }
-  
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 150));
-  
-  // Mock address geocoding - in production this would use a real service
-  const mockAddressResults: Record<string, { lat: number; lng: number }> = {
-    'chicago': { lat: 41.8781, lng: -87.6298 },
-    'new york': { lat: 40.7589, lng: -73.9851 },
-    'los angeles': { lat: 34.0522, lng: -118.2437 },
-    'houston': { lat: 29.7604, lng: -95.3698 },
-    'philadelphia': { lat: 39.9526, lng: -75.1652 },
-    'phoenix': { lat: 33.4484, lng: -112.0740 },
-    'san antonio': { lat: 29.4241, lng: -98.4936 },
-    'san diego': { lat: 32.7157, lng: -117.1611 },
-    'dallas': { lat: 32.7767, lng: -96.7970 },
-    'san jose': { lat: 37.3382, lng: -121.8863 },
-  };
-  
-  const normalized = address.toLowerCase().trim();
-  let coords: { lat: number; lng: number } | null = null;
-  
-  // Try to find a match in our mock data
-  for (const [city, coord] of Object.entries(mockAddressResults)) {
-    if (normalized.includes(city)) {
-      coords = coord;
-      break;
-    }
+
+  const hit = await forwardGeocodeAddress(address);
+  if (!('latitude' in hit)) {
+    const code =
+      hit.code === 'RATE_LIMITED'
+        ? 'RATE_LIMITED'
+        : hit.code === 'INVALID_ADDRESS'
+          ? 'INVALID_COORDINATES'
+          : 'API_ERROR';
+    return { code, message: hit.message };
   }
-  
-  if (!coords) {
-    // Generate random coordinates within US bounds for demo
-    coords = {
-      lat: 25 + Math.random() * 24, // Roughly US latitude range
-      lng: -125 + Math.random() * 58, // Roughly US longitude range
-    };
-  }
-  
-  // Use the existing geocodePoint function to get FIPS data
-  const geoResult = await geocodePoint({
-    latitude: coords.lat,
-    longitude: coords.lng,
-  });
-  
+
+  const { latitude, longitude } = hit;
+  const geoResult = await geocodePoint({ latitude, longitude });
+
   if ('fips' in geoResult) {
     return {
       ...geoResult,
-      latitude: coords.lat,
-      longitude: coords.lng,
+      latitude,
+      longitude,
     };
-  } else {
-    return geoResult;
   }
+  return geoResult;
 }

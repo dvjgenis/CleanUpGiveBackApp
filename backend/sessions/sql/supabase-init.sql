@@ -25,7 +25,9 @@ create table if not exists public.checkpoints (
   selfie_path text,
   progress_path text,
   captured_at timestamptz,
-  submitted_early boolean default false
+  submitted_early boolean default false,
+  latitude double precision,
+  longitude double precision
 );
 
 alter table public.sessions enable row level security;

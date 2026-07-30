@@ -42,6 +42,9 @@ model Checkpoint {
   progressPath   String?   @map("progress_path")
   capturedAt     DateTime? @map("captured_at") @db.Timestamptz(6)
   submittedEarly Boolean   @default(false) @map("submitted_early")
+  /** WGS84 — set when the mobile client submits a checkpoint with GPS. */
+  latitude       Float?
+  longitude      Float?
   session        Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@map("checkpoints")

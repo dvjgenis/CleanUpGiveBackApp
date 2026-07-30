@@ -54,8 +54,11 @@ In **SQL Editor**, run these files from the repo **in order** (skip any already 
 | [`admin/db/003_event_image_urls.sql`](../../admin/db/003_event_image_urls.sql) | `events.image_urls` |
 | [`admin/db/004_admin_refinements.sql`](../../admin/db/004_admin_refinements.sql) | `decline_reason`, court unique, notify history |
 | [`admin/db/006_donations.sql`](../../admin/db/006_donations.sql) | `donations` table (Payments donation revenue) |
+| [`admin/db/007_checkpoint_coordinates.sql`](../../admin/db/007_checkpoint_coordinates.sql) | `checkpoints.latitude` / `longitude` for trail photo pins |
 
 Also ensure Auth has **Anonymous** enabled if the mobile app still uses anon auth (**Authentication → Providers → Anonymous**).
+
+**Checkpoint GPS follow-up (2026-07-30):** after `007` is applied, redeploy Fly so the API persists coords — short runbook: [dulf-checkpoint-gps-fly-redeploy.md](dulf-checkpoint-gps-fly-redeploy.md).
 
 ### 1.3 Create Donna’s admin user
 

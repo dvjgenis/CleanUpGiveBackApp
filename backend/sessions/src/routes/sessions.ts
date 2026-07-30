@@ -18,6 +18,9 @@ type CheckpointBody = {
   progressPath: string;
   capturedAt: string;
   submittedEarly?: boolean;
+  /** WGS84 — optional for older clients; preferred for trail photo pins. */
+  latitude?: number | null;
+  longitude?: number | null;
 };
 
 type FinalizeBody = {
@@ -160,6 +163,19 @@ export async function registerSessionRoutes(app: FastifyInstance) {
         return reply.code(400).send({ error: 'Missing checkpoint fields' });
       }
 
+      const latitude =
+        typeof body.latitude === 'number' && Number.isFinite(body.latitude)
+          ? body.latitude
+          : null;
+      const longitude =
+        typeof body.longitude === 'number' && Number.isFinite(body.longitude)
+          ? body.longitude
+          : null;
+      const hasCoords = latitude != null && longitude != null;
+      if (hasCoords && (Math.abs(latitude) > 90 || Math.abs(longitude) > 180)) {
+        return reply.code(400).send({ error: 'Invalid checkpoint coordinates' });
+      }
+
       const checkpoint = await prisma.checkpoint.create({
         data: {
           sessionId: id,
@@ -167,6 +183,8 @@ export async function registerSessionRoutes(app: FastifyInstance) {
           progressPath: body.progressPath,
           capturedAt: new Date(body.capturedAt),
           submittedEarly: body.submittedEarly ?? false,
+          latitude: hasCoords ? latitude : null,
+          longitude: hasCoords ? longitude : null,
         },
       });
 
@@ -288,6 +306,8 @@ export async function registerSessionRoutes(app: FastifyInstance) {
           progressPath: cp.progressPath,
           capturedAt: cp.capturedAt?.toISOString() ?? null,
           submittedEarly: cp.submittedEarly,
+          latitude: cp.latitude ?? null,
+          longitude: cp.longitude ?? null,
         })),
       };
     },

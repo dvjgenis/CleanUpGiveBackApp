@@ -15,6 +15,8 @@ export type DraftPhotoCheckpoint = {
   progressUri: string;
   capturedAt: number;
   submittedEarly: boolean;
+  latitude?: number | null;
+  longitude?: number | null;
 };
 
 export type LiveSessionDraft = {

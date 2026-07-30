@@ -77,6 +77,9 @@ export type PhotoCheckpointSubmission = {
   capturedAt: number;
   /** True when submitted before the 30-minute checkpoint countdown reached zero. */
   submittedEarly: boolean;
+  /** WGS84 at capture — embedded on the Fly checkpoint row for trail pins. */
+  latitude: number | null;
+  longitude: number | null;
 };
 
 export type CompletedSessionSnapshot = {
@@ -749,6 +752,8 @@ async function postCheckpointToRemote(
     progressPath: paths.progressPath,
     capturedAt: new Date(checkpoint.capturedAt).toISOString(),
     submittedEarly: checkpoint.submittedEarly,
+    latitude: checkpoint.latitude,
+    longitude: checkpoint.longitude,
   });
 }
 
@@ -997,6 +1002,8 @@ export function addPhotoCheckpoint(submission: {
   selfieUri: string;
   progressUri: string;
   capturedAt: number;
+  latitude?: number | null;
+  longitude?: number | null;
 }): boolean {
   if (!state.isActive) {
     return false;
@@ -1004,10 +1011,33 @@ export function addPhotoCheckpoint(submission: {
 
   const nextIndex = state.submittedCheckpoints.length;
   const submittedEarly = state.checkpointSecondsRemaining > 0;
+  const gps =
+    state.displayCoordinate ??
+    state.currentCoordinate ??
+    (state.routeCoordinates.length > 0
+      ? state.routeCoordinates[state.routeCoordinates.length - 1]
+      : null);
+  const latitude =
+    typeof submission.latitude === 'number' && Number.isFinite(submission.latitude)
+      ? submission.latitude
+      : gps
+        ? gps[1]
+        : null;
+  const longitude =
+    typeof submission.longitude === 'number' && Number.isFinite(submission.longitude)
+      ? submission.longitude
+      : gps
+        ? gps[0]
+        : null;
+
   const checkpoint: PhotoCheckpointSubmission = {
     id: `checkpoint-${nextIndex}-${submission.capturedAt}`,
+    selfieUri: submission.selfieUri,
+    progressUri: submission.progressUri,
+    capturedAt: submission.capturedAt,
     submittedEarly,
-    ...submission,
+    latitude,
+    longitude,
   };
 
   setState({
@@ -1229,7 +1259,11 @@ export async function resumeLiveSessionFromDraft(draft: LiveSessionDraft) {
     mapRecenterToken: 0,
     mapFollowEnabled: draft.mapFollowEnabled,
     mapLayer: draft.mapLayer,
-    submittedCheckpoints: [...draft.submittedCheckpoints],
+    submittedCheckpoints: draft.submittedCheckpoints.map((cp) => ({
+      ...cp,
+      latitude: cp.latitude ?? null,
+      longitude: cp.longitude ?? null,
+    })),
     sessionSyncWarning: null,
     backgroundLocationEnabled: false,
   };

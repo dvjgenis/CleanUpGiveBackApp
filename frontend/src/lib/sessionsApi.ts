@@ -53,6 +53,9 @@ export async function addCheckpoint(
     progressPath: string;
     capturedAt: string;
     submittedEarly: boolean;
+    /** WGS84 — preferred for admin/web-app trail photo pins. */
+    latitude?: number | null;
+    longitude?: number | null;
   },
 ): Promise<{ id: string } | null> {
   if (!isApiConfigured) {
