@@ -5,7 +5,7 @@
  * All / Donations / Shop filters the period bar chart; product breakdown sits below.
  *
  * `monthly`/`itemBreakdown` are fetched live from the shared Supabase
- * `shop_orders` table by `web-app/src/app/payments/page.tsx` (see
+ * `shop_orders` table by `admin-web-app/src/app/payments/page.tsx` (see
  * `@/lib/live-data`) — donations stay mock until a donations table ships,
  * matching `admin/lib/payments-data.ts`.
  */

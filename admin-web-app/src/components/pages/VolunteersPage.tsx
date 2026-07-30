@@ -6,7 +6,7 @@
  * renders, since admin merged Volunteers + Court Hours into `/users`.
  *
  * `users` is fetched live from the shared Supabase Auth directory + `sessions`
- * + `court_orders` by `web-app/src/app/volunteers/page.tsx` (and `/users`)
+ * + `court_orders` by `admin-web-app/src/app/volunteers/page.tsx` (and `/users`)
  * (see `@/lib/live-data`'s `loadLiveUsers`), falling back to an illustrative
  * mock roster when the service-role key isn't configured yet.
  */

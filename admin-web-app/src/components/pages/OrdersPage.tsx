@@ -4,7 +4,7 @@
  * Faithful port of `admin/app/(admin)/orders/page.tsx` + `OrdersClientShell.tsx`.
  *
  * `orders` is fetched live from the shared Supabase `shop_orders` table by
- * `web-app/src/app/orders/page.tsx` (see `@/lib/live-data`), falling back to
+ * `admin-web-app/src/app/orders/page.tsx` (see `@/lib/live-data`), falling back to
  * `MOCK_ORDERS` when that table has no rows yet.
  */
 import { Suspense, useState } from "react";

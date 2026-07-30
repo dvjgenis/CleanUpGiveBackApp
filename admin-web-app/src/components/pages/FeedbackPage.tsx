@@ -2,7 +2,7 @@
  * Faithful port of `admin/app/(admin)/feedback/page.tsx` + `FeedbackRow.tsx`.
  *
  * `feedback` is fetched live from the shared Supabase `volunteer_feedback`
- * table by `web-app/src/app/feedback/page.tsx` (see `@/lib/live-data`),
+ * table by `admin-web-app/src/app/feedback/page.tsx` (see `@/lib/live-data`),
  * falling back to `MOCK_FEEDBACK` when that table has no rows yet.
  */
 import { EMOJI_MAP, MOCK_FEEDBACK, type FeedbackEntry } from "@/lib/mock-data";

@@ -2,7 +2,7 @@
  * Faithful port of `admin/app/(admin)/events/[id]/page.tsx`.
  *
  * `event` is fetched live from the shared Supabase `events` table by
- * `web-app/src/app/events/[id]/page.tsx`, falling back to a mock fixture
+ * `admin-web-app/src/app/events/[id]/page.tsx`, falling back to a mock fixture
  * lookup when that table is empty. When `liveActions` is set (real row, not a
  * mock fixture), renders `EventDetailActions` (edit/publish/delete) and
  * `NotifyAtRiskVolunteers` alongside the read-only detail view, same as admin.

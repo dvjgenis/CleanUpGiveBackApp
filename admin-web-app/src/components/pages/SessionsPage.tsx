@@ -11,7 +11,7 @@
  * in web-app yet, so feedback is a small inline status line instead).
  *
  * `sessions` is fetched live from the shared Supabase `sessions` table by
- * `web-app/src/app/sessions/page.tsx` (see `@/lib/live-data`), falling back to
+ * `admin-web-app/src/app/sessions/page.tsx` (see `@/lib/live-data`), falling back to
  * `MOCK_SESSIONS` when that table has no rows yet.
  */
 import { Suspense, useEffect, useState, useTransition } from "react";

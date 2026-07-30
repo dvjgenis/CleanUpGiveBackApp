@@ -7,7 +7,7 @@ Read the exact versioned Expo docs at https://docs.expo.dev/versions/v54.0.0/ be
 | Area | Path |
 |------|------|
 | Expo app | `frontend/` |
-| Admin console (production) | `web-app/` |
+| Admin console (production) | `admin-web-app/` |
 | Legacy admin (archived) | `admin/` — do not deploy; keep `admin/db/*.sql` for Supabase migrations ([admin/README.md](../admin/README.md)) |
 | Backend | `backend/sessions/` (live on Fly); `backend/{maps,payments}/` planned |
 | Living docs | `docs/` — start at [README.md](../README.md) |
@@ -23,7 +23,7 @@ Read the exact versioned Expo docs at https://docs.expo.dev/versions/v54.0.0/ be
 ## Project Identity
 
 - **Stack:** Expo SDK 54, React Native 0.81, TypeScript, Expo Router.
-- **Monorepo:** `frontend/` (app), `web-app/` (admin console), `admin/` (archived — migrations only), `backend/` (services), `docs/` (living docs).
+- **Monorepo:** `frontend/` (app), `admin-web-app/` (admin console), `admin/` (archived — migrations only), `backend/` (services), `docs/` (living docs).
 - **Builds:** EAS (development, preview, production). Location (`expo-location` + background task) and camera (`expo-camera`) plugins are configured in `frontend/app.json`.
 - **Context docs:** `docs/` — start at [docs/README.md](../README.md).
 

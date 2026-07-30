@@ -4,7 +4,7 @@
  * Port of the real admin Insights page (`admin/app/(admin)/insights/page.tsx`).
  * Layout: Hours & submissions trend → queue age / decisions / court progress →
  * three donuts → US heatmap. `sessions`/`courtProgress` are fetched live from
- * Supabase by `web-app/src/app/insights/page.tsx` and `.../analytics/page.tsx`
+ * Supabase by `admin-web-app/src/app/insights/page.tsx` and `.../analytics/page.tsx`
  * (see `@/lib/live-data`), falling back to mock fixtures when those tables are
  * empty — same prop-drilling pattern as `SessionsPage`/`DashboardPage`. Chart
  * data isn't re-scoped by the period range yet. Court progress shows View more

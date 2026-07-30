@@ -1,6 +1,6 @@
 -- Donations table — additive only.
--- Backs Payments "Donations" revenue in admin/ and web-app/, previously mock-only
--- (see admin/lib/payments-data.ts, web-app/src/lib/live-data.ts). No writer exists
+-- Backs Payments "Donations" revenue in admin/ and admin-web-app/, previously mock-only
+-- (see admin/lib/payments-data.ts, admin-web-app/src/lib/live-data.ts). No writer exists
 -- yet — the mobile Donate flow (`frontend/src/app/donate.tsx`) is still local/mock
 -- until Stripe (or another processor) ships; this table is the landing spot for
 -- that integration and can be seeded/tested manually in the meantime.

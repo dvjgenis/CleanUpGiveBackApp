@@ -2,7 +2,7 @@
  * Faithful port of `admin/app/(admin)/events/page.tsx`.
  *
  * `events` is fetched live from the shared Supabase `events` table by
- * `web-app/src/app/events/page.tsx` (see `@/lib/events` + `EventListItem`) —
+ * `admin-web-app/src/app/events/page.tsx` (see `@/lib/events` + `EventListItem`) —
  * the same table the mobile app reads for its Upcoming Events feed, and the
  * same table `admin/actions/events.ts` writes to. Falls back to illustrative
  * fixtures when that table is empty.

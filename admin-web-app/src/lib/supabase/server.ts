@@ -2,7 +2,7 @@
  * Server-side Supabase clients — ported from `admin/lib/supabase/server.ts`.
  * web-app shares the same Supabase project as `admin/` and the mobile app
  * (`frontend/`), so this is the same client shape wired to `NEXT_PUBLIC_SUPABASE_*`
- * / `SUPABASE_SERVICE_ROLE_KEY` in `web-app/.env.local`.
+ * / `SUPABASE_SERVICE_ROLE_KEY` in `admin-web-app/.env.local`.
  */
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { createClient as createSupabaseClient, type SupabaseClient } from '@supabase/supabase-js';
@@ -42,7 +42,7 @@ export async function createClient() {
   );
 }
 
-/** True when web-app/.env.local has a non-empty service-role key. */
+/** True when admin-web-app/.env.local has a non-empty service-role key. */
 export function hasServiceRoleKey(): boolean {
   return Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY?.trim());
 }
@@ -66,7 +66,7 @@ export async function createServiceClient(): Promise<SupabaseClient> {
   const client = await tryCreateServiceClient();
   if (!client) {
     throw new Error(
-      'Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in web-app/.env.local. ' +
+      'Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in admin-web-app/.env.local. ' +
         'Copy the service_role secret from Supabase Dashboard → Project Settings → API.',
     );
   }

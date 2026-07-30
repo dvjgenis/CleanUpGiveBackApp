@@ -2,6 +2,16 @@
 
 ---
 
+## [2026-07-30] — Rename `web-app/` → `admin-web-app/`
+
+**R:** Clearer folder name now that legacy `admin/` is archived.
+
+**A:** `git mv web-app admin-web-app`; renamed `docs/web-app.md` → `docs/admin-web-app.md`; updated living docs, AGENTS, cursor rules, package name. Vercel project remains `cleanupgiveback-web-app`.
+
+**P:** `cd admin-web-app && npm run dev` / `vercel --prod`.
+
+---
+
 ## [2026-07-30] — Archive legacy `admin/` Next app
 
 **R:** Production admin is `web-app/` on Vercel; keeping two Next admin apps invites drift.

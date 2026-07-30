@@ -7,7 +7,7 @@
  * `UsHeatmap`, `PaymentsPreviewCard`, `OrdersPreviewCard`).
  *
  * `sessions`/`orders`/`monthly`/`feedbackAvg` are fetched live from Supabase
- * by `web-app/src/app/dashboard/page.tsx` (see `@/lib/live-data`), falling
+ * by `admin-web-app/src/app/dashboard/page.tsx` (see `@/lib/live-data`), falling
  * back to the same mock fixtures admin uses when those tables are empty. The
  * live review actions (approve/decline, drawer, search) are still read-only.
  */
