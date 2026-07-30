@@ -6,7 +6,7 @@
 
 **R:** The desktop five-column product table leaked into mobile, leaving Revenue / Share / Rank labels and values unevenly spaced.
 
-**A:** Added a dedicated mobile card layout: item + sold count on the first row, then a stable three-column Revenue / Share / Rank definition grid. The total row now has its own compact mobile layout; desktop table columns are unchanged. Product rows inherit the card's top/bottom corner radius, and the top-share highlight uses an inset ring so its green border is not clipped on mobile.
+**A:** Added a dedicated mobile card layout: item + sold count on the first row, then a stable three-column Revenue / Share / Rank definition grid. The footer mirrors the first row geometry (Total + total sold), but because it carries no Rank it uses its own two-track metric grid rather than the product-row grid: Revenue is edge-aligned left under Total and Share / 100% is edge-aligned right under total sold. An earlier note claiming the footer left an intentionally empty Rank track was wrong — that spare track is what pushed Share into the middle of the row. Desktop table columns are unchanged. Product rows inherit the card's top/bottom corner radius, and the top-share highlight uses an inset ring so its green border is not clipped on mobile.
 
 **P:** Payments → Shop items at mobile width has consistent metadata alignment without collisions or irregular gaps.
 

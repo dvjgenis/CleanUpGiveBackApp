@@ -5,6 +5,13 @@ import { formatCents } from '@/lib/mock-data';
 import { shopItemBarColor, type ShopItemBreakdown } from '@/lib/shop-catalog';
 
 const ITEM_TABLE_COLS = 'grid-cols-[1.6fr_5rem_6.5rem_4.5rem_5.5rem]';
+const MOBILE_PRIMARY_ROW =
+  'grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-md';
+const MOBILE_METRIC_COLS =
+  'grid grid-cols-[minmax(0,1.25fr)_minmax(0,0.8fr)_minmax(0,0.65fr)] gap-x-md';
+/** Footer has no Rank, so its two metrics sit on the row edges under Total/Sold. */
+const MOBILE_TOTAL_METRIC_COLS =
+  'grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-x-md';
 
 export function ShopItemBreakdownSection({
   breakdown,
@@ -110,15 +117,15 @@ export function ShopItemBreakdownSection({
                     }`}
                   >
                     <div className="lg:hidden">
-                      <div className="flex items-baseline justify-between gap-md">
+                      <div className={MOBILE_PRIMARY_ROW}>
                         <span className="min-w-0 truncate font-body text-[14px] font-medium text-text-primary">
                           {row.label}
                         </span>
-                        <span className="shrink-0 font-data text-[12px] text-text-tertiary">
+                        <span className="font-data text-[12px] tabular-nums text-text-tertiary">
                           {row.qtySold} sold
                         </span>
                       </div>
-                      <dl className="mt-sm grid grid-cols-[minmax(0,1.25fr)_minmax(0,0.8fr)_minmax(0,0.65fr)] gap-x-md">
+                      <dl className={`mt-sm ${MOBILE_METRIC_COLS}`}>
                         <div className="min-w-0">
                           <dt className="font-data text-[10px] uppercase tracking-[0.6px] text-text-tertiary">
                             Revenue
@@ -127,7 +134,7 @@ export function ShopItemBreakdownSection({
                             {formatCents(row.revenueCents)}
                           </dd>
                         </div>
-                        <div className="min-w-0">
+                        <div className="min-w-0 text-center">
                           <dt className="font-data text-[10px] uppercase tracking-[0.6px] text-text-tertiary">
                             Share
                           </dt>
@@ -178,15 +185,33 @@ export function ShopItemBreakdownSection({
             <div
               className={`px-md py-sm bg-bg-surface-elevated border-t border-border-outline lg:grid ${ITEM_TABLE_COLS} lg:gap-md lg:items-center lg:px-lg`}
             >
-              <div className="flex items-center justify-between gap-md lg:hidden">
-                <span className="font-body text-[13px] font-semibold text-text-primary">Total</span>
-                <span className="font-data text-[12px] tabular-nums text-text-tertiary">
-                  {totalQty} sold
-                </span>
-                <span className="font-data text-[13px] font-semibold tabular-nums text-text-primary">
-                  {formatCents(totalRevenueCents)}
-                </span>
-                <span className="font-data text-[12px] tabular-nums text-text-tertiary">100%</span>
+              <div className="lg:hidden">
+                <div className={MOBILE_PRIMARY_ROW}>
+                  <span className="font-body text-[13px] font-semibold text-text-primary">
+                    Total
+                  </span>
+                  <span className="font-data text-[12px] tabular-nums text-text-tertiary">
+                    {totalQty} sold
+                  </span>
+                </div>
+                <dl className={`mt-sm ${MOBILE_TOTAL_METRIC_COLS}`}>
+                  <div className="min-w-0">
+                    <dt className="font-data text-[10px] uppercase tracking-[0.6px] text-text-tertiary">
+                      Revenue
+                    </dt>
+                    <dd className="mt-xs truncate font-data text-[14px] font-semibold tabular-nums text-text-primary">
+                      {formatCents(totalRevenueCents)}
+                    </dd>
+                  </div>
+                  <div className="min-w-0 text-right">
+                    <dt className="font-data text-[10px] uppercase tracking-[0.6px] text-text-tertiary">
+                      Share
+                    </dt>
+                    <dd className="mt-xs font-data text-[14px] tabular-nums text-text-primary">
+                      100%
+                    </dd>
+                  </div>
+                </dl>
               </div>
               <span className="hidden font-body text-[13px] font-semibold text-text-primary lg:block">
                 Total
