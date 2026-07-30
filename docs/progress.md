@@ -2,6 +2,16 @@
 
 ---
 
+## [2026-07-30] — Root README polish
+
+**R:** Improve root README aesthetics (logo, shields, light typing animation) without cluttering content.
+
+**A:** Centered brand icon + typing SVG tagline; Expo / RN / TS / Router / license / platform badges; light emoji column on layout table; kept quick start and docs links intact.
+
+**P:** Open GitHub repo README preview after push.
+
+---
+
 ## [2026-07-28] — Admin refinements full batch (execute)
 
 **R:** Ship the full admin refinement plan: notifications, live feedback, CSV, polish, court/orders writes, auth, Wave 3 correctness + UX — keep US heatmap and hours-wait bars on home.
