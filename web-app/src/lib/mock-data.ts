@@ -235,7 +235,7 @@ export function buildDecisionBars(scoped: Pick<MockSession, "status">[]): NamedB
   ].filter((b) => b.value > 0);
 }
 
-export const MOCK_FEEDBACK_AVG = 4.2;
+export const MOCK_FEEDBACK_AVG = 4.1;
 export const MOCK_OPEN_ORDERS = 4;
 
 export type MonthlyRevenuePoint = {
@@ -576,6 +576,7 @@ export const EMOJI_MAP: Record<string, { emoji: string; label: string; score: nu
   very_sad: { emoji: "😢", label: "Very Sad", score: 1, color: "#ba1a1a" },
 };
 
+/** Fixture ratings tally 5 / 3 / 2 / 1 / 1 (no twin adjacent totals like the old 4 / 4). */
 export const MOCK_FEEDBACK: FeedbackEntry[] = [
   { id: "f1", volunteer: "Jordan Kim", rating: "excited", comment: "Loved every minute — the team coordination was excellent and the park looks so much better!", submittedAt: "2026-07-20T14:23:00Z", activity: "Park Cleanup" },
   { id: "f2", volunteer: "Devon Okafor", rating: "happy", comment: "Great experience. The route was well-planned and volunteers were friendly.", submittedAt: "2026-07-20T11:05:00Z", activity: "Beach Cleanup" },
@@ -583,7 +584,7 @@ export const MOCK_FEEDBACK: FeedbackEntry[] = [
   { id: "f4", volunteer: "Marcus Rivera", rating: "neutral", comment: "It was okay. Wish we had more supplies at the start.", submittedAt: "2026-07-19T09:15:00Z", activity: "Neighborhood Cleanup" },
   { id: "f5", volunteer: "Luna Martinez", rating: "happy", comment: "Really fulfilling! Will definitely come back.", submittedAt: "2026-07-18T13:30:00Z", activity: "River Cleanup" },
   { id: "f6", volunteer: "Miguel Santos", rating: "excited", comment: "Best session yet. We cleared an entire trail section in under 3 hours.", submittedAt: "2026-07-18T10:00:00Z", activity: "Trail Cleanup" },
-  { id: "f7", volunteer: "Fatima Hassan", rating: "happy", comment: null, submittedAt: "2026-07-17T15:20:00Z", activity: "Park Cleanup" },
+  { id: "f7", volunteer: "Fatima Hassan", rating: "excited", comment: null, submittedAt: "2026-07-17T15:20:00Z", activity: "Park Cleanup" },
   { id: "f8", volunteer: "Destiny Thompson", rating: "neutral", comment: "Session was fine. The location was hard to get to without a car.", submittedAt: "2026-07-17T08:50:00Z", activity: "Highway Litter Pick" },
   { id: "f9", volunteer: "Priya Nair", rating: "sad", comment: "I got there and nobody else showed up for 45 minutes.", submittedAt: "2026-07-16T12:10:00Z", activity: "Beach Cleanup", flagged: true },
   { id: "f10", volunteer: "Tyler Washington", rating: "happy", comment: "Good vibes, easy to follow instructions.", submittedAt: "2026-07-15T14:05:00Z", activity: "Neighborhood Cleanup" },

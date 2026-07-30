@@ -58,11 +58,18 @@ export function FeedbackPage({
     feedback.length > 0
       ? feedback.reduce((sum, f) => sum + (EMOJI_MAP[f.rating]?.score ?? 0), 0) / feedback.length
       : 0;
-  const distribution = Object.entries(EMOJI_MAP).map(([key, val]) => ({
-    ...val,
-    key,
-    count: feedback.filter((f) => f.rating === key).length,
-  }));
+  const ratingOrder = ["excited", "happy", "neutral", "sad", "very_sad"] as const;
+  const distribution = ratingOrder.map((key) => {
+    const val = EMOJI_MAP[key];
+    const count = feedback.filter((f) => f.rating === key).length;
+    return {
+      ...val,
+      key,
+      count,
+      pct: feedback.length > 0 ? Math.round((count / feedback.length) * 100) : 0,
+    };
+  });
+  const maxCount = Math.max(0, ...distribution.map((d) => d.count));
   const flagged = feedback.filter((f) => f.flagged).length;
 
   return (
@@ -103,16 +110,37 @@ export function FeedbackPage({
         <p className="font-data text-[12px] tracking-[0.96px] uppercase text-text-tertiary mb-md">
           Rating Distribution
         </p>
-        <div className="grid grid-cols-5 gap-sm sm:flex sm:flex-wrap sm:gap-xl sm:justify-between">
-          {distribution.map((d) => (
-            <div key={d.key} className="flex flex-col items-center gap-xs min-w-0">
-              <span className="text-xl sm:text-2xl">{d.emoji}</span>
-              <span className="font-data text-[16px] sm:text-[18px] font-semibold text-text-primary">{d.count}</span>
-              <span className="font-data text-[9px] sm:text-[10px] text-text-tertiary text-center truncate w-full">
-                {d.label}
-              </span>
-            </div>
-          ))}
+        <div className="grid grid-cols-5 gap-md">
+          {distribution.map((d) => {
+            const barPct = maxCount > 0 ? (d.count / maxCount) * 100 : 0;
+            return (
+              <div key={d.key} className="flex flex-col items-center gap-xs min-w-0">
+                <span className="text-xl sm:text-2xl" aria-hidden>
+                  {d.emoji}
+                </span>
+                <div
+                  className="w-full max-w-[40px] h-16 flex flex-col justify-end rounded-sm bg-bg-app overflow-hidden"
+                  aria-hidden
+                >
+                  <div
+                    className="w-full rounded-sm transition-[height]"
+                    style={{
+                      height: `${Math.max(d.count > 0 ? 8 : 0, barPct)}%`,
+                      backgroundColor: d.color,
+                      opacity: d.count > 0 ? 0.85 : 0.2,
+                    }}
+                  />
+                </div>
+                <span className="font-data text-[16px] sm:text-[18px] font-semibold text-text-primary">
+                  {d.count}
+                </span>
+                <span className="font-data text-[10px] text-text-tertiary">{d.pct}%</span>
+                <span className="font-data text-[9px] sm:text-[10px] text-text-tertiary text-center leading-tight">
+                  {d.label}
+                </span>
+              </div>
+            );
+          })}
         </div>
       </div>
 

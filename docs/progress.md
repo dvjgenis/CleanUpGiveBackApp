@@ -2,6 +2,16 @@
 
 ---
 
+## [2026-07-30] — Fix Feedback rating distribution clarity
+
+**R:** Sample Rating Distribution showed twin counts (Excited 4 / Happy 4, Sad 1 / Very Sad 1) that looked like a render bug.
+
+**A:** Rebalanced mock ratings to 5/3/2/1/1. Distribution UI now uses a fixed emoji order with proportional bars + % share so equal counts read as separate categories.
+
+**P:** `/feedback` sample distribution no longer shows adjacent duplicate totals; bars/% make shares obvious.
+
+---
+
 ## [2026-07-30] — Census address verify + Google Maps fallback
 
 **R:** Photon/OSM miss or mis-match many US streets (e.g. Algonquin Rd). Wanted free Census accuracy with Google ready when a key exists.
