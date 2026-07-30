@@ -32,23 +32,24 @@ Required for native MapLibre maps and background route tracking during active se
 | `frontend/.env.example` | Template for `EXPO_PUBLIC_SUPABASE_*`, `EXPO_PUBLIC_API_URL` |
 | `frontend/.env` | Local Expo values (gitignored) — **no** `DATABASE_URL` |
 | `backend/sessions/.env` | `DATABASE_URL` (session pooler for local Prisma), optional service role for PDF dev (gitignored) |
-| `admin/.env.local` | Supabase + `SESSIONS_API_URL` + `ADMIN_API_KEY` for letterhead proxy (gitignored) |
-| `web-app/.env.local.example` | Template for `NEXT_PUBLIC_SUPABASE_*` + `SUPABASE_SERVICE_ROLE_KEY` + `BYPASS_AUTH` — same Supabase project as `admin/.env.local` — plus optional `RESEND_API_KEY`/`EMAIL_FROM` (session decision + event at-risk-volunteer emails soft-fail without it) and optional `SESSIONS_API_URL`/`ADMIN_API_KEY` (letterhead PDF proxy, same as `admin/.env.local`) |
+| `admin/.env.local` | **Unused** (admin app archived) — prefer `web-app/.env.local` |
+| `web-app/.env.local.example` | Template for `NEXT_PUBLIC_SUPABASE_*` + `SUPABASE_SERVICE_ROLE_KEY` + `BYPASS_AUTH` — same Supabase project as mobile — plus optional `RESEND_API_KEY`/`EMAIL_FROM` and optional `SESSIONS_API_URL`/`ADMIN_API_KEY` (letterhead PDF proxy) |
 | `web-app/.env.local` | Local web-app Supabase values (gitignored); without it, pages fall back to mock fixtures automatically |
-| `admin/db/*.sql` | Additive Postgres migrations for the shared Supabase project (Dashboard → SQL Editor). `001` creates `public.events`; `005_events_image_urls_and_seed.sql` adds `image_urls` + storage policies; **`007_checkpoint_coordinates.sql`** adds `checkpoints.latitude` / `longitude` for trail photo pins. Published Downtown Riverfront sample seeded 2026-07-30 (`706b8f32-523d-4fdd-ae78-a24d5d9cf23f`). |
+| `admin/db/*.sql` | Additive Postgres migrations for the shared Supabase project (Dashboard → SQL Editor). Kept under archived `admin/` on purpose. `001` creates `public.events`; `005_events_image_urls_and_seed.sql` adds `image_urls` + storage policies; **`007_checkpoint_coordinates.sql`** adds `checkpoints.latitude` / `longitude` for trail photo pins. |
 | `credentials.local.md` | **Admin sample login** (gitignored) — email `donnaadam@cleanupgiveback.org`, password `LocalAdmin!2026`, plus `BYPASS_AUTH` instructions. See also [admin sample login](#admin-portal-sample-login) below. |
 | Fly secrets | `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `ADMIN_API_KEY`, `RESEND_API_KEY`, `DONNA_EMAIL` — `fly secrets set` |
 
 ## Admin portal sample login
 
-Local admin portal: `cd admin && npm run dev` → http://localhost:3001  
+**Legacy `admin/` app is archived** — use the web app:
+
 Local web app: `cd web-app && npm run dev` → http://localhost:3000  
 Production (web-app): https://cleanupgiveback-web-app.vercel.app
 
 | Mode | How |
 |------|-----|
-| Bypass (local only) | `BYPASS_AUTH=true` in `admin/.env.local` — never enable on Vercel |
-| Real login | Email/password in **`credentials.local.md`** (gitignored). Create the Supabase user with `user_metadata.role = 'admin'` once. Add `https://cleanupgiveback-admin.vercel.app/**` to Supabase Auth → URL Configuration → Redirect URLs. |
+| Bypass (local only) | `BYPASS_AUTH=true` in `web-app/.env.local` — never enable on Vercel production long-term |
+| Real login | Email/password in **`credentials.local.md`** (gitignored). Create the Supabase user with `user_metadata.role = 'admin'` once. Add `https://cleanupgiveback-web-app.vercel.app/**` to Supabase Auth → URL Configuration → Redirect URLs. |
 
 ### Account settings (`/account`)
 

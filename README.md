@@ -31,7 +31,8 @@ Monorepo for the Clean Up - Give Back mobile app and supporting services.
 | | Path | Purpose |
 |:--:|------|---------|
 | 📱 | [`frontend/`](frontend/) | Expo React Native app, UI, design assets, and tooling |
-| 🖥️ | [`admin/`](admin/) | Next.js admin portal |
+| 🖥️ | [`web-app/`](web-app/) | Next.js admin console (production on Vercel) |
+| 🗄️ | [`admin/`](admin/) | **Archived** legacy admin portal — keep `admin/db/*.sql` migrations only; see [admin/README.md](admin/README.md) |
 | ⚙️ | [`backend/`](backend/) | Backend services (sessions live; maps & payments planned) |
 | 📚 | [`docs/`](docs/) | Living documentation, specs, ADRs, and agent context |
 | 🧩 | [`.cursor/`](.cursor/) | Cursor IDE rules and hooks (stays at repo root) |

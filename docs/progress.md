@@ -2,6 +2,16 @@
 
 ---
 
+## [2026-07-30] — Archive legacy `admin/` Next app
+
+**R:** Production admin is `web-app/` on Vercel; keeping two Next admin apps invites drift.
+
+**A:** Soft-archived `admin/` with README + ARCHIVED.md. Docs (`current`, `accounts-and-access`, `web-app`, root README, AGENTS) now point product work at `web-app/`. Kept `admin/db/*.sql` path for Supabase migrations.
+
+**P:** Use `web-app` only for admin UI; run SQL from `admin/db/` as before.
+
+---
+
 ## [2026-07-30] — Fix Feedback rating distribution clarity
 
 **R:** Sample Rating Distribution showed twin counts (Excited 4 / Happy 4, Sad 1 / Very Sad 1) that looked like a render bug.

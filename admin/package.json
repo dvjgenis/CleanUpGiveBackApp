@@ -2,6 +2,7 @@
   "name": "cleanupgiveback-admin",
   "version": "0.1.0",
   "private": true,
+  "description": "ARCHIVED 2026-07-30 — use web-app/ for admin UI. See README.md.",
   "scripts": {
     "dev": "next dev -p 3001",
     "build": "next build",

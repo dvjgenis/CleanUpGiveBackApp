@@ -8,15 +8,15 @@ The web application provides a desktop-friendly admin interface for managing Cle
 
 ```
 CleanUpGiveBackApp/
-├── frontend/          # React Native mobile app (existing)
-├── admin/            # Current admin interface (existing)
-├── backend/          # Backend services (existing)
-└── web-app/          # NEW: Next.js web application
+├── frontend/          # React Native mobile app
+├── admin/             # ARCHIVED legacy admin — keep admin/db/*.sql migrations
+├── backend/           # Backend services
+└── web-app/           # Production Next.js admin console (Vercel)
     ├── src/
     │   ├── app/       # Next.js App Router pages
     │   ├── components/ # Reusable UI components
     │   └── lib/       # Utility functions
-    └── package.json   # Web app dependencies
+    └── package.json
 ```
 
 ## Features
@@ -157,15 +157,14 @@ Several pages started as faithful, read-only ports of their `admin/app/(admin)/.
 
 ### Separation of Concerns
 - **Mobile App** (`frontend/`): Native user experience
-- **Admin Panel** (`admin/`): Current admin tooling
-- **Web App** (`web-app/`): Modern desktop interface
+- **Web App** (`web-app/`): Production admin console (Vercel)
+- **Archived admin** (`admin/`): Legacy Next portal — migrations in `admin/db/` only; see [admin/README.md](../admin/README.md)
 - **Backend** (`backend/`): Shared services
 
 ### Progressive Enhancement
-- Start with existing admin functionality
-- Gradually migrate to modern web interface
-- Maintain backward compatibility
-- Independent deployment cycles
+- Admin product work continues in `web-app/`
+- Legacy `admin/` is frozen reference + SQL migrations
+- Independent deployment cycles for mobile / web-app / Fly
 
 ### Technology Alignment
 - **React**: Shared component patterns

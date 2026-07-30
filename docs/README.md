@@ -13,7 +13,8 @@ Living docs for the Clean Up - Give Back monorepo. Templates are copy-only.
 | [accounts-and-access.md](accounts-and-access.md) | Org accounts (no secrets in repo) |
 | [supabase.md](supabase.md) | Supabase + Fly setup for sessions (schema, env vars) |
 | [reports/](reports/) | Session / decision reports (e.g. dual-cam App Store stance) |
-| [admin/admin-portal-prd.md](admin/admin-portal-prd.md) | Admin portal PRD — Donna's session review, letterheads, orders, events, feedback |
+| [web-app.md](web-app.md) | Production admin console (`web-app/` on Vercel) |
+| [admin/admin-portal-prd.md](admin/admin-portal-prd.md) | Legacy admin PRD (app archived — see [admin/README.md](../admin/README.md)) |
 | [admin/brand-web.md](admin/brand-web.md) | Web brand guidelines for admin portal (CSS tokens, fonts, Tailwind config) |
 | [admin/a11y-audit-2026-07-22.md](admin/a11y-audit-2026-07-22.md) | Admin portal axe WCAG 2.1 AA audit + remediation |
 | [admin/ux-audit-2026-07-22.md](admin/ux-audit-2026-07-22.md) | Donna-persona dashboard UX audit + remediation |
