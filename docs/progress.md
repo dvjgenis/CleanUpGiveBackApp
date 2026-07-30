@@ -2,6 +2,23 @@
 
 ---
 
+## [2026-07-30] — Complete web-app and mobile backend integration
+
+**R:** Multiple pending integrations needed to be completed: order fulfillment in web-app, volunteer profile detail pages, insights period scoping, loading/error UX, county/neighborhood heatmap tiers, and mobile checkout database persistence.
+
+**A:** 
+- **Order fulfillment**: Added full CRUD operations for web-app Orders with status/tracking updates, ported OrderFulfillmentForm and CopyAddressButton components, created order detail pages with clickable navigation
+- **Volunteer profiles**: Built comprehensive volunteer detail pages in web-app with session history, court order details, and StatusChip integration
+- **Insights period scoping**: Wired period toggle to re-filter all charts with live data using filterByPeriod utility, including enhanced heatmap tiers  
+- **Loading/error UX**: Added loading skeletons (loading.tsx files) and ErrorFallback components around all live data loaders for better user experience
+- **County/neighborhood heatmap tiers**: Implemented mock GPS → FIPS geocoding service (geocode.ts) with multi-tier geographic analysis (enhanced-geo-activity.ts), EnhancedUsHeatmap component with tier selection and GeocodingStats display
+- **Mobile checkout integration**: Created shopOrders.ts for database persistence, updated CheckoutScreen to call createShopOrder and navigate with orderId, enhanced PurchaseConfirmationScreen to display order ID
+
+**L:** All integrations maintain backwards compatibility with mock data fallbacks. Mobile checkout now properly persists orders to public.shop_orders with full error handling. Enhanced geocoding provides state/county/neighborhood analysis for future expansion.
+
+**P:** Web-app Orders support full fulfillment workflow, Volunteers pages show comprehensive profiles, Analytics charts respond to period selection, all pages have proper loading states and error handling, enhanced heatmap shows multi-tier geographic data, mobile checkout saves orders to database and displays confirmation with order ID.
+
+---
 ## [2026-07-30] — Event geocode for any venue (not only Des Plaines)
 
 **R:** New events without Places-selected coords saved `address` but null `lat`/`lng`, so the MapLibre pin only appeared for the seeded Des Plaines row.
@@ -287,6 +304,16 @@
 **A:** Desktop sidebar starts as icon rail; expands to full labels on hover (and keyboard focus-within). Push layout (in-flow width) so main content shifts aside — no overlay. Width morph uses Emil ease-in-out `cubic-bezier(0.77, 0, 0.175, 1)` at 250ms; labels fade/slide with ease-out + short enter delay. Removed localStorage pin + Collapse toggle.
 
 **P:** Spot-check at ≥1024px: collapsed rail → hover opens (content pushes) → leave collapses; Tab into nav expands.
+
+---
+
+## [2026-07-30] — Root README polish
+
+**R:** Improve root README aesthetics (logo, shields, light typing animation) without cluttering content.
+
+**A:** Centered brand icon + typing SVG tagline; Expo / RN / TS / Router / license / platform badges; light emoji column on layout table; kept quick start and docs links intact.
+
+**P:** Open GitHub repo README preview after push.
 
 ---
 

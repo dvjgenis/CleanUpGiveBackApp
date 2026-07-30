@@ -1,15 +1,40 @@
+<div align="center">
+
+<img src="frontend/assets/images/icon.png" alt="Clean Up - Give Back" width="112" />
+
 # Clean Up - Give Back
+
+[![Typing SVG](https://readme-typing-svg.demolab.com?font=Sanchez&weight=400&size=22&duration=3200&pause=1800&color=009540&center=true&vCenter=true&width=520&lines=Volunteer.+Track.+Give+back.;Community+cleanup+made+simple.)](https://github.com/dvjgenis/CleanUpGiveBackApp)
 
 Monorepo for the Clean Up - Give Back mobile app and supporting services.
 
+<p>
+  <img src="https://img.shields.io/badge/Expo-54-000020?logo=expo&logoColor=white" alt="Expo 54" />
+  <img src="https://img.shields.io/badge/React_Native-0.81-61DAFB?logo=react&logoColor=black" alt="React Native" />
+  <img src="https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/Expo_Router-6-009540?logo=expo&logoColor=white" alt="Expo Router" />
+  <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="MIT License" />
+</p>
+
+<p>
+  <img src="https://img.shields.io/badge/iOS-supported-lightgrey?logo=apple&logoColor=white" alt="iOS" />
+  <img src="https://img.shields.io/badge/Android-supported-3DDC84?logo=android&logoColor=white" alt="Android" />
+  <img src="https://img.shields.io/badge/docs-living-009540" alt="Living docs" />
+</p>
+
+</div>
+
+---
+
 ## Repository layout
 
-| Path | Purpose |
-|------|---------|
-| [`frontend/`](frontend/) | Expo React Native app, UI prototype, design assets, and tooling |
-| [`backend/`](backend/) | Backend services (maps, payments, session tracking) — planned |
-| [`docs/`](docs/) | Living documentation, specs, ADRs, and agent context |
-| [`.cursor/`](.cursor/) | Cursor IDE rules and hooks (stays at repo root) |
+| | Path | Purpose |
+|:--:|------|---------|
+| 📱 | [`frontend/`](frontend/) | Expo React Native app, UI, design assets, and tooling |
+| 🖥️ | [`admin/`](admin/) | Next.js admin portal |
+| ⚙️ | [`backend/`](backend/) | Backend services (sessions live; maps & payments planned) |
+| 📚 | [`docs/`](docs/) | Living documentation, specs, ADRs, and agent context |
+| 🧩 | [`.cursor/`](.cursor/) | Cursor IDE rules and hooks (stays at repo root) |
 
 ## Quick start
 
