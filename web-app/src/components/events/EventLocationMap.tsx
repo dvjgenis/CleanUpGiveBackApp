@@ -57,14 +57,19 @@ function createPinElement(): HTMLDivElement {
   return el;
 }
 
-function mapsUrl(coordinate: EventMapCoordinate): string {
+/** Prefer the street address so Google shows a place name, not bare lat/lng. */
+function mapsUrl(address: string, coordinate: EventMapCoordinate): string {
+  const trimmed = address.trim();
+  if (trimmed) {
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(trimmed)}`;
+  }
   const { latitude, longitude } = coordinate;
   return `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
 }
 
 export function EventLocationMap({ address, coordinate, className }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const href = mapsUrl(coordinate);
+  const href = mapsUrl(address, coordinate);
 
   useEffect(() => {
     const container = containerRef.current;

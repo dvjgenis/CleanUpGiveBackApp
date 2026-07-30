@@ -2,6 +2,16 @@
 
 ---
 
+## [2026-07-30] — Event map Opens Google Maps by address, not bare coords
+
+**R:** Tapping the location map opened `query=lat,lng`, so Google showed coordinates with no readable place name.
+
+**A:** Web `EventLocationMap` and mobile `mapsLinkForLocation` now prefer the street address in the Maps URL (coords only if address is empty). iOS open path already labeled with `q=address`.
+
+**P:** Tap the pin preview → Google should show e.g. “600 E Algonquin Rd…”.
+
+---
+
 ## [2026-07-30] — Fix blank event Location map (basemap tiles)
 
 **R:** Event detail “Location map” showed only the green pin on a cream rectangle — no streets. MapLibre + HTML marker were fine; the Carto *vector* Voyager style paints its background even when `tiles-*.basemaps.cartocdn.com` MVTs fail (ad blockers / iframe srcDoc), so it looked blank.
@@ -11,6 +21,18 @@
 **L:** Cream `#fbf8f3` + pin with no roads ≈ style loaded, vector source empty — prefer raster for non-interactive pin previews.
 
 **P:** Hard-refresh `/events/[id]` — map should show streets under the pin.
+
+---
+
+## [2026-07-30] — Confirm `/sessions` live Supabase data + harden mock fallback
+
+**R:** Needed proof production Sessions is not serving fixtures, plus a safe path if Supabase errors.
+
+**A:** Verified prod HTML contains all 23 live `sessions` ids (17 `under_review` + 6 `active`), real names (`Shivam Patel`, Auth hex volunteers), no Sample data banner / no mock names (`Maya Chen`). Hardened `loadLiveSessions` to **throw** on Supabase query error instead of silently returning `MOCK_SESSIONS`. Redeploy + route/log diagnose.
+
+**L:** Empty table still uses mocks + banner; query failure now surfaces `Unable to load sessions` via the page ErrorFallback.
+
+**P:** `/sessions` live on Vercel with real rows; no post-deploy errors.
 
 ---
 

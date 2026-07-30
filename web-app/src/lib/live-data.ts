@@ -39,7 +39,7 @@ export type LiveResult<T> = { data: T; useMock: boolean };
 /** Sessions scoped for Dashboard/Sessions pages — real `sessions` rows enriched with Auth names. */
 export async function loadLiveSessions(): Promise<LiveResult<MockSession[]>> {
   const supabase = await createDataClient();
-  const [{ data: rows }, directory] = await Promise.all([
+  const [{ data: rows, error }, directory] = await Promise.all([
     supabase
       .from('sessions')
       .select(
@@ -48,6 +48,12 @@ export async function loadLiveSessions(): Promise<LiveResult<MockSession[]>> {
       .order('created_at', { ascending: false }),
     getVolunteerDirectory(),
   ]);
+
+  // Query failures must not fall through to fixtures — that looks "loaded" with
+  // fake volunteers while production is broken. Empty table still uses mocks.
+  if (error) {
+    throw new Error(`Failed to load sessions from Supabase: ${error.message}`);
+  }
 
   if (!rows || rows.length === 0) {
     return { data: MOCK_SESSIONS, useMock: true };
