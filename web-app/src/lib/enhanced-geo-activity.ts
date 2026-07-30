@@ -5,11 +5,11 @@
 
 import { geocodePoint, type GeoPoint, type GeocodingResult } from './geocode';
 import { STATE_FIPS_NAME } from './us-heatmap';
-import { computedHours } from './mock-data';
+import { computedHours, type SessionStatus } from './mock-data';
 
 export type SessionWithLocation = {
   id: string;
-  status: 'approved' | 'under_review' | 'not_approved';
+  status: SessionStatus;
   duration_seconds: number | null;
   adjusted_hours: number | null;
   // Either FIPS code (existing data) or GPS coordinates (new data)

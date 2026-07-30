@@ -11,7 +11,8 @@ export type MockSession = {
   user_id: string;
   volunteer_name: string;
   activity: string | null;
-  status: "approved" | "under_review" | "not_approved";
+  /** Matches admin `SessionStatus` + live Supabase rows (`active` while tracking). */
+  status: "active" | "approved" | "under_review" | "not_approved" | "invalid";
   duration_seconds: number | null;
   adjusted_hours: number | null;
   court_ordered: boolean;
@@ -507,14 +508,22 @@ export function formatMiles(miles: number | null | undefined): string {
   return `${miles.toFixed(2)} mi`;
 }
 
-/** Mirrors `admin/components/ui/StatusChip.tsx`, scoped to the statuses present in `MockSession`. */
+/** Mirrors `admin/components/ui/StatusChip.tsx` / `admin/types/database.ts`. */
 export type SessionStatus = MockSession["status"];
 
 export const SESSION_STATUS_CONFIG: Record<SessionStatus, { label: string; className: string }> = {
+  active: { label: "Active", className: "bg-[#f6f3f2] text-[#3e4a3d] border-[#bdcaba]" },
   under_review: { label: "Under Review", className: "bg-[#ffddb5] text-[#835400] border-[#fcab29]" },
   approved: { label: "Approved", className: "bg-[#f7fff1] text-[#007536] border-[#007536]" },
   not_approved: { label: "Declined", className: "bg-[#ffd9de] text-[#ba1a1a] border-[#ba1a1a]" },
+  // Legacy DB rows only — "Invalid" is not a product status.
+  invalid: { label: "Declined", className: "bg-[#ffd9de] text-[#ba1a1a] border-[#ba1a1a]" },
 };
+
+/** Safe lookup for live rows — unknown statuses fall back to Active styling (admin StatusChip). */
+export function getSessionStatusConfig(status: string): { label: string; className: string } {
+  return SESSION_STATUS_CONFIG[status as SessionStatus] ?? SESSION_STATUS_CONFIG.active;
+}
 
 /** Mirrors `admin/lib/format.ts` `formatDuration`. */
 export function formatDuration(seconds: number | null | undefined, adjustedHours?: number | null): string {

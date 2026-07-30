@@ -7,7 +7,29 @@ import { colors } from '../tokens';
 import type { MapCoordinate } from '../utils/openLocationInMaps';
 
 const PRIMARY = colors.primary;
-const CARTO_VOYAGER = 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json';
+
+/**
+ * Carto Voyager *raster* tiles (not the vector GL style JSON). The vector
+ * style paints its cream background even when `tiles-*.basemaps.cartocdn.com`
+ * MVT fetches fail, which looks like a blank map with only the HTML pin.
+ */
+const VOYAGER_RASTER_STYLE = {
+  version: 8 as const,
+  sources: {
+    voyager: {
+      type: 'raster' as const,
+      tiles: [
+        'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+        'https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+        'https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+        'https://d.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+      ],
+      tileSize: 256,
+      attribution: '© CARTO © OpenStreetMap',
+    },
+  },
+  layers: [{ id: 'voyager', type: 'raster' as const, source: 'voyager' }],
+};
 
 type Props = {
   address: string;
@@ -37,7 +59,7 @@ function buildHtml(coordinate: MapCoordinate): string {
 <script>
   const map = new maplibregl.Map({
     container: 'map',
-    style: ${JSON.stringify(CARTO_VOYAGER)},
+    style: ${JSON.stringify(VOYAGER_RASTER_STYLE)},
     center: [${longitude}, ${latitude}],
     zoom: 14,
     interactive: false,

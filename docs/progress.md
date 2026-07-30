@@ -2,6 +2,29 @@
 
 ---
 
+## [2026-07-30] — Fix blank event Location map (basemap tiles)
+
+**R:** Event detail “Location map” showed only the green pin on a cream rectangle — no streets. MapLibre + HTML marker were fine; the Carto *vector* Voyager style paints its background even when `tiles-*.basemaps.cartocdn.com` MVTs fail (ad blockers / iframe srcDoc), so it looked blank.
+
+**A:** Web `EventLocationMap` now mounts MapLibre in-page (`maplibre-gl` dep) with Carto Voyager *raster* tiles. Mobile `EventLocationMapWebView` uses the same raster style JSON inside its WebView HTML.
+
+**L:** Cream `#fbf8f3` + pin with no roads ≈ style loaded, vector source empty — prefer raster for non-interactive pin previews.
+
+**P:** Hard-refresh `/events/[id]` — map should show streets under the pin.
+
+---
+
+## [2026-07-30] — Fix Vercel `/sessions` stuck on skeleton (active status crash)
+
+**R:** Production https://cleanupgiveback-web-app.vercel.app/sessions never left `loading.tsx` — Vercel logs showed `TypeError: Cannot read properties of undefined (reading 'className')` in `SessionsPage` while mapping rows.
+
+**A:** Live Supabase has `active` sessions (in-progress tracking) plus `under_review`; web-app `SESSION_STATUS_CONFIG` only knew approved/under_review/not_approved. Expanded `MockSession.status` + config to match admin (`active`/`invalid`), added `getSessionStatusConfig` fallback, wired Sessions table/cards + SessionPreviewDrawer, Active filter chip, and `SessionWithLocation` typing.
+
+**L:** Home still loaded because Dashboard doesn't chip every status; Sessions SSR crashed on the first `active` row and Next streamed only the loading shell (try/catch around JSX creation doesn't catch child render errors).
+
+**P:** Redeploy web-app to Vercel; `/sessions` should list 17 under review + 6 active without hanging.
+
+---
 ## [2026-07-30] — Complete web-app and mobile backend integration
 
 **R:** Multiple pending integrations needed to be completed: order fulfillment in web-app, volunteer profile detail pages, insights period scoping, loading/error UX, county/neighborhood heatmap tiers, and mobile checkout database persistence.

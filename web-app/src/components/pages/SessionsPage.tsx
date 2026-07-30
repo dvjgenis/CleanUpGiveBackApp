@@ -23,7 +23,7 @@ import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
 import { approveSession, approveSessionsBulk, declineSession } from "@/actions/sessions";
 import {
   MOCK_SESSIONS,
-  SESSION_STATUS_CONFIG,
+  getSessionStatusConfig,
   formatDate,
   formatDuration,
   shortId,
@@ -34,6 +34,7 @@ import {
 const STATUS_FILTERS: { value: "all" | SessionStatus; label: string }[] = [
   { value: "all", label: "All" },
   { value: "under_review", label: "Under Review" },
+  { value: "active", label: "Active" },
   { value: "approved", label: "Approved" },
   { value: "not_approved", label: "Declined" },
 ];
@@ -321,7 +322,7 @@ function SessionsPageInner({ sessions, isMock }: { sessions: MockSession[]; isMo
                 </tr>
               )}
               {filtered.map((session) => {
-                const cfg = SESSION_STATUS_CONFIG[session.status];
+                const cfg = getSessionStatusConfig(session.status);
                 const canModerate = session.status === "under_review";
                 return (
                   <tr
@@ -417,7 +418,7 @@ function SessionsPageInner({ sessions, isMock }: { sessions: MockSession[]; isMo
             </div>
           )}
           {filtered.map((session) => {
-            const cfg = SESSION_STATUS_CONFIG[session.status];
+            const cfg = getSessionStatusConfig(session.status);
             const canModerate = session.status === "under_review";
             return (
               <div key={session.id} className="px-lg py-md hover:bg-bg-surface-elevated transition-colors">

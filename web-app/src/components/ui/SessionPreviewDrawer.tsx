@@ -22,7 +22,7 @@ import {
   formatDuration,
   formatMiles,
   shortId,
-  SESSION_STATUS_CONFIG,
+  getSessionStatusConfig,
   type MockSession,
   type SessionStatus,
 } from "@/lib/mock-data";
@@ -43,7 +43,7 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 }
 
 function StatusChip({ status }: { status: SessionStatus }) {
-  const cfg = SESSION_STATUS_CONFIG[status];
+  const cfg = getSessionStatusConfig(status);
   return (
     <span
       className={`inline-flex items-center px-2 py-0.5 rounded-sm border font-data text-[12px] font-semibold leading-[16px] whitespace-nowrap ${cfg.className}`}
