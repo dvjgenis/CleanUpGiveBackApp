@@ -603,21 +603,19 @@ export function SessionWalkingPathMap({
           className="absolute inset-0 h-full w-full [&_.maplibregl-canvas]:!outline-none"
         />
 
-        <div className="absolute top-sm right-sm z-10 flex flex-col gap-sm pointer-events-none sm:right-14">
-          <button
-            type="button"
-            onClick={() => setFullscreen((v) => !v)}
-            className="pointer-events-auto inline-flex h-11 w-11 items-center justify-center rounded-full border border-border-outline bg-bg-app/95 text-text-primary hover:bg-bg-surface-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary shadow-sm"
-            aria-label={fullscreen ? "Exit full screen" : "Enter full screen"}
-            aria-pressed={fullscreen}
-          >
-            {fullscreen ? (
-              <CollapseIcon className="w-5 h-5" />
-            ) : (
+        {!fullscreen && (
+          <div className="absolute top-sm right-14 z-10 flex flex-col gap-sm pointer-events-none">
+            <button
+              type="button"
+              onClick={() => setFullscreen(true)}
+              className="pointer-events-auto inline-flex h-11 w-11 items-center justify-center rounded-full border border-border-outline bg-bg-app/95 text-text-primary hover:bg-bg-surface-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary shadow-sm"
+              aria-label="Enter full screen"
+              aria-pressed="false"
+            >
               <ExpandIcon className="w-5 h-5" />
-            )}
-          </button>
-        </div>
+            </button>
+          </div>
+        )}
 
         <div className="absolute bottom-sm left-sm right-sm z-10 flex items-end justify-between gap-sm pointer-events-none">
           <div className="pointer-events-auto flex items-center gap-sm flex-wrap">

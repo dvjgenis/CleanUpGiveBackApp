@@ -2,6 +2,16 @@
 
 ---
 
+## [2026-07-30] — Fix mobile walking-path control collision
+
+**R:** The floating fullscreen control overlapped MapLibre's top-right zoom control on narrow maps, especially after expanding the walking path.
+
+**A:** Embedded maps now offset the expand button left of MapLibre controls. Fullscreen maps hide the redundant floating collapse button and use the existing header **Exit full screen** action.
+
+**P:** On mobile, expand the Walking Path map; map controls no longer overlap.
+
+---
+
 ## [2026-07-30] — Rename `web-app/` → `admin-web-app/`
 
 **R:** Clearer folder name now that legacy `admin/` is archived.
