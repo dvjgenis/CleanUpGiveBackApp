@@ -13,6 +13,11 @@ const assets = {
   adultVestShop: require('@/assets/figma/shop/product-adult-vest.png') as number,
   childVest: require('@/assets/figma/shop/product-child-vest.png') as number,
   toteBags: require('@/assets/figma/shop/product-detail/tote-bags.png') as number,
+  toteBagsPhoto: require('@/assets/figma/shop/product-detail/tote-bags-photo.png') as number,
+  toteGreenPlanetB: require('@/assets/figma/shop/product-detail/tote-green-planet-b.png') as number,
+  toteBluePlanetB: require('@/assets/figma/shop/product-detail/tote-blue-planet-b.png') as number,
+  toteGreenEarthFriendly: require('@/assets/figma/shop/product-detail/tote-green-earth-friendly.png') as number,
+  toteBlueEarthFriendly: require('@/assets/figma/shop/product-detail/tote-blue-earth-friendly.png') as number,
 };
 
 export type ProductId =
@@ -44,6 +49,8 @@ export interface ProductDetail {
   /** Best Seller badge — kit only */
   bestSeller?: boolean;
   images: number[];
+  /** Color-filtered carousel slides (tote) — overrides `images` when a swatch is selected */
+  imagesByColor?: Record<ToteColor, number[]>;
   /** Thumbnail strip for kit carousel */
   thumbnails?: number[];
   includes?: ProductInclude[];
@@ -89,7 +96,17 @@ export const PRODUCT_DETAILS: Record<ProductId, ProductDetail> = {
     figmaNode: '905:166',
     description:
       'Embrace style and sustainability with our Reusable Earth and Ocean Tote Bags! Made from recycled materials, this cute, environmentally conscious accessory is perfect for your shopping needs! Carry your essentials while making a statement for a cleaner planet!',
-    images: [assets.toteBags],
+    images: [
+      assets.toteBagsPhoto,
+      assets.toteGreenPlanetB,
+      assets.toteBluePlanetB,
+      assets.toteGreenEarthFriendly,
+      assets.toteBlueEarthFriendly,
+    ],
+    imagesByColor: {
+      earth: [assets.toteGreenPlanetB, assets.toteGreenEarthFriendly],
+      ocean: [assets.toteBluePlanetB, assets.toteBlueEarthFriendly],
+    },
     colors: [
       { id: 'earth', label: 'Earth', hex: '#009540' },
       { id: 'ocean', label: 'Ocean', hex: '#2F80ED' },

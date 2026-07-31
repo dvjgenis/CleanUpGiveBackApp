@@ -11,7 +11,7 @@ Static media and bundled prototype HTML.
 | `frontend/assets/figma/tour/` | Tour illustrations — `home-stats.png`, `shop-showcase.png` (Trash Cleanup Kit product PNG, mint blob + transparent corners for forest-green tour bg), `track-map.png` (live map screenshot), `session-list.png` (session list screenshot); star/replay SVGs ported to `TourIcons.tsx` |
 | `frontend/assets/figma/home-screen/` | Home dashboard glyphs + `nav/` SVGs (sources for `navigation/icons/*.tsx`) |
 | `frontend/assets/figma/event-detail/` | Event detail icons + header/organizer/map media; `header.png` also used as Upcoming Events card thumb for matching mock events |
-| `frontend/assets/figma/shop/` | Shop home product PNGs; flow subfolders `cart/`, `checkout/`, `confirmation/`, `donate/`, `product-detail/`; ported glyph originals in `_source/` |
+| `frontend/assets/figma/shop/` | Shop home product PNGs; flow subfolders `cart/`, `checkout/`, `confirmation/`, `donate/`, `product-detail/` (tote carousel: `tote-bags-photo.png` + `tote-{green,blue}-{planet-b,earth-friendly}.png`); ported glyph originals in `_source/` |
 | `frontend/assets/figma/session-setup/` | Session setup form SVGs (`calendar`, `info-circle`, `back-chevron`) |
 | `frontend/assets/figma/live-session/` | Live tracker map controls + CTA SVGs; temporary Map Types thumbnails (`map-type-standard.png`, `map-type-satellite.png`, `map-type-hybrid.png`); `map-theme-light.svg` / `map-theme-dark.svg`; `weather/` subset from Figma Weather Icons (wi) |
 | `frontend/assets/figma/sessions-list/` | Sessions list SVGs (search, sort chevron, expand, meta-dot) |

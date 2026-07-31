@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   NativeScrollEvent,
   NativeSyntheticEvent,
@@ -135,12 +135,11 @@ function ColorSwatches({
   onSelect,
 }: {
   colors: NonNullable<ProductDetail['colors']>;
-  selected: ToteColor;
+  selected: ToteColor | null;
   onSelect: (id: ToteColor) => void;
 }) {
   return (
     <View style={s.colorRow}>
-      <Text style={s.colorLabel}>Color</Text>
       <View style={s.swatchRow}>
         {swatches.map((swatch) => {
           const active = swatch.id === selected;
@@ -177,13 +176,22 @@ export function ProductDetailScreen() {
 
   const [imageIndex, setImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
-  const [toteColor, setToteColor] = useState<ToteColor>('earth');
+  const [toteColor, setToteColor] = useState<ToteColor | null>(null);
   const carouselRef = useRef<ScrollView>(null);
 
   const contentWidth = Math.min(windowWidth - 32, 358);
   const carouselWidth = contentWidth;
 
-  const images = product.images.length > 0 ? product.images : [PRODUCT_DETAIL_ASSETS.kitHero];
+  const images = useMemo(() => {
+    if (toteColor != null) {
+      const byColor = product.imagesByColor?.[toteColor];
+      if (byColor && byColor.length > 0) {
+        return byColor;
+      }
+    }
+    return product.images.length > 0 ? product.images : [PRODUCT_DETAIL_ASSETS.kitHero];
+  }, [product.images, product.imagesByColor, toteColor]);
+
   const showThumbnails = (product.thumbnails?.length ?? 0) > 0;
   const dotCount = Math.max(images.length, showThumbnails ? DOT_COUNT : images.length);
 
@@ -205,6 +213,11 @@ export function ProductDetailScreen() {
     },
     [carouselWidth],
   );
+
+  const onSelectToteColor = useCallback((id: ToteColor) => {
+    setToteColor((prev) => (prev === id ? null : id));
+    setImageIndex(0);
+  }, []);
 
   const handleAddToCart = () => {
     const unitPrice = Number.parseFloat(product.price.replace(/[^0-9.]/g, '')) || 0;
@@ -252,7 +265,7 @@ export function ProductDetailScreen() {
               <ColorSwatches
                 colors={product.colors}
                 selected={toteColor}
-                onSelect={setToteColor}
+                onSelect={onSelectToteColor}
               />
             ) : null}
           </View>
@@ -260,6 +273,7 @@ export function ProductDetailScreen() {
           {/* Image carousel */}
           <View style={[s.carouselWrap, { width: carouselWidth }]}>
             <ScrollView
+              key={product.imagesByColor ? `tote-${toteColor ?? 'all'}` : product.id}
               ref={carouselRef}
               horizontal
               pagingEnabled
@@ -268,11 +282,20 @@ export function ProductDetailScreen() {
               style={{ width: carouselWidth, height: CAROUSEL_HEIGHT }}
               accessibilityLabel={`${product.name} images`}
             >
-              {images.map((src, i) => (
-                <View key={i} style={[s.carouselSlide, { width: carouselWidth }]}>
-                  <ExpoImage source={src} style={s.carouselImage} contentFit="contain" cachePolicy="memory-disk" priority={i === 0 ? 'high' : 'normal'} />
-                </View>
-              ))}
+              {images.map((src, i) => {
+                const fillsCard = src === PRODUCT_DETAIL_ASSETS.toteBagsPhoto;
+                return (
+                  <View key={i} style={[s.carouselSlide, { width: carouselWidth }]}>
+                    <ExpoImage
+                      source={src}
+                      style={s.carouselImage}
+                      contentFit={fillsCard ? 'cover' : 'contain'}
+                      cachePolicy="memory-disk"
+                      priority={i === 0 ? 'high' : 'normal'}
+                    />
+                  </View>
+                );
+              })}
             </ScrollView>
             {images.length > 1 && <CarouselDots activeIndex={imageIndex} count={dotCount} />}
           </View>
@@ -434,11 +457,6 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     paddingVertical: 4,
-  },
-  colorLabel: {
-    fontFamily: fontFamilies.ibmPlexSansRegular,
-    fontSize: 14,
-    color: colors.primary,
   },
   swatchRow: {
     flexDirection: 'row',

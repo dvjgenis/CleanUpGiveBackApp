@@ -2,6 +2,66 @@
 
 ---
 
+## [2026-07-30] — Replace tote variants with transparent cutouts
+
+**R:** User provided clean per-bag RGBA cutouts (background already removed); prior grid crops left black handle holes / fringe.
+
+**A:** Copied the four new transparent PNGs over `tote-{green,blue}-{planet-b,earth-friendly}.png` as-is (no flood-fill). Carousel `chipBg` shows through alpha.
+
+**P:** Reload tote detail — individual slides should sit on gray with no black matte.
+
+---
+
+## [2026-07-30] — Tote group photo fills carousel card
+
+**R:** Landscape group photo letterboxed with gray bars under `contentFit="contain"`.
+
+**A:** Group photo slide uses `contentFit="cover"`; individual tote variants stay `contain`.
+
+**P:** Open tote detail — first slide should edge-to-edge fill the carousel card.
+
+---
+
+## [2026-07-30] — Replace tote variant PNGs from new grid
+
+**R:** User provided a cleaner 2×2 tote render (black bg) to replace the previous individual variant crops.
+
+**A:** Cropped each bag by content bbox, flood-filled near-black → `#f0edec`, added 92px gray bottom pad, overwrote `tote-{green,blue}-{planet-b,earth-friendly}.png`. Filenames/mock wiring unchanged (group photo still first; swatches still optional filter).
+
+**P:** Reload tote detail to see the new renders in the carousel.
+
+---
+
+## [2026-07-30] — Tote default group photo + deselected swatches + gray backgrounds
+
+**R:** Default tote view should show the group photo first with all variants in the carousel; color filter optional; individual bag PNGs had white letterboxing that clashed with the carousel `chipBg`.
+
+**A:** Default `images` = photo + 4 designs; `toteColor` starts `null` (tap swatch to filter, tap again to clear). Flood-filled near-white backgrounds on the four individual tote PNGs to `#f0edec` (`chipBg`).
+
+**P:** Open tote detail — group photo first, no swatch selected; pick Earth/Ocean to filter; individual slides blend into the carousel gray.
+
+---
+
+## [2026-07-30] — Tote color swatches filter carousel + Planet B padding
+
+**R:** Color swatches were visual-only; all individual tote crops sat flush against the bottom edge.
+
+**A:** Added `imagesByColor` on tote product detail (Earth → green variants, Ocean → blue). `ProductDetailScreen` swaps carousel slides on swatch tap and resets to slide 0. Padded ~92px white below both Planet B and both Earth Friendly PNGs.
+
+**P:** On tote detail, tap Earth/Ocean and confirm only that color’s bags appear; all individual tote slides have bottom breathing room.
+
+---
+
+## [2026-07-30] — Tote bag product carousel images
+
+**R:** Tote product detail only had a single placeholder image; real product photos were available for a multi-slide carousel like the cleanup kit.
+
+**A:** Saved the group photo plus four cropped design variants under `frontend/assets/figma/shop/product-detail/` (`tote-bags-photo.png`, `tote-{green,blue}-{planet-b,earth-friendly}.png`). Wired them into `PRODUCT_DETAILS['tote-bags'].images` so `ProductDetailScreen` shows the existing horizontal pager + dots (no thumbnail strip — five 74px thumbs would overflow the kit layout). Prefetch picks them up via `PRODUCT_DETAIL_ASSETS`.
+
+**P:** Open `/product-detail?id=tote-bags` and swipe through five tote images.
+
+---
+
 ## [2026-07-30] — Fix mobile shop-item breakdown spacing
 
 **R:** The desktop five-column product table leaked into mobile, leaving Revenue / Share / Rank labels and values unevenly spaced.
