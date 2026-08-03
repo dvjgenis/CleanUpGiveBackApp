@@ -17,6 +17,8 @@ import { ChevronRightIcon } from "@/components/ui/Icons";
 import { PeriodToggle } from "@/components/ui/PeriodToggle";
 import { usePeriodLabel, usePeriodSelection } from "@/components/ui/PeriodToggleBar";
 import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
+import { ExportMenu } from "@/components/ui/ExportMenu";
+import { downloadCsv, openPrintablePdf } from "@/lib/export-download";
 import { buildMockMonthlyRevenue, formatCents, type MonthlyRevenuePoint } from "@/lib/mock-data";
 import { buildMockShopItemBreakdown, type ShopItemBreakdown } from "@/lib/shop-catalog";
 
@@ -76,14 +78,33 @@ function PaymentsPageInner({
     shopCents: typeFilter === "donations" ? 0 : m.shopCents,
   }));
 
+  const exportColumns = [
+    { key: "month", label: "month" },
+    { key: "donations", label: "donations" },
+    { key: "shop", label: "shop" },
+    { key: "total", label: "total" },
+  ];
+  const exportRows = chartData.map((m) => ({
+    month: m.label,
+    donations: formatCents(m.donationsCents),
+    shop: formatCents(m.shopCents),
+    total: formatCents(m.donationsCents + m.shopCents),
+  }));
+
   return (
     <div className="max-w-6xl mx-auto">
       <header className="flex flex-col gap-md mb-lg">
-        <div>
-          <h1 className="font-heading text-[28px] leading-[36px] text-text-primary">Payments</h1>
-          <p className="mt-xs font-body text-[14px] text-text-tertiary">
-            Donation and shop revenue for {rangeLabel}. Refunds and disputes stay in Stripe.
-          </p>
+        <div className="flex items-start justify-between gap-md flex-wrap">
+          <div>
+            <h1 className="font-heading text-[28px] leading-[36px] text-text-primary">Payments</h1>
+            <p className="mt-xs font-body text-[14px] text-text-tertiary">
+              Donation and shop revenue for {rangeLabel}. Refunds and disputes stay in Stripe.
+            </p>
+          </div>
+          <ExportMenu
+            onExportCsv={() => downloadCsv("payments-export", exportColumns, exportRows)}
+            onExportPdf={() => openPrintablePdf("Payments export", exportColumns, exportRows)}
+          />
         </div>
         <PeriodToggle selection={selection} />
       </header>

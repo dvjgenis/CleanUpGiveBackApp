@@ -7,9 +7,13 @@
  * same table `admin/actions/events.ts` writes to. Falls back to illustrative
  * fixtures when that table is empty.
  */
+"use client";
+
 import Link from "next/link";
 import { MapPinIcon, CalendarIcon } from "@/components/ui/Icons";
 import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
+import { ExportMenu } from "@/components/ui/ExportMenu";
+import { downloadCsv, openPrintablePdf } from "@/lib/export-download";
 import { formatEventWhen, type EventListItem } from "@/lib/events";
 
 export type DemoEvent = {
@@ -166,16 +170,37 @@ export function EventsPage({ events = EVENTS, isMock = false }: { events?: DemoE
     .filter((e) => e.timing === "past")
     .sort((a, b) => new Date(b.startsAt).getTime() - new Date(a.startsAt).getTime());
 
+  const exportColumns = [
+    { key: "title", label: "title" },
+    { key: "timing", label: "timing" },
+    { key: "startsAt", label: "starts_at" },
+    { key: "location", label: "location" },
+    { key: "published", label: "published" },
+  ];
+  const exportRows = events.map((e) => ({
+    title: e.title,
+    timing: e.timing,
+    startsAt: e.startsAt,
+    location: e.location ?? e.address ?? "",
+    published: e.isPublished ? "yes" : "no",
+  }));
+
   return (
     <div className="max-w-5xl mx-auto">
       <div className="flex items-center justify-between mb-lg gap-md flex-wrap">
         <h1 className="font-heading text-[28px] leading-[36px] text-text-primary">Events</h1>
-        <Link
-          href="/events/new"
-          className="h-10 px-lg rounded-sm bg-primary text-white font-data text-[13px] font-semibold hover:bg-[#007d35] transition-colors flex items-center gap-sm"
-        >
-          + New Event
-        </Link>
+        <div className="flex items-center gap-sm flex-wrap">
+          <ExportMenu
+            onExportCsv={() => downloadCsv("events-export", exportColumns, exportRows)}
+            onExportPdf={() => openPrintablePdf("Events export", exportColumns, exportRows)}
+          />
+          <Link
+            href="/events/new"
+            className="h-10 px-lg rounded-sm bg-primary text-white font-data text-[13px] font-semibold hover:bg-[#007d35] transition-colors flex items-center gap-sm"
+          >
+            + New Event
+          </Link>
+        </div>
       </div>
 
       {isMock && <SampleDataBanner />}

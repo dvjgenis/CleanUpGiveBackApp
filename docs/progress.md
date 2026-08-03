@@ -2,6 +2,26 @@
 
 ---
 
+## [2026-08-03] — Export accordion (CSV/PDF) + Insights geocoding UI off
+
+**R:** Donna wanted Export CSV replaced by an accordion with CSV + PDF on list tabs; Insights Enhanced Geocoding checkbox should go.
+
+**A:** Shared `ExportMenu` + `export-download` helpers; wired on Sessions, Users, Feedback, Orders, Events, Payments, Insights. PDF uses printable HTML + browser print. Removed Insights Enhanced Geocoding toggle (always `UsHeatmap`). Docs: `admin-web-app.md`.
+
+**P:** Smoke Export → CSV download and PDF print dialog; confirm Insights has no geocoding checkbox.
+
+---
+
+## [2026-08-03] — Admin PRD v3
+
+**R:** v2 admin PRD still described archived `admin/`, localhost-only hosting, and pre-ship feature gaps; Donna/eng need a living requirements doc for `admin-web-app/`.
+
+**A:** Authored [`docs/admin/admin-portal-prd-v3.md`](admin/admin-portal-prd-v3.md) (as-built + near-term roadmap, including production auth while temporarily bypassed). Marked v2 superseded; linked from [`docs/README.md`](README.md).
+
+**P:** Stakeholder review of §13 near-term roadmap and AC9 (auth).
+
+---
+
 ## [2026-08-03] — Sessions list volunteer name → profile
 
 **R:** Donna needs to open a volunteer profile from the Sessions tab by hovering/clicking the name (underline + primary color), matching archived admin.

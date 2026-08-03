@@ -15,6 +15,8 @@ import Link from "next/link";
 import { CourtBadge } from "@/components/ui/CourtBadge";
 import { UserPreviewDrawer, type UserRow } from "@/components/ui/UserPreviewDrawer";
 import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
+import { ExportMenu } from "@/components/ui/ExportMenu";
+import { downloadCsv, openPrintablePdf } from "@/lib/export-download";
 import { formatDate, MOCK_COURT_AT_RISK } from "@/lib/mock-data";
 
 const DEFAULT_USERS: UserRow[] = [
@@ -74,16 +76,33 @@ export function VolunteersPage({ users = DEFAULT_USERS, isMock = false }: { user
 
   const previewUser = previewId ? (users.find((u) => u.id === previewId) ?? null) : null;
 
+  const exportColumns = [
+    { key: "id", label: "id" },
+    { key: "name", label: "name" },
+    { key: "email", label: "email" },
+    { key: "sessions", label: "sessions" },
+    { key: "totalHours", label: "total_hours" },
+    { key: "courtOrdered", label: "court_ordered" },
+    { key: "lastActive", label: "last_active" },
+  ];
+  const exportRows = filtered.map((u) => ({
+    id: u.id,
+    name: u.name,
+    email: u.email,
+    sessions: u.sessions,
+    totalHours: u.totalHours.toFixed(1),
+    courtOrdered: u.courtOrdered ? "yes" : "no",
+    lastActive: u.lastActive ?? "",
+  }));
+
   return (
     <div className="max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-md gap-md flex-wrap">
         <h1 className="font-heading text-[28px] leading-[36px] text-text-primary">Users</h1>
-        <button
-          type="button"
-          className="h-9 px-md rounded-sm border border-border-outline bg-bg-surface font-data text-[12px] font-semibold text-text-tertiary hover:bg-bg-surface-elevated transition-colors inline-flex items-center gap-xs"
-        >
-          Export CSV
-        </button>
+        <ExportMenu
+          onExportCsv={() => downloadCsv("users-export", exportColumns, exportRows)}
+          onExportPdf={() => openPrintablePdf("Users export", exportColumns, exportRows)}
+        />
       </div>
 
       {isMock && <SampleDataBanner />}

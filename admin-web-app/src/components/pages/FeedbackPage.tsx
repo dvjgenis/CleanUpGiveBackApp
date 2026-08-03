@@ -10,6 +10,8 @@
 import { useState } from "react";
 import { EMOJI_MAP, MOCK_FEEDBACK, type FeedbackEntry } from "@/lib/mock-data";
 import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
+import { ExportMenu } from "@/components/ui/ExportMenu";
+import { downloadCsv, openPrintablePdf } from "@/lib/export-download";
 
 const RATING_ORDER = ["excited", "happy", "neutral", "sad", "very_sad"] as const;
 type RatingKey = (typeof RATING_ORDER)[number];
@@ -91,10 +93,31 @@ export function FeedbackPage({
   const filtered =
     ratingFilter === "all" ? feedback : feedback.filter((f) => f.rating === ratingFilter);
 
+  const exportColumns = [
+    { key: "volunteer", label: "volunteer" },
+    { key: "rating", label: "rating" },
+    { key: "activity", label: "activity" },
+    { key: "comment", label: "comment" },
+    { key: "flagged", label: "flagged" },
+    { key: "submittedAt", label: "submitted_at" },
+  ];
+  const exportRows = filtered.map((f) => ({
+    volunteer: f.volunteer,
+    rating: EMOJI_MAP[f.rating]?.label ?? f.rating,
+    activity: f.activity,
+    comment: f.comment ?? "",
+    flagged: f.flagged ? "yes" : "no",
+    submittedAt: f.submittedAt,
+  }));
+
   return (
     <div className="max-w-5xl mx-auto">
-      <div className="flex items-center justify-between mb-lg">
+      <div className="flex items-center justify-between mb-lg gap-md flex-wrap">
         <h1 className="font-heading text-[28px] leading-[36px] text-text-primary">Feedback</h1>
+        <ExportMenu
+          onExportCsv={() => downloadCsv("feedback-export", exportColumns, exportRows)}
+          onExportPdf={() => openPrintablePdf("Feedback export", exportColumns, exportRows)}
+        />
       </div>
 
       {isMock && <SampleDataBanner />}

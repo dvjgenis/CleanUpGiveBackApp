@@ -21,6 +21,8 @@ import { PeriodToggle } from "@/components/ui/PeriodToggle";
 import { usePeriodLabel, usePeriodSelection } from "@/components/ui/PeriodToggleBar";
 import { SessionPreviewDrawer } from "@/components/ui/SessionPreviewDrawer";
 import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
+import { ExportMenu } from "@/components/ui/ExportMenu";
+import { downloadCsv, openPrintablePdf } from "@/lib/export-download";
 import { approveSession, approveSessionsBulk, declineSession } from "@/actions/sessions";
 import {
   MOCK_SESSIONS,
@@ -179,42 +181,33 @@ function SessionsPageInner({ sessions, isMock }: { sessions: MockSession[]; isMo
   const previewSession: MockSession | null =
     (previewId ? localSessions.find((s) => s.id === previewId) : null) ?? null;
 
-  function exportCsv() {
-    const header = ["id", "volunteer", "activity", "status", "duration", "court_ordered", "created_at"];
-    const rows = filtered.map((s) =>
-      [
-        s.id,
-        s.volunteer_name,
-        s.activity ?? "",
-        s.status,
-        formatDuration(s.duration_seconds, s.adjusted_hours),
-        s.court_ordered ? "yes" : "no",
-        s.created_at,
-      ]
-        .map((cell) => `"${String(cell).replace(/"/g, '""')}"`)
-        .join(","),
-    );
-    const csv = [header.join(","), ...rows].join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `sessions-export-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
+  const exportColumns = [
+    { key: "id", label: "id" },
+    { key: "volunteer", label: "volunteer" },
+    { key: "activity", label: "activity" },
+    { key: "status", label: "status" },
+    { key: "duration", label: "duration" },
+    { key: "court_ordered", label: "court_ordered" },
+    { key: "created_at", label: "created_at" },
+  ];
+  const exportRows = filtered.map((s) => ({
+    id: s.id,
+    volunteer: s.volunteer_name,
+    activity: s.activity ?? "",
+    status: s.status,
+    duration: formatDuration(s.duration_seconds, s.adjusted_hours),
+    court_ordered: s.court_ordered ? "yes" : "no",
+    created_at: s.created_at,
+  }));
 
   return (
     <div className="max-w-7xl mx-auto">
       <div className="flex items-center justify-between mb-md gap-md flex-wrap">
         <h1 className="font-heading text-[28px] leading-[36px] text-text-primary">Sessions</h1>
-        <button
-          type="button"
-          onClick={exportCsv}
-          className="h-9 px-md rounded-sm border border-border-outline bg-bg-surface font-data text-[12px] font-semibold text-text-tertiary hover:bg-bg-surface-elevated transition-colors inline-flex items-center gap-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
-        >
-          Export CSV
-        </button>
+        <ExportMenu
+          onExportCsv={() => downloadCsv("sessions-export", exportColumns, exportRows)}
+          onExportPdf={() => openPrintablePdf("Sessions export", exportColumns, exportRows)}
+        />
       </div>
 
       {isMock && <SampleDataBanner />}

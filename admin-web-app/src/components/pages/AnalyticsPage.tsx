@@ -10,7 +10,7 @@
  * data isn't re-scoped by the period range yet. Court progress shows View more
  * when there are more than 5 rows.
  */
-import { Suspense, useState, useEffect } from "react";
+import { Suspense } from "react";
 import {
   MOCK_SESSIONS,
   MOCK_COURT_PROGRESS,
@@ -19,6 +19,7 @@ import {
   buildDecisionBars,
   buildCourtProgressBars,
   buildGeoActivity,
+  formatDuration,
   type MockSession,
   type MockCourtVolunteer,
 } from "@/lib/mock-data";
@@ -30,95 +31,20 @@ import { HorizontalBarChart } from "@/components/ui/HorizontalBarChart";
 import { CourtProgressChart } from "@/components/ui/CourtProgressChart";
 import { DonutChart } from "@/components/ui/DonutChart";
 import { UsHeatmap } from "@/components/dashboard/UsHeatmap";
-import { EnhancedUsHeatmap } from "@/components/ui/EnhancedUsHeatmap";
 import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
-import { buildEnhancedGeoActivity, createMockSessionsWithGPS } from "@/lib/enhanced-geo-activity";
+import { ExportMenu } from "@/components/ui/ExportMenu";
+import { downloadCsv, openPrintablePdf } from "@/lib/export-download";
 
 const ACTIVITY_COLORS = ["#007536", "#5a8f3a", "#835400", "#3d8f5c", "#6e7a6c"];
-
-/**
- * Wrapper component that handles async geocoding for the enhanced heatmap.
- */
-function EnhancedGeoHeatmapWrapper({ 
-  sessions, 
-  periodLabel, 
-  isMock 
-}: { 
-  sessions: MockSession[]; 
-  periodLabel: string; 
-  isMock: boolean; 
-}) {
-  const [enhancedActivity, setEnhancedActivity] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  
-  useEffect(() => {
-    async function loadEnhancedActivity() {
-      setIsLoading(true);
-      try {
-        // For demo purposes, mix real sessions with GPS-enabled mock sessions
-        const gpsEnabledSessions = createMockSessionsWithGPS();
-        const legacySessions = sessions.map(s => ({
-          id: s.id,
-          status: s.status,
-          duration_seconds: s.duration_seconds,
-          adjusted_hours: s.adjusted_hours,
-          state_fips: s.state_fips,
-        }));
-        
-        const allSessions = [...legacySessions, ...gpsEnabledSessions];
-        const activity = await buildEnhancedGeoActivity(allSessions);
-        setEnhancedActivity(activity);
-      } catch (error) {
-        console.error('Failed to build enhanced geo activity:', error);
-        // Fallback to regular heatmap
-        setEnhancedActivity({
-          byState: buildGeoActivity(sessions).byState,
-          byCounty: [],
-          byNeighborhood: [],
-          geocodingStats: {
-            totalSessions: sessions.length,
-            geocodedSessions: 0,
-            failedGeocodings: 0,
-            cachedResults: 0,
-          },
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    
-    loadEnhancedActivity();
-  }, [sessions]);
-  
-  if (isLoading) {
-    return (
-      <div className="bg-bg-surface border border-border-outline rounded-md p-lg">
-        <div className="animate-pulse">
-          <div className="h-6 w-48 bg-bg-surface-elevated rounded mb-md" />
-          <div className="h-64 bg-bg-surface-elevated rounded" />
-        </div>
-      </div>
-    );
-  }
-  
-  if (!enhancedActivity) {
-    // Fallback to regular heatmap on error
-    return <UsHeatmap activity={buildGeoActivity(sessions)} periodLabel={periodLabel} isMock={isMock} />;
-  }
-  
-  return <EnhancedUsHeatmap activity={enhancedActivity} periodLabel={periodLabel} isMock={isMock} />;
-}
 
 export function AnalyticsPage({
   sessions = MOCK_SESSIONS,
   courtProgress = MOCK_COURT_PROGRESS,
   isMock = false,
-  useEnhancedGeocoding = false,
 }: {
   sessions?: MockSession[];
   courtProgress?: MockCourtVolunteer[];
   isMock?: boolean;
-  useEnhancedGeocoding?: boolean;
 }) {
   return (
     <Suspense
@@ -128,12 +54,7 @@ export function AnalyticsPage({
         </div>
       }
     >
-      <AnalyticsPageInner 
-        sessions={sessions} 
-        courtProgress={courtProgress} 
-        isMock={isMock}
-        useEnhancedGeocoding={useEnhancedGeocoding}
-      />
+      <AnalyticsPageInner sessions={sessions} courtProgress={courtProgress} isMock={isMock} />
     </Suspense>
   );
 }
@@ -142,12 +63,10 @@ function AnalyticsPageInner({
   sessions,
   courtProgress,
   isMock,
-  useEnhancedGeocoding,
 }: {
   sessions: MockSession[];
   courtProgress: MockCourtVolunteer[];
   isMock: boolean;
-  useEnhancedGeocoding: boolean;
 }) {
   const now = new Date();
   const selection = usePeriodSelection();
@@ -191,30 +110,41 @@ function AnalyticsPageInner({
     { name: "Court-ordered", value: courtOrdered, color: "#835400" },
   ].filter((s) => s.value > 0);
 
+  const exportColumns = [
+    { key: "id", label: "id" },
+    { key: "volunteer", label: "volunteer" },
+    { key: "activity", label: "activity" },
+    { key: "status", label: "status" },
+    { key: "duration", label: "duration" },
+    { key: "court_ordered", label: "court_ordered" },
+    { key: "created_at", label: "created_at" },
+  ];
+  const exportRows = filteredSessions.map((s) => ({
+    id: s.id,
+    volunteer: s.volunteer_name,
+    activity: s.activity ?? "",
+    status: s.status,
+    duration: formatDuration(s.duration_seconds, s.adjusted_hours),
+    court_ordered: s.court_ordered ? "yes" : "no",
+    created_at: s.created_at,
+  }));
+
   return (
     <div className="max-w-6xl mx-auto">
       <header className="flex flex-col gap-md mb-lg">
-        <div className="flex items-start justify-between gap-md">
+        <div className="flex items-start justify-between gap-md flex-wrap">
           <div>
-            <h1 className="font-heading text-[28px] sm:text-[32px] leading-[36px] sm:leading-[40px] text-text-primary">Insights</h1>
+            <h1 className="font-heading text-[28px] sm:text-[32px] leading-[36px] sm:leading-[40px] text-text-primary">
+              Insights
+            </h1>
             <p className="mt-xs font-body text-[14px] text-text-tertiary">{periodLabelText}</p>
           </div>
-          
-          {/* Enhanced Geocoding Toggle */}
-          <div className="flex items-center gap-sm">
-            <label className="flex items-center gap-xs cursor-pointer">
-              <input
-                type="checkbox"
-                checked={useEnhancedGeocoding}
-                onChange={(e) => {
-                  // This would need to be lifted up to parent component in a real implementation
-                  console.log('Enhanced geocoding toggle:', e.target.checked);
-                }}
-                className="w-4 h-4 text-primary bg-bg-surface border-border-outline rounded focus:ring-primary focus:ring-2"
-              />
-              <span className="font-data text-[12px] text-text-tertiary">Enhanced Geocoding</span>
-            </label>
-          </div>
+          <ExportMenu
+            onExportCsv={() => downloadCsv("insights-export", exportColumns, exportRows)}
+            onExportPdf={() =>
+              openPrintablePdf(`Insights export · ${periodLabelText}`, exportColumns, exportRows)
+            }
+          />
         </div>
         <PeriodToggle selection={selection} />
       </header>
@@ -257,15 +187,11 @@ function AnalyticsPageInner({
             index={6}
           />
         </div>
-        {useEnhancedGeocoding ? (
-          <EnhancedGeoHeatmapWrapper 
-            sessions={filteredSessions} 
-            periodLabel={periodLabelText} 
-            isMock={isMock} 
-          />
-        ) : (
-          <UsHeatmap activity={buildGeoActivity(filteredSessions)} periodLabel={periodLabelText} isMock={isMock} />
-        )}
+        <UsHeatmap
+          activity={buildGeoActivity(filteredSessions)}
+          periodLabel={periodLabelText}
+          isMock={isMock}
+        />
       </div>
     </div>
   );

@@ -29,13 +29,13 @@ CleanUpGiveBackApp/
 
 ### Navigation Sections (sidebar order)
 - **Home** (`/`): Overview metrics and recent activity
-- **Sessions** (`/sessions`): Session review and management
-- **Users** (`/users`): Volunteer / user directory
-- **Insights** (`/insights`): Data visualization and reports
-- **Feedback** (`/feedback`): Volunteer feedback
-- **Events** (`/events`): Event management and scheduling
-- **Orders** (`/orders`): Shop order processing and fulfillment
-- **Payment** (`/payments`): Payment tracking
+- **Sessions** (`/sessions`): Session review and management; header **Export** accordion (CSV download + PDF via print dialog)
+- **Users** (`/users`): Volunteer / user directory; **Export** accordion
+- **Insights** (`/insights`): Data visualization and reports (no Enhanced Geocoding toggle; standard US heatmap only); header **Export** accordion (CSV + PDF)
+- **Feedback** (`/feedback`): Volunteer feedback; **Export** accordion
+- **Events** (`/events`): Event management and scheduling; **Export** accordion (+ New Event)
+- **Orders** (`/orders`): Shop order processing and fulfillment; **Export** accordion
+- **Payment** (`/payments`): Payment tracking; **Export** accordion
 - **Donna Adams / Settings**: Footer links (`/profile`, `/settings`); `/profile` Account page lets Donna edit name, email, and password (mock local save; admin persists via Supabase) with show/hide eye toggles (`react-icons/io5` `IoEye` / `IoEyeOff`) on all three password fields; account row shows name + initials; brand mark uses `/logo.png` (not a CG placeholder)
 
 ### Technical Features

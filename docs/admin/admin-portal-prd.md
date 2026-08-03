@@ -1,9 +1,11 @@
 # PRD: CleanUpGiveBack Admin Portal
 
+> **Superseded by [admin-portal-prd-v3.md](admin-portal-prd-v3.md)** (2026-08-03). This v2 file is kept for history. The production product is `admin-web-app/` (not archived `admin/`).
+
 **Version:** 2.0  
 **Date:** 2026-07-21  
 **Author:** Product  
-**Status:** Draft — pending stakeholder review  
+**Status:** Historical — superseded by v3  
 **Audience:** Donna (primary admin), engineering team  
 
 ---
