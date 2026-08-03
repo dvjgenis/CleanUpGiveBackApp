@@ -2,6 +2,116 @@
 
 ---
 
+## [2026-08-03] — Tote flatlay tighter crop + matched carousel height
+
+**R:** First tote slide had empty surface above the handles plus gray letterboxing under `contain`.
+
+**A:** Restored upright flatlay, light top/side trim (994×722) keeping full handle loops. Sized tote carousel to that aspect so `contain` fills the card without cutting the bags.
+
+**P:** Reload tote detail — first slide should fill the card with less empty space above the handles.
+
+---
+
+## [2026-08-03] — Adult vest carousel taller for full-width contain
+
+**R:** Adult flatlay is portrait; in the default 343px card `contain` left side gaps. `cover` would cut the vest.
+
+**A:** For `adult-safety-vest`, set carousel height to `width × 1024/768` so `contain` fills the card width without cropping.
+
+**P:** Reload adult vest detail — second slide should span full width with the vest fully visible.
+
+---
+
+## [2026-08-03] — Adult vest second slide contain
+
+**R:** Adult vest flatlay (`adultVestFlatlay`) was still on `cover` and cutting off the vest.
+
+**A:** Use `contentFit="contain"` for `adultVestFlatlay` as well.
+
+**P:** Reload adult vest detail — both slides show the full vest.
+
+---
+
+## [2026-08-03] — Adult vest first slide contain
+
+**R:** First adult vest image (`adultVest`) was cropped by `cover` like the child vest lead slide.
+
+**A:** Use `contentFit="contain"` for `adultVest`; keep `cover` on `adultVestFlatlay`.
+
+**P:** Reload adult vest detail — first slide should show the full vest.
+
+---
+
+## [2026-08-03] — Child vest first slide contain
+
+**R:** First child vest image (`childVest`) was cropped by `cover` and cut off the vest edges.
+
+**A:** Use `contentFit="contain"` for `childVest`; keep `cover` on `childVestFlatlay`.
+
+**P:** Reload child vest detail — first slide should show the full vest.
+
+---
+
+## [2026-08-03] — Adult vest carousel order + cover
+
+**R:** Match child vest — original image first; slides should fill the card.
+
+**A:** Reversed `adult-safety-vest` images to `[adultVest, adultVestFlatlay]`. Both use `contentFit="cover"`.
+
+**P:** Reload adult vest detail — original first; slides fill the card width.
+
+---
+
+## [2026-08-03] — Child vest carousel order + cover
+
+**R:** Child vest should lead with the original image; both slides letterboxed under contain.
+
+**A:** Reversed `child-safety-vest` images to `[childVest, childVestFlatlay]`. Both use `contentFit="cover"` in the carousel.
+
+**P:** Reload child vest detail — original first; slides fill the card width.
+
+---
+
+## [2026-08-03] — Tote flatlay contain (no bag cutoff)
+
+**R:** Tote flatlay used `cover` and cropped bag edges/handles.
+
+**A:** Keep `toteBagsPhotoFlatlay` on `contentFit="contain"`; cover remains for tote group photo + kit heroes.
+
+**P:** Reload tote detail — first flatlay slide should show both bags fully.
+
+---
+
+## [2026-08-03] — Kit carousel flatlay fills card
+
+**R:** Kit flatlay letterboxed with gray gaps under `contentFit="contain"`.
+
+**A:** Treat `kitHeroFlatlay` + `kitHero` like tote group photos — `contentFit="cover"` in `ProductDetailScreen`.
+
+**P:** Reload kit detail — first slides should edge-to-edge fill the carousel card.
+
+---
+
+## [2026-08-03] — Kit flatlay 180° + drop gloves from carousel
+
+**R:** Kit flatlay needed another 180°; gloves slide was redundant in the kit carousel.
+
+**A:** Rotated `kit-hero-flatlay.png` 180°. Removed `gloves` from cleanup-kit `images`/`thumbnails` (still in includes).
+
+**P:** Reload kit product detail — flatlay upright; carousel has no gloves slide.
+
+---
+
+## [2026-08-03] — Add product-detail flatlay photos
+
+**R:** User supplied four product photos (tote, kit, adult vest, child vest) that needed rotation; existing shop PNGs must stay.
+
+**A:** Rotated into new `*-flatlay.png` files under `frontend/assets/figma/shop/product-detail/` (no overwrites). Prepended each as the first carousel slide in `productDetail.ts` for `tote-bags`, `cleanup-kit`, `adult-safety-vest`, and `child-safety-vest`.
+
+**P:** Expo Go — open product detail for those four SKUs; first slide is the new flatlay; swipe still shows prior images.
+
+---
+
 ## [2026-07-30] — Replace tote variants with transparent cutouts
 
 **R:** User provided clean per-bag RGBA cutouts (background already removed); prior grid crops left black handle holes / fringe.

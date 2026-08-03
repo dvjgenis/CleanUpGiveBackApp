@@ -181,6 +181,13 @@ export function ProductDetailScreen() {
 
   const contentWidth = Math.min(windowWidth - 32, 358);
   const carouselWidth = contentWidth;
+  // Adult flatlay is portrait; tote flatlay is landscape — size the card to the lead asset aspect so contain fills without letterboxing or cropping.
+  const carouselHeight =
+    product.id === 'adult-safety-vest'
+      ? Math.round(carouselWidth * (1024 / 768))
+      : product.id === 'tote-bags'
+        ? Math.round(carouselWidth * (722 / 994))
+        : CAROUSEL_HEIGHT;
 
   const images = useMemo(() => {
     if (toteColor != null) {
@@ -279,13 +286,17 @@ export function ProductDetailScreen() {
               pagingEnabled
               showsHorizontalScrollIndicator={false}
               onMomentumScrollEnd={onCarouselScroll}
-              style={{ width: carouselWidth, height: CAROUSEL_HEIGHT }}
+              style={{ width: carouselWidth, height: carouselHeight }}
               accessibilityLabel={`${product.name} images`}
             >
               {images.map((src, i) => {
-                const fillsCard = src === PRODUCT_DETAIL_ASSETS.toteBagsPhoto;
+                const fillsCard =
+                  src === PRODUCT_DETAIL_ASSETS.toteBagsPhoto ||
+                  src === PRODUCT_DETAIL_ASSETS.kitHeroFlatlay ||
+                  src === PRODUCT_DETAIL_ASSETS.kitHero ||
+                  src === PRODUCT_DETAIL_ASSETS.childVestFlatlay;
                 return (
-                  <View key={i} style={[s.carouselSlide, { width: carouselWidth }]}>
+                  <View key={i} style={[s.carouselSlide, { width: carouselWidth, height: carouselHeight }]}>
                     <ExpoImage
                       source={src}
                       style={s.carouselImage}

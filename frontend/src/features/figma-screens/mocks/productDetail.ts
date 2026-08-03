@@ -6,14 +6,18 @@
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const assets = {
   kitHero: require('@/assets/figma/shop/product-detail/kit-hero.png') as number,
+  kitHeroFlatlay: require('@/assets/figma/shop/product-detail/kit-hero-flatlay.png') as number,
   gloves: require('@/assets/figma/shop/product-detail/gloves.png') as number,
   trashGrabberThumb: require('@/assets/figma/shop/product-detail/trash-grabber.png') as number,
   trashGrabber: require('@/assets/figma/shop/product-detail/trash-grabber-detail.png') as number,
   adultVest: require('@/assets/figma/shop/product-detail/adult-vest-detail.png') as number,
+  adultVestFlatlay: require('@/assets/figma/shop/product-detail/adult-vest-flatlay.png') as number,
   adultVestShop: require('@/assets/figma/shop/product-adult-vest.png') as number,
   childVest: require('@/assets/figma/shop/product-child-vest.png') as number,
+  childVestFlatlay: require('@/assets/figma/shop/product-detail/child-vest-flatlay.png') as number,
   toteBags: require('@/assets/figma/shop/product-detail/tote-bags.png') as number,
   toteBagsPhoto: require('@/assets/figma/shop/product-detail/tote-bags-photo.png') as number,
+  toteBagsPhotoFlatlay: require('@/assets/figma/shop/product-detail/tote-bags-photo-flatlay.png') as number,
   toteGreenPlanetB: require('@/assets/figma/shop/product-detail/tote-green-planet-b.png') as number,
   toteBluePlanetB: require('@/assets/figma/shop/product-detail/tote-blue-planet-b.png') as number,
   toteGreenEarthFriendly: require('@/assets/figma/shop/product-detail/tote-green-earth-friendly.png') as number,
@@ -70,8 +74,18 @@ export const PRODUCT_DETAILS: Record<ProductId, ProductDetail> = {
     figmaNode: '492:114',
     description:
       'Our comprehensive starter kit includes a professional-grade trash grabber, high-visibility adult safety vest, and 10 pairs of premium nitrile gloves. Everything you need to start your first cleanup session with confidence.',
-    images: [assets.kitHero, assets.adultVestShop, assets.gloves, assets.trashGrabberThumb],
-    thumbnails: [assets.kitHero, assets.adultVestShop, assets.gloves, assets.trashGrabberThumb],
+    images: [
+      assets.kitHeroFlatlay,
+      assets.kitHero,
+      assets.adultVestShop,
+      assets.trashGrabberThumb,
+    ],
+    thumbnails: [
+      assets.kitHeroFlatlay,
+      assets.kitHero,
+      assets.adultVestShop,
+      assets.trashGrabberThumb,
+    ],
     includes: [
       { label: '36" Ergonomic Grabber', image: assets.trashGrabberThumb },
       { label: 'One-size High-Vis Vest', image: assets.adultVestShop },
@@ -97,6 +111,7 @@ export const PRODUCT_DETAILS: Record<ProductId, ProductDetail> = {
     description:
       'Embrace style and sustainability with our Reusable Earth and Ocean Tote Bags! Made from recycled materials, this cute, environmentally conscious accessory is perfect for your shopping needs! Carry your essentials while making a statement for a cleaner planet!',
     images: [
+      assets.toteBagsPhotoFlatlay,
       assets.toteBagsPhoto,
       assets.toteGreenPlanetB,
       assets.toteBluePlanetB,
@@ -120,7 +135,7 @@ export const PRODUCT_DETAILS: Record<ProductId, ProductDetail> = {
     figmaNode: '905:236',
     description:
       "Prioritize safety during your cleanups with our Adult Safety Vest. Stay visible and protected, allowing you to focus on making a difference in your community. If you want to see it in action, just look around our website, you'll find it! Your purchase aids a safer environment.",
-    images: [assets.adultVest],
+    images: [assets.adultVest, assets.adultVestFlatlay],
   },
   'child-safety-vest': {
     id: 'child-safety-vest',
@@ -130,7 +145,7 @@ export const PRODUCT_DETAILS: Record<ProductId, ProductDetail> = {
     figmaNode: '905:306',
     description:
       'Inspire the next generation of environmental stewards with our Child Safety Vest! Designed for comfort and visibility, this vest ensures young volunteers can actively participate in cleanups. Your purchase contributes to a greener future for the next generation!',
-    images: [assets.childVest],
+    images: [assets.childVest, assets.childVestFlatlay],
   },
 };
 
