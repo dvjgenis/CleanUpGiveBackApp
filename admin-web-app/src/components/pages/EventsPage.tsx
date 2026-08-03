@@ -7,13 +7,10 @@
  * same table `admin/actions/events.ts` writes to. Falls back to illustrative
  * fixtures when that table is empty.
  */
-"use client";
-
 import Link from "next/link";
 import { MapPinIcon, CalendarIcon } from "@/components/ui/Icons";
 import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
-import { ExportMenu } from "@/components/ui/ExportMenu";
-import { downloadCsv, openPrintablePdf } from "@/lib/export-download";
+import { EventsExportMenu } from "@/components/events/EventsExportMenu";
 import { formatEventWhen, type EventListItem } from "@/lib/events";
 
 export type DemoEvent = {
@@ -190,10 +187,7 @@ export function EventsPage({ events = EVENTS, isMock = false }: { events?: DemoE
       <div className="flex items-center justify-between mb-lg gap-md flex-wrap">
         <h1 className="font-heading text-[28px] leading-[36px] text-text-primary">Events</h1>
         <div className="flex items-center gap-sm flex-wrap">
-          <ExportMenu
-            onExportCsv={() => downloadCsv("events-export", exportColumns, exportRows)}
-            onExportPdf={() => openPrintablePdf("Events export", exportColumns, exportRows)}
-          />
+          <EventsExportMenu columns={exportColumns} rows={exportRows} />
           <Link
             href="/events/new"
             className="h-10 px-lg rounded-sm bg-primary text-white font-data text-[13px] font-semibold hover:bg-[#007d35] transition-colors flex items-center gap-sm"

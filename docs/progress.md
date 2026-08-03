@@ -2,6 +2,26 @@
 
 ---
 
+## [2026-08-03] — Fix Events page client boundary
+
+**R:** Marking `EventsPage` as `"use client"` for Export broke Vercel SSR — server routes import `eventListItemToDemoEvent`/`EVENTS` from that module.
+
+**A:** Restored server `EventsPage`; moved export UI to client `EventsExportMenu`.
+
+**P:** Smoke `/events` on production.
+
+---
+
+## [2026-08-03] — Admin `/login` + branded gradient bars
+
+**R:** Port login for `admin-web-app` with a non-distracting brand atmospheric background (was missing while `BYPASS_AUTH` skipped auth).
+
+**A:** Added `gradient-bars-background.tsx` (cream canvas, soft `#009540` bars, slow pulse, reduced-motion), `/login` (Supabase email/password + admin claim), and `src/middleware.ts` (enforces auth when bypass off; allows `/login` preview when bypass on). Docs: `admin-web-app.md`, PRD v3 §7.1.
+
+**P:** Open `http://localhost:3000/login` with bypass on to preview UI; set `BYPASS_AUTH=false` to exercise real sign-in; wire Account Sign out next.
+
+---
+
 ## [2026-08-03] — Export accordion (CSV/PDF) + Insights geocoding UI off
 
 **R:** Donna wanted Export CSV replaced by an accordion with CSV + PDF on list tabs; Insights Enhanced Geocoding checkbox should go.
