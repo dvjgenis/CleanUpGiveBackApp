@@ -8,6 +8,8 @@
 
 Monorepo for the Clean Up - Give Back mobile app and supporting services.
 
+**Website:** [cleanupgiveback.org](https://cleanupgiveback.org/) — 501(c)(3) nonprofit (volunteer programs, events, donate, store)
+
 <p>
   <img src="https://img.shields.io/badge/Expo-54-000020?logo=expo&logoColor=white" alt="Expo 54" />
   <img src="https://img.shields.io/badge/React_Native-0.81-61DAFB?logo=react&logoColor=black" alt="React Native" />
@@ -17,6 +19,7 @@ Monorepo for the Clean Up - Give Back mobile app and supporting services.
 </p>
 
 <p>
+  <a href="https://cleanupgiveback.org/"><img src="https://img.shields.io/badge/Website-cleanupgiveback.org-009540" alt="Website" /></a>
   <img src="https://img.shields.io/badge/iOS-supported-lightgrey?logo=apple&logoColor=white" alt="iOS" />
   <img src="https://img.shields.io/badge/Android-supported-3DDC84?logo=android&logoColor=white" alt="Android" />
   <img src="https://img.shields.io/badge/docs-living-009540" alt="Living docs" />

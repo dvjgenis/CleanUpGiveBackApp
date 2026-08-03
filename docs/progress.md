@@ -2,6 +2,16 @@
 
 ---
 
+## [2026-08-03] — README links public website
+
+**R:** Surface the org site on the repo landing page.
+
+**A:** Added [cleanupgiveback.org](https://cleanupgiveback.org/) link + badge to root `README.md`.
+
+**P:** None — docs-only.
+
+---
+
 ## [2026-08-03] — Resend verified end-to-end (docs finalized)
 
 **R:** Finish Resend after domain verification so admin + Fly can send mail; document and push.
