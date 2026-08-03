@@ -2,6 +2,18 @@
 
 ---
 
+## [2026-08-03] — Resend verified end-to-end (docs finalized)
+
+**R:** Finish Resend after domain verification so admin + Fly can send mail; document and push.
+
+**A:** Confirmed `cleanupgiveback.org` **verified** in Resend; synced `admin-web-app/.env` + `.env.local` (Resend + Supabase); smoke-sent test emails to `DONNA_EMAIL` (HTTP 200); set Fly secrets `RESEND_API_KEY` / `EMAIL_FROM` / `DONNA_EMAIL` on `cleanup-sessions`. Docs updated: `current.md`, `accounts-and-access.md`, `supabase.md`, `architecture.md`, `implementation-plan.md`, `backend/context/payments.md` (Stripe next), `admin/dulf-resend-supabase-fly.md`, `admin-web-app.md`, `.env.local.example`.
+
+**L:** Admin local + Fly transactional email unblocked. Vercel Resend env still optional. Stripe is next (`backend/payments/` empty).
+
+**P:** Stripe test-mode implementation next; optionally add Resend vars on Vercel for production admin mail.
+
+---
+
 ## [2026-08-03] — Featured kit image larger without growing card
 
 **R:** Bumping wrap height made the whole featured card taller; only the photo should look bigger.

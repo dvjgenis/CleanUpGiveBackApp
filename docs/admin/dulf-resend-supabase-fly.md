@@ -2,7 +2,7 @@
 
 **Audience:** Dulf (ops / deploy)  
 **Project:** Clean Up – Give Back  
-**Date:** 2026-07-28  
+**Date:** 2026-07-28 (updated 2026-08-03)
 
 This guide covers the three services needed for **admin notifications**, **Donna’s admin login**, and the **sessions API** on Fly. Do **not** commit API keys or passwords to git. Store them in a password manager and/or gitignored `credentials.local.md` at the repo root.
 
@@ -17,18 +17,20 @@ App URLs today:
 
 | App | URL |
 |-----|-----|
-| Admin portal (local) | http://localhost:3001 |
+| Admin portal (local) | http://localhost:3000 (`admin-web-app/`) |
+| Admin portal (Vercel) | https://cleanupgiveback-web-app.vercel.app |
 | Sessions API (Fly) | https://cleanup-sessions.fly.dev |
 
 ---
 
 ## Checklist (order)
 
-1. [ ] Supabase — confirm project, run SQL migrations, create Donna admin user, copy API keys  
-2. [ ] Resend — create API key, verify sending domain (or use Resend onboarding domain for tests)  
-3. [ ] Wire `admin/.env.local` and `frontend/.env`  
-4. [ ] Fly — set secrets + redeploy `backend/sessions`  
-5. [ ] Smoke tests below  
+1. [x] Supabase — confirm project, run SQL migrations, create Donna admin user, copy API keys  
+2. [x] Resend — API key created; domain `cleanupgiveback.org` **verified** (2026-08-03); smoke send OK  
+3. [x] Wire `admin-web-app/.env.local` (not archived `admin/`) and `frontend/.env`  
+4. [x] Fly — `RESEND_API_KEY` / `EMAIL_FROM` / `DONNA_EMAIL` set on `cleanup-sessions`  
+5. [ ] Optional: same Resend vars on **Vercel** for production admin email  
+6. [ ] Smoke tests below (re-run after any key rotation)  
 
 ---
 
@@ -106,13 +108,13 @@ Resend sends:
 ### 2.2 Sender address (`EMAIL_FROM`)
 
 - Default in code: `noreply@cleanupgiveback.org`  
-- For production: **Domains** in Resend → add/verify `cleanupgiveback.org` (DNS records Resend shows) → then set:
+- **Done (2026-08-03):** Domains → `cleanupgiveback.org` verified (GoDaddy DNS / DKIM+SPF). Use:
 
 ```text
 EMAIL_FROM=noreply@cleanupgiveback.org
 ```
 
-- For early testing without DNS: Resend allows sending from their onboarding/test sender only to your own account email. Prefer verifying the real domain ASAP.
+- No need to paste DKIM/SPF into app env — those stay at the DNS host.
 
 ### 2.3 Donna’s inbox (`DONNA_EMAIL`)
 
@@ -128,7 +130,7 @@ If `RESEND_API_KEY` or `DONNA_EMAIL` is missing, emails are **skipped** (logged)
 
 ## 3. Env files (local)
 
-### 3.1 Admin — `admin/.env.local`
+### 3.1 Admin — `admin-web-app/.env.local` (preferred; `admin/` is archived)
 
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co

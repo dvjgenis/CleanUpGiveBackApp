@@ -22,8 +22,9 @@ Related: [current.md](current.md), [supabase.md](supabase.md), [backend/specs/se
 | Auth | Supabase anonymous JWT; API verifies via JWKS |
 | Photos | Client → Storage; API stores paths only |
 | Maps / weather | No backend; MapLibre + Carto/Esri + Open-Meteo |
-| Payments | UI only; [`backend/payments/`](../backend/payments/) empty |
-| Env | `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_SUPABASE_*`; Fly: `DATABASE_URL`, `SUPABASE_URL`, `RESEND_API_KEY`, `ADMIN_API_KEY` |
+| Payments | UI only; [`backend/payments/`](../backend/payments/) empty — **Stripe next** |
+| Email | Resend live (`cleanupgiveback.org` verified); admin local + Fly secrets |
+| Env | `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_SUPABASE_*`; Fly: `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_JWT_SECRET`, `RESEND_API_KEY`, `EMAIL_FROM`, `DONNA_EMAIL` (+ optional `ADMIN_API_KEY` / service role) |
 
 ---
 

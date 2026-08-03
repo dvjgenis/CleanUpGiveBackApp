@@ -48,7 +48,7 @@ Docs complete — see [ADR-004](adr/ADR-004-sessions-backend-supabase-fly.md), [
 - [ ] Bind design tokens to remaining Figma screens (compliance frames use DS components; variable binding pending)
 - [ ] **Approve and modify existing screens** — see [figma-compliance-screen-gap-audit.md](compliance/figma-compliance-screen-gap-audit.md#existing-screens-pending-approval)
 - [x] Native session flow in `frontend/src/app/` — `expo-location`/`expo-camera` wired; GPS route + distance live in Expo Go
-- [ ] `backend/payments/` — shop checkout and donation processing
+- [ ] `backend/payments/` — shop checkout and donation processing (**Stripe next** after Resend; Resend domain + Fly/admin local mail done 2026-08-03)
 - [ ] Replace remaining HTML prototype screens per [manifest.yaml](../frontend/design/figma/manifest.yaml) and [figma-to-native-handoff.md](frontend/specs/figma-to-native-handoff.md)
 - [x] Sequential checkpoint capture (`expo-camera`) — [photo-checkpoint-dual-capture.md](frontend/specs/photo-checkpoint-dual-capture.md) (simultaneous dual out of scope)
 - [x] Home dashboard session stats — chart + impact from `sessionStatsStore` — [home-dashboard-session-stats.md](frontend/specs/home-dashboard-session-stats.md)

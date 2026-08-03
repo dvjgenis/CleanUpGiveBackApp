@@ -13,7 +13,8 @@ Org-owned accounts for this project. **Do not store secrets, API keys, or passwo
 | Map provider | Live session map tiles | **Carto Voyager / Dark Matter** (Standard light/dark) + **Esri** (Satellite / Hybrid) via MapLibre — no API key for v1 |
 | Weather | Live session navbar | **Open-Meteo** — no API key |
 | Google Cloud | — | Not used for session tracking v1; defer until push notifications or Google geocoding needed |
-| Payments | Shop and donations | Stripe — out of scope for sessions test phase |
+| Resend | Transactional email | Domain `cleanupgiveback.org` **verified** (2026-08-03); smoke-tested. Local: `admin-web-app/.env.local` (`RESEND_API_KEY`, `EMAIL_FROM`, `DONNA_EMAIL`). Fly `cleanup-sessions`: same three secrets **deployed**. **Optional next:** add the same vars on Vercel (`cleanupgiveback-web-app`) for production admin emails. Runbook: [admin/dulf-resend-supabase-fly.md](admin/dulf-resend-supabase-fly.md). |
+| Payments | Shop and donations | **Stripe — next up** (not implemented; UI/mock only; `backend/payments/` empty) |
 
 ## EAS development build
 
@@ -33,11 +34,11 @@ Required for native MapLibre maps and background route tracking during active se
 | `frontend/.env` | Local Expo values (gitignored) — **no** `DATABASE_URL` |
 | `backend/sessions/.env` | `DATABASE_URL` (session pooler for local Prisma), optional service role for PDF dev (gitignored) |
 | `admin/.env.local` | **Unused** (admin app archived) — prefer `admin-web-app/.env.local` |
-| `admin-web-app/.env.local.example` | Template for `NEXT_PUBLIC_SUPABASE_*` + `SUPABASE_SERVICE_ROLE_KEY` + `BYPASS_AUTH` — same Supabase project as mobile — plus optional `RESEND_API_KEY`/`EMAIL_FROM` and optional `SESSIONS_API_URL`/`ADMIN_API_KEY` (letterhead PDF proxy) |
-| `admin-web-app/.env.local` | Local web-app Supabase values (gitignored); without it, pages fall back to mock fixtures automatically |
+| `admin-web-app/.env.local.example` | Template for `NEXT_PUBLIC_SUPABASE_*` + `SUPABASE_SERVICE_ROLE_KEY` + `BYPASS_AUTH` — same Supabase project as mobile — plus `RESEND_API_KEY`/`EMAIL_FROM`/`DONNA_EMAIL` and optional `SESSIONS_API_URL`/`ADMIN_API_KEY` (letterhead PDF proxy) |
+| `admin-web-app/.env.local` | Local web-app Supabase + Resend values (gitignored); without Supabase keys, pages fall back to mock fixtures; without Resend, emails soft-skip |
 | `admin/db/*.sql` | Additive Postgres migrations for the shared Supabase project (Dashboard → SQL Editor). Kept under archived `admin/` on purpose. `001` creates `public.events`; `005_events_image_urls_and_seed.sql` adds `image_urls` + storage policies; **`007_checkpoint_coordinates.sql`** adds `checkpoints.latitude` / `longitude` for trail photo pins. |
 | `credentials.local.md` | **Admin sample login** (gitignored) — email `donnaadam@cleanupgiveback.org`, password `LocalAdmin!2026`, plus `BYPASS_AUTH` instructions. See also [admin sample login](#admin-portal-sample-login) below. |
-| Fly secrets | `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `ADMIN_API_KEY`, `RESEND_API_KEY`, `DONNA_EMAIL` — `fly secrets set` |
+| Fly secrets | `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_JWT_SECRET`, `RESEND_API_KEY`, `EMAIL_FROM`, `DONNA_EMAIL` (deployed); add `SUPABASE_SERVICE_ROLE_KEY` / `ADMIN_API_KEY` when letterhead/admin API needs them — `fly secrets set` |
 
 ## Admin portal sample login
 

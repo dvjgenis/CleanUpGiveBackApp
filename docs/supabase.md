@@ -136,6 +136,8 @@ Deploy from `backend/sessions/` when implemented (see [sessions-api.md](backend/
 
 ### Transactional email (Resend)
 
+**Status (2026-08-03):** Sending domain `cleanupgiveback.org` is **verified** in Resend. Fly `cleanup-sessions` has `RESEND_API_KEY`, `EMAIL_FROM`, and `DONNA_EMAIL`. Admin local mail uses the same vars in `admin-web-app/.env.local`. Vercel production admin still needs those vars if hosted approve/decline email is required.
+
 The sessions API also serves email routes (auth required):
 
 | Route | Purpose |
@@ -148,8 +150,9 @@ Fly secrets (do not commit):
 
 - `RESEND_API_KEY` — Resend API key
 - `EMAIL_FROM` — verified sender (default `noreply@cleanupgiveback.org`)
+- `DONNA_EMAIL` — inbox for “session ready for review” on finalize
 
-When `RESEND_API_KEY` is unset, routes return `{ ok: true, skipped: true }` (dev-safe).
+When `RESEND_API_KEY` is unset, routes return `{ ok: true, skipped: true }` (dev-safe). Full ops runbook: [admin/dulf-resend-supabase-fly.md](admin/dulf-resend-supabase-fly.md).
 
 ---
 
