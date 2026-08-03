@@ -80,9 +80,17 @@ export default async function VolunteerProfilePage({
     
     if (!volunteer) notFound();
 
-  const approvedHours = volunteer.sessions
-    .filter((s) => s.status === 'approved')
-    .reduce((sum, s) => sum + computedHours(s.duration_seconds, s.adjusted_hours), 0);
+  const approvedSessions = volunteer.sessions.filter((s) => s.status === 'approved');
+
+  const approvedHours = approvedSessions.reduce(
+    (sum, s) => sum + computedHours(s.duration_seconds, s.adjusted_hours),
+    0,
+  );
+
+  const totalMilesWalked = approvedSessions.reduce(
+    (sum, s) => sum + (s.distance_miles ?? 0),
+    0,
+  );
 
   const courtCompletedHours = volunteer.sessions
     .filter((s) => s.status === 'approved' && s.court_ordered)
@@ -132,6 +140,7 @@ export default async function VolunteerProfilePage({
                 {[
                   { label: 'Sessions', value: volunteer.sessions.length },
                   { label: 'Approved Hours', value: `${approvedHours.toFixed(1)}h` },
+                  { label: 'Miles Walked', value: formatMiles(totalMilesWalked) },
                   ...(volunteer.courtOrdered && volunteer.requiredHours != null
                     ? [
                         {

@@ -2,6 +2,40 @@
 
 ---
 
+## [2026-08-03] — Account password show/hide eyes (io5)
+
+**R:** Donna needed password visibility toggles on Account change-password fields; do not add Lucide eyes — use `react-icons/io5` like mobile onboarding.
+
+**A:** `EyeIcon` / `EyeOffIcon` from `IoEye` / `IoEyeOff` in `Icons.tsx`; `/profile` Password section uses a shared `PasswordField` with independent toggles for current / new / confirm. Docs: `admin-web-app.md`.
+
+**P:** Smoke `/profile` — eye reveals text, eye-off hides; tap does not submit the form.
+
+---
+
+## [2026-08-03] — Feedback rating filter (admin-web-app)
+
+**R:** Donna needs to slice the Feedback tab by rating type (Excited → Very Sad) instead of scrolling the full list.
+
+**A:** `/feedback` (`FeedbackPage.tsx`) is now a client page with pill filters (All + each rating) matching Orders/Users; rating-distribution columns also toggle the same filter. List + count update; KPIs stay overall. Docs: `admin-web-app.md`, `current.md`.
+
+**L:** `volunteer_feedback.rating` was already live; only UI filtering was missing. Source (`session`/`account`) left unfiltered for now.
+
+**P:** Optional follow-up: source filter chips if Donna reviews post-session vs Account feedback separately.
+
+---
+
+## [2026-08-03] — Volunteer profile Miles Walked KPI
+
+**R:** Donna needs total miles walked when opening a volunteer in admin-web-app; per-session distance already existed, but the profile KPI strip only showed Sessions / Approved Hours / Court Progress.
+
+**A:** `/volunteers/[id]` sums `distance_miles` across **approved** sessions (same scope as Approved Hours) and shows a **Miles Walked** KPI via existing `formatMiles`. Docs: `admin-web-app.md`, `current.md`.
+
+**L:** No backend change — data already on `sessions.distance_miles` from finalize.
+
+**P:** Smoke on a volunteer with approved sessions that have distance; confirm `0.0 mi` when none.
+
+---
+
 ## [2026-08-03] — README links public website
 
 **R:** Surface the org site on the repo landing page.

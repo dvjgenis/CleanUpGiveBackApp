@@ -1,11 +1,12 @@
 "use client";
 
 /**
- * Icon set — Lucide glyphs via `react-icons/lu`, matching
- * `admin/components/ui/Icons.tsx`. Keep named exports stable so call sites
- * stay unchanged.
+ * Icon set — primarily Lucide (`react-icons/lu`), matching
+ * `admin/components/ui/Icons.tsx`. Password reveal uses `react-icons/io5`
+ * (`IoEye` / `IoEyeOff`) to match mobile onboarding. Keep named exports stable.
  */
 import type { IconType } from "react-icons";
+import { IoEye, IoEyeOff } from "react-icons/io5";
 import {
   LuBell,
   LuCalendar,
@@ -82,3 +83,6 @@ export const CopyIcon = makeIcon(LuCopy);
 export const PlayIcon = makeIcon(LuPlay);
 export const PauseIcon = makeIcon(LuPause);
 export const ReplayIcon = makeIcon(LuRotateCcw);
+/** Password reveal — `react-icons/io5`, same pack as mobile onboarding. */
+export const EyeIcon = makeIcon(IoEye);
+export const EyeOffIcon = makeIcon(IoEyeOff);

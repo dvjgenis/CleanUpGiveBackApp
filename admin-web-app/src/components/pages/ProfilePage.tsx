@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
+import { EyeIcon, EyeOffIcon } from '@/components/ui/Icons';
 
 /**
  * Faithful port of admin Account — editable name / email / password for
@@ -17,9 +18,65 @@ const DEFAULT_PROFILE = {
 
 const FIELD =
   'w-full h-10 px-md rounded-sm border border-border-outline bg-bg-app font-body text-[14px] text-text-primary focus:outline-none focus:border-primary';
+const PASSWORD_FIELD = `${FIELD} pr-11`;
 const LABEL = 'font-data text-[11px] tracking-[0.88px] uppercase text-text-tertiary mb-xs block';
 const SUBMIT =
   'h-11 px-lg rounded-sm bg-primary text-white font-data text-[13px] font-semibold tracking-wide disabled:opacity-60 w-fit';
+
+function PasswordField({
+  id,
+  label,
+  value,
+  onChange,
+  autoComplete,
+  required,
+  minLength,
+  visible,
+  onToggleVisible,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  autoComplete: string;
+  required?: boolean;
+  minLength?: number;
+  visible: boolean;
+  onToggleVisible: () => void;
+}) {
+  return (
+    <div>
+      <label htmlFor={id} className={LABEL}>
+        {label}
+      </label>
+      <div className="relative">
+        <input
+          id={id}
+          type={visible ? 'text' : 'password'}
+          required={required}
+          minLength={minLength}
+          autoComplete={autoComplete}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className={PASSWORD_FIELD}
+        />
+        <button
+          type="button"
+          onClick={onToggleVisible}
+          className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-sm text-text-tertiary hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          aria-label={visible ? `Hide ${label.toLowerCase()}` : `Show ${label.toLowerCase()}`}
+          aria-pressed={visible}
+        >
+          {visible ? (
+            <EyeIcon className="w-5 h-5" aria-hidden />
+          ) : (
+            <EyeOffIcon className="w-5 h-5" aria-hidden />
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function initialsFromName(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -60,6 +117,9 @@ export function ProfilePage() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   function handleProfileSave(e: FormEvent) {
     e.preventDefault();
@@ -208,50 +268,38 @@ export function ProfilePage() {
         </div>
         <div className="p-lg flex flex-col gap-md">
           <Status {...passwordMsg} />
-          <div>
-            <label htmlFor="profile-current-password" className={LABEL}>
-              Current password
-            </label>
-            <input
-              id="profile-current-password"
-              type="password"
-              required
-              autoComplete="current-password"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              className={FIELD}
-            />
-          </div>
-          <div>
-            <label htmlFor="profile-new-password" className={LABEL}>
-              New password
-            </label>
-            <input
-              id="profile-new-password"
-              type="password"
-              required
-              minLength={8}
-              autoComplete="new-password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              className={FIELD}
-            />
-          </div>
-          <div>
-            <label htmlFor="profile-confirm-password" className={LABEL}>
-              Confirm new password
-            </label>
-            <input
-              id="profile-confirm-password"
-              type="password"
-              required
-              minLength={8}
-              autoComplete="new-password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className={FIELD}
-            />
-          </div>
+          <PasswordField
+            id="profile-current-password"
+            label="Current password"
+            value={currentPassword}
+            onChange={setCurrentPassword}
+            autoComplete="current-password"
+            required
+            visible={showCurrentPassword}
+            onToggleVisible={() => setShowCurrentPassword((v) => !v)}
+          />
+          <PasswordField
+            id="profile-new-password"
+            label="New password"
+            value={newPassword}
+            onChange={setNewPassword}
+            autoComplete="new-password"
+            required
+            minLength={8}
+            visible={showNewPassword}
+            onToggleVisible={() => setShowNewPassword((v) => !v)}
+          />
+          <PasswordField
+            id="profile-confirm-password"
+            label="Confirm new password"
+            value={confirmPassword}
+            onChange={setConfirmPassword}
+            autoComplete="new-password"
+            required
+            minLength={8}
+            visible={showConfirmPassword}
+            onToggleVisible={() => setShowConfirmPassword((v) => !v)}
+          />
           <button type="submit" className={SUBMIT}>
             Update password
           </button>

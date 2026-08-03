@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * Faithful port of `admin/app/(admin)/feedback/page.tsx` + `FeedbackRow.tsx`.
  *
@@ -5,8 +7,21 @@
  * table by `admin-web-app/src/app/feedback/page.tsx` (see `@/lib/live-data`),
  * falling back to `MOCK_FEEDBACK` when that table has no rows yet.
  */
+import { useState } from "react";
 import { EMOJI_MAP, MOCK_FEEDBACK, type FeedbackEntry } from "@/lib/mock-data";
 import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
+
+const RATING_ORDER = ["excited", "happy", "neutral", "sad", "very_sad"] as const;
+type RatingKey = (typeof RATING_ORDER)[number];
+type RatingFilter = "all" | RatingKey;
+
+const RATING_FILTERS: { value: RatingFilter; label: string }[] = [
+  { value: "all", label: "All" },
+  ...RATING_ORDER.map((key) => ({
+    value: key,
+    label: `${EMOJI_MAP[key].emoji} ${EMOJI_MAP[key].label}`,
+  })),
+];
 
 function formatTime(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
@@ -54,12 +69,13 @@ export function FeedbackPage({
   feedback?: FeedbackEntry[];
   isMock?: boolean;
 }) {
+  const [ratingFilter, setRatingFilter] = useState<RatingFilter>("all");
+
   const avg =
     feedback.length > 0
       ? feedback.reduce((sum, f) => sum + (EMOJI_MAP[f.rating]?.score ?? 0), 0) / feedback.length
       : 0;
-  const ratingOrder = ["excited", "happy", "neutral", "sad", "very_sad"] as const;
-  const distribution = ratingOrder.map((key) => {
+  const distribution = RATING_ORDER.map((key) => {
     const val = EMOJI_MAP[key];
     const count = feedback.filter((f) => f.rating === key).length;
     return {
@@ -71,6 +87,9 @@ export function FeedbackPage({
   });
   const maxCount = Math.max(0, ...distribution.map((d) => d.count));
   const flagged = feedback.filter((f) => f.flagged).length;
+
+  const filtered =
+    ratingFilter === "all" ? feedback : feedback.filter((f) => f.rating === ratingFilter);
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -113,8 +132,18 @@ export function FeedbackPage({
         <div className="grid grid-cols-5 gap-md">
           {distribution.map((d) => {
             const barPct = maxCount > 0 ? (d.count / maxCount) * 100 : 0;
+            const selected = ratingFilter === d.key;
             return (
-              <div key={d.key} className="flex flex-col items-center gap-xs min-w-0">
+              <button
+                key={d.key}
+                type="button"
+                aria-pressed={selected}
+                onClick={() => setRatingFilter(selected ? "all" : d.key)}
+                className={`flex flex-col items-center gap-xs min-w-0 rounded-md p-xs -m-xs transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary ${
+                  selected ? "bg-primary/10 ring-1 ring-primary/40" : "hover:bg-bg-app"
+                }`}
+                title={selected ? `Clear ${d.label} filter` : `Show ${d.label} only`}
+              >
                 <span className="text-xl sm:text-2xl" aria-hidden>
                   {d.emoji}
                 </span>
@@ -138,16 +167,44 @@ export function FeedbackPage({
                 <span className="font-data text-[9px] sm:text-[10px] text-text-tertiary text-center leading-tight">
                   {d.label}
                 </span>
-              </div>
+              </button>
             );
           })}
         </div>
       </div>
 
+      <div className="flex flex-col gap-sm mb-lg lg:flex-row lg:flex-wrap lg:items-center">
+        <div className="flex items-center gap-xs min-w-0 max-w-full overflow-x-auto pb-0.5" role="group" aria-label="Filter by rating">
+          {RATING_FILTERS.map((f) => (
+            <button
+              key={f.value}
+              type="button"
+              aria-pressed={ratingFilter === f.value}
+              onClick={() => setRatingFilter(f.value)}
+              className={`h-11 shrink-0 inline-flex items-center px-md rounded-full border font-data text-[12px] font-semibold whitespace-nowrap transition-colors ${
+                ratingFilter === f.value
+                  ? "bg-primary text-white border-primary"
+                  : "bg-bg-surface text-text-tertiary border-border-outline hover:border-primary hover:text-primary"
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+        <span className="lg:ml-auto font-body text-[14px] text-text-tertiary self-start lg:self-center shrink-0">
+          {filtered.length} response{filtered.length !== 1 ? "s" : ""}
+          {ratingFilter !== "all" ? ` · ${EMOJI_MAP[ratingFilter].label}` : ""}
+        </span>
+      </div>
+
       <div className="flex flex-col gap-sm">
-        {feedback.map((fb) => (
-          <FeedbackRow key={fb.id} feedback={fb} />
-        ))}
+        {filtered.length === 0 ? (
+          <p className="px-lg py-xl text-center font-body text-base text-text-tertiary border border-border-outline rounded-md bg-bg-surface">
+            No feedback matches this rating.
+          </p>
+        ) : (
+          filtered.map((fb) => <FeedbackRow key={fb.id} feedback={fb} />)
+        )}
       </div>
     </div>
   );
