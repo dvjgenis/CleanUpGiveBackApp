@@ -2,6 +2,26 @@
 
 ---
 
+## [2026-08-03] — Featured kit image larger without growing card
+
+**R:** Bumping wrap height made the whole featured card taller; only the photo should look bigger.
+
+**A:** Restored wrap to 246 with `overflow: 'hidden'`; image fills wrap, scales ~1.1, and nudges down `translateY: 8` so it reads slightly larger inside the same card.
+
+**P:** Reload `/shop` — card height unchanged; kit photo fills more of the image area.
+
+---
+
+## [2026-08-03] — Featured kit image slightly larger
+
+**R:** Shop featured Trash Clean Up Kit image felt small in the card.
+
+**A:** (superseded) earlier size bumps grew the card; see entry above.
+
+**P:** Reload `/shop` — featured kit photo should read a bit larger.
+
+---
+
 ## [2026-08-03] — Tote flatlay tighter crop + matched carousel height
 
 **R:** First tote slide had empty surface above the handles plus gray letterboxing under `contain`.

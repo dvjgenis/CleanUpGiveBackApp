@@ -630,10 +630,12 @@ const s = StyleSheet.create({
     backgroundColor: colors.white,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
   featuredImage: {
-    width: 237,
-    height: 227,
+    width: '100%',
+    height: '100%',
+    transform: [{ scale: 1.1 }, { translateY: 8 }],
   },
   featuredDetails: {
     paddingHorizontal: 16,
