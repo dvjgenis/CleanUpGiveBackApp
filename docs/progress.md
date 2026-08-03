@@ -2,6 +2,16 @@
 
 ---
 
+## [2026-08-03] — Sessions list volunteer name → profile
+
+**R:** Donna needs to open a volunteer profile from the Sessions tab by hovering/clicking the name (underline + primary color), matching archived admin.
+
+**A:** `/sessions` list (`SessionsPage.tsx`) links `volunteer_name` → `/volunteers/[user_id]` with `hover:text-primary hover:underline`; `stopPropagation` on desktop so the session drawer does not open. Mobile list uses a sibling `Link` (not nested in the preview button). Docs: `admin-web-app.md`.
+
+**P:** Smoke desktop hover + click; confirm drawer still opens from the rest of the row.
+
+---
+
 ## [2026-08-03] — Account password show/hide eyes (io5)
 
 **R:** Donna needed password visibility toggles on Account change-password fields; do not add Lucide eyes — use `react-icons/io5` like mobile onboarding.

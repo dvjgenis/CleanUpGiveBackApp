@@ -15,6 +15,7 @@
  * `MOCK_SESSIONS` when that table has no rows yet.
  */
 import { Suspense, useEffect, useState, useTransition } from "react";
+import Link from "next/link";
 import { CourtBadge } from "@/components/ui/CourtBadge";
 import { PeriodToggle } from "@/components/ui/PeriodToggle";
 import { usePeriodLabel, usePeriodSelection } from "@/components/ui/PeriodToggleBar";
@@ -344,10 +345,13 @@ function SessionsPageInner({ sessions, isMock }: { sessions: MockSession[]; isMo
                     <td className="px-lg py-md font-body text-[14px] text-text-tertiary whitespace-nowrap">
                       {formatDate(session.created_at)}
                     </td>
-                    <td className="px-lg py-md">
-                      <span className="font-body text-[14px] font-medium text-text-primary whitespace-nowrap">
+                    <td className="px-lg py-md" onClick={(e) => e.stopPropagation()}>
+                      <Link
+                        href={`/volunteers/${session.user_id}`}
+                        className="font-body text-[14px] font-medium text-text-primary hover:text-primary hover:underline whitespace-nowrap"
+                      >
                         {session.volunteer_name}
-                      </span>
+                      </Link>
                     </td>
                     <td className="px-lg py-md">
                       <span className="font-body text-base text-text-primary">{session.activity ?? "—"}</span>
@@ -422,30 +426,48 @@ function SessionsPageInner({ sessions, isMock }: { sessions: MockSession[]; isMo
             const canModerate = session.status === "under_review";
             return (
               <div key={session.id} className="px-lg py-md hover:bg-bg-surface-elevated transition-colors">
-                <button
-                  type="button"
-                  onClick={() => setPreviewId(session.id)}
-                  className="block w-full text-left"
-                >
-                  <div className="flex items-start justify-between gap-md mb-sm">
-                    <div>
+                <div className="flex items-start justify-between gap-md mb-sm">
+                  <div className="min-w-0">
+                    <button
+                      type="button"
+                      onClick={() => setPreviewId(session.id)}
+                      className="block w-full text-left"
+                    >
                       <p className="font-body text-base font-medium text-text-primary">
                         {session.activity ?? "Cleanup session"}
                       </p>
-                      <p className="font-body text-[14px] text-text-tertiary">
-                        {session.volunteer_name} · {formatDate(session.created_at)}
-                      </p>
-                    </div>
+                    </button>
+                    <p className="font-body text-[14px] text-text-tertiary">
+                      <Link
+                        href={`/volunteers/${session.user_id}`}
+                        className="text-text-tertiary hover:text-primary hover:underline"
+                      >
+                        {session.volunteer_name}
+                      </Link>
+                      {" · "}
+                      {formatDate(session.created_at)}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewId(session.id)}
+                    className="shrink-0"
+                    aria-label={`Open session ${shortId(session.id)}`}
+                  >
                     <span
                       className={`inline-flex items-center px-2 py-0.5 rounded-sm border font-data text-[12px] font-semibold leading-[16px] whitespace-nowrap ${cfg.className}`}
                     >
                       {cfg.label}
                     </span>
-                  </div>
-                  <div className="flex items-center gap-lg text-[14px] text-text-tertiary font-body">
-                    <span>{formatDuration(session.duration_seconds, session.adjusted_hours)}</span>
-                    {session.court_ordered && <CourtBadge />}
-                  </div>
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPreviewId(session.id)}
+                  className="flex items-center gap-lg text-[14px] text-text-tertiary font-body w-full text-left"
+                >
+                  <span>{formatDuration(session.duration_seconds, session.adjusted_hours)}</span>
+                  {session.court_ordered && <CourtBadge />}
                 </button>
                 {canModerate && (
                   <div className="flex items-center gap-sm mt-sm">
