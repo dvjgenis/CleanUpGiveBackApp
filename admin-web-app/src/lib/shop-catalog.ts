@@ -18,6 +18,14 @@ export type ShopItemBreakdownRow = {
   revenueCents: number;
   sharePct: number;
   rankByQty: number;
+  /** This calendar month's revenue for MoM share trend. */
+  currentMonthRevenueCents?: number | null;
+  /** This calendar month's share of shop revenue (0–100). */
+  currentMonthSharePct?: number | null;
+  /** Prior calendar-month revenue for MoM trend. */
+  priorRevenueCents?: number | null;
+  /** Prior calendar-month share of shop revenue (0–100). */
+  priorSharePct?: number | null;
 };
 
 export type ShopItemBreakdown = {
@@ -27,6 +35,10 @@ export type ShopItemBreakdown = {
   mostBought: ShopItemBreakdownRow | null;
   leastBought: ShopItemBreakdownRow | null;
   fromDb: boolean;
+  /** This calendar month's shop revenue (cents) for the Revenue share card trend. */
+  currentMonthRevenueCents?: number | null;
+  /** Prior calendar month's shop revenue (cents). */
+  priorMonthRevenueCents?: number | null;
 };
 
 const ITEM_BAR_COLORS: Record<ShopItemId, string> = {
@@ -51,16 +63,42 @@ export function buildMockShopItemBreakdown(now = new Date()): ShopItemBreakdown 
     'adult-safety-vest': 15 + (seed % 3),
     'child-safety-vest': 8 + (seed % 3),
   };
+  /** Soft MoM shift so the Revenue share card can show deltas in sample mode. */
+  const priorQty: Record<ShopItemId, number> = {
+    'cleanup-kit': Math.max(0, baseQty['cleanup-kit'] - 2 - (seed % 2)),
+    'tote-bags': Math.max(0, baseQty['tote-bags'] - 5 + (seed % 3)),
+    'trash-grabber': Math.max(0, baseQty['trash-grabber'] + 1),
+    'adult-safety-vest': Math.max(0, baseQty['adult-safety-vest'] - 1),
+    'child-safety-vest': Math.max(0, baseQty['child-safety-vest'] + (seed % 2)),
+  };
 
   const totalRevenueCents = SHOP_ITEM_CATALOG.reduce(
     (sum, p) => sum + baseQty[p.id] * p.unitCents,
     0,
   );
   const totalQty = SHOP_ITEM_CATALOG.reduce((sum, p) => sum + baseQty[p.id], 0);
+  const priorMonthRevenueCents = SHOP_ITEM_CATALOG.reduce(
+    (sum, p) => sum + priorQty[p.id] * p.unitCents,
+    0,
+  );
+  /** Sample “this month” qty ≈ slightly shifted mix so MoM share deltas show up. */
+  const currentQty: Record<ShopItemId, number> = {
+    'cleanup-kit': Math.max(0, Math.round(baseQty['cleanup-kit'] * 0.16) - 1),
+    'tote-bags': Math.max(0, Math.round(baseQty['tote-bags'] * 0.2) + 2),
+    'trash-grabber': Math.max(0, Math.round(baseQty['trash-grabber'] * 0.18)),
+    'adult-safety-vest': Math.max(0, Math.round(baseQty['adult-safety-vest'] * 0.17)),
+    'child-safety-vest': Math.max(0, Math.round(baseQty['child-safety-vest'] * 0.18)),
+  };
+  const currentMonthRevenueCents = SHOP_ITEM_CATALOG.reduce(
+    (sum, p) => sum + currentQty[p.id] * p.unitCents,
+    0,
+  );
 
   const rows: ShopItemBreakdownRow[] = SHOP_ITEM_CATALOG.map((p) => {
     const qtySold = baseQty[p.id];
     const revenueCents = qtySold * p.unitCents;
+    const priorRevenueCents = priorQty[p.id] * p.unitCents;
+    const monthRevenueCents = currentQty[p.id] * p.unitCents;
     return {
       id: p.id,
       label: p.label,
@@ -69,6 +107,16 @@ export function buildMockShopItemBreakdown(now = new Date()): ShopItemBreakdown 
       revenueCents,
       sharePct: totalRevenueCents > 0 ? Math.round((revenueCents / totalRevenueCents) * 100) : 0,
       rankByQty: 0,
+      currentMonthRevenueCents: monthRevenueCents,
+      currentMonthSharePct:
+        currentMonthRevenueCents > 0
+          ? Math.round((monthRevenueCents / currentMonthRevenueCents) * 100)
+          : 0,
+      priorRevenueCents,
+      priorSharePct:
+        priorMonthRevenueCents > 0
+          ? Math.round((priorRevenueCents / priorMonthRevenueCents) * 100)
+          : 0,
     };
   }).sort((a, b) => {
     if (b.qtySold !== a.qtySold) return b.qtySold - a.qtySold;
@@ -87,5 +135,7 @@ export function buildMockShopItemBreakdown(now = new Date()): ShopItemBreakdown 
     mostBought: withSales[0] ?? null,
     leastBought: withSales.length > 0 ? withSales[withSales.length - 1]! : null,
     fromDb: false,
+    currentMonthRevenueCents,
+    priorMonthRevenueCents,
   };
 }

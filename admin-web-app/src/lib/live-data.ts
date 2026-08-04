@@ -8,7 +8,7 @@
  *
  * Every table read here is the same shared Supabase project the mobile app writes to.
  */
-import { subYears } from 'date-fns';
+import { endOfMonth, isWithinInterval, parseISO, startOfMonth, subMonths, subYears } from 'date-fns';
 import { createDataClient, createServiceClient } from '@/lib/supabase/server';
 import { getVolunteerDirectory, getVolunteerName, type VolunteerDirectory } from '@/lib/volunteers';
 import {
@@ -464,11 +464,28 @@ export async function loadLiveShopItemBreakdown(now = new Date()): Promise<LiveR
     .neq('status', 'cancelled');
 
   const tallies = emptyItemTallies();
+  const currentMonthTallies = emptyItemTallies();
+  const priorMonthTallies = emptyItemTallies();
+  const thisMonth = { start: startOfMonth(now), end: endOfMonth(now) };
+  const priorMonthDate = subMonths(now, 1);
+  const priorMonth = { start: startOfMonth(priorMonthDate), end: endOfMonth(priorMonthDate) };
   let matchedAny = false;
 
   for (const order of data ?? []) {
     const items = order.items;
     if (!Array.isArray(items)) continue;
+
+    let createdAt: Date | null = null;
+    if (typeof order.created_at === 'string') {
+      try {
+        createdAt = parseISO(order.created_at);
+      } catch {
+        createdAt = null;
+      }
+    }
+    const inCurrentMonth = createdAt != null && isWithinInterval(createdAt, thisMonth);
+    const inPriorMonth = createdAt != null && isWithinInterval(createdAt, priorMonth);
+
     for (const entry of items) {
       if (!entry || typeof entry !== 'object') continue;
       const raw = entry as Record<string, unknown>;
@@ -478,8 +495,17 @@ export async function loadLiveShopItemBreakdown(now = new Date()): Promise<LiveR
       if (!(qty > 0)) continue;
       const catalog = SHOP_ITEM_CATALOG.find((p) => p.id === id)!;
       const unitCents = Number(raw.unitCents ?? raw.unit_cents ?? catalog.unitCents) || catalog.unitCents;
+      const lineCents = qty * unitCents;
       tallies[id].qty += qty;
-      tallies[id].revenueCents += qty * unitCents;
+      tallies[id].revenueCents += lineCents;
+      if (inCurrentMonth) {
+        currentMonthTallies[id].qty += qty;
+        currentMonthTallies[id].revenueCents += lineCents;
+      }
+      if (inPriorMonth) {
+        priorMonthTallies[id].qty += qty;
+        priorMonthTallies[id].revenueCents += lineCents;
+      }
       matchedAny = true;
     }
   }
@@ -490,8 +516,18 @@ export async function loadLiveShopItemBreakdown(now = new Date()): Promise<LiveR
 
   const totalRevenueCents = SHOP_ITEM_CATALOG.reduce((sum, p) => sum + tallies[p.id].revenueCents, 0);
   const totalQty = SHOP_ITEM_CATALOG.reduce((sum, p) => sum + tallies[p.id].qty, 0);
+  const currentMonthRevenueCents = SHOP_ITEM_CATALOG.reduce(
+    (sum, p) => sum + currentMonthTallies[p.id].revenueCents,
+    0,
+  );
+  const priorMonthRevenueCents = SHOP_ITEM_CATALOG.reduce(
+    (sum, p) => sum + priorMonthTallies[p.id].revenueCents,
+    0,
+  );
   const rows: ShopItemBreakdownRow[] = SHOP_ITEM_CATALOG.map((p) => {
     const { qty, revenueCents } = tallies[p.id];
+    const monthRevenueCents = currentMonthTallies[p.id].revenueCents;
+    const priorRevenueCents = priorMonthTallies[p.id].revenueCents;
     return {
       id: p.id,
       label: p.label,
@@ -500,6 +536,20 @@ export async function loadLiveShopItemBreakdown(now = new Date()): Promise<LiveR
       revenueCents,
       sharePct: totalRevenueCents > 0 ? Math.round((revenueCents / totalRevenueCents) * 100) : 0,
       rankByQty: 0,
+      currentMonthRevenueCents: monthRevenueCents,
+      currentMonthSharePct:
+        currentMonthRevenueCents > 0
+          ? Math.round((monthRevenueCents / currentMonthRevenueCents) * 100)
+          : currentMonthRevenueCents === 0 && priorMonthRevenueCents === 0
+            ? null
+            : 0,
+      priorRevenueCents,
+      priorSharePct:
+        priorMonthRevenueCents > 0
+          ? Math.round((priorRevenueCents / priorMonthRevenueCents) * 100)
+          : priorMonthRevenueCents === 0 && currentMonthRevenueCents === 0
+            ? null
+            : 0,
     };
   }).sort((a, b) => (b.qtySold !== a.qtySold ? b.qtySold - a.qtySold : b.revenueCents - a.revenueCents));
   rows.forEach((row, i) => {
@@ -515,6 +565,8 @@ export async function loadLiveShopItemBreakdown(now = new Date()): Promise<LiveR
       mostBought: withSales[0] ?? null,
       leastBought: withSales.length > 0 ? withSales[withSales.length - 1]! : null,
       fromDb: true,
+      currentMonthRevenueCents,
+      priorMonthRevenueCents,
     },
     useMock: false,
   };

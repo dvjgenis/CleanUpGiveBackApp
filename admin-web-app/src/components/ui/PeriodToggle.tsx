@@ -2,8 +2,7 @@
 
 /**
  * Ported from `admin/components/ui/PeriodToggle.tsx` — segmented period bar
- * (Today / Month / 30 days / Year / All / Custom) with the custom From–To
- * datepicker panel.
+ * (Today / Month / Year / All / Custom) with the custom From–To datepicker panel.
  */
 import { useEffect, useId, useState, useTransition } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
@@ -13,7 +12,6 @@ import { CalendarIcon, ChevronDownIcon } from "@/components/ui/Icons";
 const PRESETS: { value: Exclude<DashboardPeriod, "custom">; label: string; shortLabel?: string }[] = [
   { value: "day", label: "Today" },
   { value: "month", label: "Month" },
-  { value: "30d", label: "30 days", shortLabel: "30d" },
   { value: "year", label: "Year" },
   { value: "all", label: "All" },
 ];
@@ -113,7 +111,7 @@ export function PeriodToggle({
       }`}
     >
       <div className="flex min-w-0 items-stretch">
-        <div className="grid min-w-0 flex-1 grid-cols-5" role="group" aria-label="Period presets">
+        <div className="grid min-w-0 flex-1 grid-cols-4" role="group" aria-label="Period presets">
           {PRESETS.map((opt) => {
             const active = !customActive && selection.period === opt.value;
             return (

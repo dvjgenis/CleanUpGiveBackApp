@@ -27,8 +27,10 @@ import { PeriodToggle } from "@/components/ui/PeriodToggle";
 import { usePeriodLabel, usePeriodSelection } from "@/components/ui/PeriodToggleBar";
 import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
 import {
+  MOCK_FEEDBACK,
   MOCK_FEEDBACK_AVG,
   MOCK_ORDERS,
+  EMOJI_MAP,
   computedHours,
   buildQueueAgeBars,
   buildTrendSeries,
@@ -37,7 +39,16 @@ import {
   type MockSession,
   type OrderRow,
   type MonthlyRevenuePoint,
+  type FeedbackEntry,
 } from "@/lib/mock-data";
+import {
+  filterByInterval,
+  formatSignedDelta,
+  inInterval,
+  periodInterval,
+  previousPeriodInterval,
+  priorPeriodCaption,
+} from "@/lib/dashboard-period";
 import { differenceInDays, differenceInHours, parseISO } from "date-fns";
 
 function ageLabel(iso: string, now: Date): string {
@@ -82,6 +93,8 @@ function MetricTile({
   accent,
   donut,
   emojiStrip,
+  delta,
+  priorCaption,
 }: {
   label: string;
   value: string | number;
@@ -90,26 +103,48 @@ function MetricTile({
   accent?: boolean;
   donut?: MiniDonutSlice[];
   emojiStrip?: FeedbackEmojiCount[];
+  /** Signed change vs prior window, e.g. "+3". Null when no comparable prior. */
+  delta?: string | null;
+  /** e.g. "vs yesterday" — null when there is no prior window. */
+  priorCaption?: string | null;
 }) {
+  const deltaTone =
+    delta == null
+      ? "text-text-tertiary"
+      : delta.startsWith("+")
+        ? "text-primary"
+        : delta.startsWith("-")
+          ? "text-[#ba1a1a]"
+          : "text-text-tertiary";
+  const caption = priorCaption ?? "No prior";
+
   return (
     <Bento as="article" className="h-full min-h-0">
       <Link
         href={href}
-        className="flex h-full flex-col justify-center p-md no-underline text-inherit hover:bg-bg-app/60 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
-        aria-label={`${label}: ${value}`}
+        className="flex h-full flex-col justify-between gap-sm p-md no-underline text-inherit hover:bg-bg-app/60 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+        aria-label={`${label}: ${value}${delta != null ? `, ${delta} ${caption}` : ""}`}
       >
-        <p className="font-data text-[11px] uppercase tracking-[0.88px] text-text-tertiary mb-xs">{label}</p>
-        <div className="flex items-end justify-between gap-sm min-w-0">
-          <p className={`font-data text-[22px] sm:text-[28px] leading-[28px] sm:leading-[34px] font-semibold shrink-0 ${accent ? "text-[#835400]" : "text-text-primary"}`}>
-            {value}
-          </p>
-          {donut ? (
-            <MiniDonut slices={donut} size={40} thickness={5} className="mb-0.5 shrink-0 sm:w-12 sm:h-12" />
-          ) : emojiStrip ? (
-            <FeedbackEmojiStrip counts={emojiStrip} className="mb-0.5 min-w-0 max-w-[5.5rem] sm:max-w-[7.5rem]" />
-          ) : null}
+        <p className="font-data text-[11px] uppercase tracking-[0.88px] text-text-tertiary">{label}</p>
+        <div className="min-w-0">
+          <div className="flex items-end justify-between gap-sm min-w-0">
+            <p
+              className={`font-data text-[22px] sm:text-[28px] leading-[28px] sm:leading-[34px] font-semibold shrink-0 ${accent ? "text-[#835400]" : "text-text-primary"}`}
+            >
+              {value}
+            </p>
+            {donut ? (
+              <MiniDonut slices={donut} size={40} thickness={5} className="mb-0.5 shrink-0 sm:w-12 sm:h-12" />
+            ) : emojiStrip ? (
+              <FeedbackEmojiStrip counts={emojiStrip} className="mb-0.5 min-w-0 max-w-[5.5rem] sm:max-w-[7.5rem]" />
+            ) : null}
+          </div>
+          {hint ? <p className="mt-xs font-body text-[12px] text-text-tertiary line-clamp-2">{hint}</p> : null}
         </div>
-        {hint ? <p className="mt-xs font-body text-[12px] text-text-tertiary line-clamp-2">{hint}</p> : null}
+        <div className="flex items-baseline justify-between gap-sm">
+          <p className={`font-data text-[13px] font-semibold tabular-nums ${deltaTone}`}>{delta ?? "—"}</p>
+          <p className="font-data text-[11px] text-text-tertiary shrink-0">{caption}</p>
+        </div>
       </Link>
     </Bento>
   );
@@ -119,12 +154,14 @@ export function DashboardPage({
   sessions = [],
   orders = MOCK_ORDERS,
   monthly: monthlyProp,
+  feedback = MOCK_FEEDBACK,
   feedbackAvg = MOCK_FEEDBACK_AVG,
   isMock = false,
 }: {
   sessions?: MockSession[];
   orders?: OrderRow[];
   monthly?: MonthlyRevenuePoint[];
+  feedback?: FeedbackEntry[];
   feedbackAvg?: number;
   isMock?: boolean;
 }) {
@@ -140,6 +177,7 @@ export function DashboardPage({
         sessions={sessions}
         orders={orders}
         monthly={monthlyProp ?? buildMockMonthlyRevenue()}
+        feedback={feedback}
         feedbackAvg={feedbackAvg}
         isMock={isMock}
       />
@@ -147,43 +185,82 @@ export function DashboardPage({
   );
 }
 
+function avgFeedbackScore(rows: FeedbackEntry[]): number | null {
+  if (rows.length === 0) return null;
+  const sum = rows.reduce((acc, f) => acc + (EMOJI_MAP[f.rating]?.score ?? 0), 0);
+  return sum / rows.length;
+}
+
 function DashboardPageInner({
   sessions,
   orders,
   monthly,
+  feedback,
   feedbackAvg,
   isMock,
 }: {
   sessions: MockSession[];
   orders: OrderRow[];
   monthly: MonthlyRevenuePoint[];
+  feedback: FeedbackEntry[];
   feedbackAvg: number;
   isMock: boolean;
 }) {
   const now = new Date();
   const selection = usePeriodSelection();
   const periodLabelText = usePeriodLabel(now);
+  const interval = periodInterval(selection, now);
+  const prevInterval = previousPeriodInterval(selection, now);
   const [courtOnlyFilter, setCourtOnlyFilter] = useState(false);
+
   const queue = sessions.filter((s) => s.status === "under_review");
   const filteredQueue = courtOnlyFilter ? queue.filter((s) => s.court_ordered) : queue;
-  const approved = sessions.filter((s) => s.status === "approved");
+  const scoped = filterByInterval(sessions, interval);
+  const prevScoped = filterByInterval(sessions, prevInterval);
+  const approved = scoped.filter((s) => s.status === "approved");
+  const prevApproved = prevScoped.filter((s) => s.status === "approved");
   const totalApprovedHours = approved.reduce((sum, s) => sum + computedHours(s.duration_seconds, s.adjusted_hours), 0);
+  const prevApprovedHours = prevApproved.reduce(
+    (sum, s) => sum + computedHours(s.duration_seconds, s.adjusted_hours),
+    0,
+  );
+  /** Prior open-queue proxy: still-waiting sessions that arrived in the prior window. */
+  const priorOpenQueue = prevInterval
+    ? queue.filter((s) => inInterval(s.created_at, prevInterval)).length
+    : null;
+
+  const feedbackInPeriod = filterByInterval(feedback, interval);
+  const feedbackPrior = filterByInterval(feedback, prevInterval);
+  const periodFeedbackAvg = avgFeedbackScore(feedbackInPeriod);
+  const priorFeedbackAvg = avgFeedbackScore(feedbackPrior);
+  const displayFeedbackAvg = periodFeedbackAvg ?? (feedback.length > 0 ? feedbackAvg : 0);
+
+  const waitingDelta = prevInterval != null ? formatSignedDelta(queue.length, priorOpenQueue ?? 0) : null;
+  const approvedDelta = prevInterval != null ? formatSignedDelta(approved.length, prevApproved.length) : null;
+  const hoursDelta = prevInterval != null ? formatSignedDelta(totalApprovedHours, prevApprovedHours, 1) : null;
+  const feedbackDelta =
+    prevInterval != null && periodFeedbackAvg != null && priorFeedbackAvg != null
+      ? formatSignedDelta(periodFeedbackAvg, priorFeedbackAvg, 1)
+      : null;
+  const priorCaption = priorPeriodCaption(selection);
+
   const visibleQueue = filteredQueue.slice(0, 5);
   const isFiltered = courtOnlyFilter;
 
   const waitingDonut: MiniDonutSlice[] = [{ value: Math.max(queue.length, 1), color: "#fcab29" }];
   const approvedDonut: MiniDonutSlice[] = [{ value: Math.max(approved.length, 1), color: "#007536" }];
   const hoursDonut: MiniDonutSlice[] = [{ value: Math.max(Math.round(totalApprovedHours), 1), color: "#5a8f3a" }];
-  const feedbackEmojis: FeedbackEmojiCount[] = [
-    { key: "excited", emoji: "🤩", label: "Excited", count: 5 },
-    { key: "happy", emoji: "😊", label: "Happy", count: 4 },
-    { key: "neutral", emoji: "😐", label: "Neutral", count: 2 },
-    { key: "sad", emoji: "😔", label: "Sad", count: 1 },
-    { key: "very_sad", emoji: "😢", label: "Very Sad", count: 0 },
-  ];
+  const feedbackEmojis: FeedbackEmojiCount[] = (["excited", "happy", "neutral", "sad", "very_sad"] as const).map(
+    (key) => ({
+      key,
+      emoji: EMOJI_MAP[key].emoji,
+      label: EMOJI_MAP[key].label,
+      count: feedbackInPeriod.filter((f) => f.rating === key).length,
+    }),
+  );
 
   const queueAge = buildQueueAgeBars(queue, now);
-  const hoursTrend = buildTrendSeries(sessions);
+  const hoursTrend = buildTrendSeries(scoped.length > 0 ? scoped : sessions);
 
   const paymentsThisMonthCents = monthly[monthly.length - 1]
     ? monthly[monthly.length - 1].donationsCents + monthly[monthly.length - 1].shopCents
@@ -191,8 +268,9 @@ function DashboardPageInner({
   const openOrders = orders.filter((o) => o.status === "pending" || o.status === "paid" || o.status === "shipped");
   const ordersRevenueCents = orders.filter((o) => o.status !== "cancelled").reduce((sum, o) => sum + o.totalCents, 0);
 
-  const approvalRatePct = sessions.length > 0 ? Math.round((approved.length / sessions.length) * 100) : 0;
-  const geoActivity = buildGeoActivity(sessions);
+  const approvalRatePct =
+    scoped.length > 0 ? Math.round((approved.length / scoped.length) * 100) : sessions.length > 0 ? Math.round((sessions.filter((s) => s.status === "approved").length / sessions.length) * 100) : 0;
+  const geoActivity = buildGeoActivity(scoped.length > 0 ? scoped : sessions);
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -308,21 +386,35 @@ function DashboardPageInner({
             href="/dashboard"
             accent={queue.length > 0}
             donut={waitingDonut}
+            delta={waitingDelta}
+            priorCaption={priorCaption}
           />
-          <MetricTile label="Approved" value={approved.length} hint={periodLabelText} href="/dashboard" donut={approvedDonut} />
+          <MetricTile
+            label="Approved"
+            value={approved.length}
+            hint={periodLabelText}
+            href="/dashboard"
+            donut={approvedDonut}
+            delta={approvedDelta}
+            priorCaption={priorCaption}
+          />
           <MetricTile
             label="Hours"
             value={totalApprovedHours.toFixed(1)}
-            hint="No prior period"
+            hint={prevInterval ? periodLabelText : "No prior period"}
             href="/dashboard"
             donut={hoursDonut}
+            delta={hoursDelta}
+            priorCaption={priorCaption}
           />
           <MetricTile
             label="Feedback"
-            value={feedbackAvg.toFixed(1)}
+            value={displayFeedbackAvg > 0 ? displayFeedbackAvg.toFixed(1) : "—"}
             hint="Average rating"
             href="/feedback"
             emojiStrip={feedbackEmojis}
+            delta={feedbackDelta}
+            priorCaption={priorCaption}
           />
         </div>
       </div>

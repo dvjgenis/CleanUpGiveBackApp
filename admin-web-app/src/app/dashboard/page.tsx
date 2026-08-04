@@ -44,6 +44,7 @@ export default async function Dashboard() {
             sessions={sessionsResult.data}
             orders={ordersResult.data}
             monthly={monthlyResult.data}
+            feedback={feedbackResult.data}
             feedbackAvg={feedbackAvg}
             isMock={isMock}
           />

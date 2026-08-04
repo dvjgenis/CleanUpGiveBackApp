@@ -5,7 +5,8 @@
  *
  * `orders` is fetched live from the shared Supabase `shop_orders` table by
  * `admin-web-app/src/app/orders/page.tsx` (see `@/lib/live-data`), falling back to
- * `MOCK_ORDERS` when that table has no rows yet.
+ * `MOCK_ORDERS` when that table has no rows yet. PeriodToggle scopes the list +
+ * KPIs via `filterByPeriod` on `createdAt` (same window as Payments).
  */
 import { Suspense, useState } from "react";
 import Link from "next/link";
@@ -24,6 +25,7 @@ import { usePeriodLabel, usePeriodSelection } from "@/components/ui/PeriodToggle
 import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
 import { ExportMenu } from "@/components/ui/ExportMenu";
 import { downloadCsv, openPrintablePdf } from "@/lib/export-download";
+import { filterByPeriod } from "@/lib/dashboard-period";
 
 const STATUS_FILTERS: { value: "all" | OrderStatus; label: string }[] = [
   { value: "all", label: "All" },
@@ -53,10 +55,11 @@ function OrdersPageInner({ orders, isMock }: { orders: OrderRow[]; isMock: boole
   const selection = usePeriodSelection();
   const rangeLabel = usePeriodLabel();
 
-  const summary = summarizeOrders(orders);
+  const periodScoped = filterByPeriod(orders, selection);
+  const summary = summarizeOrders(periodScoped);
 
   const needle = q.trim().toLowerCase();
-  const filtered = orders.filter((order) => {
+  const filtered = periodScoped.filter((order) => {
     if (status !== "all" && normalizeOrderStatus(order.status) !== status) return false;
     if (!needle) return true;
     return (
@@ -66,6 +69,11 @@ function OrdersPageInner({ orders, isMock }: { orders: OrderRow[]; isMock: boole
       order.items.toLowerCase().includes(needle)
     );
   });
+
+  const emptyMessage =
+    periodScoped.length === 0
+      ? `No orders in ${rangeLabel}.`
+      : "No orders match these filters.";
 
   const exportColumns = [
     { key: "id", label: "id" },
@@ -169,7 +177,7 @@ function OrdersPageInner({ orders, isMock }: { orders: OrderRow[]; isMock: boole
           ))}
         </div>
         {filtered.length === 0 ? (
-          <p className="px-lg py-xl text-center font-body text-base text-text-tertiary">No orders found.</p>
+          <p className="px-lg py-xl text-center font-body text-base text-text-tertiary">{emptyMessage}</p>
         ) : (
           <ul role="list" className="divide-y divide-border-outline">
             {filtered.map((order) => {

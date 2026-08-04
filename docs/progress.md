@@ -2,6 +2,86 @@
 
 ---
 
+## [2026-08-04] — Revenue share donut size + label
+
+**R:** Center total was cramped in the donut hole; “pp” was unclear.
+
+**A:** Donut 96→128px (inner 42 / outer 58); share deltas say “percentage points”; longer totals use a slightly smaller center type. Docs: `admin-web-app.md`.
+
+**P:** Refresh `/payments` — hole fits currency; legend shows e.g. `+3 percentage points`.
+
+---
+
+## [2026-08-04] — Period filter: drop 30d; Payments 6-mo / 6-yr
+
+**R:** PeriodToggle still offered “30 days”; Payments Month/Year only showed the current calendar window.
+
+**A:** Removed 30d from PeriodToggle (Today / Month / Year / All / Custom). Legacy `?period=30d` maps to month. Payments uses `paymentsPeriodInterval` — Month = last 6 months (monthly bars), Year = last 6 years (yearly bars) for KPIs + chart + shop items. Docs: `admin-web-app.md`, `current.md`.
+
+**P:** Flip PeriodToggle — no 30 days chip. `/payments?period=month` → 6 monthly bars; `?period=year` → 6 yearly bars.
+
+---
+
+## [2026-08-04] — Shop items empty → mock mix
+
+**R:** Period-scoped shop-item loader returned zeros when the live window had no line items, so Revenue share looked empty.
+
+**A:** `loadShopItemBreakdown` falls back to sample catalog tallies + MoM prior whenever the window has no matched sales (`useMock: true` → Sample banner). Docs: `admin-web-app.md`.
+
+**P:** Refresh `/payments` with an empty shop window → Shop items + Revenue share show the sample mix.
+
+---
+
+## [2026-08-04] — Orders + Sessions period sync
+
+**R:** PeriodToggle on Orders/Sessions only updated copy; lists and Orders KPIs ignored the window (unlike Payments).
+
+**A:** Client `filterByPeriod` on Orders (`createdAt` → Open/Total/Revenue + list/export) and Sessions (`ended_at`→`started_at`→`created_at` → list/export; clear bulk select on period change). Period-aware empty copy. Docs: `admin-web-app.md`, `current.md`.
+
+**P:** `/orders` or `/sessions` — flip PeriodToggle; counts/rows follow. Use All time for the full roster (default Today hides older July fixtures).
+
+---
+
+## [2026-08-04] — Insights empty→fixtures for all cards
+
+**R:** Insights/Analytics showed empty charts when sessions/court_orders were empty.
+
+**A:** Page-level `resolveInsightsFixtures` on `/insights` + `/analytics` injects `buildInsightsMockSessions(now)` (relative dates so Today fills all chart cards) + `MOCK_COURT_PROGRESS` when live lists are empty; Sample data banner. Sessions/Users loaders stay empty-real. Docs: `admin-web-app.md`.
+
+**P:** Refresh `/insights` with empty live sessions → all cards populated under Today.
+
+---
+
+## [2026-08-04] — Revenue share card: MoM trends
+
+**R:** Payments Revenue share donut stretched tall next to the item table and looked empty.
+
+**A:** Densified `DonutChart` (currency total, per-slice share + MoM ±pp, top-mover insight, footer % vs last month). `payments-data.loadShopItemBreakdown` + mock catalog attach calendar this-month / prior-month tallies for the trend.
+
+**P:** Open `/payments` — Revenue share shows share deltas, top mover, and MoM revenue %.
+
+---
+
+## [2026-08-04] — Payments revenue syncs with PeriodToggle
+
+**R:** Payments always showed a fixed last-6-months bar series + unscoped shop-item mix even when Today was selected.
+
+**A:** Ported period-scoped `loadPaymentsBreakdown` / `loadShopItemBreakdown` + granularity (`admin-web-app/src/lib/payments-data.ts`). `/payments` reads `searchParams` and reloads KPIs/bars/table/shop items for the window (day → one bar). Docs: `admin-web-app.md`.
+
+**P:** `/payments?period=day` → single-day chart subtitle “Totals for today”; shop items reflect that window only.
+
+---
+
+## [2026-08-04] — Denser metric tiles with period deltas
+
+**R:** Waiting/Approved/Hours/Feedback tiles had large empty vertical space (content centered in cells stretched to the Review column). User asked to fill with useful info, not just shrink padding.
+
+**A:** Redesigned `MetricTile` to `justify-between` (label / value+visual / signed delta + period-specific caption: “vs yesterday” / “vs last month” / “vs prior 30d” / “vs last year” / “vs prior range”). Wired `periodInterval` / `previousPeriodInterval` / `formatSignedDelta` / `priorPeriodCaption` in `dashboard-period.ts`. Approved/Hours period-scoped; Waiting delta = open queue vs still-waiting from prior window; Feedback uses live rows for period avg + delta. Docs: `admin-web-app.md`.
+
+**P:** Flip PeriodToggle — tile values and deltas should move; All time shows “No prior”.
+
+---
+
 ## [2026-08-03] — Sessions/Users never inject fixtures on Vercel
 
 **R:** Empty `sessions` / Auth directory (or missing service-role) still returned Maya Chen–style fixtures, so production could look “loaded” with sample people.

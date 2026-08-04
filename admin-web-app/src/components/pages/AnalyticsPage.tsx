@@ -3,12 +3,12 @@
 /**
  * Port of the real admin Insights page (`admin/app/(admin)/insights/page.tsx`).
  * Layout: Hours & submissions trend → queue age / decisions / court progress →
- * three donuts → US heatmap. `sessions`/`courtProgress` are fetched live from
- * Supabase by `admin-web-app/src/app/insights/page.tsx` and `.../analytics/page.tsx`
- * (see `@/lib/live-data`). Empty sessions / court_orders render empty charts —
- * no fixture fallback. Chart data isn't re-scoped by the period range yet.
- * Court progress shows View more when there are more than 5 rows.
+ * three donuts → US heatmap. `sessions`/`courtProgress` come from
+ * `insights`/`analytics` routes via `loadLiveSessions` + `loadLiveCourtProgress`,
+ * with page-level empty→`resolveInsightsFixtures` (relative-dated sessions +
+ * court fixtures + SampleDataBanner). Sessions/Users loaders stay empty-real.
  */
+
 import { Suspense } from "react";
 import {
   buildQueueAgeBars,

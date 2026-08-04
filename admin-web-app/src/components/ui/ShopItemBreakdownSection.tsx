@@ -2,7 +2,7 @@
 
 import { DonutChart } from '@/components/ui/DonutChart';
 import { formatCents } from '@/lib/mock-data';
-import { shopItemBarColor, type ShopItemBreakdown } from '@/lib/shop-catalog';
+import { shopItemBarColor, type ShopItemBreakdown, type ShopItemBreakdownRow } from '@/lib/shop-catalog';
 
 const ITEM_TABLE_COLS = 'grid-cols-[1.6fr_5rem_6.5rem_4.5rem_5.5rem]';
 const MOBILE_PRIMARY_ROW =
@@ -13,12 +13,55 @@ const MOBILE_METRIC_COLS =
 const MOBILE_TOTAL_METRIC_COLS =
   'grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-x-md';
 
+function formatPctDelta(current: number, prior: number): string | null {
+  if (prior <= 0) {
+    if (current <= 0) return '0%';
+    return 'New';
+  }
+  const pct = Math.round(((current - prior) / prior) * 100);
+  if (pct === 0) return '0%';
+  return `${pct > 0 ? '+' : ''}${pct}%`;
+}
+
+function formatSharePtsDelta(
+  current: number | null | undefined,
+  prior: number | null | undefined,
+): string | null {
+  if (current == null || prior == null) return null;
+  const diff = current - prior;
+  if (diff === 0) return '0 percentage points';
+  return `${diff > 0 ? '+' : ''}${diff} percentage points`;
+}
+
+function topMoverInsight(rows: ShopItemBreakdownRow[]): string | null {
+  let best: { label: string; pts: number } | null = null;
+  for (const row of rows) {
+    if (row.currentMonthSharePct == null || row.priorSharePct == null) continue;
+    const pts = row.currentMonthSharePct - row.priorSharePct;
+    if (best == null || Math.abs(pts) > Math.abs(best.pts)) {
+      best = { label: row.label, pts };
+    }
+  }
+  if (best == null || best.pts === 0) return null;
+  const sign = best.pts > 0 ? '+' : '';
+  return `${best.label} ${sign}${best.pts} percentage points share vs last month`;
+}
+
 export function ShopItemBreakdownSection({
   breakdown,
 }: {
   breakdown: ShopItemBreakdown;
 }) {
-  const { rows, mostBought, leastBought, totalQty, totalRevenueCents, fromDb } = breakdown;
+  const {
+    rows,
+    mostBought,
+    leastBought,
+    totalQty,
+    totalRevenueCents,
+    fromDb,
+    currentMonthRevenueCents = null,
+    priorMonthRevenueCents = null,
+  } = breakdown;
   const hasSales = totalQty > 0;
 
   const maxSharePct = hasSales ? Math.max(...rows.map((r) => r.sharePct)) : 0;
@@ -37,7 +80,20 @@ export function ShopItemBreakdownSection({
       name: r.label,
       value: Math.round(r.revenueCents / 100),
       color: shopItemBarColor(r.id),
+      valueLabel: formatCents(r.revenueCents),
+      meta: `${r.sharePct}%`,
+      delta: formatSharePtsDelta(r.currentMonthSharePct, r.priorSharePct),
     }));
+
+  const revenueTrendDelta =
+    currentMonthRevenueCents != null && priorMonthRevenueCents != null
+      ? formatPctDelta(currentMonthRevenueCents, priorMonthRevenueCents)
+      : null;
+  const donutTrend =
+    revenueTrendDelta != null
+      ? { delta: revenueTrendDelta, caption: 'shop revenue vs last month' }
+      : null;
+  const donutInsight = topMoverInsight(rows);
 
   return (
     <div className="flex flex-col gap-md">
@@ -76,15 +132,20 @@ export function ShopItemBreakdownSection({
         </div>
       ) : null}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-md items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-md items-stretch">
         <DonutChart
           title="Revenue share"
           data={donutData}
           total={Math.round(totalRevenueCents / 100)}
+          totalLabel={formatCents(totalRevenueCents)}
+          emptyLabel="No shop sales in this window"
+          insight={donutInsight}
+          trend={donutTrend}
           index={0}
+          className="h-full"
         />
 
-        <div className="bg-bg-surface border border-border-outline rounded-md overflow-hidden">
+        <div className="bg-bg-surface border border-border-outline rounded-md overflow-hidden h-full">
           <div
             className={`hidden lg:grid ${ITEM_TABLE_COLS} gap-md px-lg py-sm bg-bg-surface-elevated border-b border-border-outline`}
           >
@@ -110,9 +171,9 @@ export function ShopItemBreakdownSection({
                 return (
                   <li
                     key={row.id}
-                    className={`px-md py-md first:rounded-t-md last:rounded-b-md lg:grid ${ITEM_TABLE_COLS} lg:gap-md lg:items-center lg:px-lg lg:py-sm ${
+                    className={`px-md py-md last:rounded-b-md lg:grid ${ITEM_TABLE_COLS} lg:gap-md lg:items-center lg:px-lg lg:py-sm ${
                       isTopShare
-                        ? 'bg-primary/5 ring-2 ring-inset ring-primary z-[1]'
+                        ? 'bg-primary/5 ring-2 ring-inset ring-primary rounded-t-none z-[1]'
                         : ''
                     }`}
                   >

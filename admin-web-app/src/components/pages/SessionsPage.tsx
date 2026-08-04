@@ -12,7 +12,8 @@
  *
  * `sessions` is fetched live from the shared Supabase `sessions` table by
  * `admin-web-app/src/app/sessions/page.tsx` (see `@/lib/live-data`). Empty
- * tables render an empty list — no fixture fallback.
+ * tables render an empty list — no fixture fallback. PeriodToggle scopes the
+ * list via `filterByPeriod` (`ended_at` → `started_at` → `created_at`).
  */
 import { Suspense, useEffect, useState, useTransition } from "react";
 import Link from "next/link";
@@ -24,6 +25,7 @@ import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
 import { ExportMenu } from "@/components/ui/ExportMenu";
 import { downloadCsv, openPrintablePdf } from "@/lib/export-download";
 import { approveSession, approveSessionsBulk, declineSession } from "@/actions/sessions";
+import { filterByPeriod } from "@/lib/dashboard-period";
 import {
   getSessionStatusConfig,
   formatDate,
@@ -73,6 +75,10 @@ function SessionsPageInner({ sessions, isMock }: { sessions: MockSession[]; isMo
   useEffect(() => {
     setLocalSessions(sessions);
   }, [sessions]);
+
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [selection.period, selection.from, selection.to]);
 
   function updateLocalStatus(id: string, next: SessionStatus) {
     setLocalSessions((prev) => prev.map((s) => (s.id === id ? { ...s, status: next } : s)));
@@ -166,7 +172,8 @@ function SessionsPageInner({ sessions, isMock }: { sessions: MockSession[]; isMo
   }
 
   const needle = q.trim().toLowerCase();
-  const filtered = localSessions.filter((session) => {
+  const periodScoped = filterByPeriod(localSessions, selection);
+  const filtered = periodScoped.filter((session) => {
     if (status !== "all" && session.status !== status) return false;
     if (courtOnly && !session.court_ordered) return false;
     if (!needle) return true;
@@ -176,6 +183,11 @@ function SessionsPageInner({ sessions, isMock }: { sessions: MockSession[]; isMo
       session.id.toLowerCase().includes(needle)
     );
   });
+
+  const emptyMessage =
+    periodScoped.length === 0
+      ? `No sessions in ${rangeLabel}.`
+      : "No sessions match these filters.";
 
   const previewSession: MockSession | null =
     (previewId ? localSessions.find((s) => s.id === previewId) : null) ?? null;
@@ -310,7 +322,7 @@ function SessionsPageInner({ sessions, isMock }: { sessions: MockSession[]; isMo
               {filtered.length === 0 && (
                 <tr>
                   <td colSpan={8} className="px-lg py-xl text-center">
-                    <p className="font-body text-base text-text-tertiary">No sessions found.</p>
+                    <p className="font-body text-base text-text-tertiary">{emptyMessage}</p>
                   </td>
                 </tr>
               )}
@@ -410,7 +422,7 @@ function SessionsPageInner({ sessions, isMock }: { sessions: MockSession[]; isMo
         <div className="lg:hidden divide-y divide-border-outline">
           {filtered.length === 0 && (
             <div className="px-lg py-xl text-center">
-              <p className="font-body text-base text-text-tertiary">No sessions found.</p>
+              <p className="font-body text-base text-text-tertiary">{emptyMessage}</p>
             </div>
           )}
           {filtered.map((session) => {

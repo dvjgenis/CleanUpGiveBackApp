@@ -1,11 +1,10 @@
 'use client';
 
-/** Ported verbatim from `admin/components/ui/PaymentsPreviewCard.tsx`. */
+/** Ported from `admin/components/ui/PaymentsPreviewCard.tsx` (chevron omitted — header link stays clickable). */
 import { useState } from 'react';
 import Link from 'next/link';
 import type { MonthlyRevenuePoint } from '@/lib/mock-data';
 import { formatCents } from '@/lib/mock-data';
-import { ChevronRightIcon } from '@/components/ui/Icons';
 
 const DONATIONS_COLOR = '#007536';
 const SHOP_COLOR = '#835400';
@@ -27,19 +26,16 @@ export function PaymentsPreviewCard({
     <div className="bg-bg-surface border border-border-outline rounded-md p-lg flex flex-col gap-sm h-full min-h-0 transition-colors hover:border-primary/40">
       <Link
         href="/payments"
-        className="flex items-start justify-between gap-sm shrink-0 no-underline text-inherit focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary rounded-sm"
+        className="block shrink-0 no-underline text-inherit focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary rounded-sm"
         aria-label="View payments"
       >
-        <div>
-          <p className="font-data text-[12px] leading-[18px] tracking-[0.96px] text-text-tertiary uppercase">
-            Payments this month
-          </p>
-          <p className="font-data text-[28px] leading-[36px] font-semibold text-text-primary mt-xs">
-            {formatCents(totalCents)}
-          </p>
-          <p className="font-body text-[14px] leading-[20px] text-text-tertiary">{monthLabel}</p>
-        </div>
-        <ChevronRightIcon className="w-2 h-3.5 text-primary shrink-0 mt-1" color="currentColor" />
+        <p className="font-data text-[12px] leading-[18px] tracking-[0.96px] text-text-tertiary uppercase">
+          Payments this month
+        </p>
+        <p className="font-data text-[28px] leading-[36px] font-semibold text-text-primary mt-xs">
+          {formatCents(totalCents)}
+        </p>
+        <p className="font-body text-[14px] leading-[20px] text-text-tertiary">{monthLabel}</p>
       </Link>
 
       <div

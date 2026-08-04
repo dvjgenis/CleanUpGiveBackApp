@@ -1,14 +1,28 @@
 'use client';
 
-/** Ported verbatim from `admin/components/ui/DonutChart.tsx`. */
+/** Ported from `admin/components/ui/DonutChart.tsx` — optional layout/trend props for denser cards. */
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useHasMounted } from '@/hooks/useHasMounted';
+import { cn } from '@/lib/utils';
 
 export interface DonutSlice {
   name: string;
   value: number;
   color: string;
+  /** Optional right-side primary label (defaults to zero-padded `value`). */
+  valueLabel?: string;
+  /** Optional share / secondary label under the name (e.g. "42%"). */
+  meta?: string;
+  /** Signed MoM delta, e.g. "+3 percentage points" or "+12%". */
+  delta?: string | null;
+}
+
+export interface DonutTrend {
+  /** Signed change label, e.g. "+12%". */
+  delta: string;
+  /** Prior-window caption, e.g. "vs last month". */
+  caption: string;
 }
 
 interface DonutChartProps {
@@ -16,10 +30,34 @@ interface DonutChartProps {
   data: DonutSlice[];
   total: number;
   index?: number;
+  className?: string;
+  /** Override center total text (e.g. "$1,240"). */
+  totalLabel?: string;
+  emptyLabel?: string;
+  /** One-line insight under the legend (e.g. top mover). */
+  insight?: string | null;
+  /** Footer trend strip. */
+  trend?: DonutTrend | null;
 }
 
 const chartShellClassName =
   'bg-bg-surface border border-border-outline rounded-md p-lg flex flex-col gap-md';
+
+/** False for flat / zero deltas so they stay tertiary. */
+function isPositiveDelta(delta: string): boolean {
+  if (delta === 'New') return true;
+  if (!delta.startsWith('+')) return false;
+  if (delta === '+0%' || delta === '+0 percentage points') return false;
+  if (delta === '0%' || delta.startsWith('0 ')) return false;
+  return true;
+}
+
+function deltaToneClass(delta: string | null | undefined): string {
+  if (delta == null) return 'text-text-tertiary';
+  if (isPositiveDelta(delta)) return 'text-primary';
+  if (delta.startsWith('-')) return 'text-[#ba1a1a]';
+  return 'text-text-tertiary';
+}
 
 function CustomTooltip({
   active,
@@ -31,43 +69,67 @@ function CustomTooltip({
   if (!active || !payload?.length) return null;
   const slice = payload[0]!;
   const label = slice.payload?.name ?? slice.name ?? '';
+  const meta = slice.payload?.meta;
+  const delta = slice.payload?.delta;
   return (
     <div className="relative z-50 bg-bg-surface border border-border-outline rounded-sm px-md py-sm shadow-bar-top pointer-events-none">
       <p className="font-data text-[12px] font-semibold text-text-primary leading-snug whitespace-nowrap">
         {label}
       </p>
-      <p className="font-data text-[12px] text-text-tertiary leading-snug mt-xs">{slice.value}</p>
+      <p className="font-data text-[12px] text-text-tertiary leading-snug mt-xs">
+        {slice.payload?.valueLabel ?? slice.value}
+        {meta ? ` · ${meta}` : ''}
+      </p>
+      {delta ? (
+        <p className={`font-data text-[11px] leading-snug mt-xs ${deltaToneClass(delta)}`}>{delta}</p>
+      ) : null}
     </div>
   );
 }
 
-export function DonutChart({ title, data, total, index = 0 }: DonutChartProps) {
+export function DonutChart({
+  title,
+  data,
+  total,
+  index = 0,
+  className,
+  totalLabel,
+  emptyLabel = 'No sessions in this period',
+  insight = null,
+  trend = null,
+}: DonutChartProps) {
   const hasData = data.some((d) => d.value > 0);
   const prefersReduced = useReducedMotion();
   const mounted = useHasMounted();
+  const shellClassName = cn(chartShellClassName, className);
+  const centerTotal = totalLabel ?? String(total);
 
   const body = !hasData ? (
     <>
       <p className="font-data text-[11px] leading-[16px] tracking-[1px] text-text-tertiary uppercase">
         {title}
       </p>
-      <div className="py-lg text-center">
-        <p className="font-body text-[13px] text-text-tertiary">No sessions in this period</p>
+      <div className="flex-1 flex items-center justify-center py-lg text-center">
+        <p className="font-body text-[13px] text-text-tertiary">{emptyLabel}</p>
       </div>
     </>
   ) : (
     <>
-      <p className="font-data text-[11px] leading-[16px] tracking-[1px] text-text-tertiary uppercase">
+      <p className="font-data text-[11px] leading-[16px] tracking-[1px] text-text-tertiary uppercase shrink-0">
         {title}
       </p>
 
-      <div className="flex items-center gap-lg">
-        <div className="relative shrink-0" style={{ width: 96, height: 96 }}>
+      <div className="flex flex-1 items-center gap-lg min-h-0">
+        <div className="relative shrink-0" style={{ width: 128, height: 128 }}>
           {/* Behind the chart so hover tooltips are not covered by the center label */}
-          <div className="absolute inset-0 z-0 flex flex-col items-center justify-center pointer-events-none">
+          <div className="absolute inset-0 z-0 flex flex-col items-center justify-center pointer-events-none px-2">
             <span className="font-data text-[11px] text-text-tertiary leading-none">Total</span>
-            <span className="font-data text-[18px] font-semibold text-text-primary leading-none mt-0.5">
-              {total}
+            <span
+              className={`font-data font-semibold text-text-primary leading-tight mt-0.5 tabular-nums text-center ${
+                centerTotal.length > 8 ? 'text-[13px]' : 'text-[16px]'
+              }`}
+            >
+              {centerTotal}
             </span>
           </div>
           <div className="relative z-10 h-full w-full">
@@ -77,8 +139,8 @@ export function DonutChart({ title, data, total, index = 0 }: DonutChartProps) {
                   data={data}
                   cx="50%"
                   cy="50%"
-                  innerRadius={30}
-                  outerRadius={44}
+                  innerRadius={42}
+                  outerRadius={58}
                   dataKey="value"
                   nameKey="name"
                   strokeWidth={0}
@@ -99,28 +161,67 @@ export function DonutChart({ title, data, total, index = 0 }: DonutChartProps) {
           </div>
         </div>
 
-        <ul className="flex flex-col gap-xs flex-1 min-w-0">
+        <ul className="flex flex-col gap-sm flex-1 min-w-0 justify-center">
           {data.map((slice) => (
-            <li key={slice.name} className="flex items-center justify-between gap-sm">
-              <div className="flex items-center gap-xs min-w-0">
+            <li key={slice.name} className="flex items-start justify-between gap-sm">
+              <div className="flex items-start gap-xs min-w-0">
                 <span
-                  className="w-2 h-2 rounded-full shrink-0"
+                  className="w-2 h-2 rounded-full shrink-0 mt-1"
                   style={{ backgroundColor: slice.color }}
                 />
-                <span className="font-body text-[12px] text-text-tertiary truncate">{slice.name}</span>
+                <div className="min-w-0">
+                  <span className="font-body text-[12px] text-text-tertiary truncate block">
+                    {slice.name}
+                  </span>
+                  {slice.meta || slice.delta ? (
+                    <span className="font-data text-[11px] tabular-nums mt-0.5 block">
+                      {slice.meta ? (
+                        <span className="text-text-primary font-semibold">{slice.meta}</span>
+                      ) : null}
+                      {slice.meta && slice.delta != null ? (
+                        <span className="text-text-tertiary"> · </span>
+                      ) : null}
+                      {slice.delta != null ? (
+                        <span className={deltaToneClass(slice.delta)}>{slice.delta}</span>
+                      ) : null}
+                    </span>
+                  ) : null}
+                </div>
               </div>
-              <span className="font-data text-[12px] font-semibold text-text-primary shrink-0">
-                {String(slice.value).padStart(2, '0')}
+              <span className="font-data text-[12px] font-semibold text-text-primary shrink-0 tabular-nums pt-0.5">
+                {slice.valueLabel ?? String(slice.value).padStart(2, '0')}
               </span>
             </li>
           ))}
         </ul>
       </div>
+
+      {insight ? (
+        <p className="font-body text-[12px] text-text-tertiary shrink-0 border-t border-border-outline pt-md">
+          <span className="font-data text-[11px] uppercase tracking-[0.88px] text-text-tertiary font-semibold mr-sm">
+            Top mover
+          </span>
+          {insight}
+        </p>
+      ) : null}
+
+      {trend ? (
+        <div
+          className={`flex items-baseline justify-between gap-sm shrink-0 ${
+            insight ? '' : 'border-t border-border-outline pt-md'
+          }`}
+        >
+          <p className={`font-data text-[13px] font-semibold tabular-nums ${deltaToneClass(trend.delta)}`}>
+            {trend.delta}
+          </p>
+          <p className="font-data text-[11px] text-text-tertiary shrink-0">{trend.caption}</p>
+        </div>
+      ) : null}
     </>
   );
 
   if (!mounted) {
-    return <div className={chartShellClassName}>{body}</div>;
+    return <div className={shellClassName}>{body}</div>;
   }
 
   return (
@@ -128,7 +229,7 @@ export function DonutChart({ title, data, total, index = 0 }: DonutChartProps) {
       initial={{ opacity: 0, y: prefersReduced ? 0 : 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, delay: 0.1 + index * 0.07, ease: [0.23, 1, 0.32, 1] }}
-      className={chartShellClassName}
+      className={shellClassName}
     >
       {body}
     </motion.div>

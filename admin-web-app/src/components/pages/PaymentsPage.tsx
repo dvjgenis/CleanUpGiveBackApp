@@ -1,13 +1,12 @@
 "use client";
 
 /**
- * Faithful port of `admin/app/(admin)/payments/page.tsx` + `PaymentsBreakdownSection.tsx`.
- * All / Donations / Shop filters the period bar chart; product breakdown sits below.
+ * Payments console — KPIs, All/Donations/Shop chart filter, period-scoped
+ * revenue bars + table, and shop item breakdown.
  *
- * `monthly`/`itemBreakdown` are fetched live from the shared Supabase
- * `shop_orders` table by `admin-web-app/src/app/payments/page.tsx` (see
- * `@/lib/live-data`) — donations stay mock until a donations table ships,
- * matching `admin/lib/payments-data.ts`.
+ * PeriodToggle updates `?period=` / `from` / `to`; the server page reloads
+ * `loadPaymentsBreakdown` + `loadShopItemBreakdown` for that window
+ * (day → one bar, month → last 6 months, year → last 6 years, all → years).
  */
 import { Suspense, useState } from "react";
 import { KPICard } from "@/components/ui/KPICard";
@@ -15,12 +14,14 @@ import { RevenueBarChart } from "@/components/ui/RevenueBarChart";
 import { ShopItemBreakdownSection } from "@/components/ui/ShopItemBreakdownSection";
 import { ChevronRightIcon } from "@/components/ui/Icons";
 import { PeriodToggle } from "@/components/ui/PeriodToggle";
-import { usePeriodLabel, usePeriodSelection } from "@/components/ui/PeriodToggleBar";
+import { usePeriodSelection } from "@/components/ui/PeriodToggleBar";
 import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
 import { ExportMenu } from "@/components/ui/ExportMenu";
 import { downloadCsv, openPrintablePdf } from "@/lib/export-download";
-import { buildMockMonthlyRevenue, formatCents, type MonthlyRevenuePoint } from "@/lib/mock-data";
+import { formatCents, type MonthlyRevenuePoint } from "@/lib/mock-data";
 import { buildMockShopItemBreakdown, type ShopItemBreakdown } from "@/lib/shop-catalog";
+import type { BreakdownRow } from "@/lib/payments-data";
+import { paymentsPeriodLabel, type DashboardPeriod } from "@/lib/dashboard-period";
 
 type TypeFilter = "all" | "donations" | "shop";
 
@@ -32,13 +33,49 @@ const TYPE_FILTERS: { value: TypeFilter; label: string }[] = [
 
 const PAYMENTS_TABLE_COLS = "lg:grid-cols-[1.4fr_6.5rem_6.5rem_6.5rem]";
 
+function chartSubtitle(period: DashboardPeriod, rangeLabel: string): string {
+  switch (period) {
+    case "day":
+      return "Totals for today";
+    case "month":
+      return "Monthly totals for the last 6 months";
+    case "year":
+      return "Yearly totals for the last 6 years";
+    case "all":
+      return "Yearly totals (all time)";
+    case "custom":
+      return `Totals for ${rangeLabel}`;
+    default: {
+      const _exhaustive: never = period;
+      return _exhaustive;
+    }
+  }
+}
+
+function toChartPoints(rows: BreakdownRow[]): MonthlyRevenuePoint[] {
+  return rows.map((r) => ({
+    label: r.label,
+    monthKey: r.key,
+    donationsCents: r.donationsCents,
+    shopCents: r.shopCents,
+  }));
+}
+
 export function PaymentsPage({
-  monthly = buildMockMonthlyRevenue(),
+  rows = [],
+  totalDonationsCents = 0,
+  totalShopCents = 0,
   itemBreakdown = buildMockShopItemBreakdown(),
+  donationsFromDb = false,
+  shopFromDb = false,
   isMock = false,
 }: {
-  monthly?: MonthlyRevenuePoint[];
+  rows?: BreakdownRow[];
+  totalDonationsCents?: number;
+  totalShopCents?: number;
   itemBreakdown?: ShopItemBreakdown;
+  donationsFromDb?: boolean;
+  shopFromDb?: boolean;
   isMock?: boolean;
 }) {
   return (
@@ -49,29 +86,43 @@ export function PaymentsPage({
         </div>
       }
     >
-      <PaymentsPageInner monthly={monthly} itemBreakdown={itemBreakdown} isMock={isMock} />
+      <PaymentsPageInner
+        rows={rows}
+        totalDonationsCents={totalDonationsCents}
+        totalShopCents={totalShopCents}
+        itemBreakdown={itemBreakdown}
+        donationsFromDb={donationsFromDb}
+        shopFromDb={shopFromDb}
+        isMock={isMock}
+      />
     </Suspense>
   );
 }
 
 function PaymentsPageInner({
-  monthly,
+  rows,
+  totalDonationsCents,
+  totalShopCents,
   itemBreakdown,
+  donationsFromDb,
+  shopFromDb,
   isMock,
 }: {
-  monthly: MonthlyRevenuePoint[];
+  rows: BreakdownRow[];
+  totalDonationsCents: number;
+  totalShopCents: number;
   itemBreakdown: ShopItemBreakdown;
+  donationsFromDb: boolean;
+  shopFromDb: boolean;
   isMock: boolean;
 }) {
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
   const selection = usePeriodSelection();
-  const rangeLabel = usePeriodLabel();
-
-  const totalDonationsCents = monthly.reduce((sum, m) => sum + m.donationsCents, 0);
-  const totalShopCents = monthly.reduce((sum, m) => sum + m.shopCents, 0);
+  const rangeLabel = paymentsPeriodLabel(selection);
   const totalCents = totalDonationsCents + totalShopCents;
+  const points = toChartPoints(rows);
 
-  const chartData = monthly.map((m) => ({
+  const chartData = points.map((m) => ({
     label: m.label,
     monthKey: m.monthKey,
     donationsCents: typeFilter === "shop" ? 0 : m.donationsCents,
@@ -79,17 +130,19 @@ function PaymentsPageInner({
   }));
 
   const exportColumns = [
-    { key: "month", label: "month" },
+    { key: "period", label: "period" },
     { key: "donations", label: "donations" },
     { key: "shop", label: "shop" },
     { key: "total", label: "total" },
   ];
   const exportRows = chartData.map((m) => ({
-    month: m.label,
+    period: m.label,
     donations: formatCents(m.donationsCents),
     shop: formatCents(m.shopCents),
     total: formatCents(m.donationsCents + m.shopCents),
   }));
+
+  const tableRows = [...points].reverse();
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -112,11 +165,16 @@ function PaymentsPageInner({
       {isMock && <SampleDataBanner />}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-md mb-xl">
-        <KPICard label="Donations" value={formatCents(totalDonationsCents)} subtext={rangeLabel} index={0} />
+        <KPICard
+          label="Donations"
+          value={formatCents(totalDonationsCents)}
+          subtext={donationsFromDb ? "From donations" : rangeLabel}
+          index={0}
+        />
         <KPICard
           label="Shop revenue"
           value={formatCents(totalShopCents)}
-          subtext="Merchandise + kits"
+          subtext={shopFromDb ? "From shop orders" : "Merchandise + kits"}
           index={1}
           href="/orders"
           showChevron
@@ -149,7 +207,7 @@ function PaymentsPageInner({
 
         <RevenueBarChart
           title="Revenue breakdown"
-          subtitle="Totals for the last 6 months"
+          subtitle={chartSubtitle(selection.period, rangeLabel)}
           data={chartData}
           index={0}
         />
@@ -169,36 +227,42 @@ function PaymentsPageInner({
               </span>
             ))}
           </div>
-          <ul role="list" className="divide-y divide-border-outline max-h-[420px] overflow-y-auto">
-            {[...monthly].reverse().map((row) => {
-              const donationsDisplay = typeFilter === "shop" ? "—" : formatCents(row.donationsCents);
-              const shopDisplay = typeFilter === "donations" ? "—" : formatCents(row.shopCents);
-              const periodTotal = formatCents(
-                (typeFilter === "shop" ? 0 : row.donationsCents) +
-                  (typeFilter === "donations" ? 0 : row.shopCents),
-              );
-              return (
-                <li
-                  key={row.monthKey}
-                  className={`grid grid-cols-1 ${PAYMENTS_TABLE_COLS} gap-xs lg:gap-md lg:items-center px-lg py-md lg:py-sm`}
-                >
-                  <span className="font-body text-[14px] font-medium text-text-primary">{row.label}</span>
-                  <span className="font-data text-[13px] text-text-tertiary whitespace-nowrap lg:text-center">
-                    <span className="lg:hidden text-text-tertiary/70">Donations </span>
-                    {donationsDisplay}
-                  </span>
-                  <span className="font-data text-[13px] text-text-tertiary whitespace-nowrap lg:text-center">
-                    <span className="lg:hidden text-text-tertiary/70">Shop </span>
-                    {shopDisplay}
-                  </span>
-                  <span className="font-data text-[13px] font-semibold text-text-primary whitespace-nowrap lg:text-center">
-                    <span className="lg:hidden text-text-tertiary/70 font-normal">Total </span>
-                    {periodTotal}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
+          {tableRows.length === 0 ? (
+            <p className="px-lg py-xl text-center font-body text-base text-text-tertiary">
+              No payment activity in this window.
+            </p>
+          ) : (
+            <ul role="list" className="divide-y divide-border-outline max-h-[420px] overflow-y-auto">
+              {tableRows.map((row) => {
+                const donationsDisplay = typeFilter === "shop" ? "—" : formatCents(row.donationsCents);
+                const shopDisplay = typeFilter === "donations" ? "—" : formatCents(row.shopCents);
+                const periodTotal = formatCents(
+                  (typeFilter === "shop" ? 0 : row.donationsCents) +
+                    (typeFilter === "donations" ? 0 : row.shopCents),
+                );
+                return (
+                  <li
+                    key={row.monthKey}
+                    className={`grid grid-cols-1 ${PAYMENTS_TABLE_COLS} gap-xs lg:gap-md lg:items-center px-lg py-md lg:py-sm`}
+                  >
+                    <span className="font-body text-[14px] font-medium text-text-primary">{row.label}</span>
+                    <span className="font-data text-[13px] text-text-tertiary whitespace-nowrap lg:text-center">
+                      <span className="lg:hidden text-text-tertiary/70">Donations </span>
+                      {donationsDisplay}
+                    </span>
+                    <span className="font-data text-[13px] text-text-tertiary whitespace-nowrap lg:text-center">
+                      <span className="lg:hidden text-text-tertiary/70">Shop </span>
+                      {shopDisplay}
+                    </span>
+                    <span className="font-data text-[13px] font-semibold text-text-primary whitespace-nowrap lg:text-center">
+                      <span className="lg:hidden text-text-tertiary/70 font-normal">Total </span>
+                      {periodTotal}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </div>
       </div>
 

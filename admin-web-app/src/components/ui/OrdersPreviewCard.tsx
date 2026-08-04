@@ -1,6 +1,5 @@
-/** Ported verbatim from `admin/components/ui/OrdersPreviewCard.tsx`. */
+/** Ported from `admin/components/ui/OrdersPreviewCard.tsx` (chevron omitted — header link stays clickable). */
 import Link from 'next/link';
-import { ChevronRightIcon } from '@/components/ui/Icons';
 import { ORDER_STATUS_CONFIG, formatOrderCents, normalizeOrderStatus, type OrderRow } from '@/lib/mock-data';
 
 /** Compact open-orders table preview for the Today commerce card. */
@@ -17,21 +16,18 @@ export function OrdersPreviewCard({
     <div className="bg-bg-surface border border-border-outline rounded-md p-lg flex flex-col gap-md h-full transition-colors hover:border-primary/40">
       <Link
         href="/orders"
-        className="flex items-start justify-between gap-sm no-underline text-inherit focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary rounded-sm"
+        className="block no-underline text-inherit focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary rounded-sm"
         aria-label="View all open orders"
       >
-        <div>
-          <p className="font-data text-[12px] leading-[18px] tracking-[0.96px] text-text-tertiary uppercase">
-            Open orders
-          </p>
-          <p className="font-data text-[28px] leading-[36px] font-semibold text-text-primary mt-xs">
-            {openCount}
-          </p>
-          <p className="font-body text-[14px] leading-[20px] text-text-tertiary">
-            {formatOrderCents(revenueCents)} total revenue
-          </p>
-        </div>
-        <ChevronRightIcon className="w-2 h-3.5 text-primary shrink-0 mt-1" color="currentColor" />
+        <p className="font-data text-[12px] leading-[18px] tracking-[0.96px] text-text-tertiary uppercase">
+          Open orders
+        </p>
+        <p className="font-data text-[28px] leading-[36px] font-semibold text-text-primary mt-xs">
+          {openCount}
+        </p>
+        <p className="font-body text-[14px] leading-[20px] text-text-tertiary">
+          {formatOrderCents(revenueCents)} total revenue
+        </p>
       </Link>
 
       {preview.length === 0 ? (

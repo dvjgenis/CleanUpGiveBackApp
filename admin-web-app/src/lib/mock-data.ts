@@ -7,6 +7,7 @@
  */
 
 import { format, parseISO } from "date-fns";
+import { inInterval, type DateInterval } from "@/lib/dashboard-period";
 
 export type MockSession = {
   id: string;
@@ -45,6 +46,40 @@ export const MOCK_SESSIONS: MockSession[] = [
   { id: "m11", user_id: "u2", volunteer_name: "Jordan Lee", activity: "Park Cleanup", status: "approved", duration_seconds: 7800, adjusted_hours: null, court_ordered: true, distance_miles: 4.0, started_at: "2026-07-04T08:00:00Z", ended_at: "2026-07-04T10:10:00Z", created_at: "2026-07-04T10:15:00Z", state_fips: "26" },
   { id: "m12", user_id: "u10", volunteer_name: "Chris Park", activity: "River Cleanup", status: "not_approved", duration_seconds: 600, adjusted_hours: null, court_ordered: false, distance_miles: 0.3, started_at: "2026-07-03T12:00:00Z", ended_at: "2026-07-03T12:10:00Z", created_at: "2026-07-03T12:12:00Z", state_fips: "17" },
 ];
+
+/**
+ * Insights-only fixtures: same mix as `MOCK_SESSIONS`, but timestamps are shifted
+ * relative to `now` so PeriodToggle (default Today) still fills every chart.
+ * Day 0 gets approved / under_review / declined + court + multi-state coverage.
+ * Does not affect Dashboard/Sessions — those keep empty-real lists.
+ */
+export function buildInsightsMockSessions(now = new Date()): MockSession[] {
+  /** Days before today — first four land on “today” for a dense Today view. */
+  const dayOffsets = [0, 0, 0, 1, 0, 2, 3, 4, 5, 6, 8, 10] as const;
+  const hourSlots = [9, 11, 13, 15] as const;
+
+  return MOCK_SESSIONS.map((session, index) => {
+    const offset = dayOffsets[index] ?? index;
+    const day = new Date(now);
+    day.setHours(0, 0, 0, 0);
+    day.setDate(day.getDate() - offset);
+
+    const slot = hourSlots[index % hourSlots.length]!;
+    const started = new Date(day);
+    started.setHours(slot, 0, 0, 0);
+    const durationMs = (session.duration_seconds ?? 3600) * 1000;
+    const ended = new Date(started.getTime() + durationMs);
+    const created = new Date(ended.getTime() + 5 * 60 * 1000);
+
+    return {
+      ...session,
+      id: `insights-${session.id}`,
+      started_at: started.toISOString(),
+      ended_at: ended.toISOString(),
+      created_at: created.toISOString(),
+    };
+  });
+}
 
 /** State FIPS → display name, subset used by mock session fixtures. Mirrors `admin/lib/us-heatmap.ts`. */
 export const STATE_FIPS_NAME: Record<string, string> = {
@@ -212,6 +247,29 @@ export const MOCK_COURT_PROGRESS: MockCourtVolunteer[] = [
   { id: "c22", name: "Amara Okonkwo", email: "amara.o@email.com", requiredHours: 35, completedHours: 28.0, sessions: 7, status: "in_progress", dueDate: "2026-11-15" },
   { id: "c23", name: "Riley Sato", email: "riley.s@email.com", requiredHours: 15, completedHours: 5.5, sessions: 2, status: "at_risk", dueDate: "2026-08-12" },
 ];
+
+/** Page-level empty→fixture for Insights/Analytics only (not Sessions loaders). */
+export function resolveInsightsFixtures(
+  liveSessions: MockSession[],
+  liveCourt: MockCourtVolunteer[],
+  now = new Date(),
+  /** When set, fixtures also apply if no live sessions fall in this window (e.g. Today). Pass null for All time. */
+  periodInterval: DateInterval | null = null,
+): { sessions: MockSession[]; courtProgress: MockCourtVolunteer[]; isMock: boolean } {
+  const sessionsEmpty = liveSessions.length === 0;
+  const liveInPeriod =
+    periodInterval == null
+      ? liveSessions
+      : liveSessions.filter((s) => inInterval(s.ended_at ?? s.started_at ?? s.created_at, periodInterval));
+  const periodEmpty = liveInPeriod.length === 0;
+  const useSessionFixtures = sessionsEmpty || (periodInterval != null && periodEmpty);
+  const courtEmpty = liveCourt.length === 0;
+  return {
+    sessions: useSessionFixtures ? buildInsightsMockSessions(now) : liveSessions,
+    courtProgress: courtEmpty ? MOCK_COURT_PROGRESS : liveCourt,
+    isMock: useSessionFixtures || courtEmpty,
+  };
+}
 
 /** Court volunteer completion toward required hours — mirrors `admin/lib/dashboard-charts.ts`. */
 export function buildCourtProgressBars(

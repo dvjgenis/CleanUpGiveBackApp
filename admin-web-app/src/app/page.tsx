@@ -25,6 +25,7 @@ export default async function Home() {
           sessions={sessionsResult.data}
           orders={ordersResult.data}
           monthly={monthlyResult.data}
+          feedback={feedbackResult.data}
           feedbackAvg={feedbackAvg}
           isMock={isMock}
         />
