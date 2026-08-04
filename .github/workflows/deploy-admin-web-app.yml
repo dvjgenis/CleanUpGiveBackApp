@@ -1,6 +1,9 @@
 # Auto-deploy admin-web-app to Vercel on pushes to main.
 # GitHub Integration can't connect collaborators on a personal-owned repo,
 # so CI deploys with a Vercel token instead.
+#
+# Project Root Directory is `admin-web-app` — run from the repo root so
+# Vercel does not resolve admin-web-app/admin-web-app.
 name: Deploy admin-web-app
 
 on:
@@ -14,9 +17,6 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: admin-web-app
     env:
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
