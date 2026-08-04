@@ -11,7 +11,7 @@
  * back to the same mock fixtures admin uses when those tables are empty. The
  * live review actions (approve/decline, drawer, search) are still read-only.
  */
-import { Suspense, type ReactNode, type HTMLAttributes } from "react";
+import { Suspense, useState, type ReactNode, type HTMLAttributes } from "react";
 import Link from "next/link";
 import { CourtBadge } from "@/components/ui/CourtBadge";
 import { Button } from "@/components/ui/Button";
@@ -39,13 +39,17 @@ import {
   type OrderRow,
   type MonthlyRevenuePoint,
 } from "@/lib/mock-data";
+import { differenceInDays, differenceInHours, parseISO } from "date-fns";
 
 function ageLabel(iso: string, now: Date): string {
-  const hours = Math.round((now.getTime() - new Date(iso).getTime()) / 3_600_000);
+  const d = parseISO(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  // Full elapsed hours/days (truncated), not rounded — avoids off-by-one “Xd ago”.
+  const hours = differenceInHours(now, d);
   if (hours < 1) return "Just now";
   if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days === 1) return "1d ago";
+  const days = differenceInDays(now, d);
+  if (days <= 1) return "1d ago";
   return `${days}d ago`;
 }
 
@@ -160,10 +164,13 @@ function DashboardPageInner({
   const now = new Date();
   const selection = usePeriodSelection();
   const periodLabelText = usePeriodLabel(now);
+  const [courtOnlyFilter, setCourtOnlyFilter] = useState(false);
   const queue = sessions.filter((s) => s.status === "under_review");
+  const filteredQueue = courtOnlyFilter ? queue.filter((s) => s.court_ordered) : queue;
   const approved = sessions.filter((s) => s.status === "approved");
   const totalApprovedHours = approved.reduce((sum, s) => sum + computedHours(s.duration_seconds, s.adjusted_hours), 0);
-  const visibleQueue = queue.slice(0, 5);
+  const visibleQueue = filteredQueue.slice(0, 5);
+  const isFiltered = courtOnlyFilter;
 
   const waitingDonut: MiniDonutSlice[] = [{ value: Math.max(queue.length, 1), color: "#fcab29" }];
   const approvedDonut: MiniDonutSlice[] = [{ value: Math.max(approved.length, 1), color: "#007536" }];
@@ -207,10 +214,14 @@ function DashboardPageInner({
             <div>
               <p className="font-data text-[11px] uppercase tracking-[0.88px] text-text-tertiary mb-xs">Needs you</p>
               <h2 id="bento-review-heading" className="font-heading text-[24px] leading-[30px] text-text-primary">
-                {queue.length === 0 ? "All clear" : `${queue.length} to review`}
+                {queue.length === 0
+                  ? "All clear"
+                  : isFiltered
+                    ? `${filteredQueue.length} of ${queue.length}`
+                    : `${queue.length} to review`}
               </h2>
             </div>
-            {queue.length > 0 && (
+            {filteredQueue.length > 0 && (
               <Button type="button" className="min-h-11 shrink-0">
                 Start
               </Button>
@@ -222,9 +233,18 @@ function DashboardPageInner({
               <div className="h-11 flex items-center px-md rounded-full border border-border-outline bg-bg-surface font-data text-[13px] text-text-tertiary w-full sm:w-56">
                 Search the queue…
               </div>
-              <span className="h-11 shrink-0 inline-flex items-center px-md rounded-full border border-border-outline bg-bg-surface text-text-tertiary font-data text-[12px] font-semibold whitespace-nowrap">
+              <button
+                type="button"
+                aria-pressed={courtOnlyFilter}
+                onClick={() => setCourtOnlyFilter((v) => !v)}
+                className={`h-11 shrink-0 inline-flex items-center px-md rounded-full border font-data text-[12px] font-semibold whitespace-nowrap transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary ${
+                  courtOnlyFilter
+                    ? "bg-primary text-white border-primary"
+                    : "bg-bg-surface text-text-tertiary border-border-outline hover:border-primary hover:text-primary"
+                }`}
+              >
                 Court-ordered only
-              </span>
+              </button>
             </div>
           )}
 
@@ -241,6 +261,12 @@ function DashboardPageInner({
             <div className="px-lg pb-lg flex-1 flex items-center">
               <p className="font-body text-[14px] text-text-tertiary max-w-xs">
                 Nothing waiting. New submissions will show up here.
+              </p>
+            </div>
+          ) : filteredQueue.length === 0 ? (
+            <div className="px-lg pb-lg flex-1 flex items-center">
+              <p className="font-body text-[14px] text-text-tertiary max-w-xs">
+                No court-ordered sessions in the queue. Clear the filter to see all waiting reviews.
               </p>
             </div>
           ) : (

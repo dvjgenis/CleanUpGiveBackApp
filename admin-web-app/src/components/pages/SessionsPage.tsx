@@ -336,7 +336,7 @@ function SessionsPageInner({ sessions, isMock }: { sessions: MockSession[]; isMo
                       )}
                     </td>
                     <td className="px-lg py-md font-body text-[14px] text-text-tertiary whitespace-nowrap">
-                      {formatDate(session.created_at)}
+                      {formatDate(session.started_at)}
                     </td>
                     <td className="px-lg py-md" onClick={(e) => e.stopPropagation()}>
                       <Link
@@ -438,7 +438,7 @@ function SessionsPageInner({ sessions, isMock }: { sessions: MockSession[]; isMo
                         {session.volunteer_name}
                       </Link>
                       {" · "}
-                      {formatDate(session.created_at)}
+                      {formatDate(session.started_at)}
                     </p>
                   </div>
                   <button

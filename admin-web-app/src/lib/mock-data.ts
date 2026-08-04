@@ -6,6 +6,8 @@
  * - `admin/app/(admin)/feedback/page.tsx` (MOCK_FEEDBACK, EMOJI_MAP)
  */
 
+import { format, parseISO } from "date-fns";
+
 export type MockSession = {
   id: string;
   user_id: string;
@@ -463,12 +465,21 @@ export function formatOrderCents(cents: number): string {
 }
 
 export function formatOrderDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  try {
+    return format(parseISO(iso), "MMM d, yyyy");
+  } catch {
+    return "—";
+  }
 }
 
+/** Local calendar date of the timestamp (Donna's browser TZ) — mirrors `admin/lib/format.ts`. */
 export function formatDate(iso: string | null | undefined): string {
   if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  try {
+    return format(parseISO(iso), "MMM d, yyyy");
+  } catch {
+    return "—";
+  }
 }
 
 export function formatShippingAddress(addr: ShippingAddress): string {
@@ -488,18 +499,14 @@ export function trackingUrl(carrier: string | null, tracking: string | null): st
   return null;
 }
 
-/** Mirrors admin session detail datetime rows (`MMM dd, yyyy HH:mm`). */
+/** Local datetime — mirrors admin session detail rows (`MMM d, yyyy HH:mm`). */
 export function formatDateTime(iso: string | null | undefined): string {
   if (!iso) return "—";
-  return new Date(iso).toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-    timeZone: "UTC",
-  });
+  try {
+    return format(parseISO(iso), "MMM d, yyyy HH:mm");
+  } catch {
+    return "—";
+  }
 }
 
 /** Mirrors `admin/lib/format.ts` `formatMiles`. */

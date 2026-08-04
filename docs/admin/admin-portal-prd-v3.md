@@ -120,16 +120,16 @@ RLS and JWT checks use `user_metadata.role === 'admin'` (not a top-level JWT `ro
 
 Status tags: **Shipped** · **Partial** · **Near-term** · **Blocked (external)**
 
-### 7.1 Authentication — Login & Logout — Near-term (temporarily disabled)
+### 7.1 Authentication — Login & Logout — Partial (UI shipped; bypass still on for demo)
 
 **Product requirement (unchanged from v2 intent):**
 
-- Login at `/login`: email + password via Supabase Auth; no self-serve sign-up.
-- Guard all admin routes; deny non-`admin` claim with Access denied.
-- Logout from account chrome → `signOut()` → `/login`.
-- Session expiry: Supabase JWT refresh; banner on lapse.
+- Login at `/login`: email + password via Supabase Auth; no self-serve sign-up. **Shipped** in `admin-web-app` with branded subtle gradient-bars background.
+- Guard all admin routes; deny non-`admin` claim with Access denied. **Shipped** via `src/middleware.ts` when `BYPASS_AUTH` is off.
+- Logout from account chrome → `signOut()` → `/login`. **Near-term** (button present; wire action).
+- Session expiry: Supabase JWT refresh; banner on lapse. **Near-term**.
 
-**Current interim:** `BYPASS_AUTH` may skip auth so Donna/eng can demo without login friction. Treat as **temporary**. Before calling production secure:
+**Current interim:** `BYPASS_AUTH` may skip auth so Donna/eng can demo without login friction; `/login` remains reachable for UI preview while bypass is on. Treat bypass as **temporary**. Before calling production secure:
 
 1. Set `BYPASS_AUTH=false` on Vercel production (and keep it false).
 2. Ensure Donna’s Auth user has `user_metadata.role = 'admin'`.

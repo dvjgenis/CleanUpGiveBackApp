@@ -2,6 +2,36 @@
 
 ---
 
+## [2026-08-03] — Dashboard Court-ordered only filter
+
+**R:** “Court-ordered only” on Home was a non-interactive span — no toggle/filter.
+
+**A:** Wired as `aria-pressed` button; filters under-review queue to `court_ordered`; heading shows `N of M` when active; empty filter copy when none match.
+
+**P:** Toggle on/off with mixed court + voluntary under-review rows.
+
+---
+
+## [2026-08-03] — Sessions Date = local started_at
+
+**R:** Sessions list Date used `created_at`; wrong calendar day vs when the cleanup ran. `formatDateTime` also forced UTC, which could disagree with local list dates by a day.
+
+**A:** Sessions Date (table + mobile) → `started_at`. Shared `formatDate` / `formatDateTime` / `formatOrderDate` use date-fns local formatting (same as legacy admin). Docs: `admin-web-app.md`.
+
+**P:** Spot-check a live session’s Date vs wall-clock start in your TZ.
+
+---
+
+## [2026-08-03] — Accurate dashboard queue “Xd ago”
+
+**R:** Review-queue age used `Math.round` on hours then `floor(hours/24)`, which could off-by-one the day count (e.g. ~23.5h → “1d ago”).
+
+**A:** `DashboardPage` `ageLabel` now uses date-fns `differenceInHours` / `differenceInDays` (full elapsed periods). Doc note in `admin-web-app.md`.
+
+**P:** Confirm a live under-review row’s age matches wall-clock days since `created_at`.
+
+---
+
 ## [2026-08-03] — Fix Events page client boundary
 
 **R:** Marking `EventsPage` as `"use client"` for Export broke Vercel SSR — server routes import `eventListItemToDemoEvent`/`EVENTS` from that module.
