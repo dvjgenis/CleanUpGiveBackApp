@@ -27,7 +27,6 @@ import { PeriodToggle } from "@/components/ui/PeriodToggle";
 import { usePeriodLabel, usePeriodSelection } from "@/components/ui/PeriodToggleBar";
 import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
 import {
-  MOCK_SESSIONS,
   MOCK_FEEDBACK_AVG,
   MOCK_ORDERS,
   computedHours,
@@ -117,7 +116,7 @@ function MetricTile({
 }
 
 export function DashboardPage({
-  sessions = MOCK_SESSIONS,
+  sessions = [],
   orders = MOCK_ORDERS,
   monthly: monthlyProp,
   feedbackAvg = MOCK_FEEDBACK_AVG,

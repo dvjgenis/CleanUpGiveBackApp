@@ -1,19 +1,19 @@
 /**
- * Live Supabase reads for web-app pages, each falling back to the existing
- * `@/lib/mock-data` fixtures when the shared project has no rows yet — same
- * "useMock" pattern as `admin/lib/dashboard-data.ts` / `admin/lib/payments-data.ts`.
- * Every table read here (`sessions`, `volunteer_feedback`, `shop_orders`,
- * `court_orders`, Auth users) is the same table the mobile app and admin write to,
- * so once Supabase has data, this page reflects it immediately.
+ * Live Supabase reads for web-app pages.
+ *
+ * Sessions + users + court progress never fall back to fixtures: empty tables
+ * / missing Auth directory return empty arrays with `useMock: false` so Vercel
+ * never shows sample volunteers. Other surfaces (orders, feedback, payments,
+ * revenue) still use the older empty→fixture pattern until those domains go live.
+ *
+ * Every table read here is the same shared Supabase project the mobile app writes to.
  */
 import { subYears } from 'date-fns';
 import { createDataClient, createServiceClient } from '@/lib/supabase/server';
 import { getVolunteerDirectory, getVolunteerName, type VolunteerDirectory } from '@/lib/volunteers';
 import {
-  MOCK_SESSIONS,
   MOCK_FEEDBACK,
   MOCK_ORDERS,
-  MOCK_COURT_PROGRESS,
   buildMockMonthlyRevenue,
   normalizeOrderStatus,
   type MockSession,
@@ -50,13 +50,13 @@ export async function loadLiveSessions(): Promise<LiveResult<MockSession[]>> {
   ]);
 
   // Query failures must not fall through to fixtures — that looks "loaded" with
-  // fake volunteers while production is broken. Empty table still uses mocks.
+  // fake volunteers while production is broken. Empty table stays empty (real mode).
   if (error) {
     throw new Error(`Failed to load sessions from Supabase: ${error.message}`);
   }
 
   if (!rows || rows.length === 0) {
-    return { data: MOCK_SESSIONS, useMock: true };
+    return { data: [], useMock: false };
   }
 
   const sessions: MockSession[] = rows.map((s) => ({
@@ -195,30 +195,6 @@ type VolunteerDetail = {
 
 /** Load a single volunteer profile with detailed information including sessions and court orders */
 export async function loadLiveVolunteerById(id: string): Promise<LiveResult<VolunteerDetail | null>> {
-  // Check if it's a mock ID first
-  const mockVolunteers = await loadLiveUsers();
-  if (mockVolunteers.useMock) {
-    const mockVolunteer = mockVolunteers.data.find(u => u.id === id);
-    if (!mockVolunteer) return { data: null, useMock: true };
-    
-    return {
-      data: {
-        id: mockVolunteer.id,
-        name: mockVolunteer.name,
-        email: mockVolunteer.email,
-        phone: mockVolunteer.phone,
-        joinedAt: mockVolunteer.joinedAt,
-        lastActive: mockVolunteer.lastActive,
-        courtOrdered: mockVolunteer.courtOrdered,
-        requiredHours: mockVolunteer.requiredHours,
-        courtDueDate: null,
-        caseReference: null,
-        sessions: [], // Mock volunteers don't have detailed session data in the current structure
-      },
-      useMock: true
-    };
-  }
-
   const supabase = await createDataClient();
   const serviceClient = await createServiceClient();
 
@@ -376,7 +352,7 @@ export async function loadLiveCourtProgress(): Promise<LiveResult<MockCourtVolun
   const { data: courtOrders } = await supabase.from('court_orders').select('user_id, required_hours, due_date');
 
   if (!courtOrders || courtOrders.length === 0) {
-    return { data: MOCK_COURT_PROGRESS, useMock: true };
+    return { data: [], useMock: false };
   }
 
   const orderRows = courtOrders as CourtRiskOrderRow[];
@@ -549,28 +525,13 @@ type SessionForUser = { user_id: string; status: string | null; duration_seconds
 /**
  * Full Users/Volunteers directory for `/users` + `/volunteers` — every Auth
  * user with session-derived hours, court-ordered ones flagged from
- * `court_orders`. Falls back to the illustrative mock roster (court fixtures +
- * a few voluntary rows) when the service-role key isn't configured yet, since
- * that's an Auth Admin API call rather than a table read.
+ * `court_orders`. Empty Auth directory (missing service-role key or no users)
+ * returns `[]` in real mode — never the illustrative mock roster.
  */
 export async function loadLiveUsers(): Promise<LiveResult<import('@/components/ui/UserPreviewDrawer').UserRow[]>> {
   const directory = await getVolunteerDirectory();
   if (directory.size === 0) {
-    const { MOCK_COURT_AT_RISK } = await import('@/lib/mock-data');
-    const courtUsers = MOCK_COURT_AT_RISK.map((v) => ({
-      id: v.id,
-      name: v.name,
-      email: v.email,
-      phone: null,
-      sessions: v.sessions,
-      totalHours: v.completedHours,
-      courtOrdered: true,
-      lastActive: null,
-      joinedAt: null,
-      requiredHours: v.requiredHours,
-      completedHours: v.completedHours,
-    }));
-    return { data: courtUsers, useMock: true };
+    return { data: [], useMock: false };
   }
 
   const supabase = await createDataClient();

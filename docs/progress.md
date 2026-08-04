@@ -2,6 +2,16 @@
 
 ---
 
+## [2026-08-03] — Sessions/Users never inject fixtures on Vercel
+
+**R:** Empty `sessions` / Auth directory (or missing service-role) still returned Maya Chen–style fixtures, so production could look “loaded” with sample people.
+
+**A:** `loadLiveSessions` / `loadLiveUsers` / `loadLiveCourtProgress` / `loadLiveVolunteerById` return empty real lists (`useMock: false`). Page defaults + sidebar badges/notifications no longer seed mock session/user data. Restored Vercel Production+Development Supabase URL/anon/service-role from local `.env.local`. Made `tryCreateServiceClient` cookie-free (`createServiceRoleClient`) so a signed-in admin JWT cannot collapse list reads under volunteer RLS. Docs: `admin-web-app.md`, `current.md`.
+
+**P:** Sign in on https://cleanupgiveback-web-app.vercel.app → `/sessions?period=all` and `/users` show the shared Supabase rows (23 sessions currently).
+
+---
+
 ## [2026-08-03] — Dashboard Court-ordered only filter
 
 **R:** “Court-ordered only” on Home was a non-interactive span — no toggle/filter.

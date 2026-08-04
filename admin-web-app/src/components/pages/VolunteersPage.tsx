@@ -7,8 +7,8 @@
  *
  * `users` is fetched live from the shared Supabase Auth directory + `sessions`
  * + `court_orders` by `admin-web-app/src/app/volunteers/page.tsx` (and `/users`)
- * (see `@/lib/live-data`'s `loadLiveUsers`), falling back to an illustrative
- * mock roster when the service-role key isn't configured yet.
+ * (see `@/lib/live-data`'s `loadLiveUsers`). Empty directory renders an empty
+ * list — no fixture roster.
  */
 import { useState } from "react";
 import Link from "next/link";
@@ -17,26 +17,7 @@ import { UserPreviewDrawer, type UserRow } from "@/components/ui/UserPreviewDraw
 import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
 import { ExportMenu } from "@/components/ui/ExportMenu";
 import { downloadCsv, openPrintablePdf } from "@/lib/export-download";
-import { formatDate, MOCK_COURT_AT_RISK } from "@/lib/mock-data";
-
-const DEFAULT_USERS: UserRow[] = [
-  ...MOCK_COURT_AT_RISK.map((v) => ({
-    id: v.id,
-    name: v.name,
-    email: v.email,
-    phone: null,
-    sessions: v.sessions,
-    totalHours: v.completedHours,
-    courtOrdered: true,
-    lastActive: "2026-07-20T00:00:00Z",
-    joinedAt: "2026-01-15T00:00:00Z",
-    requiredHours: v.requiredHours,
-    completedHours: v.completedHours,
-  })),
-  { id: "u1", name: "Alex Chen", email: "alex.c@email.com", phone: null, sessions: 12, totalHours: 48.5, courtOrdered: false, lastActive: "2026-07-18T00:00:00Z", joinedAt: "2025-11-02T00:00:00Z", requiredHours: null, completedHours: null },
-  { id: "u2", name: "Luna Martinez", email: "luna.m@email.com", phone: null, sessions: 15, totalHours: 60.2, courtOrdered: false, lastActive: "2026-07-21T00:00:00Z", joinedAt: "2025-09-14T00:00:00Z", requiredHours: null, completedHours: null },
-  { id: "u3", name: "Miguel Santos", email: "miguel.s@email.com", phone: null, sessions: 9, totalHours: 34.0, courtOrdered: false, lastActive: "2026-07-10T00:00:00Z", joinedAt: "2026-02-01T00:00:00Z", requiredHours: null, completedHours: null },
-];
+import { formatDate } from "@/lib/mock-data";
 
 const FILTERS: { value: "all" | "court" | "voluntary"; label: string }[] = [
   { value: "all", label: "All" },
@@ -54,7 +35,7 @@ function ProgressBar({ pct }: { pct: number }) {
   );
 }
 
-export function VolunteersPage({ users = DEFAULT_USERS, isMock = false }: { users?: UserRow[]; isMock?: boolean }) {
+export function VolunteersPage({ users = [], isMock = false }: { users?: UserRow[]; isMock?: boolean }) {
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<"all" | "court" | "voluntary">("all");
   const [previewId, setPreviewId] = useState<string | null>(null);

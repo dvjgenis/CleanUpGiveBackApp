@@ -1,8 +1,9 @@
 "use client";
 
 /**
- * App shell sidebar — mirrors admin nav branding (Sanchez heading, IBM Plex
- * data labels), mock notification badges, and left-aligned icon rail.
+ * App shell sidebar — Sanchez heading, IBM Plex data labels, left-aligned icon
+ * rail. Badges/notifications stay empty until live counts are wired — never
+ * fixture session/user numbers or fake volunteer names.
  */
 import React, { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -20,20 +21,8 @@ import {
 } from "@/components/ui/Icons";
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
-import {
-  MOCK_COURT_AT_RISK,
-  MOCK_ORDERS,
-  MOCK_SESSIONS,
-} from "@/lib/mock-data";
 
-const MOCK_BADGES = {
-  sessionsUnderReview: MOCK_SESSIONS.filter((s) => s.status === "under_review").length,
-  courtAtRisk: MOCK_COURT_AT_RISK.filter((v) => v.status === "at_risk").length,
-  openOrders: MOCK_ORDERS.filter((o) => o.status === "pending" || o.status === "paid" || o.status === "shipped")
-    .length,
-};
-
-type MockNotification = {
+type ShellNotification = {
   id: string;
   title: string;
   body: string;
@@ -42,40 +31,8 @@ type MockNotification = {
   href: string;
 };
 
-const MOCK_NOTIFICATIONS: MockNotification[] = [
-  {
-    id: "n1",
-    title: "3 sessions need review",
-    body: "Isaiah Grant, Nadia Flores, and Aaliyah Brooks are waiting.",
-    time: "12m ago",
-    unread: true,
-    href: "/sessions",
-  },
-  {
-    id: "n2",
-    title: "Court hours at risk",
-    body: "4 volunteers are behind on required hours before their due date.",
-    time: "1h ago",
-    unread: true,
-    href: "/users",
-  },
-  {
-    id: "n3",
-    title: "Open shop orders",
-    body: `${MOCK_BADGES.openOrders} orders still need fulfillment.`,
-    time: "Yesterday",
-    unread: false,
-    href: "/orders",
-  },
-  {
-    id: "n4",
-    title: "New feedback flagged",
-    body: "Priya Nair left a low rating on Beach Cleanup.",
-    time: "2d ago",
-    unread: false,
-    href: "/feedback",
-  },
-];
+/** No fixture notifications — avoid fake volunteer names in the chrome. */
+const SHELL_NOTIFICATIONS: ShellNotification[] = [];
 
 export function SidebarDemo({ children }: { children: React.ReactNode }) {
   const links = [
@@ -88,15 +45,11 @@ export function SidebarDemo({ children }: { children: React.ReactNode }) {
       label: "Sessions",
       href: "/sessions",
       icon: <SessionsIcon className="h-4 w-4 flex-shrink-0" />,
-      badge: MOCK_BADGES.sessionsUnderReview,
-      badgeLabel: "under review",
     },
     {
       label: "Users",
       href: "/users",
       icon: <VolunteerIcon className="h-4 w-4 flex-shrink-0" />,
-      badge: MOCK_BADGES.courtAtRisk,
-      badgeLabel: "at risk",
     },
     {
       label: "Insights",
@@ -117,8 +70,6 @@ export function SidebarDemo({ children }: { children: React.ReactNode }) {
       label: "Orders",
       href: "/orders",
       icon: <OrdersIcon className="h-4 w-4 flex-shrink-0" />,
-      badge: MOCK_BADGES.openOrders,
-      badgeLabel: "open orders",
     },
     {
       label: "Payments",
@@ -195,7 +146,7 @@ function NotificationsControl() {
   const panelRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const prefersReduced = useReducedMotion() ?? false;
-  const unread = MOCK_NOTIFICATIONS.filter((n) => n.unread).length;
+  const unread = SHELL_NOTIFICATIONS.filter((n) => n.unread).length;
 
   useLayoutEffect(() => {
     if (!panelOpen || !buttonRef.current) {
@@ -261,33 +212,37 @@ function NotificationsControl() {
               <p className="font-heading text-[16px] text-text-primary">Notifications</p>
               <span className="font-data text-[11px] text-text-tertiary">{unread} unread</span>
             </div>
-            <ul role="list" className="min-h-0 overflow-y-auto divide-y divide-border-outline">
-              {MOCK_NOTIFICATIONS.map((n) => (
-                <li key={n.id}>
-                  <Link
-                    href={n.href}
-                    onClick={() => {
-                      setPanelOpen(false);
-                      setMobileOpen(false);
-                    }}
-                    className="block px-md py-sm hover:bg-bg-surface-elevated transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
-                  >
-                    <div className="flex items-start gap-sm">
-                      {n.unread ? (
-                        <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-primary shrink-0" aria-hidden />
-                      ) : (
-                        <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-transparent shrink-0" aria-hidden />
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <p className="font-body text-[13px] font-medium text-text-primary">{n.title}</p>
-                        <p className="font-body text-[12px] text-text-tertiary mt-0.5 line-clamp-2">{n.body}</p>
-                        <p className="font-data text-[10px] text-text-tertiary mt-1">{n.time}</p>
+            {SHELL_NOTIFICATIONS.length === 0 ? (
+              <p className="px-md py-lg font-body text-[13px] text-text-tertiary">No notifications yet.</p>
+            ) : (
+              <ul role="list" className="min-h-0 overflow-y-auto divide-y divide-border-outline">
+                {SHELL_NOTIFICATIONS.map((n) => (
+                  <li key={n.id}>
+                    <Link
+                      href={n.href}
+                      onClick={() => {
+                        setPanelOpen(false);
+                        setMobileOpen(false);
+                      }}
+                      className="block px-md py-sm hover:bg-bg-surface-elevated transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+                    >
+                      <div className="flex items-start gap-sm">
+                        {n.unread ? (
+                          <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-primary shrink-0" aria-hidden />
+                        ) : (
+                          <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-transparent shrink-0" aria-hidden />
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <p className="font-body text-[13px] font-medium text-text-primary">{n.title}</p>
+                          <p className="font-body text-[12px] text-text-tertiary mt-0.5 line-clamp-2">{n.body}</p>
+                          <p className="font-data text-[10px] text-text-tertiary mt-1">{n.time}</p>
+                        </div>
                       </div>
-                    </div>
-                  </Link>
-                </li>
-              ))}
-            </ul>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
           </motion.div>,
           document.body,
         )

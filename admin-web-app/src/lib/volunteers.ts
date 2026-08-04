@@ -64,7 +64,7 @@ const loadVolunteerDirectoryOnce = cache(async (): Promise<VolunteerDirectory> =
 /**
  * Loads every Supabase Auth user once per request into an id-keyed map.
  * Requires the service-role key — Admin API only. Returns an empty map (not
- * an error) when the key is missing, so pages fall back to mock data.
+ * an error) when the key is missing; callers render empty real lists (no fixtures).
  */
 export async function getVolunteerDirectory(): Promise<VolunteerDirectory> {
   return loadVolunteerDirectoryOnce();

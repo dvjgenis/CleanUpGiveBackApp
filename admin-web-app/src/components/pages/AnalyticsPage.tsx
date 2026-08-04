@@ -5,15 +5,12 @@
  * Layout: Hours & submissions trend → queue age / decisions / court progress →
  * three donuts → US heatmap. `sessions`/`courtProgress` are fetched live from
  * Supabase by `admin-web-app/src/app/insights/page.tsx` and `.../analytics/page.tsx`
- * (see `@/lib/live-data`), falling back to mock fixtures when those tables are
- * empty — same prop-drilling pattern as `SessionsPage`/`DashboardPage`. Chart
- * data isn't re-scoped by the period range yet. Court progress shows View more
- * when there are more than 5 rows.
+ * (see `@/lib/live-data`). Empty sessions / court_orders render empty charts —
+ * no fixture fallback. Chart data isn't re-scoped by the period range yet.
+ * Court progress shows View more when there are more than 5 rows.
  */
 import { Suspense } from "react";
 import {
-  MOCK_SESSIONS,
-  MOCK_COURT_PROGRESS,
   buildQueueAgeBars,
   buildTrendSeries,
   buildDecisionBars,
@@ -38,8 +35,8 @@ import { downloadCsv, openPrintablePdf } from "@/lib/export-download";
 const ACTIVITY_COLORS = ["#007536", "#5a8f3a", "#835400", "#3d8f5c", "#6e7a6c"];
 
 export function AnalyticsPage({
-  sessions = MOCK_SESSIONS,
-  courtProgress = MOCK_COURT_PROGRESS,
+  sessions = [],
+  courtProgress = [],
   isMock = false,
 }: {
   sessions?: MockSession[];

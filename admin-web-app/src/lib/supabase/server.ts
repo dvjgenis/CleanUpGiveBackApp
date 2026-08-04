@@ -49,17 +49,14 @@ export function hasServiceRoleKey(): boolean {
 
 /**
  * Service-role client for Auth Admin API (listUsers / getUserById) and for
- * reading volunteer-owned rows without RLS. Returns null when
- * `SUPABASE_SERVICE_ROLE_KEY` is missing so pages can degrade to mock data
- * instead of crashing.
+ * reading volunteer-owned rows without RLS. Cookie-free on purpose: pairing
+ * `createServerClient(serviceRoleKey, { cookies })` with a logged-in admin
+ * session can scope PostgREST as the user JWT and return zero rows under
+ * volunteer RLS. Returns null when `SUPABASE_SERVICE_ROLE_KEY` is missing so
+ * callers can render empty real lists (sessions/users never inject fixtures).
  */
 export async function tryCreateServiceClient(): Promise<SupabaseClient | null> {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
-  if (!url || !key) return null;
-
-  const cookieStore = await cookies();
-  return createServerClient(url, key, { cookies: cookieHandlers(cookieStore) });
+  return createServiceRoleClient();
 }
 
 export async function createServiceClient(): Promise<SupabaseClient> {
@@ -74,10 +71,10 @@ export async function createServiceClient(): Promise<SupabaseClient> {
 }
 
 /**
- * Data-plane client for reads. Prefers service role so pages can read
- * volunteer-owned rows (sessions / feedback / orders) even without a logged-in
- * admin JWT; falls back to the cookie/anon client, then to mock data upstream
- * when both come back empty.
+ * Data-plane client for reads. Prefers the cookie-free service role so pages
+ * can list every volunteer-owned row (sessions / feedback / orders) even when
+ * Donna is signed in with a normal admin JWT; falls back to the cookie/anon
+ * client when the service-role key is unset.
  */
 export async function createDataClient(): Promise<SupabaseClient> {
   const service = await tryCreateServiceClient();

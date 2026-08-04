@@ -9,6 +9,7 @@
 - Admin UI and copy are written for operator Donna Adams (account chrome, welcome text, “Donna can…” flows).
 - Prefer real icon arrows over text-arrow affordances across the admin website.
 - Tote bag color variants should use earth/ocean labels in data/backend (not green/blue UI labels).
+- Admin sessions/users must stay on real Supabase data (no fixture fallback); service-role reads must be cookie-free so signed-in admin JWTs do not empty RLS-scoped lists.
 
 ## Learned Workspace Facts
 

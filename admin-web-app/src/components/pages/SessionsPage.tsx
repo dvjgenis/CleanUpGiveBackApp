@@ -11,8 +11,8 @@
  * in web-app yet, so feedback is a small inline status line instead).
  *
  * `sessions` is fetched live from the shared Supabase `sessions` table by
- * `admin-web-app/src/app/sessions/page.tsx` (see `@/lib/live-data`), falling back to
- * `MOCK_SESSIONS` when that table has no rows yet.
+ * `admin-web-app/src/app/sessions/page.tsx` (see `@/lib/live-data`). Empty
+ * tables render an empty list — no fixture fallback.
  */
 import { Suspense, useEffect, useState, useTransition } from "react";
 import Link from "next/link";
@@ -25,7 +25,6 @@ import { ExportMenu } from "@/components/ui/ExportMenu";
 import { downloadCsv, openPrintablePdf } from "@/lib/export-download";
 import { approveSession, approveSessionsBulk, declineSession } from "@/actions/sessions";
 import {
-  MOCK_SESSIONS,
   getSessionStatusConfig,
   formatDate,
   formatDuration,
@@ -42,7 +41,7 @@ const STATUS_FILTERS: { value: "all" | SessionStatus; label: string }[] = [
   { value: "not_approved", label: "Declined" },
 ];
 
-export function SessionsPage({ sessions = MOCK_SESSIONS, isMock = false }: { sessions?: MockSession[]; isMock?: boolean }) {
+export function SessionsPage({ sessions = [], isMock = false }: { sessions?: MockSession[]; isMock?: boolean }) {
   return (
     <Suspense
       fallback={
