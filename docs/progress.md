@@ -2,6 +2,16 @@
 
 ---
 
+## [2026-08-04] — Admin web-app auto-deploy via GitHub Action
+
+**R:** Native Vercel Git integration can’t connect a collaborator to a personal-owned repo (`dvjgenis/CleanUpGiveBackApp`). Git push alone never deployed.
+
+**A:** Added `.github/workflows/deploy-admin-web-app.yml` (vercel pull/build/deploy --prod on `main` when `admin-web-app/` changes). Repo secrets `VERCEL_TOKEN` / `VERCEL_ORG_ID` / `VERCEL_PROJECT_ID`. Set project `rootDirectory` to `admin-web-app`. Docs: `accounts-and-access.md`, `admin-web-app.md`.
+
+**P:** Push to `main` under `admin-web-app/` → Actions run → https://cleanupgiveback-web-app.vercel.app updates.
+
+---
+
 ## [2026-08-04] — Revenue share donut size + label
 
 **R:** Center total was cramped in the donut hole; “pp” was unclear.

@@ -1,0 +1,36 @@
+# Auto-deploy admin-web-app to Vercel on pushes to main.
+# GitHub Integration can't connect collaborators on a personal-owned repo,
+# so CI deploys with a Vercel token instead.
+name: Deploy admin-web-app
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "admin-web-app/**"
+      - ".github/workflows/deploy-admin-web-app.yml"
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: admin-web-app
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Pull Vercel Environment
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy to Production
+        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
