@@ -44,7 +44,7 @@ import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { CoachmarkEnter } from '@/components/motion/CoachmarkEnter';
 import { useFadeUpEnter } from '@/components/motion/hooks';
 import { staggerDelay } from '@/motion';
-import { addPhotoCheckpoint, finalizeLiveSession, resetCheckpointCountdown, startNewLiveSession, useLiveSession } from '@/features/session-tracking/liveSessionStore';
+import { addPhotoCheckpoint, finalizeLiveSession, resetCheckpointCountdown, resolveCheckpointCaptureCoords, startNewLiveSession, useLiveSession } from '@/features/session-tracking/liveSessionStore';
 import {
   clearPendingSessionSetup,
   consumePendingSessionSetupForm,
@@ -893,11 +893,21 @@ export function PhotoCaptureScreen() {
     setSubmitError(null);
     try {
       const capturedAt = Date.now();
-      const persisted = await persistCheckpointPhotos({
-        selfieUri,
-        progressUri,
-        capturedAt,
-      });
+      // Persist photos + resolve GPS in parallel so session-start pins get real lat/lng
+      // even before the live tracker has received its first watch sample.
+      const [persisted, captureCoords] = await Promise.all([
+        persistCheckpointPhotos({
+          selfieUri,
+          progressUri,
+          capturedAt,
+        }),
+        resolveCheckpointCaptureCoords(),
+      ]);
+      const withCoords = {
+        ...persisted,
+        latitude: captureCoords.latitude,
+        longitude: captureCoords.longitude,
+      };
 
       if (isSessionStart) {
         const setup = consumePendingSessionSetupForm();
@@ -912,7 +922,7 @@ export function PhotoCaptureScreen() {
             courtOrdered: setup.courtOrdered,
             description: setup.description,
           });
-          addPhotoCheckpoint(persisted);
+          addPhotoCheckpoint(withCoords);
           resetCheckpointCountdown();
           router.replace('/live-session?from=onboarding' as Href);
         } catch {
@@ -926,14 +936,14 @@ export function PhotoCaptureScreen() {
           setSubmitError('No active session. Return to the tracker and try again.');
           return;
         }
-        addPhotoCheckpoint(persisted);
+        addPhotoCheckpoint(withCoords);
         finalizeLiveSession({ status: 'under_review' });
         // Session summary + route replay first; feedback is offered from confirmation.
         router.replace('/submission-confirmation' as Href);
         return;
       }
 
-      addPhotoCheckpoint(persisted);
+      addPhotoCheckpoint(withCoords);
       router.replace('/photo-submitted');
     } catch {
       setSubmitError('Could not save photos. Please try again.');

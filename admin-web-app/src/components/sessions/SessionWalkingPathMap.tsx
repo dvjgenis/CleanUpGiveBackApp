@@ -2,7 +2,7 @@
 
 /**
  * MapLibre walking-path map with mobile-style route replay, Start/End labels,
- * checkpoint photo thumbnails along the trail (time→distance placement), and
+ * square rounded checkpoint photo thumbnails along the trail (tap to enlarge), and
  * a Donna-facing fullscreen mode.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -36,6 +36,8 @@ const FULL_SOURCE_ID = "session-route-full";
 const FULL_LAYER_ID = "session-route-full-line";
 const LIVE_SOURCE_ID = "session-route-live";
 const LIVE_LAYER_ID = "session-route-live-line";
+const PHOTO_SOURCE_ID = "session-photo-pins";
+const PHOTO_LAYER_ID = "session-photo-pins-dots";
 
 const VOYAGER_RASTER_STYLE: maplibregl.StyleSpecification = {
   version: 8,
@@ -137,16 +139,37 @@ function updateTipHeading(el: HTMLDivElement, heading: number | null) {
   }
 }
 
-/** Circular photo thumbnail pin on the trail. */
+function photoPinsFeatureCollection(
+  pins: SessionPhotoPin[],
+): GeoJSON.FeatureCollection<GeoJSON.Point> {
+  return {
+    type: "FeatureCollection",
+    features: pins.map((pin) => ({
+      type: "Feature",
+      properties: { id: pin.id },
+      geometry: {
+        type: "Point",
+        coordinates: pin.coordinate,
+      },
+    })),
+  };
+}
+
+/** Square rounded photo thumbnail pin on the trail (tap opens lightbox). */
 function createPhotoPinElement(
   pin: SessionPhotoPin,
   onOpen: (photos: SessionPhoto[], index: number) => void,
 ): HTMLDivElement {
   const wrap = document.createElement("div");
+  wrap.className = "session-photo-pin";
   wrap.style.display = "flex";
   wrap.style.alignItems = "center";
   wrap.style.gap = "2px";
+  wrap.style.minWidth = "44px";
+  wrap.style.minHeight = "44px";
   wrap.style.cursor = "pointer";
+  wrap.style.pointerEvents = "auto";
+  wrap.style.zIndex = "3";
   wrap.style.filter = "drop-shadow(0 2px 4px rgba(0,0,0,0.4))";
   wrap.setAttribute("role", "button");
   wrap.setAttribute(
@@ -160,29 +183,36 @@ function createPhotoPinElement(
     thumb.type = "button";
     thumb.style.width = "44px";
     thumb.style.height = "44px";
+    thumb.style.flex = "0 0 44px";
     thumb.style.padding = "0";
-    thumb.style.borderRadius = "50%";
+    thumb.style.borderRadius = "12px";
     thumb.style.border = `3px solid ${PRIMARY}`;
     thumb.style.overflow = "hidden";
     thumb.style.background = "#fff";
     thumb.style.cursor = "pointer";
+    thumb.style.pointerEvents = "auto";
     thumb.style.marginLeft = photoIndex > 0 ? "-12px" : "0";
     thumb.style.position = "relative";
     thumb.style.zIndex = String(20 - photoIndex);
     thumb.style.boxShadow = "0 2px 6px rgba(0,0,0,0.35)";
     thumb.setAttribute("aria-label", `Open ${photo.label} photo`);
+    thumb.title = `Open ${photo.label} photo`;
 
     const img = document.createElement("img");
     img.src = photo.url;
     img.alt = photo.label;
-    img.loading = "lazy";
+    img.loading = "eager";
+    img.decoding = "async";
     img.style.width = "100%";
     img.style.height = "100%";
     img.style.objectFit = "cover";
+    img.style.display = "block";
+    img.style.pointerEvents = "none";
     img.draggable = false;
 
     thumb.appendChild(img);
     thumb.addEventListener("click", (e) => {
+      e.preventDefault();
       e.stopPropagation();
       onOpen(pin.photos, photoIndex);
     });
@@ -339,20 +369,62 @@ export function SessionWalkingPathMap({
     photoMarkersRef.current = [];
   }, []);
 
+  const syncPhotoPinLayer = useCallback((map: maplibregl.Map, pins: SessionPhotoPin[]) => {
+    const data = photoPinsFeatureCollection(pins);
+    const existing = map.getSource(PHOTO_SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
+    if (existing) {
+      existing.setData(data);
+      return;
+    }
+    map.addSource(PHOTO_SOURCE_ID, { type: "geojson", data });
+    map.addLayer({
+      id: PHOTO_LAYER_ID,
+      type: "circle",
+      source: PHOTO_SOURCE_ID,
+      paint: {
+        "circle-radius": 10,
+        "circle-color": "#e8f5ec",
+        "circle-stroke-width": 3,
+        "circle-stroke-color": PRIMARY,
+        "circle-opacity": 0.95,
+      },
+    });
+  }, []);
+
   const syncPhotoMarkers = useCallback(() => {
     const map = mapRef.current;
-    if (!map || !map.isStyleLoaded()) return;
+    if (!map) return;
+    if (!map.isStyleLoaded()) {
+      map.once("load", () => {
+        syncPhotoMarkers();
+      });
+      return;
+    }
+
+    const pins = photoPinsRef.current;
+    syncPhotoPinLayer(map, pins);
     clearPhotoMarkers();
-    for (const pin of photoPinsRef.current) {
+
+    for (const pin of pins) {
+      const [lng, lat] = pin.coordinate;
+      if (!Number.isFinite(lng) || !Number.isFinite(lat)) continue;
+
       const el = createPhotoPinElement(pin, (photos, index) => {
         onOpenPhotoRef.current(photos, index);
       });
-      const marker = new maplibregl.Marker({ element: el, anchor: "center" })
-        .setLngLat(pin.coordinate)
+      const marker = new maplibregl.Marker({
+        element: el,
+        anchor: "bottom",
+        offset: [0, -6],
+        pitchAlignment: "viewport",
+        rotationAlignment: "viewport",
+      })
+        .setLngLat([lng, lat])
         .addTo(map);
+      marker.getElement().style.zIndex = "3";
       photoMarkersRef.current.push(marker);
     }
-  }, [clearPhotoMarkers]);
+  }, [clearPhotoMarkers, syncPhotoPinLayer]);
 
   const syncMarkers = useCallback(
     (visible: RouteCoordinate[], progress: number) => {
@@ -502,6 +574,11 @@ export function SessionWalkingPathMap({
           duration: 0,
         });
       }
+
+      // FitBounds can run before marker layout settles — re-sync pins once idle.
+      map.once("idle", () => {
+        syncPhotoMarkers();
+      });
     });
 
     return () => {
@@ -528,6 +605,17 @@ export function SessionWalkingPathMap({
   useEffect(() => {
     syncPhotoMarkers();
   }, [pinsKey, syncPhotoMarkers]);
+
+  // Heal missing HTML markers if a race cleared them while the style was loading.
+  useEffect(() => {
+    if (photoPins.length === 0) return undefined;
+    const id = window.setTimeout(() => {
+      if (photoMarkersRef.current.length !== photoPinsRef.current.length) {
+        syncPhotoMarkers();
+      }
+    }, 250);
+    return () => window.clearTimeout(id);
+  }, [pinsKey, routeKey, fullscreen, photoPins.length, syncPhotoMarkers]);
 
   // Resize after entering/exiting fullscreen so the canvas fills the new box.
   useEffect(() => {

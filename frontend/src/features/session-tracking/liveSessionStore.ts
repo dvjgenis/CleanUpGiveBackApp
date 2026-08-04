@@ -575,20 +575,102 @@ function stopLocationWatching() {
 
 /** One-shot GPS can hang indefinitely on some devices — never await it untimed. */
 const INITIAL_FIX_TIMEOUT_MS = 8000;
+/** Checkpoint submit should not block long on a cold fix — prefer last-known + store. */
+const CHECKPOINT_GPS_TIMEOUT_MS = 5000;
 
-async function getCurrentPositionWithTimeout(): Promise<Location.LocationObject | null> {
+async function getCurrentPositionWithTimeout(
+  timeoutMs: number = INITIAL_FIX_TIMEOUT_MS,
+): Promise<Location.LocationObject | null> {
   try {
     return await Promise.race([
       Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       }),
       new Promise<null>((resolve) => {
-        setTimeout(() => resolve(null), INITIAL_FIX_TIMEOUT_MS);
+        setTimeout(() => resolve(null), timeoutMs);
       }),
     ]);
   } catch {
     return null;
   }
+}
+
+function coordsFromRoutePoint(
+  point: RouteCoordinate | null,
+): { latitude: number; longitude: number } | null {
+  if (!isRouteCoordinate(point)) {
+    return null;
+  }
+  return { longitude: point[0], latitude: point[1] };
+}
+
+function liveStoreCheckpointCoords(): { latitude: number; longitude: number } | null {
+  return (
+    coordsFromRoutePoint(state.displayCoordinate) ??
+    coordsFromRoutePoint(state.currentCoordinate) ??
+    coordsFromRoutePoint(
+      state.routeCoordinates.length > 0
+        ? state.routeCoordinates[state.routeCoordinates.length - 1]
+        : null,
+    )
+  );
+}
+
+/**
+ * Best-effort WGS84 for a photo checkpoint (admin trail pins).
+ * Preference: explicit submission → live tracker → last-known → timed current fix.
+ */
+export async function resolveCheckpointCaptureCoords(explicit?: {
+  latitude?: number | null;
+  longitude?: number | null;
+}): Promise<{ latitude: number | null; longitude: number | null }> {
+  const explicitLat = explicit?.latitude;
+  const explicitLng = explicit?.longitude;
+  if (
+    typeof explicitLat === 'number' &&
+    Number.isFinite(explicitLat) &&
+    typeof explicitLng === 'number' &&
+    Number.isFinite(explicitLng) &&
+    Math.abs(explicitLat) <= 90 &&
+    Math.abs(explicitLng) <= 180
+  ) {
+    return { latitude: explicitLat, longitude: explicitLng };
+  }
+
+  const fromStore = liveStoreCheckpointCoords();
+  if (fromStore) {
+    return fromStore;
+  }
+
+  try {
+    const permission = await Location.getForegroundPermissionsAsync();
+    if (permission.status !== 'granted') {
+      return { latitude: null, longitude: null };
+    }
+
+    const lastKnown = await Location.getLastKnownPositionAsync({
+      maxAge: 5 * 60 * 1000,
+      requiredAccuracy: 100,
+    });
+    if (lastKnown) {
+      const { latitude, longitude } = lastKnown.coords;
+      if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+        return { latitude, longitude };
+      }
+    }
+
+    const current = await getCurrentPositionWithTimeout(CHECKPOINT_GPS_TIMEOUT_MS);
+    if (current) {
+      const { latitude, longitude } = current.coords;
+      if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+        return { latitude, longitude };
+      }
+    }
+  } catch {
+    // Leave null — remote row still stores photos; admin falls back to time-along-route.
+  }
+
+  return { latitude: null, longitude: null };
 }
 
 /** Best-effort seed so the tracker map can mount centered on the user ASAP. */
@@ -732,6 +814,41 @@ function isActiveSessionNotFoundError(error: unknown): boolean {
   return message.includes('404') && message.includes('Active session not found');
 }
 
+async function ensureCheckpointHasCoords(
+  checkpoint: PhotoCheckpointSubmission,
+): Promise<PhotoCheckpointSubmission> {
+  if (
+    typeof checkpoint.latitude === 'number' &&
+    Number.isFinite(checkpoint.latitude) &&
+    typeof checkpoint.longitude === 'number' &&
+    Number.isFinite(checkpoint.longitude)
+  ) {
+    return checkpoint;
+  }
+
+  const coords = await resolveCheckpointCaptureCoords({
+    latitude: checkpoint.latitude,
+    longitude: checkpoint.longitude,
+  });
+  if (coords.latitude == null || coords.longitude == null) {
+    return checkpoint;
+  }
+
+  const withCoords: PhotoCheckpointSubmission = {
+    ...checkpoint,
+    latitude: coords.latitude,
+    longitude: coords.longitude,
+  };
+
+  setState({
+    submittedCheckpoints: state.submittedCheckpoints.map((cp) =>
+      cp.id === checkpoint.id ? withCoords : cp,
+    ),
+  });
+
+  return withCoords;
+}
+
 async function postCheckpointToRemote(
   sessionId: string,
   checkpoint: PhotoCheckpointSubmission,
@@ -766,8 +883,10 @@ async function persistCheckpointToRemote(
     return false;
   }
 
+  const withCoords = await ensureCheckpointHasCoords(checkpoint);
+
   try {
-    await postCheckpointToRemote(sessionId, checkpoint);
+    await postCheckpointToRemote(sessionId, withCoords);
     setSessionSyncWarning(null);
     return true;
   } catch (error) {
@@ -775,7 +894,7 @@ async function persistCheckpointToRemote(
       setState({ remoteSessionId: null });
       sessionId = await ensureRemoteSession();
       if (sessionId) {
-        return persistCheckpointToRemote(checkpoint, true);
+        return persistCheckpointToRemote(withCoords, true);
       }
     }
 
@@ -1011,24 +1130,15 @@ export function addPhotoCheckpoint(submission: {
 
   const nextIndex = state.submittedCheckpoints.length;
   const submittedEarly = state.checkpointSecondsRemaining > 0;
-  const gps =
-    state.displayCoordinate ??
-    state.currentCoordinate ??
-    (state.routeCoordinates.length > 0
-      ? state.routeCoordinates[state.routeCoordinates.length - 1]
-      : null);
+  const fromStore = liveStoreCheckpointCoords();
   const latitude =
     typeof submission.latitude === 'number' && Number.isFinite(submission.latitude)
       ? submission.latitude
-      : gps
-        ? gps[1]
-        : null;
+      : (fromStore?.latitude ?? null);
   const longitude =
     typeof submission.longitude === 'number' && Number.isFinite(submission.longitude)
       ? submission.longitude
-      : gps
-        ? gps[0]
-        : null;
+      : (fromStore?.longitude ?? null);
 
   const checkpoint: PhotoCheckpointSubmission = {
     id: `checkpoint-${nextIndex}-${submission.capturedAt}`,

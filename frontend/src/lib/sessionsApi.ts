@@ -105,6 +105,8 @@ export async function getSession(sessionId: string): Promise<{
     progressPath: string | null;
     capturedAt: string | null;
     submittedEarly: boolean;
+    latitude: number | null;
+    longitude: number | null;
   }>;
 } | null> {
   if (!isApiConfigured) {

@@ -2,6 +2,46 @@
 
 ---
 
+## [2026-08-04] — Fix walking-path photo thumbnails not rendering
+
+**R:** July 21 session legend showed “Photos on trail (4)” and Photos grid had images, but no thumbs on the MapLibre path (Start/End only).
+
+**A:** Hardened `SessionWalkingPathMap` pin sync: retry when style isn’t ready, re-sync on `idle`, heal timeout if HTML marker count drifts, GeoJSON circle fallback layer under thumbs, bottom-anchored square pins with z-index. Redeploying admin-web-app to Vercel.
+
+**P:** Re-open the July 21 session drawer — trail should show green dots + square photo thumbs; tap still opens lightbox.
+
+---
+
+## [2026-08-04] — Harden checkpoint lat/lng for admin trail pins
+
+**R:** July 21 walk checkpoints often had null GPS (session-start before watch fix), so admin Walking Path could not place thumbs on the real capture location.
+
+**A:** Added `resolveCheckpointCaptureCoords` (store → last-known → timed current fix). `PhotoCaptureScreen` submits with those coords (start/in-session/end). `persistCheckpointToRemote` backfills GPS before Fly POST if still null. `getSession` types include lat/lng. Admin already prefers stored GPS via `loadSessionEvidence`. Specs/docs updated.
+
+**P:** New checkpoint rows in Supabase should have non-null `latitude`/`longitude`; admin map pins use them (snapped to polyline).
+
+---
+
+## [2026-08-04] — Seed mid-path photo pins on July 21 walk session
+
+**R:** Long outdoor walk session (`48425f22…`, 788 GPS pts) only had a start checkpoint, so Walking Path thumbs didn’t show along the trail.
+
+**A:** Reused that session’s existing selfie/progress Storage paths; set start CP lat/lng; inserted 3 mid-path checkpoints at ~25/50/75% with GPS + capture times. DB-only (no code change).
+
+**P:** Open that July 21 session in admin → Walking Path should show 4 square photo pin clusters along the route.
+
+---
+
+## [2026-08-04] — Walking path photo pins: square rounded + clickable
+
+**R:** Trail checkpoint thumbs were circular; Donna prefers square with radius, clearly tappable.
+
+**A:** `SessionWalkingPathMap` pin thumbs use `border-radius: 12px` (was `50%`); explicit pointer-events + click → lightbox. Docs: `admin-web-app.md`.
+
+**P:** Open a session drawer with checkpoint photos → square rounded pins on the path; tap opens enlarge.
+
+---
+
 ## [2026-08-04] — List Month = last 30 days; Feedback PeriodToggle
 
 **R:** Sessions Month used calendar August, so a July 23 session disappeared even though it was ~12 days ago. Legacy `30d` was remapped to Month without keeping a rolling window on list pages.

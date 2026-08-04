@@ -133,7 +133,7 @@ Shared UI components in `frontend/src/components/`.
 
 | Component | Path | Role |
 |-----------|------|------|
-| liveSessionStore | `features/session-tracking/liveSessionStore.ts` | Active session: Kalman GPS, compass heading, route samples, sync warnings (banner on live tracker), background task lifecycle, finalize; checkpoint **and** finalize recreate once on Fly `404 Active session not found`; `AppState` → `resumeLiveSessionTrackingAfterForeground` on return to active |
+| liveSessionStore | `features/session-tracking/liveSessionStore.ts` | Active session: Kalman GPS, compass heading, route samples, sync warnings (banner on live tracker), background task lifecycle, finalize; **checkpoint GPS** via `resolveCheckpointCaptureCoords` (explicit → tracker → last-known → timed fix) embedded on Fly `checkpoints.latitude`/`longitude`; checkpoint **and** finalize recreate once on Fly `404 Active session not found`; `AppState` → `resumeLiveSessionTrackingAfterForeground` on return to active |
 | backgroundLocationTask | `features/session-tracking/backgroundLocationTask.ts` | TaskManager task → `ingestBackgroundLocationSample` (active session only) |
 | sessionStatsStore | `features/session-tracking/sessionStatsStore.ts` | Home Service Hours / impact; local snapshots + AsyncStorage persistence + `GET /sessions` hydration |
 | LiveSessionMinimizedPill | `features/session-tracking/components/LiveSessionMinimizedPill.tsx` | Green minimized tracker pill (Figma `622:176`); checkpoint progress fill animates via `useAnimatedProgressFill` |

@@ -169,7 +169,7 @@ Primary UX: **`SessionPreviewDrawer`** (not a separate long-lived `/sessions/[id
 | Panel | Behavior |
 |-------|----------|
 | Session info | Activity, times, duration, distance, court flag |
-| Walking path | MapLibre polyline from `sessions.route`; Play / Pause / Replay; fullscreen; Start/End; checkpoint thumbs on trail |
+| Walking path | MapLibre polyline from `sessions.route`; Play / Pause / Replay; fullscreen; Start/End; square rounded checkpoint thumbs on trail (tap to enlarge) |
 | Photos | Signed `session-photos` grid + lightbox |
 | Admin actions | Approve / Decline, hours adjust, admin notes, letterhead download |
 
