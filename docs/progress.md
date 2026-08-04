@@ -2,6 +2,26 @@
 
 ---
 
+## [2026-08-04] — List Month = last 30 days; Feedback PeriodToggle
+
+**R:** Sessions Month used calendar August, so a July 23 session disappeared even though it was ~12 days ago. Legacy `30d` was remapped to Month without keeping a rolling window on list pages.
+
+**A:** Added `listPeriodInterval` / `filterByListPeriod` / `listPeriodLabel` (Month = rolling last 30 days). Wired on Sessions, Orders, Feedback. Feedback gained PeriodToggle + period-scoped KPIs/list. Home/Insights still use calendar month; Payments still uses 6-mo/6-yr. Docs: `admin-web-app.md`.
+
+**P:** `/sessions?period=month` should show the July 23 session; `/feedback` has the same period bar.
+
+---
+
+## [2026-08-04] — Shop items table fills donut-card height
+
+**R:** Item table next to Revenue share left empty space under the Total row because the card stretched to the taller donut.
+
+**A:** `ShopItemBreakdownSection` table uses flex column + `flex-1` rows so data rows expand evenly to fill the card.
+
+**P:** `/payments` — table rows meet the Total footer with no bottom gap.
+
+---
+
 ## [2026-08-04] — Admin web-app auto-deploy via GitHub Action
 
 **R:** Native Vercel Git integration can’t connect a collaborator to a personal-owned repo (`dvjgenis/CleanUpGiveBackApp`). Git push alone never deployed.

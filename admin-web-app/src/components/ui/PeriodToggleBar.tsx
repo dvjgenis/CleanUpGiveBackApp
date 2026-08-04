@@ -7,6 +7,7 @@
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import {
+  listPeriodLabel,
   parsePeriodSelection,
   periodLabel,
   type PeriodSelection,
@@ -24,6 +25,11 @@ export function usePeriodSelection(): PeriodSelection {
 
 export function usePeriodLabel(now = new Date()): string {
   return periodLabel(usePeriodSelection(), now);
+}
+
+/** Period label for Sessions / Orders / Feedback (Month → “Last 30 days”). */
+export function useListPeriodLabel(now = new Date()): string {
+  return listPeriodLabel(usePeriodSelection(), now);
 }
 
 function PeriodToggleInner() {

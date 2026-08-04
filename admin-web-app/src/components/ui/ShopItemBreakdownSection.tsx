@@ -145,9 +145,9 @@ export function ShopItemBreakdownSection({
           className="h-full"
         />
 
-        <div className="bg-bg-surface border border-border-outline rounded-md overflow-hidden h-full">
+        <div className="bg-bg-surface border border-border-outline rounded-md overflow-hidden h-full flex flex-col">
           <div
-            className={`hidden lg:grid ${ITEM_TABLE_COLS} gap-md px-lg py-sm bg-bg-surface-elevated border-b border-border-outline`}
+            className={`hidden lg:grid ${ITEM_TABLE_COLS} gap-md px-lg py-md bg-bg-surface-elevated border-b border-border-outline shrink-0`}
           >
             {['Item', 'Sold', 'Revenue', 'Share', 'Rank'].map((col) => (
               <span
@@ -165,13 +165,13 @@ export function ShopItemBreakdownSection({
               No shop item sales in this window.
             </p>
           ) : (
-            <ul role="list" className="divide-y divide-border-outline">
+            <ul role="list" className="divide-y divide-border-outline flex-1 flex flex-col min-h-0">
               {tableRows.map((row) => {
                 const isTopShare = row.sharePct === maxSharePct && maxSharePct > 0;
                 return (
                   <li
                     key={row.id}
-                    className={`px-md py-md last:rounded-b-md lg:grid ${ITEM_TABLE_COLS} lg:gap-md lg:items-center lg:px-lg lg:py-sm ${
+                    className={`px-md py-md last:rounded-b-md flex-1 flex flex-col justify-center lg:grid ${ITEM_TABLE_COLS} lg:gap-md lg:items-center lg:px-lg lg:py-md ${
                       isTopShare
                         ? 'bg-primary/5 ring-2 ring-inset ring-primary rounded-t-none z-[1]'
                         : ''
@@ -244,7 +244,7 @@ export function ShopItemBreakdownSection({
           )}
           {hasSales ? (
             <div
-              className={`px-md py-sm bg-bg-surface-elevated border-t border-border-outline lg:grid ${ITEM_TABLE_COLS} lg:gap-md lg:items-center lg:px-lg`}
+              className={`px-md py-md bg-bg-surface-elevated border-t border-border-outline shrink-0 lg:grid ${ITEM_TABLE_COLS} lg:gap-md lg:items-center lg:px-lg`}
             >
               <div className="lg:hidden">
                 <div className={MOBILE_PRIMARY_ROW}>

@@ -126,7 +126,7 @@ export function periodInterval(selection: PeriodSelection, now = new Date()): Da
 
 /**
  * Payments Month/Year use rolling windows (last 6 months / last 6 years),
- * not the calendar month/year used on Dashboard / Orders / Sessions.
+ * not the calendar month/year used on Dashboard / Insights.
  */
 export function paymentsPeriodInterval(selection: PeriodSelection, now = new Date()): DateInterval | null {
   switch (selection.period) {
@@ -149,6 +149,23 @@ export function paymentsPeriodLabel(selection: PeriodSelection, now = new Date()
     default:
       return periodLabel(selection, now);
   }
+}
+
+/**
+ * List ops pages (Sessions / Orders / Feedback) use rolling last-30-days for Month —
+ * the legacy `30d` preset the PeriodToggle replaced — not calendar month.
+ */
+export function listPeriodInterval(selection: PeriodSelection, now = new Date()): DateInterval | null {
+  if (selection.period === "month") {
+    return { start: startOfDay(subDays(now, 30)), end: endOfDay(now) };
+  }
+  return periodInterval(selection, now);
+}
+
+/** Labels for Sessions / Orders / Feedback period copy. */
+export function listPeriodLabel(selection: PeriodSelection, now = new Date()): string {
+  if (selection.period === "month") return "Last 30 days";
+  return periodLabel(selection, now);
 }
 
 /** Previous comparable window for sparklines / deltas. */
@@ -212,6 +229,17 @@ export function filterByPeriod<T extends DateFilterable>(
   now = new Date(),
 ): T[] {
   const interval = periodInterval(selection, now);
+  if (!interval) return records;
+  return records.filter((record) => inInterval(getRecordDate(record), interval));
+}
+
+/** Same as `filterByPeriod`, but Month is rolling last 30 days (Sessions / Orders / Feedback). */
+export function filterByListPeriod<T extends DateFilterable>(
+  records: T[],
+  selection: PeriodSelection,
+  now = new Date(),
+): T[] {
+  const interval = listPeriodInterval(selection, now);
   if (!interval) return records;
   return records.filter((record) => inInterval(getRecordDate(record), interval));
 }

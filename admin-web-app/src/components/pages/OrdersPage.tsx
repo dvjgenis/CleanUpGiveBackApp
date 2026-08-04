@@ -6,7 +6,7 @@
  * `orders` is fetched live from the shared Supabase `shop_orders` table by
  * `admin-web-app/src/app/orders/page.tsx` (see `@/lib/live-data`), falling back to
  * `MOCK_ORDERS` when that table has no rows yet. PeriodToggle scopes the list +
- * KPIs via `filterByPeriod` on `createdAt` (same window as Payments).
+ * KPIs via `filterByListPeriod` on `createdAt` (Month = rolling last 30 days).
  */
 import { Suspense, useState } from "react";
 import Link from "next/link";
@@ -21,11 +21,11 @@ import {
   type OrderStatus,
 } from "@/lib/mock-data";
 import { PeriodToggle } from "@/components/ui/PeriodToggle";
-import { usePeriodLabel, usePeriodSelection } from "@/components/ui/PeriodToggleBar";
+import { useListPeriodLabel, usePeriodSelection } from "@/components/ui/PeriodToggleBar";
 import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
 import { ExportMenu } from "@/components/ui/ExportMenu";
 import { downloadCsv, openPrintablePdf } from "@/lib/export-download";
-import { filterByPeriod } from "@/lib/dashboard-period";
+import { filterByListPeriod } from "@/lib/dashboard-period";
 
 const STATUS_FILTERS: { value: "all" | OrderStatus; label: string }[] = [
   { value: "all", label: "All" },
@@ -53,9 +53,9 @@ function OrdersPageInner({ orders, isMock }: { orders: OrderRow[]; isMock: boole
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<"all" | OrderStatus>("all");
   const selection = usePeriodSelection();
-  const rangeLabel = usePeriodLabel();
+  const rangeLabel = useListPeriodLabel();
 
-  const periodScoped = filterByPeriod(orders, selection);
+  const periodScoped = filterByListPeriod(orders, selection);
   const summary = summarizeOrders(periodScoped);
 
   const needle = q.trim().toLowerCase();

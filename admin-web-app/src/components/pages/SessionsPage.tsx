@@ -13,19 +13,20 @@
  * `sessions` is fetched live from the shared Supabase `sessions` table by
  * `admin-web-app/src/app/sessions/page.tsx` (see `@/lib/live-data`). Empty
  * tables render an empty list — no fixture fallback. PeriodToggle scopes the
- * list via `filterByPeriod` (`ended_at` → `started_at` → `created_at`).
+ * list via `filterByListPeriod` (`ended_at` → `started_at` → `created_at`;
+ * Month = rolling last 30 days).
  */
 import { Suspense, useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { CourtBadge } from "@/components/ui/CourtBadge";
 import { PeriodToggle } from "@/components/ui/PeriodToggle";
-import { usePeriodLabel, usePeriodSelection } from "@/components/ui/PeriodToggleBar";
+import { useListPeriodLabel, usePeriodSelection } from "@/components/ui/PeriodToggleBar";
 import { SessionPreviewDrawer } from "@/components/ui/SessionPreviewDrawer";
 import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
 import { ExportMenu } from "@/components/ui/ExportMenu";
 import { downloadCsv, openPrintablePdf } from "@/lib/export-download";
 import { approveSession, approveSessionsBulk, declineSession } from "@/actions/sessions";
-import { filterByPeriod } from "@/lib/dashboard-period";
+import { filterByListPeriod } from "@/lib/dashboard-period";
 import {
   getSessionStatusConfig,
   formatDate,
@@ -70,7 +71,7 @@ function SessionsPageInner({ sessions, isMock }: { sessions: MockSession[]; isMo
   const [isPending, startTransition] = useTransition();
   const [isBulkPending, startBulkTransition] = useTransition();
   const selection = usePeriodSelection();
-  const rangeLabel = usePeriodLabel();
+  const rangeLabel = useListPeriodLabel();
 
   useEffect(() => {
     setLocalSessions(sessions);
@@ -172,7 +173,7 @@ function SessionsPageInner({ sessions, isMock }: { sessions: MockSession[]; isMo
   }
 
   const needle = q.trim().toLowerCase();
-  const periodScoped = filterByPeriod(localSessions, selection);
+  const periodScoped = filterByListPeriod(localSessions, selection);
   const filtered = periodScoped.filter((session) => {
     if (status !== "all" && session.status !== status) return false;
     if (courtOnly && !session.court_ordered) return false;
