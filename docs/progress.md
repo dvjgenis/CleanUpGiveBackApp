@@ -2,6 +2,26 @@
 
 ---
 
+## [2026-08-04] — Trash Cleanup Kit carousel image order
+
+**R:** Product view showed flatlay before hero; Donna wanted those swapped.
+
+**A:** In `productDetail.ts` cleanup-kit `images`/`thumbnails`, swapped `kitHero` ahead of `kitHeroFlatlay`.
+
+**P:** First slide is group hero; second is flatlay.
+
+---
+
+## [2026-08-04] — Shipping integration research brief (Donna)
+
+**R:** Need a compact ops/eng brief on live shipping, tracking IDs, email, and admin visibility before next-week implementation planning.
+
+**A:** Wrote [research/shipping-integration-2026-08.md](research/shipping-integration-2026-08.md) — Phase 1 manual Pirate Ship + Resend + existing `shop_orders` fulfillment; Phase 2 Shippo. Indexed in README + current.md. No code/vendor signup.
+
+**P:** Share brief with Donna; confirm ship-from / printer / carrier questions before Phase 1 build.
+
+---
+
 ## [2026-08-04] — No fake live path while standing still (Expo Go)
 
 **R:** Live walkthrough drew a straight seed→pin segment when the volunteer did not move. Expo Go WebView invented a 2-point LineString whenever the marker drifted ≥0.15 m from a single seed; `appendLiveTipToDisplayRoute` did the same on the React side.

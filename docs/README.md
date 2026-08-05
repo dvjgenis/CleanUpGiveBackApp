@@ -13,6 +13,7 @@ Living docs for the Clean Up - Give Back monorepo. Templates are copy-only.
 | [accounts-and-access.md](accounts-and-access.md) | Org accounts (no secrets in repo) |
 | [supabase.md](supabase.md) | Supabase + Fly setup for sessions (schema, env vars) |
 | [reports/](reports/) | Session / decision reports (e.g. dual-cam App Store stance) |
+| [research/shipping-integration-2026-08.md](research/shipping-integration-2026-08.md) | Shipping/tracking research brief for Donna (Phase 1 Pirate Ship + Resend → Phase 2 Shippo) |
 | [admin-web-app.md](admin-web-app.md) | Production admin console (`admin-web-app/` on Vercel) |
 | [admin/admin-portal-prd-v3.md](admin/admin-portal-prd-v3.md) | **Current** admin web app PRD (shipped + near-term roadmap) |
 | [admin/admin-portal-prd.md](admin/admin-portal-prd.md) | Historical v2 PRD (pre–`admin-web-app`; app `admin/` archived) |

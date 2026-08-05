@@ -52,6 +52,7 @@ What runs in the repo today.
 
 - Supabase dashboard: enable Anonymous auth + run `sql/supabase-init.sql` storage policies if bucket missing (verify if not done)
 - Production auth (email OTP), **Stripe** (shop/donate/tracker checkout — UI mock only; `backend/payments/` empty), Vercel Resend env for production admin mail
+- **Shop shipping/tracking UX** — admin can already paste carrier + tracking on `shop_orders`; volunteer shipped email + live Order History track link + label purchase API **not built**. Research brief for Donna: [research/shipping-integration-2026-08.md](research/shipping-integration-2026-08.md) (Phase 1 Pirate Ship + Resend → Phase 2 Shippo)
 - Detach unused Fly Managed Postgres cluster (`cleanup-sessions-db`) if provisioned during `fly launch` — app uses Supabase Postgres
 
 ## How to run
