@@ -277,3 +277,29 @@ Canonical detailed log: [`docs/progress.md`](docs/progress.md).
 - `Pressable` `flexDirection: 'row'` style does not apply to children reliably in RN — confirmed pattern: inner `View` with `flexDirection: 'row'` inside every Pressable that needs row layout.
 - Compass "facing direction" design: red tick rotates by `+heading` (clockwise with heading) so the top of the ring always shows the direction the phone is pointing. Static background ticks serve as cardinal/intercardinal reference marks.
 - `bearingToLabel`: `Math.round(deg/45) % 8` maps continuous heading to 8-point cardinal label.
+
+---
+
+## [2026-08-04] — Fix stationary-session route line; diagnose Sessions tab / backend outage
+
+**Session goal:** Stop the live/replay map from drawing a walking path when the user hasn't moved, then diagnose why a locally-logged session wasn't appearing in the Sessions tab.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Raise GPS movement gate so stationary jitter isn't recorded as a route point | `frontend/src/features/session-tracking/utils/routeFiltering.ts` | ✅ `getMinMovementMeters` floor raised (1m→2m, 0.25×→0.4× accuracy); updated `routeFiltering.test.ts` expectations |
+| Diagnose "no sessions logged yet" on Expo Go | (investigation only) | ✅ Traced to `cleanup-sessions` Fly backend outage (stale `DATABASE_URL`, see [[fly-cleanup-sessions-outage]] memory) — finalize sync fails, session stays `active`, `SessionsScreen.tsx` filters those out with no local fallback |
+| Push accumulated uncommitted work to `origin/main` | 23 files (admin-web-app realtime refresh, finalize retry/sync-warning banner, route fix) | ✅ Commit `1b824b3` |
+| Security review flagged admin RLS policy privilege escalation | `admin/db/008_admin_sessions_realtime_read.sql` | ⚠️ Deferred — user chose "hold off, don't change auth yet"; needs `app_metadata` migration + teammate coordination before fixing |
+
+### Key Decisions
+
+- Movement-gate fix targets the gate threshold only (not `isStationary`'s speed logic), since raising the speed floor would reject genuine slow "cleanup" walking pace — the app's real use case.
+- Admin-role privilege escalation (client-writable `user_metadata.role` used for admin checks app-wide, not just the new RLS policy) is a known, deliberately deferred issue — see `admin-role-privilege-escalation` memory. Do not fix without re-confirming with the user.
+
+### Learnings
+
+- GPS jitter while stationary commonly exceeds a `accuracy × 0.25` movement floor at good reported accuracy (4-8m), which is what let a single noisy fix register as a "walked" route point — fixed by raising the floor, not the speed threshold (`MIN_SPEED_TO_RECORD_MPS` stays low to still catch slow real walking).
+- `SessionsScreen.tsx` has no offline/local fallback — any failed `finalizeSession` sync makes a session permanently invisible in that tab even though local state believes it completed. The finalize-retry + sync-warning banner (already in progress before this session) is the mitigation, but the underlying Fly/Postgres outage is infra, not app-fixable from this machine.
+- Before assuming a session-sync bug is client-side, verify the Fly backend can actually write to Postgres first — see [[fly-cleanup-sessions-outage]].
