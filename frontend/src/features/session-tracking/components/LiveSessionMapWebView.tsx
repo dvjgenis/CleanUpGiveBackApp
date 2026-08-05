@@ -12,7 +12,7 @@ import { MapInteractionContainer } from './MapInteractionContainer';
 
 const PRIMARY = colors.primary;
 /** Bump when inline MapLibre JS changes so Expo Go remounts the WebView HTML. */
-const LIVE_MAP_HTML_REVISION = 4;
+const LIVE_MAP_HTML_REVISION = 5;
 /** Start-pin color unused on the live tracker (no start marker — matches native).
  * Still required by `buildWebViewMapHelpers` for shared preview helpers. */
 const MAP_HELPERS = buildWebViewMapHelpers(PRIMARY, colors.textTertiary);
@@ -115,15 +115,9 @@ function buildHtml(initialCenter: [number, number] | null, theme: MapBasemapThem
     // this guard to avoid touching the map before it's ready at all.
     if (!forceApply && !map.isStyleLoaded()) return;
 
-    let displayCoords = pendingCoords || [];
-    if (
-      displayCoords.length === 1 &&
-      pendingCurrent &&
-      pendingCurrent.length === 2 &&
-      deltaMetersBetween(displayCoords[0], pendingCurrent) >= 0.15
-    ) {
-      displayCoords = [displayCoords[0], pendingCurrent];
-    }
+    // Never synthesize seed→pin segments. A line draws only for ≥2 real route
+    // points (tip extension happens in React before inject). Marker alone when idle.
+    const displayCoords = pendingCoords || [];
     const data = { type: 'Feature', geometry: { type: 'LineString', coordinates: displayCoords } };
     if (displayCoords.length >= 2) {
       try {
@@ -151,7 +145,11 @@ function buildHtml(initialCenter: [number, number] | null, theme: MapBasemapThem
         // Style races can throw; the next GPS tick retries.
       }
     } else if (map.getSource('route')) {
-      map.getSource('route').setData(data);
+      // Clear any prior line (e.g. after warmup seed only / GPS jitter).
+      map.getSource('route').setData({
+        type: 'Feature',
+        geometry: { type: 'LineString', coordinates: [] },
+      });
     }
 
     syncMarkers(pendingCurrent, pendingHeading);

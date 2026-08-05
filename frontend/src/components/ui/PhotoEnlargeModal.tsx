@@ -15,9 +15,9 @@ import {
 import { StatusBar } from 'expo-status-bar';
 
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
+import { ChevronLeftIcon } from '@/features/session-tracking/components/icons/ChevronLeftIcon';
+import { ChevronRightIcon } from '@/features/session-tracking/components/icons/ChevronRightIcon';
 import { CloseIcon } from '@/features/session-tracking/components/icons/CloseIcon';
-
-const CHEVRON_RIGHT = require('@/assets/figma/account/chevron-right.svg');
 
 const C = {
   overlay: '#000000',
@@ -132,12 +132,7 @@ export function PhotoEnlargeModal({
                 accessibilityRole="button"
                 accessibilityLabel="Previous photo"
               >
-                <ExpoImage
-                  source={CHEVRON_RIGHT}
-                  style={[s.chevron, s.chevronLeft]}
-                  contentFit="contain"
-                  accessibilityIgnoresInvertColors
-                />
+                <ChevronLeftIcon color={C.textOnDark} size={28} strokeWidth={2.25} />
               </AnimatedPressable>
 
               <AnimatedPressable
@@ -147,12 +142,7 @@ export function PhotoEnlargeModal({
                 accessibilityRole="button"
                 accessibilityLabel="Next photo"
               >
-                <ExpoImage
-                  source={CHEVRON_RIGHT}
-                  style={s.chevron}
-                  contentFit="contain"
-                  accessibilityIgnoresInvertColors
-                />
+                <ChevronRightIcon color={C.textOnDark} size={28} strokeWidth={2.25} />
               </AnimatedPressable>
             </View>
 
@@ -246,16 +236,6 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 12,
     flex: 1,
-  },
-
-  chevron: {
-    width: 28,
-    height: 28,
-    tintColor: C.textOnDark,
-  },
-
-  chevronLeft: {
-    transform: [{ scaleX: -1 }],
   },
 
   bottomStack: {

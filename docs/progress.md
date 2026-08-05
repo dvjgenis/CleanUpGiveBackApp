@@ -2,6 +2,56 @@
 
 ---
 
+## [2026-08-04] — No fake live path while standing still (Expo Go)
+
+**R:** Live walkthrough drew a straight seed→pin segment when the volunteer did not move. Expo Go WebView invented a 2-point LineString whenever the marker drifted ≥0.15 m from a single seed; `appendLiveTipToDisplayRoute` did the same on the React side.
+
+**A:** Tip append only when the committed polyline already has ≥2 points. Removed WebView seed→current synthesis; clear route GeoJSON when length &lt; 2. Bumped `LIVE_MAP_HTML_REVISION` to 5. Tests + `components.md`.
+
+**P:** Stationary live session shows marker only; path appears after real walk appends.
+
+---
+
+## [2026-08-04] — Event detail icons blank + Register weight
+
+**R:** Event detail social / what-to-bring / calendar glyphs were blank (`expo-image` + raw `.svg` requires don’t paint on native — same as shop). Register CTA used Regular instead of SemiBold.
+
+**A:** Ported `EventIcons` to inline `react-native-svg` from `assets/figma/event-detail/*.svg`. Set `RegisterButton` label to `notoSansSemiBold`. Docs: `components.md`, `current.md`.
+
+**P:** Event detail shows organizer socials, bring icons, calendar glyph, and SemiBold Register.
+
+---
+
+## [2026-08-04] — Session Details top bar back chevron invisible
+
+**R:** Opening a logged session from Home/Sessions showed “Session Details” with no visible back control (`router.back` was wired; Figma `back.svg` via `expo-image` did not render).
+
+**A:** Matched Event Detail: `SessionSetupBackChevronIcon` + title overlay layout in `SessionDetailScreen` top bar. Docs: `components.md`.
+
+**P:** Logged session detail shows a tappable left chevron that uses navigation history.
+
+---
+
+## [2026-08-04] — Session detail enlarge chevrons invisible
+
+**R:** Tapping a completed-session photo opened the enlarge modal without visible prev/next arrows.
+
+**A:** `PhotoEnlargeModal` was rendering Figma `chevron-right.svg` (`fill="#1C1B1B"`) via `expo-image` + `tintColor` white — tint doesn’t recolor that SVG, so glyphs stayed near-black on the dark scrim. Switched to white `ChevronLeftIcon` / `ChevronRightIcon` (same pattern as close). Docs: `components.md`.
+
+**P:** With 2+ photos, enlarge shows white side chevrons; first/last still hide the inactive side (`opacity: 0`).
+
+---
+
+## [2026-08-04] — Wire Account Sign out → login
+
+**R:** Profile Sign out button did nothing (unwired); PRD marked logout Near-term.
+
+**A:** `ProfilePage` calls `supabase.auth.signOut()` then `router.push('/login')` + refresh; disabled/Signing out… state. Docs: `admin-web-app.md`, PRD v3. Deployed production via Vercel CLI.
+
+**P:** With `BYPASS_AUTH=false`, Account → Sign out lands on `/login` and admin routes stay gated until re-login.
+
+---
+
 ## [2026-08-04] — Fix walking-path photo thumbnails not rendering
 
 **R:** July 21 session legend showed “Photos on trail (4)” and Photos grid had images, but no thumbs on the MapLibre path (Start/End only).
@@ -6959,3 +7009,44 @@ useEffect(() => {
 - `admin/` is a completely separate Next.js app at port 3001 — run from `admin/` directory, not repo root
 - `npx tsc --noEmit` run from repo root silently exits 0 (wrong dir); must be run from `admin/` to catch errors
 - Volunteer detail route uses `params: Promise<{ id: string }>` — Next.js 15 App Router passes params as Promise, must be awaited
+
+---
+
+## [2026-08-04] — Fix silent session-sync failures + instant admin realtime, diagnose Fly DB outage
+
+**Session goal:** Diagnose why a mobile-logged session wasn't appearing in admin-web-app, fix it, and make future sessions appear on the web admin instantly.
+**Workflow used:** Chat (systematic-debugging skill for root-cause investigation)
+
+### Skills Invoked
+
+| Skill | Purpose | Outcome |
+|---|---|---|
+| `systematic-debugging` | Root-cause the missing-session report before proposing fixes | Traced to a fire-and-forget finalize call in `liveSessionStore.ts` — confirmed via code read, not guessed |
+| `vercel:deploy` | Ship the realtime admin fix to production | `admin-web-app` deployed to `cleanupgiveback-web-app.vercel.app`, build clean |
+| `wrap` | End-of-session hygiene | This block |
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Await + retry session finalize | `frontend/src/features/session-tracking/liveSessionStore.ts` | ✅ `finalizeLiveSession()` now async/awaited; `persistFinalizeToRemote()` retries twice with backoff before giving up (was fire-and-forget, silently swallowed) |
+| Surface sync failure to user | `frontend/src/screens/SubmissionConfirmationScreen.tsx`, `PhotoCaptureScreen.tsx` | ✅ New "Retry Sync" banner (`getLastFinalizeSyncFailed`/`retryFinalizeSync`) replaces the old blanket "submitted for approval" message when finalize fails |
+| Instant admin session visibility | `admin-web-app/src/lib/useSessionsRealtimeRefresh.ts` (new), `SessionsPage.tsx`, `DashboardPage.tsx` | ✅ Client-side Supabase Realtime subscription (`postgres_changes` on `sessions`, debounced 400ms) triggers `router.refresh()` — mobile-logged sessions now appear without manual reload |
+| Admin RLS + Realtime publication migration | `admin/db/008_admin_sessions_realtime_read.sql` (new) | ✅ Adds `admin_read_all_sessions` SELECT policy (`user_metadata.role = 'admin'`) + adds `sessions` to `supabase_realtime` publication; run by Superman in Supabase SQL editor, confirmed via Publications UI showing "1 table" |
+| Verify admin JWT shape matches new policy | — (dashboard SQL check) | ✅ `select ... from auth.users where raw_user_meta_data->>'role' = 'admin'` returned Donna's account — policy claim path confirmed correct |
+| Deploy admin-web-app to production | Vercel | ✅ `vercel --prod` — READY, all routes built including `/sessions`, `/dashboard` |
+
+### Key Decisions
+
+- Chose Supabase Realtime over polling for admin instant-update, after presenting the tradeoff to Superman (Realtime = true push but needs a new RLS policy since browser subscriptions run under the admin's own JWT, not the service-role key server reads use; polling = simpler but not truly instant) — Superman picked Realtime
+- Realtime subscription lives in the two page-level client components (`SessionsPage`, `DashboardPage`) rather than a shared layout wrapper, since those are the only surfaces currently reading live `sessions` rows
+- Debounced the refresh 400ms so a burst of checkpoint + finalize writes for one session collapses into a single `router.refresh()` instead of one per row change
+
+### Learnings
+
+- **Root cause of the original missing session:** `finalizeLiveSession()` called `void persistFinalizeToRemote(...)` (fire-and-forget) then immediately tore down module state via `endLiveSession()`, which also wiped `state.sessionSyncWarning` — so even the one warning mechanism that existed was self-erased before any screen could show it. The confirmation screen read only the local snapshot and unconditionally claimed success.
+- **Deeper root cause, found only after fixing the above:** the `cleanup-sessions` Fly backend's `DATABASE_URL` had a stale Postgres password — reproduced directly with `curl` (anonymous Supabase signup → real JWT → `POST /sessions` → 500 `Authentication failed against database server`). The client-side retry/banner fix was necessary but not sufficient; without this, every session write fails regardless of client reliability.
+- **Fly org access ≠ app access:** a personal-account Fly app (not inside a shared org) can't be shared via "add as collaborator" — the teammate needs to either run secret changes themselves or `flyctl apps move cleanup-sessions -o <shared-org>` to transfer it into an org Superman actually has membership in. Confirmed by checking the shared org's dashboard and finding 0 apps there after being "added."
+- Supabase database passwords are write-only after project creation — no "reveal" option, only reset via Database settings; the "existing connections will break" warning on reset only matters for consumers still holding the old value (here, only the Fly `DATABASE_URL` secret — REST/Auth API consumers using anon/service_role keys are unaffected).
+- Docs' recommended **session pooler** host (`aws-1-us-east-1.pooler.supabase.com:5432`) differs from the **direct** host (`db.<ref>.supabase.co:5432`) — a secret update that still errors mentioning the direct host is a strong signal the wrong string got pasted in, not that the password is still wrong.
+- **Still open at end of session:** after the teammate's first `DATABASE_URL` update, `curl` reproduction still failed, still citing the direct host — teammate needs to re-run `flyctl secrets set` with the pooler host and confirm via `flyctl secrets list`/`flyctl releases` before this is verified fixed. Mobile session logging remains broken until that lands.

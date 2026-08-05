@@ -18,6 +18,7 @@
  */
 import { Suspense, useEffect, useState, useTransition } from "react";
 import Link from "next/link";
+import { useSessionsRealtimeRefresh } from "@/lib/useSessionsRealtimeRefresh";
 import { CourtBadge } from "@/components/ui/CourtBadge";
 import { PeriodToggle } from "@/components/ui/PeriodToggle";
 import { useListPeriodLabel, usePeriodSelection } from "@/components/ui/PeriodToggleBar";
@@ -59,6 +60,7 @@ export function SessionsPage({ sessions = [], isMock = false }: { sessions?: Moc
 }
 
 function SessionsPageInner({ sessions, isMock }: { sessions: MockSession[]; isMock: boolean }) {
+  useSessionsRealtimeRefresh();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<"all" | SessionStatus>("all");
   const [courtOnly, setCourtOnly] = useState(false);

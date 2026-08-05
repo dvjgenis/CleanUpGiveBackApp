@@ -33,7 +33,11 @@ import {
   SessionPhotosSection,
   type SessionPhotosSectionItem,
 } from '@/features/session-tracking/components/SessionPhotosSection';
-import { getCompletedSessionSnapshot } from '@/features/session-tracking/liveSessionStore';
+import {
+  getCompletedSessionSnapshot,
+  getLastFinalizeSyncFailed,
+  retryFinalizeSync,
+} from '@/features/session-tracking/liveSessionStore';
 import { resolveCompletedSessionId } from '@/features/session-tracking/utils/resolveCompletedSessionId';
 import {
   formatPhotoTimeLabel,
@@ -130,13 +134,23 @@ export function SubmissionConfirmationScreen() {
   const timelineStyle = useFadeUpEnter(staggerDelay(3));
   const footerStyle = useFadeUpEnter(staggerDelay(4));
   const [session, setSession] = useState(() => getCompletedSessionSnapshot());
+  const [syncFailed, setSyncFailed] = useState(() => getLastFinalizeSyncFailed());
+  const [isRetryingSync, setIsRetryingSync] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
 
   useFocusEffect(
     useCallback(() => {
       setSession(getCompletedSessionSnapshot());
+      setSyncFailed(getLastFinalizeSyncFailed());
     }, []),
   );
+
+  const handleRetrySync = useCallback(async () => {
+    setIsRetryingSync(true);
+    const synced = await retryFinalizeSync();
+    setSyncFailed(!synced);
+    setIsRetryingSync(false);
+  }, []);
 
   const sessionId = session ? resolveCompletedSessionId(session) : undefined;
 
@@ -303,13 +317,34 @@ export function SubmissionConfirmationScreen() {
 
       <Animated.View style={[s.footer, { paddingBottom: 12 + insets.bottom }, footerStyle]}>
         <View style={s.footerContent}>
-          <View style={s.footerMessageBlock}>
-            <ApprovalIcon />
-            <Text style={s.footerMessage}>
-              Your session has been submitted{'\n'}for manual approval. You will be notified
-              in-app and email once approved.
-            </Text>
-          </View>
+          {syncFailed ? (
+            <View style={s.syncWarningBlock}>
+              <Text style={s.syncWarningText} accessibilityRole="alert">
+                Could not sync this session to the server yet. It&apos;s saved on your device
+                — tap retry before closing the app.
+              </Text>
+              <AnimatedPressable
+                style={s.syncRetryBtn}
+                scaleTo={0.98}
+                onPress={handleRetrySync}
+                disabled={isRetryingSync}
+                accessibilityRole="button"
+                accessibilityLabel="Retry syncing session"
+              >
+                <Text style={s.syncRetryBtnText}>
+                  {isRetryingSync ? 'Retrying…' : 'Retry Sync'}
+                </Text>
+              </AnimatedPressable>
+            </View>
+          ) : (
+            <View style={s.footerMessageBlock}>
+              <ApprovalIcon />
+              <Text style={s.footerMessage}>
+                Your session has been submitted{'\n'}for manual approval. You will be notified
+                in-app and email once approved.
+              </Text>
+            </View>
+          )}
 
           <View style={s.goHomeBtnWrap}>
             <AnimatedPressable
@@ -617,6 +652,36 @@ const s = StyleSheet.create({
     lineHeight: 20,
     color: C.textPrimary,
     textAlign: 'center',
+  },
+
+  syncWarningBlock: {
+    alignItems: 'center',
+    gap: 10,
+    maxWidth: 310,
+  },
+
+  syncWarningText: {
+    fontFamily: 'NotoSans_600SemiBold',
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#ffb4ab',
+    textAlign: 'center',
+  },
+
+  syncRetryBtn: {
+    minHeight: 40,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#ffb4ab',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+
+  syncRetryBtnText: {
+    fontFamily: 'NotoSans_600SemiBold',
+    fontSize: 14,
+    color: '#ffb4ab',
   },
 
   goHomeBtnWrap: {

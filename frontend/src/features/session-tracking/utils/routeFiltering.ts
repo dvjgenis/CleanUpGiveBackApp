@@ -2,7 +2,6 @@ import {
   haversineMiles,
   isRouteCoordinate,
   milesToMeters,
-  MIN_ROUTE_SAMPLE_METERS,
   type RouteCoordinate,
 } from './geo';
 import { DEFAULT_ACCURACY_METERS } from './locationKalman';
@@ -77,10 +76,20 @@ export function isPlausibleMovement(
   return speedMps <= maxSpeed;
 }
 
+/**
+ * Floor for the movement gate below (meters). A single stationary GPS fix
+ * commonly jitters 1-2m even at good reported accuracy (multipath, urban
+ * canyon); the previous 1m floor let that jitter register as a "walked"
+ * route point on a completely still session. 2m keeps a still session's
+ * route pinned to the seed point while still catching normal walking pace
+ * within a step or two.
+ */
+const STATIONARY_JITTER_FLOOR_METERS = 2;
+
 /** Movement must exceed GPS error radius before appending a route point. */
 export function getMinMovementMeters(accuracyMeters: number): number {
   const safeAccuracy = resolveAccuracyMeters(accuracyMeters);
-  return Math.max(MIN_ROUTE_SAMPLE_METERS, safeAccuracy * 0.25);
+  return Math.max(STATIONARY_JITTER_FLOOR_METERS, safeAccuracy * 0.4);
 }
 
 export function detectMotionState(
@@ -596,7 +605,11 @@ export function simplifyRouteForLiveDisplay(coordinates: RouteCoordinate[]): Rou
   return [...simplifiedHead, ...tail];
 }
 
-/** Extends the display polyline to the EMA-smoothed tip between GPS appends. */
+/**
+ * Extends an existing display polyline to the EMA-smoothed tip between GPS
+ * appends. Does not invent a line from a single seed/pin — standing still
+ * (or pre-walk GPS jitter) must keep the map as a marker only.
+ */
 export function appendLiveTipToDisplayRoute(
   displayRoute: RouteCoordinate[],
   tip: RouteCoordinate | null,
@@ -605,8 +618,10 @@ export function appendLiveTipToDisplayRoute(
     return displayRoute;
   }
 
-  if (displayRoute.length === 0) {
-    return [tip];
+  // Need a real polyline (≥2 committed points) before extending to the tip.
+  // A single seed + jittered pin would otherwise draw a fake straight segment.
+  if (displayRoute.length < 2) {
+    return displayRoute;
   }
 
   const last = displayRoute[displayRoute.length - 1];

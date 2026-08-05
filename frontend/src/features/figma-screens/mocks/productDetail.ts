@@ -75,14 +75,14 @@ export const PRODUCT_DETAILS: Record<ProductId, ProductDetail> = {
     description:
       'Our comprehensive starter kit includes a professional-grade trash grabber, high-visibility adult safety vest, and 10 pairs of premium nitrile gloves. Everything you need to start your first cleanup session with confidence.',
     images: [
-      assets.kitHeroFlatlay,
       assets.kitHero,
+      assets.kitHeroFlatlay,
       assets.adultVestShop,
       assets.trashGrabberThumb,
     ],
     thumbnails: [
-      assets.kitHeroFlatlay,
       assets.kitHero,
+      assets.kitHeroFlatlay,
       assets.adultVestShop,
       assets.trashGrabberThumb,
     ],

@@ -14,6 +14,7 @@ import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
+import { SessionSetupBackChevronIcon } from '@/components/session-setup/icons/SessionSetupBackChevronIcon';
 import { StatusPill } from '@/features/session-tracking/components/StatusPill';
 import { SessionRouteMapPanel } from '@/features/session-tracking/components/SessionRouteMapPanel';
 import { SessionNotesField } from '@/features/session-tracking/components/SessionNotesField';
@@ -29,7 +30,6 @@ import { isApiConfigured } from '@/lib/api';
 import { downloadServiceLetterPdf } from '@/lib/downloadServiceLetterPdf';
 
 import {
-  SessionDetailBackIcon,
   SessionDetailHoursIcon,
   SessionDetailMilesIcon,
   SessionDetailPhotosIcon,
@@ -58,22 +58,24 @@ function SessionDetailTopBar({
       <View style={s.topBarRow}>
         <AnimatedPressable
           scaleTo={0.98}
-          style={s.topBarSideLeft}
+          style={s.topBarIconBtn}
           onPress={onBack}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           accessibilityRole="button"
           accessibilityLabel="Go back"
         >
-          <SessionDetailBackIcon />
+          <SessionSetupBackChevronIcon color={colors.textPrimary} />
         </AnimatedPressable>
 
-        <Text style={s.topBarTitle} numberOfLines={1}>
-          Session Details
-        </Text>
+        <View style={s.topBarTitleOverlay} pointerEvents="none">
+          <Text style={s.topBarTitle} numberOfLines={1}>
+            Session Details
+          </Text>
+        </View>
 
         <AnimatedPressable
           scaleTo={0.98}
-          style={s.topBarSideRight}
+          style={s.topBarIconBtn}
           onPress={onShare}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           accessibilityRole="button"
@@ -364,25 +366,25 @@ const s = StyleSheet.create({
     zIndex: 11,
   },
   topBarRow: {
-    height: layout.topBarTitleRow,
+    minHeight: layout.topBarTitleRow,
     paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  topBarSideLeft: {
-    width: 44,
-    height: layout.topBarTitleRow,
-    alignItems: 'flex-start',
+  topBarIconBtn: {
+    width: 24,
+    height: 44,
     justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
   },
-  topBarSideRight: {
-    width: 44,
-    height: layout.topBarTitleRow,
-    alignItems: 'flex-end',
+  topBarTitleOverlay: {
+    ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
+    alignItems: 'center',
   },
   topBarTitle: {
-    flex: 1,
     fontFamily: fontFamilies.sanchezRegular,
     fontSize: 18,
     lineHeight: 23,

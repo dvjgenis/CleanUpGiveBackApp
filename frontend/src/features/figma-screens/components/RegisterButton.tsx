@@ -14,7 +14,7 @@ type Props = {
 
 /**
  * Figma `RegisterButton` (`196:272`) — primary full-width CTA.
- * 358×50 on the event detail frame; padding 24×14, radius 12, Body/Large.
+ * 358×50 on the event detail frame; padding 24×14, radius 12, Noto Sans SemiBold 16.
  */
 export function RegisterButton({
   onPress,
@@ -49,7 +49,7 @@ const s = StyleSheet.create({
     overflow: 'hidden',
   },
   label: {
-    fontFamily: fontFamilies.notoSansRegular,
+    fontFamily: fontFamilies.notoSansSemiBold,
     fontSize: 16,
     lineHeight: 22,
     color: colors.textOnPrimary,

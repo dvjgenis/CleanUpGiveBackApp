@@ -143,6 +143,9 @@ let state: LiveSessionState = {
 };
 
 let completedSessionSnapshot: CompletedSessionSnapshot | null = null;
+// Survives endLiveSession()'s `state` reset (unlike `state.sessionSyncWarning`)
+// so the confirmation screen can still tell the last finalize didn't sync.
+let lastFinalizeSyncFailed = false;
 
 let tickInterval: ReturnType<typeof setInterval> | null = null;
 let locationSubscription: Location.LocationSubscription | null = null;
@@ -913,6 +916,12 @@ function rememberCompletedRemoteSessionId(sessionId: string) {
   }
 }
 
+const FINALIZE_RETRY_DELAYS_MS = [800, 2000];
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function persistFinalizeToRemote(
   snapshot: CompletedSessionSnapshot,
   status: 'under_review' | 'invalid' = 'under_review',
@@ -927,36 +936,49 @@ async function persistFinalizeToRemote(
   }
 
   if (!sessionId) {
+    lastFinalizeSyncFailed = true;
     return false;
   }
 
-  try {
-    await finalizeSession(sessionId, {
-      endedAt: new Date(snapshot.endedAt).toISOString(),
-      durationSeconds: snapshot.elapsedSeconds,
-      distanceMiles: snapshot.distanceMiles,
-      route: snapshot.routeCoordinates,
-      status,
-    });
-    return true;
-  } catch (error) {
-    if (!retried && isActiveSessionNotFoundError(error)) {
-      // Local session may already be torn down — create from snapshot setup, not live state.
-      const recreatedId = await createRemoteSessionFromSetup(snapshot.setup);
-      if (recreatedId) {
-        rememberCompletedRemoteSessionId(recreatedId);
-        return persistFinalizeToRemote(
-          { ...snapshot, remoteSessionId: recreatedId },
-          status,
-          true,
-        );
+  let lastError: unknown = null;
+  for (let attempt = 0; attempt <= FINALIZE_RETRY_DELAYS_MS.length; attempt += 1) {
+    try {
+      await finalizeSession(sessionId, {
+        endedAt: new Date(snapshot.endedAt).toISOString(),
+        durationSeconds: snapshot.elapsedSeconds,
+        distanceMiles: snapshot.distanceMiles,
+        route: snapshot.routeCoordinates,
+        status,
+      });
+      lastFinalizeSyncFailed = false;
+      setSessionSyncWarning(null);
+      return true;
+    } catch (error) {
+      lastError = error;
+
+      if (!retried && isActiveSessionNotFoundError(error)) {
+        // Local session may already be torn down — create from snapshot setup, not live state.
+        const recreatedId = await createRemoteSessionFromSetup(snapshot.setup);
+        if (recreatedId) {
+          rememberCompletedRemoteSessionId(recreatedId);
+          return persistFinalizeToRemote(
+            { ...snapshot, remoteSessionId: recreatedId },
+            status,
+            true,
+          );
+        }
+      }
+
+      if (attempt < FINALIZE_RETRY_DELAYS_MS.length) {
+        await delay(FINALIZE_RETRY_DELAYS_MS[attempt]);
       }
     }
-
-    console.warn('[sessions] finalize persist failed:', error);
-    setSessionSyncWarning('Could not sync session to the server. Your route is saved on device.');
-    return false;
   }
+
+  console.warn('[sessions] finalize persist failed after retries:', lastError);
+  lastFinalizeSyncFailed = true;
+  setSessionSyncWarning('Could not sync session to the server. Your route is saved on device.');
+  return false;
 }
 
 /** Re-request location updates if the session is active but watching stopped (e.g. permission retry). */
@@ -1066,7 +1088,7 @@ export function evaluateCheckpointMissAndFinalize(): boolean {
   }
 
   pendingMissedCheckpointNavigation = true;
-  finalizeLiveSession({ status: 'invalid' });
+  void finalizeLiveSession({ status: 'invalid' });
   return true;
 }
 
@@ -1183,10 +1205,12 @@ export function resetCheckpointCountdown() {
   }
 }
 
-export function finalizeLiveSession(options?: { status?: 'under_review' | 'invalid' }) {
+export async function finalizeLiveSession(options?: {
+  status?: 'under_review' | 'invalid';
+}): Promise<boolean> {
   if (!state.setup) {
     endLiveSession();
-    return;
+    return false;
   }
 
   const endedAt = Date.now();
@@ -1205,15 +1229,32 @@ export function finalizeLiveSession(options?: { status?: 'under_review' | 'inval
     mapLayer: state.mapLayer,
   };
 
-  void persistFinalizeToRemote(completedSessionSnapshot, status);
+  // Awaited (with retries inside persistFinalizeToRemote) so a real failure is
+  // known before we report success and tear down state — previously this was
+  // fire-and-forget, so a failed sync was silently invisible to the caller.
+  const synced = await persistFinalizeToRemote(completedSessionSnapshot, status);
   recordCompletedSession(completedSessionSnapshot);
   recordSessionStatFromSnapshot(completedSessionSnapshot);
   cacheCompletedSession(completedSessionSnapshot);
   endLiveSession();
+  return synced;
 }
 
 export function getCompletedSessionSnapshot() {
   return completedSessionSnapshot;
+}
+
+/** True when the last finalize attempt exhausted its retries without syncing. */
+export function getLastFinalizeSyncFailed(): boolean {
+  return lastFinalizeSyncFailed;
+}
+
+/** Re-attempts syncing the last completed session after a failed finalize. */
+export async function retryFinalizeSync(): Promise<boolean> {
+  if (!completedSessionSnapshot || !lastFinalizeSyncFailed) {
+    return !lastFinalizeSyncFailed;
+  }
+  return persistFinalizeToRemote(completedSessionSnapshot, 'under_review');
 }
 
 export function endLiveSession() {

@@ -91,6 +91,8 @@ CleanUpGiveBackApp/
 ### Live data wiring
 admin-web-app reads/writes the same Supabase project as `admin/` and the mobile app (`frontend/`), via a `admin-web-app/src/lib/supabase/{server,client}.ts` pair ported from `admin/lib/supabase/`. Copy `admin-web-app/.env.local.example` → `admin-web-app/.env.local` and fill in `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY` (same project as `admin/.env.local`) to go live. Data/Admin-API reads use a **cookie-free service-role client** (`createServiceRoleClient`) so a signed-in admin JWT does not collapse lists under volunteer RLS. **Sessions, users/volunteers, and court progress never inject fixtures** — empty tables or a missing service-role key yield empty real lists (`useMock: false`). Orders, feedback, payments, and revenue still fall back to fixtures + a **Sample data** banner when those tables are empty.
 
+**Realtime refresh (2026-08-04):** `/sessions` and `/dashboard` (`components/pages/SessionsPage.tsx`, `DashboardPage.tsx`) call `useSessionsRealtimeRefresh()` (`admin-web-app/src/lib/useSessionsRealtimeRefresh.ts`), a client-side Supabase Realtime subscription (`postgres_changes` on `public.sessions` INSERT/UPDATE, debounced 400ms) that triggers `router.refresh()` so a session logged on mobile — or an approve/decline from another admin tab — appears without a manual page reload. This requires the `admin_read_all_sessions` RLS policy + `supabase_realtime` publication membership in `admin/db/008_admin_sessions_realtime_read.sql` (run once in the Supabase SQL editor): the browser subscription authenticates as the signed-in admin over the anon key, so unlike the server-side reads below (which use the service-role key and bypass RLS) it needs its own read policy or it silently receives zero events.
+
 Each `app/*/page.tsx` route is now an async Server Component that calls a loader in `admin-web-app/src/lib/live-data.ts`, then passes the result as props into the (still `"use client"`) page component:
 
 | Page | Live source | Loader |
@@ -130,7 +132,7 @@ Several pages started as faithful, read-only ports of their `admin/app/(admin)/.
 ### Next Steps
 1. **Backend Integration**:
    - ✅ Connect to existing Supabase database (see [Live data wiring](#live-data-wiring))
-   - ✅ `/login` + middleware auth gate shipped; keep `BYPASS_AUTH=false` in production and wire Account **Sign out** to `signOut()` → `/login`
+   - ✅ `/login` + middleware auth gate shipped; keep `BYPASS_AUTH=false` in production. Account **Sign out** (`/profile`) calls `supabase.auth.signOut()` then redirects to `/login`
    - Share user sessions with admin panel (single sign-on across `admin.cleanupgiveback.org` and web-app once both are deployed)
    - ✅ `/sessions` moderation actions (approve/decline), `/events` edit/publish/delete/notify, and `/insights` + `/analytics` chart series are now live-wired
 

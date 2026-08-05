@@ -937,8 +937,10 @@ export function PhotoCaptureScreen() {
           return;
         }
         addPhotoCheckpoint(withCoords);
-        finalizeLiveSession({ status: 'under_review' });
         // Session summary + route replay first; feedback is offered from confirmation.
+        // Awaited so a sync failure is captured (getLastFinalizeSyncFailed) before we
+        // navigate away — the confirmation screen surfaces it with a retry option.
+        await finalizeLiveSession({ status: 'under_review' });
         router.replace('/submission-confirmation' as Href);
         return;
       }

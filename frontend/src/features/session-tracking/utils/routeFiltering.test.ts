@@ -18,6 +18,7 @@ import {
   smoothCoordinateEma,
   smoothHeadingEma,
   smoothRouteForDisplay,
+  appendLiveTipToDisplayRoute,
   DISPLAY_COORDINATE_EMA_ALPHA,
   HEADING_EMA_ALPHA_MAX,
   HEADING_EMA_ALPHA_MIN,
@@ -51,12 +52,12 @@ describe('isPlausibleMovement', () => {
 });
 
 describe('getMinMovementMeters', () => {
-  it('uses at least MIN_ROUTE_SAMPLE_METERS', () => {
-    expect(getMinMovementMeters(5)).toBe(1.25);
+  it('uses at least the stationary jitter floor', () => {
+    expect(getMinMovementMeters(5)).toBe(3);
   });
 
   it('scales with reported accuracy', () => {
-    expect(getMinMovementMeters(20)).toBe(5);
+    expect(getMinMovementMeters(20)).toBe(12);
   });
 });
 
@@ -477,5 +478,36 @@ describe('shouldSkipDuplicateLocationSample', () => {
         lastProcessedCoordinate: base,
       }),
     ).toBe(false);
+  });
+});
+
+describe('appendLiveTipToDisplayRoute', () => {
+  const tip: RouteCoordinate = [-87.62, 41.88];
+
+  it('does not invent a polyline from a single seed and a distant tip', () => {
+    const seed: RouteCoordinate = [-87.63, 41.88];
+    expect(appendLiveTipToDisplayRoute([seed], tip)).toEqual([seed]);
+  });
+
+  it('leaves an empty route empty even when a tip exists', () => {
+    expect(appendLiveTipToDisplayRoute([], tip)).toEqual([]);
+  });
+
+  it('extends an existing polyline to a moved tip', () => {
+    const route: RouteCoordinate[] = [
+      [-87.63, 41.88],
+      [-87.625, 41.88],
+    ];
+    const extended = appendLiveTipToDisplayRoute(route, tip);
+    expect(extended).toHaveLength(3);
+    expect(extended[2]).toEqual(tip);
+  });
+
+  it('skips appending when tip is within the deadband of the last point', () => {
+    const route: RouteCoordinate[] = [
+      [-87.63, 41.88],
+      [-87.62, 41.88],
+    ];
+    expect(appendLiveTipToDisplayRoute(route, [-87.62, 41.880001])).toEqual(route);
   });
 });

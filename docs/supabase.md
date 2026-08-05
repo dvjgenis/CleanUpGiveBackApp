@@ -62,6 +62,8 @@ create policy "users_own_checkpoints" on public.checkpoints
   );
 ```
 
+**Admin realtime read (2026-08-04):** `admin-web-app`'s `/sessions` + `/dashboard` pages subscribe to Supabase Realtime from the browser (anon key + admin's own JWT), which is still subject to RLS — `users_own_sessions` alone would hide every volunteer's rows from an admin. Run [`admin/db/008_admin_sessions_realtime_read.sql`](../admin/db/008_admin_sessions_realtime_read.sql) once (adds an `admin_read_all_sessions` SELECT policy keyed on `user_metadata.role = 'admin'`, plus adds `public.sessions` to the `supabase_realtime` publication) or the subscription connects but silently receives nothing.
+
 ---
 
 ## 3. Environment variables

@@ -50,6 +50,7 @@ import {
   priorPeriodCaption,
 } from "@/lib/dashboard-period";
 import { differenceInDays, differenceInHours, parseISO } from "date-fns";
+import { useSessionsRealtimeRefresh } from "@/lib/useSessionsRealtimeRefresh";
 
 function ageLabel(iso: string, now: Date): string {
   const d = parseISO(iso);
@@ -206,6 +207,7 @@ function DashboardPageInner({
   feedbackAvg: number;
   isMock: boolean;
 }) {
+  useSessionsRealtimeRefresh();
   const now = new Date();
   const selection = usePeriodSelection();
   const periodLabelText = usePeriodLabel(now);

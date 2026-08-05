@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
+import { useRouter } from 'next/navigation';
 import { EyeIcon, EyeOffIcon } from '@/components/ui/Icons';
+import { createClient } from '@/lib/supabase/client';
 
 /**
- * Faithful port of admin Account — editable name / email / password for
- * Donna. Web-app is mock-only (no Supabase session), so saves update local
- * state and surface success messaging.
+ * Account page for Donna — profile / password edits are still preview-local;
+ * Sign out clears the Supabase session and returns to `/login`.
  */
 const DEFAULT_PROFILE = {
   name: 'Donna Adam',
@@ -110,6 +111,7 @@ function Status({ error, success }: { error?: string; success?: string }) {
 }
 
 export function ProfilePage() {
+  const router = useRouter();
   const [name, setName] = useState(DEFAULT_PROFILE.name);
   const [email, setEmail] = useState(DEFAULT_PROFILE.email);
   const [profileMsg, setProfileMsg] = useState<{ error?: string; success?: string }>({});
@@ -120,6 +122,27 @@ export function ProfilePage() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+
+  async function handleSignOut() {
+    if (signingOut) return;
+    setSigningOut(true);
+    setPasswordMsg({});
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        setPasswordMsg({ error: 'Could not sign out. Try again.' });
+        setSigningOut(false);
+        return;
+      }
+      router.push('/login');
+      router.refresh();
+    } catch {
+      setPasswordMsg({ error: 'Could not sign out. Try again.' });
+      setSigningOut(false);
+    }
+  }
 
   function handleProfileSave(e: FormEvent) {
     e.preventDefault();
@@ -309,9 +332,11 @@ export function ProfilePage() {
       <div className="mt-0 flex flex-col gap-md">
         <button
           type="button"
-          className="h-11 px-lg rounded-sm border border-border-outline bg-bg-surface font-data text-[13px] font-semibold text-text-primary hover:bg-bg-surface-elevated transition-colors w-fit"
+          onClick={handleSignOut}
+          disabled={signingOut}
+          className="h-11 px-lg rounded-sm border border-border-outline bg-bg-surface font-data text-[13px] font-semibold text-text-primary hover:bg-bg-surface-elevated transition-colors w-fit disabled:cursor-not-allowed disabled:opacity-60"
         >
-          Sign out
+          {signingOut ? 'Signing out…' : 'Sign out'}
         </button>
       </div>
     </div>
