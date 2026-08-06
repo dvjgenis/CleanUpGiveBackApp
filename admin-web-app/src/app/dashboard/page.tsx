@@ -3,6 +3,9 @@ import { DashboardPage } from "@/components/pages/DashboardPage";
 import { loadLiveSessions, loadLiveOrders, loadLiveMonthlyRevenue, loadLiveFeedback } from "@/lib/live-data";
 import { EMOJI_MAP } from "@/lib/mock-data";
 
+// See admin-web-app/src/app/sessions/page.tsx — same static-prerender staleness issue.
+export const dynamic = 'force-dynamic';
+
 function ErrorFallback({ error }: { error: string }) {
   return (
     <div className="w-full h-dvh">

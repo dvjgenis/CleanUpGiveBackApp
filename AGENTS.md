@@ -10,6 +10,10 @@
 - Prefer real icon arrows over text-arrow affordances across the admin website.
 - Tote bag color variants should use earth/ocean labels in data/backend (not green/blue UI labels).
 - Admin sessions/users must stay on real Supabase data (no fixture fallback); service-role reads must be cookie-free so signed-in admin JWTs do not empty RLS-scoped lists.
+- On admin session walking-path maps, use square rounded photo thumbnails that open a lightbox (not circular pins).
+- On admin home, Payments and Orders cards should stay clickable without chevron affordances.
+- Live session walk maps must not draw a path until real GPS movement points exist (no synthetic straight line when stationary).
+- Prefer the mobile-app style password-field icon on the admin web login.
 
 ## Learned Workspace Facts
 
@@ -20,3 +24,7 @@
 - `admin-web-app` deploys on Vercel; live session services run from `backend/sessions/` on Fly.
 - Admin-web-app stack is Next.js App Router + TypeScript + Tailwind + shadcn-style `components/ui`.
 - Mobile shop product carousels follow the trash-cleanup-kit pattern under the figma shop screens/assets.
+- Admin top period bar is Today / Month / Year / All / Custom (no 30-day option). Payments: Month = last 6 months, Year = last 6 years; Sessions/Orders/Feedback Month uses a rolling ~30-day window.
+- Mobile session checkpoint photos should persist lat/long so admin walking-path maps can pin them by capture location.
+- Shipping research for Donna: Phase 1 Pirate Ship labels + paste tracking in existing Orders UI + Resend email; Phase 2 Shippo at higher volume (see `docs/research/shipping-integration-2026-08.md`).
+- Mobile shop catalog/cart remain largely client-side; Stripe checkout and live shipping are not fully backend-wired yet.

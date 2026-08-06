@@ -112,7 +112,18 @@ function buildHtml() {
 
   function applyRoute(coords) {
     pendingCoords = coords || [];
-    if (pendingCoords.length < 2) return;
+    if (pendingCoords.length === 0) return;
+
+    if (pendingCoords.length === 1) {
+      displayCoords = pendingCoords;
+      syncPreviewMarkers(pendingCoords, 1);
+      if (!boundsApplied) {
+        boundsApplied = true;
+        map.setCenter(pendingCoords[0]);
+        map.setZoom(15);
+      }
+      return;
+    }
 
     displayCoords = simplifyRouteForLiveDisplay(pendingCoords);
     const visibleCoords = sliceCoordsByProgress(displayCoords, replayProgress);

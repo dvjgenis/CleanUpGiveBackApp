@@ -725,3 +725,40 @@ export function deltaMetersBetween(from: RouteCoordinate, to: RouteCoordinate): 
     haversineMiles(from[1], from[0], to[1], to[0]),
   );
 }
+
+/**
+ * Below this span, a route is treated as "the user never actually moved" for display
+ * purposes — e.g. a GPS fix settling shortly after the warmup seed can produce a second,
+ * spurious point a few meters from the first even though the user stood still.
+ */
+const STATIONARY_ROUTE_SPAN_METERS = 8;
+
+/** Max distance from the first point to any other point in the route. */
+export function getRouteSpanMeters(coordinates: RouteCoordinate[]): number {
+  if (coordinates.length < 2) {
+    return 0;
+  }
+  const origin = coordinates[0];
+  let maxSpan = 0;
+  for (const coordinate of coordinates) {
+    const distance = deltaMetersBetween(origin, coordinate);
+    if (distance > maxSpan) {
+      maxSpan = distance;
+    }
+  }
+  return maxSpan;
+}
+
+/**
+ * Collapses a route to its single starting point when every recorded point is within
+ * jitter distance of it, so replay UIs don't draw a line or animate a marker for a
+ * session where the user never moved.
+ */
+export function collapseStationaryRoute(coordinates: RouteCoordinate[]): RouteCoordinate[] {
+  if (coordinates.length < 2) {
+    return coordinates;
+  }
+  return getRouteSpanMeters(coordinates) < STATIONARY_ROUTE_SPAN_METERS
+    ? [coordinates[0]]
+    : coordinates;
+}

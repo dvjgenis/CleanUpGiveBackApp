@@ -8,6 +8,7 @@ import { formatCountdown } from '../mocks/session';
 import { colors, radius, textStyles } from '../tokens';
 import { DEFAULT_MAP_LAYER, type MapLayerType } from '../utils/mapStyles';
 import type { RouteCoordinate } from '../utils/geo';
+import { collapseStationaryRoute } from '../utils/routeFiltering';
 import {
   computeRouteReplayDurationMs,
   computeRouteReplayDurationSeconds,
@@ -55,18 +56,26 @@ export function SessionRouteMapPanel({
   const playFromRef = useRef(0);
   const hasAutoPlayedRef = useRef(false);
 
-  const replayDurationMs = useMemo(
-    () => computeRouteReplayDurationMs(routeCoordinates),
+  /** Collapse to a single point when the user never actually moved, so replay never
+   * draws a line or animates a marker for a stationary session. */
+  const displayCoordinates = useMemo(
+    () => collapseStationaryRoute(routeCoordinates),
     [routeCoordinates],
   );
+
+  const replayDurationMs = useMemo(
+    () => computeRouteReplayDurationMs(displayCoordinates),
+    [displayCoordinates],
+  );
   const replayDurationSeconds = useMemo(
-    () => computeRouteReplayDurationSeconds(routeCoordinates),
-    [routeCoordinates],
+    () => computeRouteReplayDurationSeconds(displayCoordinates),
+    [displayCoordinates],
   );
   const replayDurationMsRef = useRef(replayDurationMs);
   replayDurationMsRef.current = replayDurationMs;
 
-  const hasRoute = routeCoordinates.length >= 2;
+  const hasLocation = displayCoordinates.length >= 1;
+  const hasRoute = displayCoordinates.length >= 2;
   const canReplay = enableReplay && hasRoute;
   const showControls = hasRoute && canReplay;
   const currentSeconds = Math.round(
@@ -125,7 +134,7 @@ export function SessionRouteMapPanel({
     setIsPlaying(false);
     stopAnimation();
     hasAutoPlayedRef.current = false;
-  }, [replayOnce, routeCoordinates, stopAnimation]);
+  }, [replayOnce, displayCoordinates, stopAnimation]);
 
   useEffect(() => {
     if (!canReplay || !replayOnce || hasAutoPlayedRef.current) {
@@ -140,7 +149,7 @@ export function SessionRouteMapPanel({
     }
 
     startReplay(0);
-  }, [canReplay, reducedMotion, replayOnce, routeCoordinates, startReplay]);
+  }, [canReplay, reducedMotion, replayOnce, displayCoordinates, startReplay]);
 
   const handlePlayPause = () => {
     if (isPlaying) {
@@ -165,9 +174,9 @@ export function SessionRouteMapPanel({
 
   return (
     <View style={[styles.panel, style]}>
-      {hasRoute ? (
+      {hasLocation ? (
         <SessionRouteMapPreview
-          routeCoordinates={routeCoordinates}
+          routeCoordinates={displayCoordinates}
           mapLayer={mapLayer}
           replayProgress={canReplay ? replayProgress : 1}
           style={styles.map}
