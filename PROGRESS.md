@@ -303,3 +303,43 @@ Canonical detailed log: [`docs/progress.md`](docs/progress.md).
 - GPS jitter while stationary commonly exceeds a `accuracy × 0.25` movement floor at good reported accuracy (4-8m), which is what let a single noisy fix register as a "walked" route point — fixed by raising the floor, not the speed threshold (`MIN_SPEED_TO_RECORD_MPS` stays low to still catch slow real walking).
 - `SessionsScreen.tsx` has no offline/local fallback — any failed `finalizeSession` sync makes a session permanently invisible in that tab even though local state believes it completed. The finalize-retry + sync-warning banner (already in progress before this session) is the mitigation, but the underlying Fly/Postgres outage is infra, not app-fixable from this machine.
 - Before assuming a session-sync bug is client-side, verify the Fly backend can actually write to Postgres first — see [[fly-cleanup-sessions-outage]].
+
+---
+
+## [2026-08-06] — Fix admin-web-app stale data, dead review buttons, and session-privacy gaps
+
+**Session goal:** Diagnose why mobile sessions weren't showing in admin (last visible session 13d stale), then fix a string of admin-web-app bugs Donna found while using it live: dead Dashboard buttons, wrong photo count, missing volunteer-name reliability, and in-progress sessions being admin-visible.
+**Workflow used:** Chat, `superpowers:systematic-debugging` for the root-cause investigation
+
+### Skills Invoked
+
+| Skill | Purpose | Outcome |
+|---|---|---|
+| `superpowers:systematic-debugging` | Root-cause the stale-sessions report before proposing a fix | Found `/sessions`, `/dashboard`, `/` were statically prerendered at build time (no `dynamic`/`revalidate` export, service-role read triggers no dynamic API) — froze session data as of last deploy |
+| `update-config` | Add a Bash permission rule for `vercel deploy --prod` after the auto-mode classifier blocked a direct prod deploy | `.claude/settings.local.json` created (gitignored) with `Bash(vercel deploy --prod*)` allow rule |
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Fix stale Sessions/Dashboard/Home (static prerender) | `admin-web-app/src/app/{sessions,dashboard,}/page.tsx` | ✅ Added `export const dynamic = 'force-dynamic'` to all three |
+| Fix "Photos on trail" undercount | `SessionPreviewDrawer.tsx`, `SessionWalkingPathMap.tsx` | ✅ Was counting checkpoint pins (1 per checkpoint) instead of actual photos (selfie+progress per checkpoint) — sourced from `evidence.photos.length` |
+| Make volunteer-name sync reliable | `frontend/src/lib/supabase.ts` (`syncVolunteerProfile`) | ✅ Was fire-and-forget, single attempt, no verification — now retries with backoff (500/1500/3000ms) and confirms `updateUser`'s response reflects the new `full_name` before trusting it |
+| Wire up dead Dashboard "Review"/"Start" buttons | `DashboardPage.tsx` | ✅ Both had no `onClick` — now open the same `SessionPreviewDrawer` `/sessions` uses |
+| Remove non-functional bulk-select checkboxes + tip | `DashboardPage.tsx` | ✅ Checkboxes were `readOnly`/dead; Donna reviews sessions individually, not in bulk |
+| Make "Needs you" queue scrollable | `DashboardPage.tsx` | ✅ Was hard-capped at 5 items with the rest invisible; now shows the full queue, scrollable past ~5 rows |
+| Remove Dashboard Snapshot section | `DashboardPage.tsx` | ✅ Removed per request; cleaned up now-unused `approvalRatePct`/`ChevronRightIcon` |
+| Exclude in-progress (`active`) sessions from all admin surfaces | `admin-web-app/src/lib/live-data.ts`, `SessionsPage.tsx` | ✅ Privacy requirement — admin must not see a volunteer's session while still in progress. `.neq('status','active')` added to every sessions query (Dashboard/Sessions/volunteer detail/court progress/user counts); removed now-unreachable "Active" filter chip. 6 real active/abandoned sessions confirmed excluded. |
+
+### Key Decisions
+
+- GitHub Actions was mid-outage (confirmed via githubstatus.com) for most of this session — every deploy went out via direct `vercel deploy --prod --yes` instead of the `Deploy admin-web-app` GitHub Action, after the user added a scoped `Bash(vercel deploy --prod*)` permission rule.
+- git push required switching the active `gh`/git credential from `spatel-fm` (no write access) to `spatel54` (has push access) — `gh auth switch --user spatel54` + `gh auth setup-git`.
+- "Active" sessions are excluded at the query layer (`live-data.ts`), not by hiding the status client-side — guarantees no admin surface can ever leak one, present or future.
+
+### Learnings
+
+- A Next.js App Router route with no `dynamic`/`revalidate` export and a cookie-free data fetch (service-role Supabase client, no `cookies()` call) gets statically prerendered at build time with no warning — `next build`'s route table (`○` vs `ƒ`) is the fastest way to confirm this class of bug.
+- Client-side `router.refresh()` (e.g. a Supabase-realtime hook) cannot un-stale a statically-prerendered route on Vercel — it just re-requests the same cached payload. Only a redeploy or `revalidatePath`/`revalidateTag` actually re-executes the server component.
+- `syncVolunteerProfile` and `liveSessionStore`'s finalize retry now share the same backoff-retry pattern — worth reusing for any other single-attempt Supabase write in onboarding/session flows.
+- Sessions can be real, identifiable DB rows stuck in `status='active'` indefinitely (finalize never completed) — not fake test data. Worth periodically checking `select id from sessions where status='active'` for volume, since it signals ongoing finalize-sync reliability, not just a privacy filter.

@@ -13,6 +13,8 @@ export type MockSession = {
   id: string;
   user_id: string;
   volunteer_name: string;
+  /** Volunteer's account-level classification (Court Ordered / Volunteering / School / Other), if synced. */
+  volunteer_service_type?: string | null;
   activity: string | null;
   /** Matches admin `SessionStatus` + live Supabase rows (`active` while tracking). */
   status: "active" | "approved" | "under_review" | "not_approved" | "invalid";

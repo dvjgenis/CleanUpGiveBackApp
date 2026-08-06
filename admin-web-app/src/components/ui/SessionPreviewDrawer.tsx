@@ -18,6 +18,7 @@
 import { useEffect, useId, useState, useTransition } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { CourtBadge } from "@/components/ui/CourtBadge";
+import { ServiceTypeBadge } from "@/components/ui/ServiceTypeBadge";
 import { CameraIcon, CloseIcon, CollapseIcon, ExpandIcon } from "@/components/ui/Icons";
 import { SessionPhotoGrid } from "@/components/sessions/SessionPhotoGrid";
 import {
@@ -614,6 +615,9 @@ function SessionDrawerPanel({
             <p className="font-body text-[14px] text-primary mt-xs">{session.volunteer_name}</p>
             <div className="mt-sm flex items-center gap-sm flex-wrap">
               {session.court_ordered && <CourtBadge />}
+              {session.volunteer_service_type && (
+                <ServiceTypeBadge serviceType={session.volunteer_service_type} />
+              )}
               <StatusChip status={status} />
             </div>
           </div>
@@ -650,6 +654,7 @@ function SessionDrawerPanel({
                   </h2>
                   <dl className="grid grid-cols-2 gap-x-lg gap-y-md">
                     <InfoRow label="Volunteer" value={session.volunteer_name} />
+                    <InfoRow label="Service Type" value={session.volunteer_service_type ?? "—"} />
                     <InfoRow label="Activity" value={session.activity ?? "—"} />
                     <InfoRow label="Court Ordered" value={session.court_ordered ? "Yes" : "No"} />
                     <InfoRow label="Started" value={formatDateTime(session.started_at)} />

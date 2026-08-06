@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 
-import { DEFAULT_COUNTRY } from '@/constants/countries';
+import { COUNTRIES, DEFAULT_COUNTRY } from '@/constants/countries';
 import type { ServiceType } from '@/constants/serviceTypes';
 
 /** In-memory onboarding gate + profile fields for the prototype (no persistence yet). */
@@ -63,6 +63,16 @@ export function getPhoneCountryIso2(): string {
 
 export function getPhoneDigits(): string {
   return phoneDigits;
+}
+
+/** E.164-formatted phone number (e.g. `+15551234567`), or empty string if no digits are set. */
+export function getE164Phone(): string {
+  if (!phoneDigits) {
+    return '';
+  }
+  const dialCode = COUNTRIES.find((country) => country.iso2 === phoneCountryIso2)?.dialCode
+    ?? DEFAULT_COUNTRY.dialCode;
+  return `+${dialCode}${phoneDigits}`;
 }
 
 /** Saves the birthday (month + year) from the account-details step. */

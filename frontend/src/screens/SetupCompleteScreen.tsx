@@ -6,8 +6,10 @@ import {
 } from '@/components/onboarding/OnboardingIcons';
 import { prefetchTourGraphics } from '@/components/onboarding/tourAssets';
 import {
+  getE164Phone,
   getEmail,
   getPreferredName,
+  getServiceType,
   markOnboardingComplete,
 } from '@/features/onboarding/onboardingStore';
 import { colors as C, radius } from '@/features/figma-screens/tokens';
@@ -183,7 +185,12 @@ export function SetupCompleteScreen() {
             style={s.continueBtn}
             onPress={() => {
               markOnboardingComplete();
-              void syncVolunteerProfile({ preferredName: getPreferredName(), email: getEmail() });
+              void syncVolunteerProfile({
+                preferredName: getPreferredName(),
+                email: getEmail(),
+                phone: getE164Phone(),
+                serviceType: getServiceType() ?? undefined,
+              });
               router.push('/home-tour');
             }}
             accessibilityRole="button"

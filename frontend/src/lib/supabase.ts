@@ -87,7 +87,7 @@ function delay(ms: number): Promise<void> {
 }
 
 /**
- * Sync of the onboarding display name (and optionally email) into
+ * Sync of the onboarding display name (and optionally email/phone/serviceType) into
  * `user_metadata`, so the admin dashboard can resolve real volunteer names.
  * Retries with backoff on transient failure and verifies the write actually
  * landed (not just that the request didn't error) before giving up — a
@@ -99,6 +99,8 @@ function delay(ms: number): Promise<void> {
 export async function syncVolunteerProfile(details: {
   preferredName?: string;
   email?: string;
+  phone?: string;
+  serviceType?: string;
 }): Promise<boolean> {
   if (!supabase) {
     return false;
@@ -113,6 +115,12 @@ export async function syncVolunteerProfile(details: {
   if (details.email?.trim()) {
     data.email = details.email.trim();
   }
+  if (details.phone?.trim()) {
+    data.phone = details.phone.trim();
+  }
+  if (details.serviceType?.trim()) {
+    data.service_type = details.serviceType.trim();
+  }
 
   let lastError: unknown = null;
 
@@ -121,12 +129,19 @@ export async function syncVolunteerProfile(details: {
       await ensureAnonymousAuth();
 
       const { data: updated, error } = await supabase.auth.updateUser({ data });
+      const metadata = updated.user?.user_metadata ?? {};
+      const wroteCleanly =
+        !error &&
+        metadata.full_name === trimmedName &&
+        (!data.phone || metadata.phone === data.phone) &&
+        (!data.service_type || metadata.service_type === data.service_type);
+
       if (error) {
         lastError = error;
-      } else if (updated.user.user_metadata?.full_name !== trimmedName) {
+      } else if (!wroteCleanly) {
         // Request succeeded but the response doesn't reflect our write — treat as
         // unconfirmed and retry rather than trusting a no-error response blindly.
-        lastError = new Error('full_name mismatch after updateUser');
+        lastError = new Error('profile fields mismatch after updateUser');
       } else {
         return true;
       }

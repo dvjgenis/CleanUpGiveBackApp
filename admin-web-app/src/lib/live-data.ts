@@ -10,7 +10,12 @@
  */
 import { endOfMonth, isWithinInterval, parseISO, startOfMonth, subMonths, subYears } from 'date-fns';
 import { createDataClient, createServiceClient } from '@/lib/supabase/server';
-import { getVolunteerDirectory, getVolunteerName, type VolunteerDirectory } from '@/lib/volunteers';
+import {
+  getVolunteerDirectory,
+  getVolunteerName,
+  getVolunteerServiceType,
+  type VolunteerDirectory,
+} from '@/lib/volunteers';
 import {
   MOCK_FEEDBACK,
   MOCK_ORDERS,
@@ -68,6 +73,7 @@ export async function loadLiveSessions(): Promise<LiveResult<MockSession[]>> {
     id: s.id,
     user_id: s.user_id,
     volunteer_name: getVolunteerName(directory, s.user_id),
+    volunteer_service_type: getVolunteerServiceType(directory, s.user_id),
     activity: s.activity,
     status: (s.status ?? 'under_review') as MockSession['status'],
     duration_seconds: s.duration_seconds,

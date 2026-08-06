@@ -20,6 +20,7 @@ import { Suspense, useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { useSessionsRealtimeRefresh } from "@/lib/useSessionsRealtimeRefresh";
 import { CourtBadge } from "@/components/ui/CourtBadge";
+import { ServiceTypeBadge } from "@/components/ui/ServiceTypeBadge";
 import { PeriodToggle } from "@/components/ui/PeriodToggle";
 import { useListPeriodLabel, usePeriodSelection } from "@/components/ui/PeriodToggleBar";
 import { SessionPreviewDrawer } from "@/components/ui/SessionPreviewDrawer";
@@ -355,12 +356,17 @@ function SessionsPageInner({ sessions, isMock }: { sessions: MockSession[]; isMo
                       {formatDate(session.started_at)}
                     </td>
                     <td className="px-lg py-md" onClick={(e) => e.stopPropagation()}>
-                      <Link
-                        href={`/volunteers/${session.user_id}`}
-                        className="font-body text-[14px] font-medium text-text-primary hover:text-primary hover:underline whitespace-nowrap"
-                      >
-                        {session.volunteer_name}
-                      </Link>
+                      <div className="flex items-center gap-sm flex-wrap">
+                        <Link
+                          href={`/volunteers/${session.user_id}`}
+                          className="font-body text-[14px] font-medium text-text-primary hover:text-primary hover:underline whitespace-nowrap"
+                        >
+                          {session.volunteer_name}
+                        </Link>
+                        {session.volunteer_service_type && (
+                          <ServiceTypeBadge serviceType={session.volunteer_service_type} />
+                        )}
+                      </div>
                     </td>
                     <td className="px-lg py-md">
                       <span className="font-body text-base text-text-primary">{session.activity ?? "—"}</span>
@@ -446,13 +452,16 @@ function SessionsPageInner({ sessions, isMock }: { sessions: MockSession[]; isMo
                         {session.activity ?? "Cleanup session"}
                       </p>
                     </button>
-                    <p className="font-body text-[14px] text-text-tertiary">
+                    <p className="font-body text-[14px] text-text-tertiary flex items-center gap-xs flex-wrap">
                       <Link
                         href={`/volunteers/${session.user_id}`}
                         className="text-text-tertiary hover:text-primary hover:underline"
                       >
                         {session.volunteer_name}
                       </Link>
+                      {session.volunteer_service_type && (
+                        <ServiceTypeBadge serviceType={session.volunteer_service_type} />
+                      )}
                       {" · "}
                       {formatDate(session.started_at)}
                     </p>

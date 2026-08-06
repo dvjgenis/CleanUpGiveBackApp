@@ -7,6 +7,8 @@ export type VolunteerDirectoryEntry = {
   id: string;
   name: string;
   email: string | null;
+  /** Account-level classification set once during onboarding (Court Ordered / Volunteering / School / Other). */
+  serviceType: string | null;
   createdAt: string;
 };
 
@@ -27,6 +29,13 @@ export function resolveVolunteerName(user: Pick<User, 'id' | 'email' | 'user_met
   return `Volunteer ${user.id.slice(0, 8).toUpperCase()}`;
 }
 
+export function resolveVolunteerServiceType(
+  user: Pick<User, 'user_metadata'>,
+): string | null {
+  const serviceType = user.user_metadata?.service_type;
+  return typeof serviceType === 'string' && serviceType.trim() ? serviceType.trim() : null;
+}
+
 async function fetchVolunteerDirectory(serviceClient: SupabaseClient): Promise<VolunteerDirectory> {
   const directory: VolunteerDirectory = new Map();
   let page = 1;
@@ -43,6 +52,7 @@ async function fetchVolunteerDirectory(serviceClient: SupabaseClient): Promise<V
         id: user.id,
         name: resolveVolunteerName(user),
         email: user.email ?? null,
+        serviceType: resolveVolunteerServiceType(user),
         createdAt: user.created_at,
       });
     }
@@ -72,4 +82,8 @@ export async function getVolunteerDirectory(): Promise<VolunteerDirectory> {
 
 export function getVolunteerName(directory: VolunteerDirectory, userId: string): string {
   return directory.get(userId)?.name ?? `Volunteer ${userId.slice(0, 8).toUpperCase()}`;
+}
+
+export function getVolunteerServiceType(directory: VolunteerDirectory, userId: string): string | null {
+  return directory.get(userId)?.serviceType ?? null;
 }
