@@ -8,8 +8,10 @@
  *
  * `sessions`/`orders`/`monthly`/`feedbackAvg` are fetched live from Supabase
  * by `admin-web-app/src/app/dashboard/page.tsx` (see `@/lib/live-data`), falling
- * back to the same mock fixtures admin uses when those tables are empty. The
- * live review actions (approve/decline, drawer, search) are still read-only.
+ * back to the same mock fixtures admin uses when those tables are empty.
+ * "Start"/"Review" open the same `SessionPreviewDrawer` used on `/sessions` for
+ * approve/decline. Bulk-select checkboxes and the queue search box are still
+ * non-functional (not wired up).
  */
 import { Suspense, useState, type ReactNode, type HTMLAttributes } from "react";
 import Link from "next/link";
@@ -51,6 +53,7 @@ import {
 } from "@/lib/dashboard-period";
 import { differenceInDays, differenceInHours, parseISO } from "date-fns";
 import { useSessionsRealtimeRefresh } from "@/lib/useSessionsRealtimeRefresh";
+import { SessionPreviewDrawer } from "@/components/ui/SessionPreviewDrawer";
 
 function ageLabel(iso: string, now: Date): string {
   const d = parseISO(iso);
@@ -214,6 +217,7 @@ function DashboardPageInner({
   const interval = periodInterval(selection, now);
   const prevInterval = previousPeriodInterval(selection, now);
   const [courtOnlyFilter, setCourtOnlyFilter] = useState(false);
+  const [previewId, setPreviewId] = useState<string | null>(null);
 
   const queue = sessions.filter((s) => s.status === "under_review");
   const filteredQueue = courtOnlyFilter ? queue.filter((s) => s.court_ordered) : queue;
@@ -301,7 +305,11 @@ function DashboardPageInner({
               </h2>
             </div>
             {filteredQueue.length > 0 && (
-              <Button type="button" className="min-h-11 shrink-0">
+              <Button
+                type="button"
+                className="min-h-11 shrink-0"
+                onClick={() => setPreviewId(filteredQueue[0].id)}
+              >
                 Start
               </Button>
             )}
@@ -369,7 +377,13 @@ function DashboardPageInner({
                     </p>
                   </div>
                   <div className="flex gap-xs shrink-0">
-                    <Button type="button" size="sm" className="min-h-11" aria-label={`Review ${item.volunteer_name}`}>
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="min-h-11"
+                      aria-label={`Review ${item.volunteer_name}`}
+                      onClick={() => setPreviewId(item.id)}
+                    >
                       Review
                     </Button>
                   </div>
@@ -475,6 +489,13 @@ function DashboardPageInner({
           </Link>
         </div>
       </Bento>
+
+      <SessionPreviewDrawer
+        session={sessions.find((s) => s.id === previewId) ?? null}
+        open={previewId != null}
+        isMock={isMock}
+        onClose={() => setPreviewId(null)}
+      />
     </div>
   );
 }
