@@ -389,7 +389,7 @@ function DashboardPageInner({
             label="Waiting"
             value={queue.length}
             hint={queue.length > 0 ? "Open queue" : "Caught up"}
-            href="/dashboard"
+            href="/sessions"
             accent={queue.length > 0}
             donut={waitingDonut}
             delta={waitingDelta}
@@ -399,7 +399,7 @@ function DashboardPageInner({
             label="Approved"
             value={approved.length}
             hint={periodLabelText}
-            href="/dashboard"
+            href="/sessions"
             donut={approvedDonut}
             delta={approvedDelta}
             priorCaption={priorCaption}
@@ -408,7 +408,7 @@ function DashboardPageInner({
             label="Hours"
             value={totalApprovedHours.toFixed(1)}
             hint={prevInterval ? periodLabelText : "No prior period"}
-            href="/dashboard"
+            href="/sessions"
             donut={hoursDonut}
             delta={hoursDelta}
             priorCaption={priorCaption}
