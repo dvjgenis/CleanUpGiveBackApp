@@ -27,6 +27,8 @@ export type MockSession = {
   created_at: string;
   /** US state FIPS code — powers the simplified state-activity heatmap. */
   state_fips: string;
+  /** True when `state_fips` is a fallback (no GPS route/checkpoint on the session) rather than geocoded. */
+  state_fips_placeholder?: boolean;
   /** Internal-only note, never shown to the volunteer. Optional — not set on the base fixtures. */
   admin_notes?: string | null;
   /** Populated when `declineSession` is called with a reason. */

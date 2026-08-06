@@ -274,6 +274,7 @@ function DashboardPageInner({
   const ordersRevenueCents = orders.filter((o) => o.status !== "cancelled").reduce((sum, o) => sum + o.totalCents, 0);
 
   const geoActivity = buildGeoActivity(scoped.length > 0 ? scoped : sessions);
+  const hasPlaceholderLocations = isMock || sessions.some((s) => s.state_fips_placeholder);
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -438,7 +439,7 @@ function DashboardPageInner({
       </div>
 
       <div className="grid grid-cols-1 gap-md mt-md">
-        <UsHeatmap activity={geoActivity} periodLabel={periodLabelText} isMock />
+        <UsHeatmap activity={geoActivity} periodLabel={periodLabelText} isMock={hasPlaceholderLocations} />
       </div>
 
       {/* Commerce preview — payments + orders at a glance, deeper detail on their own tabs */}

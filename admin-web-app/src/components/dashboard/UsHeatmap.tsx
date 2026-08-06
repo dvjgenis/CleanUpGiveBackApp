@@ -382,7 +382,7 @@ export function UsHeatmap({ activity, periodLabel, isMock = false }: Props) {
           )}
           {isMock && (
             <p className="mt-xs font-body text-[12px] text-text-tertiary">
-              Preview locations — live sessions default to Illinois / Cook County until GPS geocoding ships.
+              Some sessions have no GPS data and default to Illinois / Cook County.
             </p>
           )}
         </div>

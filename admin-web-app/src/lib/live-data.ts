@@ -38,6 +38,8 @@ import {
 } from '@/lib/shop-catalog';
 import { withEventTiming, type EventListItem, type EventRow } from '@/lib/events';
 import { buildCourtRisk, type CourtOrderRow as CourtRiskOrderRow } from '@/lib/court-risk';
+import { stateFipsForPoint } from '@/lib/us-geo';
+import { ILLINOIS_FIPS } from '@/lib/us-heatmap';
 
 export type LiveResult<T> = { data: T; useMock: boolean };
 
@@ -52,7 +54,7 @@ export async function loadLiveSessions(): Promise<LiveResult<MockSession[]>> {
     supabase
       .from('sessions')
       .select(
-        'id, user_id, activity, started_at, ended_at, created_at, status, duration_seconds, adjusted_hours, court_ordered, distance_miles',
+        'id, user_id, activity, started_at, ended_at, created_at, status, duration_seconds, adjusted_hours, court_ordered, distance_miles, route',
       )
       .neq('status', 'active')
       .order('created_at', { ascending: false }),
@@ -69,26 +71,63 @@ export async function loadLiveSessions(): Promise<LiveResult<MockSession[]>> {
     return { data: [], useMock: false };
   }
 
-  const sessions: MockSession[] = rows.map((s) => ({
-    id: s.id,
-    user_id: s.user_id,
-    volunteer_name: getVolunteerName(directory, s.user_id),
-    volunteer_service_type: getVolunteerServiceType(directory, s.user_id),
-    activity: s.activity,
-    status: (s.status ?? 'under_review') as MockSession['status'],
-    duration_seconds: s.duration_seconds,
-    adjusted_hours: s.adjusted_hours,
-    court_ordered: Boolean(s.court_ordered),
-    distance_miles: s.distance_miles,
-    started_at: s.started_at ?? s.created_at,
-    ended_at: s.ended_at ?? s.started_at ?? s.created_at,
-    created_at: s.created_at ?? s.started_at ?? new Date().toISOString(),
-    // Session GPS → FIPS geocoding hasn't shipped yet; attribute live rows to
-    // Cook County, IL, same placeholder admin uses.
-    state_fips: '17',
-  }));
+  // Route (GPS trail) is preferred; checkpoint selfie/progress pins are the
+  // fallback for sessions logged before route capture or with a sparse route.
+  const sessionIds = rows.map((s) => s.id);
+  const { data: checkpointRows } = await supabase
+    .from('checkpoints')
+    .select('session_id, latitude, longitude')
+    .in('session_id', sessionIds)
+    .not('latitude', 'is', null)
+    .not('longitude', 'is', null);
+
+  const checkpointBySession = new Map<string, { latitude: number; longitude: number }>();
+  for (const c of checkpointRows ?? []) {
+    if (c.latitude == null || c.longitude == null || checkpointBySession.has(c.session_id)) continue;
+    checkpointBySession.set(c.session_id, { latitude: c.latitude, longitude: c.longitude });
+  }
+
+  const sessions: MockSession[] = await Promise.all(
+    rows.map(async (s) => {
+      const point = firstRoutePoint(s.route) ?? checkpointBySession.get(s.id) ?? null;
+      const geocodedFips = point ? await stateFipsForPoint(point.longitude, point.latitude) : null;
+
+      return {
+        id: s.id,
+        user_id: s.user_id,
+        volunteer_name: getVolunteerName(directory, s.user_id),
+        volunteer_service_type: getVolunteerServiceType(directory, s.user_id),
+        activity: s.activity,
+        status: (s.status ?? 'under_review') as MockSession['status'],
+        duration_seconds: s.duration_seconds,
+        adjusted_hours: s.adjusted_hours,
+        court_ordered: Boolean(s.court_ordered),
+        distance_miles: s.distance_miles,
+        started_at: s.started_at ?? s.created_at,
+        ended_at: s.ended_at ?? s.started_at ?? s.created_at,
+        created_at: s.created_at ?? s.started_at ?? new Date().toISOString(),
+        // Geocoded from the session's GPS route (or a checkpoint pin) via point-in-polygon
+        // against the states map; sessions with no GPS data fall back to the IL placeholder.
+        state_fips: geocodedFips ?? ILLINOIS_FIPS,
+        state_fips_placeholder: geocodedFips == null,
+      };
+    }),
+  );
 
   return { data: sessions, useMock: false };
+}
+
+/** First finite `[longitude, latitude]` pair in a session's route jsonb, if any. */
+function firstRoutePoint(route: unknown): { longitude: number; latitude: number } | null {
+  if (!Array.isArray(route)) return null;
+  for (const point of route) {
+    if (!Array.isArray(point) || point.length < 2) continue;
+    const [longitude, latitude] = point;
+    if (typeof longitude === 'number' && typeof latitude === 'number' && Number.isFinite(longitude) && Number.isFinite(latitude)) {
+      return { longitude, latitude };
+    }
+  }
+  return null;
 }
 
 type FeedbackRow = {

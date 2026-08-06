@@ -1,5 +1,5 @@
 import { feature } from 'topojson-client';
-import { geoAlbersUsa, geoCentroid, geoMercator, geoPath } from 'd3-geo';
+import { geoAlbersUsa, geoCentroid, geoContains, geoMercator, geoPath } from 'd3-geo';
 import type { Feature, FeatureCollection, Geometry } from 'geojson';
 
 const STATES_URL = 'https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json';
@@ -59,6 +59,22 @@ export function fipsId(featureOrId: UsGeoFeature | string | number | undefined):
 
 export function stateFipsFromCounty(countyFips: string): string {
   return countyFips.slice(0, 2);
+}
+
+/**
+ * Reverse-geocodes a WGS84 point to its US state FIPS code via point-in-polygon
+ * against the same states TopoJSON the map renders — no external geocoding API.
+ * Returns null when the point falls outside every state polygon (e.g. ocean/foreign soil).
+ */
+export async function stateFipsForPoint(longitude: number, latitude: number): Promise<string | null> {
+  const states = await loadUsStates();
+  for (const raw of states.features) {
+    const f = raw as UsGeoFeature;
+    if (geoContains(f as never, [longitude, latitude])) {
+      return fipsId(f);
+    }
+  }
+  return null;
 }
 
 /** Nation-scale Albers USA (AK/HI insets). */

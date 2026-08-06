@@ -107,6 +107,8 @@ function AnalyticsPageInner({
     { name: "Court-ordered", value: courtOrdered, color: "#835400" },
   ].filter((s) => s.value > 0);
 
+  const hasPlaceholderLocations = isMock || filteredSessions.some((s) => s.state_fips_placeholder);
+
   const exportColumns = [
     { key: "id", label: "id" },
     { key: "volunteer", label: "volunteer" },
@@ -187,7 +189,7 @@ function AnalyticsPageInner({
         <UsHeatmap
           activity={buildGeoActivity(filteredSessions)}
           periodLabel={periodLabelText}
-          isMock={isMock}
+          isMock={hasPlaceholderLocations}
         />
       </div>
     </div>
