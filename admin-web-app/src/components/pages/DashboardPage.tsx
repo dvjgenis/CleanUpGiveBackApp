@@ -10,8 +10,8 @@
  * by `admin-web-app/src/app/dashboard/page.tsx` (see `@/lib/live-data`), falling
  * back to the same mock fixtures admin uses when those tables are empty.
  * "Start"/"Review" open the same `SessionPreviewDrawer` used on `/sessions` for
- * approve/decline. Bulk-select checkboxes and the queue search box are still
- * non-functional (not wired up).
+ * approve/decline — one session at a time by design, no bulk-approve shortcut.
+ * The queue search box is still non-functional (not wired up).
  */
 import { Suspense, useState, type ReactNode, type HTMLAttributes } from "react";
 import Link from "next/link";
@@ -335,15 +335,6 @@ function DashboardPageInner({
             </div>
           )}
 
-          {queue.length > 0 && (
-            <div className="px-lg pb-md">
-              <div className="px-md py-sm rounded-sm bg-[#f7fff1] border border-primary text-[12px] font-body text-text-tertiary">
-                <strong className="text-primary font-semibold">Tip:</strong> Select multiple sessions with checkboxes to
-                approve in bulk. Click any row to review details.
-              </div>
-            </div>
-          )}
-
           {queue.length === 0 ? (
             <div className="px-lg pb-lg flex-1 flex items-center">
               <p className="font-body text-[14px] text-text-tertiary max-w-xs">
@@ -360,7 +351,6 @@ function DashboardPageInner({
             <ul role="list" className="flex-1 divide-y divide-border-outline border-t border-border-outline">
               {visibleQueue.map((item) => (
                 <li key={item.id} className="px-lg py-md flex flex-col sm:flex-row sm:items-center gap-sm sm:gap-md">
-                  <input type="checkbox" className="w-4 h-4 accent-primary shrink-0" aria-label={`Select ${item.volunteer_name}`} readOnly />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-xs">
                       <Link
