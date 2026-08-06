@@ -37,10 +37,12 @@ import {
   type SessionStatus,
 } from "@/lib/mock-data";
 
+// "active" (in-progress, not yet submitted) sessions are excluded at the query layer
+// (see loadLiveSessions in @/lib/live-data) — no admin surface ever sees them, so no
+// filter for that status here.
 const STATUS_FILTERS: { value: "all" | SessionStatus; label: string }[] = [
   { value: "all", label: "All" },
   { value: "under_review", label: "Under Review" },
-  { value: "active", label: "Active" },
   { value: "approved", label: "Approved" },
   { value: "not_approved", label: "Declined" },
 ];

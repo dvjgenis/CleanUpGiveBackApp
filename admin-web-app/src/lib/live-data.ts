@@ -36,7 +36,11 @@ import { buildCourtRisk, type CourtOrderRow as CourtRiskOrderRow } from '@/lib/c
 
 export type LiveResult<T> = { data: T; useMock: boolean };
 
-/** Sessions scoped for Dashboard/Sessions pages — real `sessions` rows enriched with Auth names. */
+/**
+ * Sessions scoped for Dashboard/Sessions pages — real `sessions` rows enriched with Auth names.
+ * Excludes `active` (in-progress, not yet submitted) sessions: admin must never see a
+ * volunteer's location/activity while a session is still live, only after they submit it.
+ */
 export async function loadLiveSessions(): Promise<LiveResult<MockSession[]>> {
   const supabase = await createDataClient();
   const [{ data: rows, error }, directory] = await Promise.all([
@@ -45,6 +49,7 @@ export async function loadLiveSessions(): Promise<LiveResult<MockSession[]>> {
       .select(
         'id, user_id, activity, started_at, ended_at, created_at, status, duration_seconds, adjusted_hours, court_ordered, distance_miles',
       )
+      .neq('status', 'active')
       .order('created_at', { ascending: false }),
     getVolunteerDirectory(),
   ]);
@@ -216,6 +221,7 @@ export async function loadLiveVolunteerById(id: string): Promise<LiveResult<Volu
         .from('sessions')
         .select('id, activity, started_at, duration_seconds, adjusted_hours, distance_miles, status, court_ordered')
         .eq('user_id', id)
+        .neq('status', 'active')
         .order('started_at', { ascending: false }),
       supabase
         .from('court_orders')
@@ -360,6 +366,7 @@ export async function loadLiveCourtProgress(): Promise<LiveResult<MockCourtVolun
     supabase
       .from('sessions')
       .select('user_id, status, court_ordered, duration_seconds, adjusted_hours')
+      .neq('status', 'active')
       .in(
         'user_id',
         orderRows.map((c) => c.user_id),
@@ -588,7 +595,7 @@ export async function loadLiveUsers(): Promise<LiveResult<import('@/components/u
 
   const supabase = await createDataClient();
   const [{ data: sessions }, { data: courtOrders }] = await Promise.all([
-    supabase.from('sessions').select('user_id, status, duration_seconds, adjusted_hours'),
+    supabase.from('sessions').select('user_id, status, duration_seconds, adjusted_hours').neq('status', 'active'),
     supabase.from('court_orders').select('user_id, required_hours, due_date'),
   ]);
 

@@ -17,7 +17,6 @@ import { Suspense, useState, type ReactNode, type HTMLAttributes } from "react";
 import Link from "next/link";
 import { CourtBadge } from "@/components/ui/CourtBadge";
 import { Button } from "@/components/ui/Button";
-import { ChevronRightIcon } from "@/components/ui/Icons";
 import { MiniDonut, type MiniDonutSlice } from "@/components/ui/MiniDonut";
 import { FeedbackEmojiStrip, type FeedbackEmojiCount } from "@/components/ui/FeedbackEmojiStrip";
 import { HorizontalBarChart } from "@/components/ui/HorizontalBarChart";
@@ -250,7 +249,7 @@ function DashboardPageInner({
       : null;
   const priorCaption = priorPeriodCaption(selection);
 
-  const visibleQueue = filteredQueue.slice(0, 5);
+  const visibleQueue = filteredQueue;
   const isFiltered = courtOnlyFilter;
 
   const waitingDonut: MiniDonutSlice[] = [{ value: Math.max(queue.length, 1), color: "#fcab29" }];
@@ -274,8 +273,6 @@ function DashboardPageInner({
   const openOrders = orders.filter((o) => o.status === "pending" || o.status === "paid" || o.status === "shipped");
   const ordersRevenueCents = orders.filter((o) => o.status !== "cancelled").reduce((sum, o) => sum + o.totalCents, 0);
 
-  const approvalRatePct =
-    scoped.length > 0 ? Math.round((approved.length / scoped.length) * 100) : sessions.length > 0 ? Math.round((sessions.filter((s) => s.status === "approved").length / sessions.length) * 100) : 0;
   const geoActivity = buildGeoActivity(scoped.length > 0 ? scoped : sessions);
 
   return (
@@ -348,7 +345,10 @@ function DashboardPageInner({
               </p>
             </div>
           ) : (
-            <ul role="list" className="flex-1 divide-y divide-border-outline border-t border-border-outline">
+            <ul
+              role="list"
+              className="flex-1 divide-y divide-border-outline border-t border-border-outline max-h-[420px] overflow-y-auto"
+            >
               {visibleQueue.map((item) => (
                 <li key={item.id} className="px-lg py-md flex flex-col sm:flex-row sm:items-center gap-sm sm:gap-md">
                   <div className="min-w-0 flex-1">
@@ -450,35 +450,6 @@ function DashboardPageInner({
           preview={orders.slice(0, 4)}
         />
       </div>
-
-      {/* Snapshot — glanceable composition; deeper breakdowns on /insights */}
-      <Bento as="section" aria-labelledby="bento-snapshot-heading" className="mt-md">
-        <div className="px-lg py-lg flex flex-col sm:flex-row sm:items-center gap-lg">
-          <div className="flex-1 min-w-0">
-            <p className="font-data text-[11px] uppercase tracking-[0.88px] text-text-tertiary mb-xs">This period</p>
-            <h2 id="bento-snapshot-heading" className="font-heading text-[20px] leading-[26px] text-text-primary">
-              Snapshot
-            </h2>
-          </div>
-          <div className="flex flex-wrap items-center gap-lg">
-            <div>
-              <p className="font-data text-[11px] uppercase tracking-[0.5px] text-text-tertiary">Approval rate</p>
-              <p className="font-data text-[22px] font-semibold text-text-primary">{approvalRatePct}%</p>
-            </div>
-            <div>
-              <p className="font-data text-[11px] uppercase tracking-[0.5px] text-text-tertiary">Top activity</p>
-              <p className="font-body text-[16px] font-medium text-text-primary truncate max-w-[10rem]">Park Cleanup</p>
-            </div>
-          </div>
-          <Link
-            href="/analytics"
-            className="font-data text-[12px] font-semibold text-primary hover:underline min-h-11 inline-flex items-center gap-2 shrink-0"
-          >
-            More charts
-            <ChevronRightIcon className="w-3.5 h-3.5" color="currentColor" />
-          </Link>
-        </div>
-      </Bento>
 
       <SessionPreviewDrawer
         session={sessions.find((s) => s.id === previewId) ?? null}
