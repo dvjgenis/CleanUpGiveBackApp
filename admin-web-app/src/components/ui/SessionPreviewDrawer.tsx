@@ -128,6 +128,7 @@ function WalkingPathSection({
 }) {
   const route = evidence?.route;
   const photoPins = evidence?.photoPins ?? [];
+  const photoCount = evidence?.photos.length ?? 0;
   const hasLiveRoute = (route?.length ?? 0) >= 2;
 
   return (
@@ -150,7 +151,7 @@ function WalkingPathSection({
         />
       )}
       {hasLiveRoute && route && (
-        <WalkingPathLegend pointCount={route.length} photoPinCount={photoPins.length} />
+        <WalkingPathLegend pointCount={route.length} photoCount={photoCount} />
       )}
     </section>
   );

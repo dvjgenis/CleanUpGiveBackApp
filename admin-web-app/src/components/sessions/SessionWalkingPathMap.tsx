@@ -841,10 +841,10 @@ export function SessionWalkingPathMap({
 /** High-contrast legend under the map — replaces the old grey “black Start · red End” line. */
 export function WalkingPathLegend({
   pointCount,
-  photoPinCount,
+  photoCount,
 }: {
   pointCount: number;
-  photoPinCount: number;
+  photoCount: number;
 }) {
   return (
     <div className="mt-md flex flex-col gap-sm sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-lg sm:gap-y-sm">
@@ -868,20 +868,20 @@ export function WalkingPathLegend({
           />
           End
         </li>
-        {photoPinCount > 0 && (
+        {photoCount > 0 && (
           <li className="inline-flex items-center gap-xs font-body text-[13px] text-text-primary">
             <span
               className="inline-block w-3 h-3 rounded-full border-2 shrink-0"
               style={{ borderColor: PRIMARY, background: "#e8f5ec" }}
               aria-hidden
             />
-            Photos on trail ({photoPinCount})
+            Photos on trail ({photoCount})
           </li>
         )}
       </ul>
       <p className="font-body text-[13px] text-text-tertiary">
         Use Play to replay the walk
-        {photoPinCount > 0 ? " · tap a thumbnail to enlarge" : ""}
+        {photoCount > 0 ? " · tap a thumbnail to enlarge" : ""}
       </p>
     </div>
   );
