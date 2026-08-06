@@ -80,37 +80,65 @@ export async function getUserId(): Promise<string | null> {
   return session?.user?.id ?? null;
 }
 
+const SYNC_VOLUNTEER_PROFILE_RETRY_DELAYS_MS = [500, 1500, 3000];
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 /**
- * Best-effort sync of the onboarding display name (and optionally email) into
+ * Sync of the onboarding display name (and optionally email) into
  * `user_metadata`, so the admin dashboard can resolve real volunteer names.
- * Never throws — safe to fire-and-forget from UI code.
+ * Retries with backoff on transient failure and verifies the write actually
+ * landed (not just that the request didn't error) before giving up — a
+ * volunteer's name has no other path to admin once this is skipped, since
+ * the onboarding store holding it is in-memory only. Never throws — safe to
+ * fire-and-forget from UI code, but keeps retrying in the background even
+ * after the calling screen unmounts.
  */
 export async function syncVolunteerProfile(details: {
   preferredName?: string;
   email?: string;
-}): Promise<void> {
+}): Promise<boolean> {
   if (!supabase) {
-    return;
+    return false;
   }
 
   const trimmedName = details.preferredName?.trim() ?? '';
   if (!trimmedName) {
-    return;
+    return false;
   }
 
-  try {
-    await ensureAnonymousAuth();
-
-    const data: Record<string, string> = { full_name: trimmedName };
-    if (details.email?.trim()) {
-      data.email = details.email.trim();
-    }
-
-    const { error } = await supabase.auth.updateUser({ data });
-    if (error) {
-      console.warn('[supabase] volunteer profile sync failed:', error.message);
-    }
-  } catch (error) {
-    console.warn('[supabase] volunteer profile sync failed:', error);
+  const data: Record<string, string> = { full_name: trimmedName };
+  if (details.email?.trim()) {
+    data.email = details.email.trim();
   }
+
+  let lastError: unknown = null;
+
+  for (let attempt = 0; attempt <= SYNC_VOLUNTEER_PROFILE_RETRY_DELAYS_MS.length; attempt += 1) {
+    try {
+      await ensureAnonymousAuth();
+
+      const { data: updated, error } = await supabase.auth.updateUser({ data });
+      if (error) {
+        lastError = error;
+      } else if (updated.user.user_metadata?.full_name !== trimmedName) {
+        // Request succeeded but the response doesn't reflect our write — treat as
+        // unconfirmed and retry rather than trusting a no-error response blindly.
+        lastError = new Error('full_name mismatch after updateUser');
+      } else {
+        return true;
+      }
+    } catch (error) {
+      lastError = error;
+    }
+
+    if (attempt < SYNC_VOLUNTEER_PROFILE_RETRY_DELAYS_MS.length) {
+      await delay(SYNC_VOLUNTEER_PROFILE_RETRY_DELAYS_MS[attempt]);
+    }
+  }
+
+  console.warn('[supabase] volunteer profile sync failed after retries:', lastError);
+  return false;
 }
