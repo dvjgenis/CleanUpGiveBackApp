@@ -133,9 +133,10 @@ html, body {
 }
 
 .heatmap-search-popup .maplibregl-popup-content {
+  position: relative;
   color: #1c1b1b;
   background: #ffffff;
-  padding: 10px 28px 10px 12px;
+  padding: 12px 36px 12px 12px;
   border-radius: 8px;
   border: 1px solid #bdcaba;
   box-shadow: 0 4px 5px rgba(0, 0, 0, 0.15);
@@ -152,15 +153,28 @@ html, body {
 }
 
 .heatmap-search-popup .maplibregl-popup-close-button {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
   color: #1c1b1b;
   font-size: 18px;
+  font-weight: 600;
   line-height: 1;
-  padding: 4px 8px;
-  opacity: 0.7;
+  opacity: 0.75;
 }
 
 .heatmap-search-popup .maplibregl-popup-close-button:hover {
-  background: transparent;
+  background: #f6f3f2;
   color: #007536;
   opacity: 1;
 }
