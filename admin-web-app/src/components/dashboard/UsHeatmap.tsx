@@ -185,6 +185,8 @@ export function UsHeatmap({ activity, sessions, periodLabel }: Props) {
     return map;
   }, [tractStatsById, neighborhoodNames]);
 
+  const resolvedNameIds = useMemo(() => new Set(neighborhoodNames.keys()), [neighborhoodNames]);
+
   const stateCounties = useMemo(() => {
     if (!countiesFc || drill.level === 'nation') return null;
     const stateFips = drill.level === 'state' ? drill.fips : drill.stateFips;
@@ -361,6 +363,7 @@ export function UsHeatmap({ activity, sessions, periodLabel }: Props) {
                 key={drill.fips}
                 tracts={tracts}
                 statsById={resolvedTractStatsById}
+                resolvedNameIds={resolvedNameIds}
                 maxCount={maxCount}
                 hoveredId={hoveredId}
                 onHoverId={setHoveredId}

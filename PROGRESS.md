@@ -343,3 +343,34 @@ Canonical detailed log: [`docs/progress.md`](docs/progress.md).
 - Client-side `router.refresh()` (e.g. a Supabase-realtime hook) cannot un-stale a statically-prerendered route on Vercel — it just re-requests the same cached payload. Only a redeploy or `revalidatePath`/`revalidateTag` actually re-executes the server component.
 - `syncVolunteerProfile` and `liveSessionStore`'s finalize retry now share the same backoff-retry pattern — worth reusing for any other single-attempt Supabase write in onboarding/session flows.
 - Sessions can be real, identifiable DB rows stuck in `status='active'` indefinitely (finalize never completed) — not fake test data. Worth periodically checking `select id from sessions where status='active'` for volume, since it signals ongoing finalize-sync reliability, not just a privacy filter.
+
+---
+
+## [2026-08-06 Session 9] — Fix Fly DB outage, stationary-route replay, sync ServiceType/phone to admin
+
+**Session goal:** Confirm mobile sessions actually reach the backend and admin now that Fly.io is a paid app; fix a stationary-session replay bug; surface each volunteer's ServiceType next to their sessions in admin.
+**Workflow used:** Chat, with `Explore` subagents for codebase tracing (mobile Sessions tab data source, service-type field path, ServiceType storage/join point)
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Diagnose + fix `cleanup-sessions` Fly `DATABASE_URL` outage | Fly secret `DATABASE_URL` (no code change) | ✅ Reproduced via live `POST /sessions` (500, mangled tenant name); user reset the Supabase DB password, `flyctl secrets set` pushed the corrected pooler URL, verified with a real write → `201` → confirmed row in Postgres → cleaned up test row |
+| Audit mobile Sessions tab read path | (research only) | ✅ Confirmed it hits real `GET /sessions`, not local-only; found silently-swallowed fetch errors and a mock-data fallback when `EXPO_PUBLIC_API_URL` is unset |
+| Audit EAS build env-var config | (research only) | ✅ `eas env:list` showed zero vars configured for development/preview/production — real builds would ship with `EXPO_PUBLIC_API_URL`/Supabase vars all `undefined`; flagged, not yet fixed |
+| Fix stationary-session replay drawing a fake walked line | `frontend/src/features/session-tracking/utils/routeFiltering.ts`, `components/SessionRouteMapPanel.tsx`, `components/SessionRouteMapPreviewWebView.tsx` | ✅ Added `getRouteSpanMeters`/`collapseStationaryRoute` (8m floor) so a GPS-settle jitter point no longer renders as an animated line; also fixed the WebView branch, which previously showed no marker at all for a single-point route |
+| Persist volunteer phone + account-level ServiceType to Supabase | `frontend/src/lib/supabase.ts` (`syncVolunteerProfile`), `frontend/src/features/onboarding/onboardingStore.ts` (`getE164Phone`), `frontend/src/screens/SetupCompleteScreen.tsx` | ✅ Extended the existing `full_name` sync (with its verify-then-retry pattern) to also write `phone`/`service_type` into `user_metadata` at the terminal onboarding step |
+| Surface ServiceType next to each volunteer in admin Sessions tab | `admin-web-app/src/lib/volunteers.ts`, `live-data.ts`, `mock-data.ts`, `components/pages/SessionsPage.tsx`, `components/ui/SessionPreviewDrawer.tsx`, new `components/ui/ServiceTypeBadge.tsx` | ✅ Directory-level `serviceType` resolved from `user_metadata.service_type`, badge shown next to volunteer name (list + drawer) and as a Session Info row |
+| Deploy admin-web-app to production | — | ✅ `vercel deploy --prod --yes`, live at `cleanupgiveback-web-app.vercel.app`; `/sessions` still correctly `ƒ` (dynamic), not statically prerendered |
+
+### Key Decisions
+
+- ServiceType stays **account-level, not per-session** — set once at onboarding, same value shown for every session that volunteer logs. User explicitly chose this over a per-session picker.
+- ServiceType/phone persist into Supabase `user_metadata` (same mechanism as `full_name`) rather than a new `profiles` table/migration — avoids a schema change for a field with no other relational use yet.
+- Mobile changes were committed and pushed to `main` but **not** shipped via EAS build this session — user deferred that. Admin-web-app was pushed and deployed to production.
+
+### Learnings
+
+- Paying a Fly.io bill does not fix a broken `DATABASE_URL` secret — those are orthogonal failure modes (billing/suspension vs. a stale DB credential). Always verify with a live write, not just `/health`.
+- `EXPO_PUBLIC_*` vars in a gitignored `.env` are invisible to EAS cloud builds unless mirrored into `eas env:create` — local `expo start` dev testing can look fully wired while a real device build silently falls back to mock data.
+- `ServiceType` had been mobile-only, in-memory, unpersisted (`onboardingStore.ts` comment: "no persistence yet") despite already having onboarding UI for it — a good reminder to check persistence, not just UI presence, when asked "does X get logged accurately."

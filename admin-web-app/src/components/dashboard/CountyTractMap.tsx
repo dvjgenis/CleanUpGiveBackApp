@@ -24,11 +24,17 @@ const SELECTED_LINE_LAYER_ID = "county-tracts-selected-outline";
 type Props = {
   tracts: FeatureCollection;
   statsById: Map<string, GeoUnitStats>;
+  /** Geoids with a real, Nominatim-resolved place name — everything else is still
+   *  showing a fallback tract ID and should read as visibly provisional on hover. */
+  resolvedNameIds: Set<string>;
   maxCount: number;
   hoveredId: string | null;
   onHoverId: (id: string | null) => void;
   onSelectTract: (id: string, name: string) => void;
 };
+
+const HOVER_TEXT_RESOLVED = "#1c1b1b";
+const HOVER_TEXT_FALLBACK = "#6e7a6c";
 
 /** Flattens Polygon/MultiPolygon coordinates to a flat point list for bounds fitting. */
 function collectPositions(coords: unknown, out: Position[]): void {
@@ -78,6 +84,7 @@ function boundsOf(fc: FeatureCollection): maplibregl.LngLatBoundsLike | null {
 function toStyledCollection(
   tracts: FeatureCollection,
   statsById: Map<string, GeoUnitStats>,
+  resolvedNameIds: Set<string>,
   maxCount: number,
 ): FeatureCollection {
   return {
@@ -99,13 +106,22 @@ function toStyledCollection(
           sessionCount: count,
           fillColor: heatFill(maxCount > 0 ? count / maxCount : 0),
           displayName,
+          isResolvedName: resolvedNameIds.has(geoid),
         },
       };
     }),
   };
 }
 
-export function CountyTractMap({ tracts, statsById, maxCount, hoveredId, onHoverId, onSelectTract }: Props) {
+export function CountyTractMap({
+  tracts,
+  statsById,
+  resolvedNameIds,
+  maxCount,
+  hoveredId,
+  onHoverId,
+  onSelectTract,
+}: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const hoveredIdRef = useRef<string | null>(null);
@@ -140,7 +156,7 @@ export function CountyTractMap({ tracts, statsById, maxCount, hoveredId, onHover
     map.on("load", () => {
       map.addSource(SOURCE_ID, {
         type: "geojson",
-        data: toStyledCollection(tracts, statsById, maxCount),
+        data: toStyledCollection(tracts, statsById, resolvedNameIds, maxCount),
       });
       map.addLayer({
         id: FILL_LAYER_ID,
@@ -165,12 +181,17 @@ export function CountyTractMap({ tracts, statsById, maxCount, hoveredId, onHover
       map.on("mousemove", FILL_LAYER_ID, (e) => {
         const id = e.features?.[0]?.properties?.GEOID as string | undefined;
         const name = e.features?.[0]?.properties?.displayName as string | undefined;
+        const isResolved = e.features?.[0]?.properties?.isResolvedName as boolean | undefined;
         if (id && id !== hoveredIdRef.current) {
           hoveredIdRef.current = id;
           onHoverId(id);
         }
         if (name) {
           popup.setLngLat(e.lngLat).setText(name).addTo(map);
+          // A real resolved place name reads in full-contrast text; a still-provisional
+          // tract-ID fallback stays muted so it doesn't look like a confirmed name.
+          const content = popup.getElement()?.querySelector<HTMLElement>(".maplibregl-popup-content");
+          if (content) content.style.color = isResolved ? HOVER_TEXT_RESOLVED : HOVER_TEXT_FALLBACK;
         }
         map.getCanvas().style.cursor = "pointer";
       });
@@ -207,12 +228,12 @@ export function CountyTractMap({ tracts, statsById, maxCount, hoveredId, onHover
     if (!map) return;
     const source = map.getSource(SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
     if (source) {
-      source.setData(toStyledCollection(tracts, statsById, maxCount));
+      source.setData(toStyledCollection(tracts, statsById, resolvedNameIds, maxCount));
     }
     if (map.getLayer(SELECTED_LINE_LAYER_ID)) {
       map.setFilter(SELECTED_LINE_LAYER_ID, ["==", ["get", "GEOID"], hoveredId ?? ""]);
     }
-  }, [tracts, statsById, maxCount, hoveredId]);
+  }, [tracts, statsById, resolvedNameIds, maxCount, hoveredId]);
 
   useEffect(() => {
     if (!fullscreen) return;
