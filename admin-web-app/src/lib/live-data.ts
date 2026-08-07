@@ -38,7 +38,7 @@ import {
 } from '@/lib/shop-catalog';
 import { withEventTiming, type EventListItem, type EventRow } from '@/lib/events';
 import { buildCourtRisk, type CourtOrderRow as CourtRiskOrderRow } from '@/lib/court-risk';
-import { stateFipsForPoint } from '@/lib/us-geo';
+import { geoFipsForPoint } from '@/lib/us-geo';
 import { ILLINOIS_FIPS } from '@/lib/us-heatmap';
 
 export type LiveResult<T> = { data: T; useMock: boolean };
@@ -90,7 +90,9 @@ export async function loadLiveSessions(): Promise<LiveResult<MockSession[]>> {
   const sessions: MockSession[] = await Promise.all(
     rows.map(async (s) => {
       const point = firstRoutePoint(s.route) ?? checkpointBySession.get(s.id) ?? null;
-      const geocodedFips = point ? await stateFipsForPoint(point.longitude, point.latitude) : null;
+      const { stateFips, countyFips } = point
+        ? await geoFipsForPoint(point.longitude, point.latitude)
+        : { stateFips: null, countyFips: null };
 
       return {
         id: s.id,
@@ -107,9 +109,10 @@ export async function loadLiveSessions(): Promise<LiveResult<MockSession[]>> {
         ended_at: s.ended_at ?? s.started_at ?? s.created_at,
         created_at: s.created_at ?? s.started_at ?? new Date().toISOString(),
         // Geocoded from the session's GPS route (or a checkpoint pin) via point-in-polygon
-        // against the states map; sessions with no GPS data fall back to the IL placeholder.
-        state_fips: geocodedFips ?? ILLINOIS_FIPS,
-        state_fips_placeholder: geocodedFips == null,
+        // against the states/counties map; sessions with no GPS data fall back to the IL placeholder.
+        state_fips: stateFips ?? ILLINOIS_FIPS,
+        state_fips_placeholder: stateFips == null,
+        county_fips: countyFips,
       };
     }),
   );

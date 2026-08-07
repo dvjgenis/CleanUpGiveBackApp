@@ -103,15 +103,24 @@ export function UsHeatmap({ activity, periodLabel, isMock = false }: Props) {
       return [...activity.byState].sort((a, b) => b.sessionCount - a.sessionCount);
     }
     if (drill.level === 'state') {
+      const countyNameById = new Map<string, string>();
+      if (stateCounties) {
+        for (const raw of stateCounties.features) {
+          const f = raw as UsGeoFeature;
+          const id = fipsId(f);
+          countyNameById.set(id, featureName(f, id));
+        }
+      }
       return activity.byCounty
         .filter((c) => c.id.startsWith(drill.fips))
+        .map((c) => ({ ...c, name: countyNameById.get(c.id) ?? c.name }))
         .sort((a, b) => b.sessionCount - a.sessionCount);
     }
     const neigh = neighborhoodsForCounty(drill.fips);
     return neigh
       .map((n) => byNeighborhood.get(n.id) ?? emptyStats(n.id, n.name))
       .sort((a, b) => b.sessionCount - a.sessionCount);
-  }, [activity.byState, activity.byCounty, byNeighborhood, drill]);
+  }, [activity.byState, activity.byCounty, byNeighborhood, drill, stateCounties]);
 
   const maxCount = Math.max(1, ...activeStatsList.map((s) => s.sessionCount));
 

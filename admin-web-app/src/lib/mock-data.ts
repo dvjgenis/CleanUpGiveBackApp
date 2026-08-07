@@ -29,6 +29,8 @@ export type MockSession = {
   state_fips: string;
   /** True when `state_fips` is a fallback (no GPS route/checkpoint on the session) rather than geocoded. */
   state_fips_placeholder?: boolean;
+  /** US county FIPS code (5-digit), when geocoded — powers the heatmap's county drill-down. */
+  county_fips?: string | null;
   /** Internal-only note, never shown to the volunteer. Optional — not set on the base fixtures. */
   admin_notes?: string | null;
   /** Populated when `declineSession` is called with a reason. */
@@ -128,32 +130,52 @@ export function loadStateActivity(sessions: MockSession[] = MOCK_SESSIONS): Stat
 
 /**
  * `GeoActivityBundle` for the real drill-down `UsHeatmap` (`admin/lib/us-heatmap.ts` shape).
- * Mock sessions only carry state-level FIPS, so county/neighborhood tiers stay empty —
- * matches how the admin map renders when a state has no county-level data yet.
+ * County stats only populate for sessions carrying a geocoded `county_fips` (live sessions
+ * with GPS route/checkpoint data); mock fixtures and ungeocoded live sessions only have
+ * state-level FIPS, so the county tier stays empty for those — same as neighborhoods, which
+ * `UsHeatmap` derives client-side from the schematic Cook County tile set, not from here.
  */
 export function buildGeoActivity(sessions: MockSession[] = MOCK_SESSIONS): {
   byState: { id: string; name: string; sessionCount: number; hours: number; underReview: number }[];
   byCounty: { id: string; name: string; sessionCount: number; hours: number; underReview: number }[];
   byNeighborhood: { id: string; name: string; sessionCount: number; hours: number; underReview: number }[];
 } {
-  const map = new Map<
-    string,
-    { id: string; name: string; sessionCount: number; hours: number; underReview: number }
-  >();
+  type Bucket = { id: string; name: string; sessionCount: number; hours: number; underReview: number };
+  const byState = new Map<string, Bucket>();
+  const byCounty = new Map<string, Bucket>();
+
   for (const s of sessions) {
-    const cur = map.get(s.state_fips) ?? {
+    const hours = computedHours(s.duration_seconds, s.adjusted_hours);
+    const underReview = s.status === "under_review" ? 1 : 0;
+
+    const stateBucket = byState.get(s.state_fips) ?? {
       id: s.state_fips,
       name: STATE_FIPS_NAME[s.state_fips] ?? `State ${s.state_fips}`,
       sessionCount: 0,
       hours: 0,
       underReview: 0,
     };
-    cur.sessionCount += 1;
-    cur.hours += computedHours(s.duration_seconds, s.adjusted_hours);
-    if (s.status === "under_review") cur.underReview += 1;
-    map.set(s.state_fips, cur);
+    stateBucket.sessionCount += 1;
+    stateBucket.hours += hours;
+    stateBucket.underReview += underReview;
+    byState.set(s.state_fips, stateBucket);
+
+    if (s.county_fips) {
+      const countyBucket = byCounty.get(s.county_fips) ?? {
+        id: s.county_fips,
+        name: `County ${s.county_fips}`,
+        sessionCount: 0,
+        hours: 0,
+        underReview: 0,
+      };
+      countyBucket.sessionCount += 1;
+      countyBucket.hours += hours;
+      countyBucket.underReview += underReview;
+      byCounty.set(s.county_fips, countyBucket);
+    }
   }
-  return { byState: [...map.values()], byCounty: [], byNeighborhood: [] };
+
+  return { byState: [...byState.values()], byCounty: [...byCounty.values()], byNeighborhood: [] };
 }
 
 export type NamedBar = { name: string; value: number; color: string };

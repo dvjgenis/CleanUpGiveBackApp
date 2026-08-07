@@ -62,19 +62,36 @@ export function stateFipsFromCounty(countyFips: string): string {
 }
 
 /**
- * Reverse-geocodes a WGS84 point to its US state FIPS code via point-in-polygon
- * against the same states TopoJSON the map renders — no external geocoding API.
- * Returns null when the point falls outside every state polygon (e.g. ocean/foreign soil).
+ * Reverse-geocodes a WGS84 point to state + county FIPS in one pass — feeds the
+ * heatmap's county drill-down, which otherwise has nothing to show once a state
+ * is clicked. `countyFips` is null when the point matched a state but no county
+ * polygon (rare, e.g. slivers along coastlines) or no state at all.
  */
-export async function stateFipsForPoint(longitude: number, latitude: number): Promise<string | null> {
-  const states = await loadUsStates();
+export async function geoFipsForPoint(
+  longitude: number,
+  latitude: number,
+): Promise<{ stateFips: string | null; countyFips: string | null }> {
+  const [states, counties] = await Promise.all([loadUsStates(), loadUsCounties()]);
+
+  let stateFips: string | null = null;
   for (const raw of states.features) {
     const f = raw as UsGeoFeature;
     if (geoContains(f as never, [longitude, latitude])) {
-      return fipsId(f);
+      stateFips = fipsId(f);
+      break;
     }
   }
-  return null;
+
+  let countyFips: string | null = null;
+  for (const raw of counties.features) {
+    const f = raw as UsGeoFeature;
+    if (geoContains(f as never, [longitude, latitude])) {
+      countyFips = fipsId(f);
+      break;
+    }
+  }
+
+  return { stateFips, countyFips };
 }
 
 /** Nation-scale Albers USA (AK/HI insets). */
