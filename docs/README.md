@@ -81,7 +81,7 @@ Living docs for the Clean Up - Give Back monorepo. Templates are copy-only.
 |------|---------|
 | [architecture.md](architecture.md) | Full-system Mermaid diagrams (clients, Fly, Supabase, integrations) |
 | [adr/](adr/) | Architecture decision records |
-| [agents/](agents/) | Agent instructions (`AGENTS.md`, `CLAUDE.md`) |
+| [agents/](agents/) | Agent instructions (`AGENTS.md`, `CLAUDE.md`) + [session-abuse-checklist.md](agents/session-abuse-checklist.md) (court / session gaming vectors) |
 
 ## Templates
 

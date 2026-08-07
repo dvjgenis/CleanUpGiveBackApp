@@ -45,6 +45,7 @@ Apply strictly to `**/*.tsx` and `**/*.ts`:
 2. **MCP-first for externals:** If the task needs GitHub, search, browser checks, or cross-session memory, use the matching MCP tool (see MCP table below). Read tool schemas before calling.
 3. **Verify:** `cd frontend && npx tsc --noEmit` before marking done. Use Expo Go or EAS dev build for native checks.
 4. **Sync docs:** Update living docs under `docs/` after every code or behavior change (see Documentation Backpressure below).
+5. **Court / session trust work:** Read [session-abuse-checklist.md](session-abuse-checklist.md) before changing live sessions, checkpoints, admin approval, court-hours progress, service letters, or proposing auto-approve / trust scoring.
 
 ---
 

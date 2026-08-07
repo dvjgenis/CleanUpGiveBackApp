@@ -2,6 +2,30 @@
 
 ---
 
+## [2026-08-06] — Mild tighten of live GPS append gates
+
+**R:** Standing-still sessions were still occasionally growing junk trail points from GPS jitter; mild append-gate tighten preferred over lowering the 8 m replay collapse span.
+
+**A:** In `routeFiltering.ts`: jitter floor **2 → 2.5 m**, min-move factor **0.4 → 0.45**, slow-walk speed floor **0.12 → 0.14 m/s**. Updated unit expectations + synced maps/project/current/spec docs.
+
+**L:** Docs still cited stale `max(1m, ×0.25)` / 0.12 — code had already moved to 2 m / ×0.4 before this tighten.
+
+**P:** Milder still-session filtering; outdoor slow-walk QA still recommended.
+
+**H:** Replay `collapseStationaryRoute` span stays **8 m** (display only); capture gates are the first line of defense.
+
+---
+
+## [2026-08-06] — Session abuse checklist for agents
+
+**R:** Court-ordered volunteers have strong incentive to game GPS + photo + hours; need a durable thinking aid for Claude on trust/review work.
+
+**A:** Added [agents/session-abuse-checklist.md](agents/session-abuse-checklist.md); linked from `AGENTS.md` workflow + docs README agents row. No product code.
+
+**P:** Use when changing sessions/checkpoints/admin approve/court hours or evaluating suspicious patterns.
+
+---
+
 ## [2026-08-04] — Trash Cleanup Kit carousel image order
 
 **R:** Product view showed flatlay before hero; Donna wanted those swapped.

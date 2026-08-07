@@ -16,7 +16,7 @@ export const ROUTE_GAP_RECOVERY_MS = 30_000;
 export const MAX_PLAUSIBLE_SPEED_MPS = 6;
 
 /** Device-reported speed below this is treated as stationary (m/s). */
-export const MIN_SPEED_TO_RECORD_MPS = 0.12;
+export const MIN_SPEED_TO_RECORD_MPS = 0.14;
 
 /** Ignore route appends for this long after session start (ms). */
 export const GPS_WARMUP_MS = 3000;
@@ -78,18 +78,16 @@ export function isPlausibleMovement(
 
 /**
  * Floor for the movement gate below (meters). A single stationary GPS fix
- * commonly jitters 1-2m even at good reported accuracy (multipath, urban
- * canyon); the previous 1m floor let that jitter register as a "walked"
- * route point on a completely still session. 2m keeps a still session's
- * route pinned to the seed point while still catching normal walking pace
- * within a step or two.
+ * commonly jitters 1–2 m even at good reported accuracy (multipath, urban
+ * canyon); 2.5 m keeps a still session's route pinned to the seed while still
+ * catching normal walking within a step or two.
  */
-const STATIONARY_JITTER_FLOOR_METERS = 2;
+const STATIONARY_JITTER_FLOOR_METERS = 2.5;
 
 /** Movement must exceed GPS error radius before appending a route point. */
 export function getMinMovementMeters(accuracyMeters: number): number {
   const safeAccuracy = resolveAccuracyMeters(accuracyMeters);
-  return Math.max(STATIONARY_JITTER_FLOOR_METERS, safeAccuracy * 0.4);
+  return Math.max(STATIONARY_JITTER_FLOOR_METERS, safeAccuracy * 0.45);
 }
 
 export function detectMotionState(

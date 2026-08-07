@@ -53,11 +53,11 @@ describe('isPlausibleMovement', () => {
 
 describe('getMinMovementMeters', () => {
   it('uses at least the stationary jitter floor', () => {
-    expect(getMinMovementMeters(5)).toBe(3);
+    expect(getMinMovementMeters(5)).toBe(2.5);
   });
 
   it('scales with reported accuracy', () => {
-    expect(getMinMovementMeters(20)).toBe(12);
+    expect(getMinMovementMeters(20)).toBe(9);
   });
 });
 
