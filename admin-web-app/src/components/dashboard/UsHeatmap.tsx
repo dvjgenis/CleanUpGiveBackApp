@@ -7,7 +7,6 @@ import type { FeatureCollection } from 'geojson';
 import { geoContains } from 'd3-geo';
 import {
   heatFill,
-  heatText,
   STATE_FIPS_NAME,
   type GeoActivityBundle,
   type GeoUnitStats,
@@ -388,7 +387,7 @@ export function UsHeatmap({ activity, sessions, periodLabel }: Props) {
     drill.level === 'nation'
       ? `State heat · ${periodLabel}`
       : drill.level === 'state'
-        ? `County bubble heat · ${periodLabel}`
+        ? `County heat · ${periodLabel}`
         : `Neighborhood heat · ${periodLabel}`;
 
   function featureName(f: UsGeoFeature, fallbackFips: string): string {
@@ -539,24 +538,29 @@ export function UsHeatmap({ activity, sessions, periodLabel }: Props) {
               viewBox={`0 0 ${MAP_W} ${MAP_H}`}
               className="w-full h-auto max-h-[400px]"
               role="img"
-              aria-label={`${drill.name} county bubble heat map. Select a county to see neighborhoods.`}
+              aria-label={`${drill.name} county heat map. Select a county to see neighborhoods.`}
             >
               <rect x="0" y="0" width={MAP_W} height={MAP_H} fill="#fcf9f8" />
-              {/* Faint county outlines for geography context */}
+              {/* Every county in the state, filled by session-count intensity — same choropleth
+               * treatment as the nation view, so a county with zero sessions still renders its
+               * real shape (just unfilled) instead of only appearing once it has data. */}
               {stateCounties.features.map((raw) => {
                 const f = raw as UsGeoFeature;
                 const id = fipsId(f);
                 const d = countyPath.path(f as never) ?? '';
                 if (!d) return null;
                 const name = featureName(f, id);
+                const stat = byCounty.get(id);
+                const count = stat?.sessionCount ?? 0;
+                const intensity = count / maxCount;
                 const hovered = hoveredId === id;
                 return (
                   <path
-                    key={`outline-${id}`}
+                    key={id}
                     d={d}
-                    fill={hovered ? '#e8f5ec' : '#f6f3f2'}
-                    stroke={hovered ? '#007536' : '#bdcaba'}
-                    strokeWidth={hovered ? 1.2 : 0.5}
+                    fill={heatFill(intensity)}
+                    stroke={hovered ? '#1c1b1b' : '#ffffff'}
+                    strokeWidth={hovered ? 1.5 : 0.6}
                     className="cursor-pointer"
                     onMouseEnter={() => setHoveredId(id)}
                     onMouseLeave={() => setHoveredId(null)}
@@ -570,65 +574,12 @@ export function UsHeatmap({ activity, sessions, periodLabel }: Props) {
                       })
                     }
                   >
-                    <title>{name}</title>
+                    <title>
+                      {name}: {count} session{count === 1 ? '' : 's'}
+                    </title>
                   </path>
                 );
               })}
-              {/* Activity bubbles at county centroids — clearer than flat choropleth when sparse */}
-              {[...countyBubbles]
-                .sort((a, b) => a.sessionCount - b.sessionCount)
-                .map((b) => {
-                  const intensity = b.sessionCount / maxCount;
-                  const hovered = hoveredId === b.id;
-                  const r =
-                    b.sessionCount <= 0
-                      ? 0
-                      : Math.max(6, Math.min(28, 6 + Math.sqrt(intensity) * 22));
-                  if (r <= 0) return null;
-                  return (
-                    <g key={`bubble-${b.id}`}>
-                      <circle
-                        cx={b.cx}
-                        cy={b.cy}
-                        r={r + (hovered ? 2 : 0)}
-                        fill={heatFill(Math.max(0.2, intensity))}
-                        fillOpacity={0.88}
-                        stroke={hovered ? '#1c1b1b' : '#ffffff'}
-                        strokeWidth={hovered ? 2 : 1.25}
-                        className="cursor-pointer"
-                        onMouseEnter={() => setHoveredId(b.id)}
-                        onMouseLeave={() => setHoveredId(null)}
-                        onClick={() =>
-                          setDrill({
-                            level: 'county',
-                            fips: b.id,
-                            name: b.name,
-                            stateFips: drill.fips,
-                            stateName: drill.name,
-                          })
-                        }
-                      >
-                        <title>
-                          {b.name}: {b.sessionCount} session{b.sessionCount === 1 ? '' : 's'}
-                        </title>
-                      </circle>
-                      {b.sessionCount > 0 && r >= 12 && (
-                        <text
-                          x={b.cx}
-                          y={b.cy + 3}
-                          textAnchor="middle"
-                          className="pointer-events-none"
-                          fill={heatText(Math.max(0.2, intensity))}
-                          fontSize="10"
-                          fontFamily="var(--font-ibm-plex-sans), monospace"
-                          fontWeight="700"
-                        >
-                          {b.sessionCount}
-                        </text>
-                      )}
-                    </g>
-                  );
-                })}
             </svg>
           ) : null}
 
