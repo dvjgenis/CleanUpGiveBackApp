@@ -17,6 +17,8 @@ import {
   PauseIcon,
   PlayIcon,
   ReplayIcon,
+  EyeIcon,
+  EyeOffIcon,
 } from "@/components/ui/Icons";
 import type { SessionPhoto, SessionPhotoPin } from "@/lib/session-evidence";
 import {
@@ -243,6 +245,9 @@ export function SessionWalkingPathMap({
   const [replayProgress, setReplayProgress] = useState(1);
   const [isPlaying, setIsPlaying] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
+  const [showPhotoThumbnails, setShowPhotoThumbnails] = useState(true);
+  const showPhotoThumbnailsRef = useRef(showPhotoThumbnails);
+  showPhotoThumbnailsRef.current = showPhotoThumbnails;
   const [lightbox, setLightbox] = useState<{ photos: SessionPhoto[]; index: number } | null>(
     null,
   );
@@ -384,7 +389,7 @@ export function SessionWalkingPathMap({
       return;
     }
 
-    const pins = photoPinsRef.current;
+    const pins = showPhotoThumbnailsRef.current ? photoPinsRef.current : [];
     syncPhotoPinLayer(map, pins);
     clearPhotoMarkers();
 
@@ -587,18 +592,18 @@ export function SessionWalkingPathMap({
 
   useEffect(() => {
     syncPhotoMarkers();
-  }, [pinsKey, syncPhotoMarkers]);
+  }, [pinsKey, showPhotoThumbnails, syncPhotoMarkers]);
 
   // Heal missing HTML markers if a race cleared them while the style was loading.
   useEffect(() => {
-    if (photoPins.length === 0) return undefined;
+    if (photoPins.length === 0 || !showPhotoThumbnails) return undefined;
     const id = window.setTimeout(() => {
       if (photoMarkersRef.current.length !== photoPinsRef.current.length) {
         syncPhotoMarkers();
       }
     }, 250);
     return () => window.clearTimeout(id);
-  }, [pinsKey, routeKey, fullscreen, photoPins.length, syncPhotoMarkers]);
+  }, [pinsKey, routeKey, fullscreen, photoPins.length, showPhotoThumbnails, syncPhotoMarkers]);
 
   // Resize after entering/exiting fullscreen so the canvas fills the new box.
   useEffect(() => {
@@ -717,6 +722,25 @@ export function SessionWalkingPathMap({
             >
               <ReplayIcon className="w-5 h-5" />
             </button>
+            {photoPins.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowPhotoThumbnails((v) => !v)}
+                aria-pressed={showPhotoThumbnails}
+                className="inline-flex h-11 items-center gap-sm px-md rounded-full border border-border-outline bg-bg-app/95 font-data text-[12px] font-semibold text-text-primary hover:bg-bg-surface-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+                aria-label={
+                  showPhotoThumbnails ? "Hide checkpoint photo thumbnails" : "Show checkpoint photo thumbnails"
+                }
+                title={showPhotoThumbnails ? "Hide photo thumbnails" : "Show photo thumbnails"}
+              >
+                {showPhotoThumbnails ? (
+                  <EyeIcon className="w-5 h-5" />
+                ) : (
+                  <EyeOffIcon className="w-5 h-5" />
+                )}
+                Photos
+              </button>
+            )}
           </div>
         </div>
       </div>
