@@ -2,7 +2,15 @@
 
 ---
 
-## [2026-08-07] — Tract hover shows real neighborhood names
+## [2026-08-07] — Heatmap search pin + sticky dropdown fix
+
+**R:** Picking a suggestion rewrote the input, which re-fetched typeahead and reopened the list while panning. Fly-to alone also didn't show the exact address.
+
+**A:** Lock suggestions after pick/Search until the user types again; blur the input on commit. Drop a MapLibre pin (+ address popup) at the match (zoom 16); clear pin on new typing or exit fullscreen.
+
+**P:** Select a place → dropdown stays closed; green pin marks the address.
+
+---
 
 **R:** County map hover showed muted `Tract 8080.01`-style IDs; Donna wants colloquial names like Lincoln Park. Browser Nominatim was also unreliable (User-Agent / CORS).
 

@@ -128,13 +128,42 @@ export function CountyTractMap({
   const hoveredIdRef = useRef<string | null>(null);
   const popupRef = useRef<maplibregl.Popup | null>(null);
   const navControlRef = useRef<maplibregl.NavigationControl | null>(null);
+  const searchMarkerRef = useRef<maplibregl.Marker | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+
+  function clearSearchMarker() {
+    searchMarkerRef.current?.remove();
+    searchMarkerRef.current = null;
+  }
+
+  function showSearchMarker(place: PlaceSelection) {
+    const map = mapRef.current;
+    if (!map) return;
+    clearSearchMarker();
+
+    const marker = new maplibregl.Marker({ color: "#007536" })
+      .setLngLat([place.longitude, place.latitude])
+      .setPopup(
+        new maplibregl.Popup({
+          offset: 18,
+          closeButton: true,
+          closeOnClick: false,
+          maxWidth: "280px",
+        }).setText(place.label),
+      )
+      .addTo(map);
+    marker.togglePopup();
+    searchMarkerRef.current = marker;
+  }
 
   function flyToPlace(place: PlaceSelection) {
     const map = mapRef.current;
     if (!map) return;
-    const go = () => map.flyTo({ center: [place.longitude, place.latitude], zoom: 14 });
+    const go = () => {
+      map.flyTo({ center: [place.longitude, place.latitude], zoom: 16 });
+      showSearchMarker(place);
+    };
     if (map.loaded()) go();
     else map.once("load", go);
   }
@@ -219,6 +248,7 @@ export function CountyTractMap({
 
     return () => {
       resizeObserver.disconnect();
+      clearSearchMarker();
       popup.remove();
       popupRef.current = null;
       map.remove();
@@ -261,7 +291,11 @@ export function CountyTractMap({
   useEffect(() => {
     if (!fullscreen) return;
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setFullscreen(false);
+      if (e.key === "Escape") {
+        clearSearchMarker();
+        setSearchQuery("");
+        setFullscreen(false);
+      }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -278,6 +312,8 @@ export function CountyTractMap({
       map.addControl(navControlRef.current, "top-right");
     } else if (navControlRef.current) {
       map.removeControl(navControlRef.current);
+      clearSearchMarker();
+      setSearchQuery("");
     }
   }, [fullscreen]);
 
@@ -294,9 +330,12 @@ export function CountyTractMap({
           <PlaceSearchField
             value={searchQuery}
             onChange={setSearchQuery}
+            onUserEdit={() => {
+              clearSearchMarker();
+            }}
             onPlaceSelected={(place) => {
-              flyToPlace(place);
               setSearchQuery(place.label);
+              flyToPlace(place);
             }}
             viewboxBounds={flatBoundsOf(tracts) ?? undefined}
             showSubmitButton
@@ -305,7 +344,11 @@ export function CountyTractMap({
           />
           <button
             type="button"
-            onClick={() => setFullscreen(false)}
+            onClick={() => {
+              clearSearchMarker();
+              setSearchQuery("");
+              setFullscreen(false);
+            }}
             className="shrink-0 inline-flex h-11 items-center gap-sm px-md rounded-sm border border-border-outline bg-bg-app font-data text-[12px] font-semibold text-text-primary hover:bg-bg-surface-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
             aria-label="Exit full screen"
           >

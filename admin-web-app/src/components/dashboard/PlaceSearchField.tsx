@@ -2,9 +2,12 @@
 
 /**
  * Heatmap / map place search (fullscreen county map):
- * - Always-on free path: Photon → Nominatim via `/api/place-search` (no Google required).
+ * - Always-on free path: Census + Photon → Nominatim via `/api/place-search`.
  * - Optional: Google Places Autocomplete when `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` is set.
  * - Search / Enter resolves through the same free chain when Google isn't used / fails.
+ *
+ * After a pick / successful Search, suggestions stay closed until the user types again
+ * (avoids the list reopening from the post-pick value change).
  */
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import {
@@ -20,6 +23,8 @@ type Props = {
   value: string;
   onChange: (value: string) => void;
   onPlaceSelected: (place: PlaceSelection) => void;
+  /** Fired when the user edits the query (not when a suggestion is applied). */
+  onUserEdit?: () => void;
   placeholder?: string;
   /** Bias results toward this viewport without excluding outsiders. */
   viewboxBounds?: [number, number, number, number];
@@ -53,6 +58,7 @@ export function PlaceSearchField({
   value,
   onChange,
   onPlaceSelected,
+  onUserEdit,
   placeholder = "Search for an address or place",
   viewboxBounds,
   showSubmitButton = false,
@@ -65,6 +71,8 @@ export function PlaceSearchField({
   const autocompleteRef = useRef<PlacesAutocomplete | null>(null);
   const onPlaceSelectedRef = useRef(onPlaceSelected);
   onPlaceSelectedRef.current = onPlaceSelected;
+  /** After pick/search, ignore typeahead until the user types again. */
+  const lockedAfterPickRef = useRef(false);
 
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -99,9 +107,13 @@ export function PlaceSearchField({
             return;
           }
           const label = place.formatted_address ?? place.name ?? inputRef.current?.value ?? "";
+          lockedAfterPickRef.current = true;
+          setOpen(false);
+          setSuggestions([]);
           onChange(label);
           setError(null);
           onPlaceSelectedRef.current({ label, latitude: lat, longitude: lng });
+          inputRef.current?.blur();
         });
         autocompleteRef.current = autocomplete;
       })
@@ -123,9 +135,16 @@ export function PlaceSearchField({
     }
   }, [viewboxBounds]);
 
-  // Free typeahead (Photon → Nominatim) whenever Google isn't active.
+  // Free typeahead whenever Google isn't active and the field isn't locked after a pick.
   useEffect(() => {
     if (useGoogle) return;
+    if (lockedAfterPickRef.current) {
+      setSuggestions([]);
+      setOpen(false);
+      setActiveIndex(-1);
+      return;
+    }
+
     const q = value.trim();
     if (q.length < 2) {
       setSuggestions([]);
@@ -139,7 +158,7 @@ export function PlaceSearchField({
       void (async () => {
         try {
           const hits = await fetchPlaceHits(q, viewboxBounds, 6, controller.signal);
-          if (controller.signal.aborted) return;
+          if (controller.signal.aborted || lockedAfterPickRef.current) return;
           setSuggestions(hits);
           setOpen(hits.length > 0);
           setActiveIndex(-1);
@@ -158,12 +177,19 @@ export function PlaceSearchField({
     };
   }, [value, viewboxBounds, useGoogle]);
 
-  function pickSuggestion(hit: PlaceHit) {
-    onChange(hit.label);
+  function commitPlace(place: PlaceSelection) {
+    lockedAfterPickRef.current = true;
     setOpen(false);
     setSuggestions([]);
+    setActiveIndex(-1);
     setError(null);
-    onPlaceSelected({
+    onChange(place.label);
+    onPlaceSelected(place);
+    inputRef.current?.blur();
+  }
+
+  function pickSuggestion(hit: PlaceHit) {
+    commitPlace({
       label: hit.label,
       latitude: hit.latitude,
       longitude: hit.longitude,
@@ -175,11 +201,11 @@ export function PlaceSearchField({
     const q = value.trim();
     if (!q) return;
 
-    if (!useGoogle && activeIndex >= 0 && suggestions[activeIndex]) {
+    if (!useGoogle && !lockedAfterPickRef.current && activeIndex >= 0 && suggestions[activeIndex]) {
       pickSuggestion(suggestions[activeIndex]);
       return;
     }
-    if (!useGoogle && suggestions.length === 1) {
+    if (!useGoogle && !lockedAfterPickRef.current && suggestions.length === 1) {
       pickSuggestion(suggestions[0]);
       return;
     }
@@ -188,15 +214,13 @@ export function PlaceSearchField({
     setError(null);
     setOpen(false);
     try {
-      // Always resolve via free chain on submit (works with or without Google).
       const hits = await fetchPlaceHits(q, viewboxBounds, 1);
       const top = hits[0];
       if (!top) {
         setError(`No results for "${q}"`);
         return;
       }
-      onChange(top.label);
-      onPlaceSelected({
+      commitPlace({
         label: top.label,
         latitude: top.latitude,
         longitude: top.longitude,
@@ -222,11 +246,15 @@ export function PlaceSearchField({
             type="search"
             value={value}
             onChange={(e) => {
+              lockedAfterPickRef.current = false;
+              onUserEdit?.();
               onChange(e.target.value);
               setError(null);
             }}
             onFocus={() => {
-              if (!useGoogle && suggestions.length > 0) setOpen(true);
+              if (!useGoogle && !lockedAfterPickRef.current && suggestions.length > 0) {
+                setOpen(true);
+              }
             }}
             onBlur={() => {
               window.setTimeout(() => setOpen(false), 150);
