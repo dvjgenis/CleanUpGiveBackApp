@@ -56,10 +56,44 @@ export function UsHeatmap({ activity, sessions, periodLabel }: Props) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [tracts, setTracts] = useState<FeatureCollection | null>(null);
   const [tractsError, setTractsError] = useState<string | null>(null);
-  /** Real place names (via Nominatim), resolved only for tracts with real activity —
-   *  never for the whole county's tract set, to stay within Nominatim's rate limit. */
+  /** Real place names (via `/api/place-reverse`), queued for every tract in the drilled
+   *  county — hovered tracts jump the queue so tooltips resolve quickly. */
   const [neighborhoodNames, setNeighborhoodNames] = useState<Map<string, string>>(new Map());
   const attemptedGeocodesRef = useRef<Set<string>>(new Set());
+  const geocodeQueueRef = useRef<string[]>([]);
+  const geocodeRunningRef = useRef(false);
+  const tractsRef = useRef<FeatureCollection | null>(null);
+  const pumpGeocodeQueueRef = useRef<() => void>(() => {});
+
+  // Keep the pump function stable across renders so enqueue effects can share one runner.
+  pumpGeocodeQueueRef.current = () => {
+    const pump = async () => {
+      if (geocodeRunningRef.current) return;
+      geocodeRunningRef.current = true;
+      try {
+        while (geocodeQueueRef.current.length > 0) {
+          const geoid = geocodeQueueRef.current.shift();
+          if (!geoid || attemptedGeocodesRef.current.has(geoid)) continue;
+          attemptedGeocodesRef.current.add(geoid);
+          const feature = tractsRef.current?.features.find(
+            (f) => (f as TractFeature).properties?.GEOID === geoid,
+          ) as TractFeature | undefined;
+          const centroid = feature ? tractCentroid(feature) : null;
+          if (!centroid) continue;
+          const name = await reverseGeocodePlaceName(geoid, centroid[0], centroid[1]);
+          if (!name) continue;
+          setNeighborhoodNames((prev) => {
+            if (prev.get(geoid) === name) return prev;
+            return new Map(prev).set(geoid, name);
+          });
+        }
+      } finally {
+        geocodeRunningRef.current = false;
+        if (geocodeQueueRef.current.length > 0) void pump();
+      }
+    };
+    void pump();
+  };
   const [search, setSearch] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
@@ -158,31 +192,50 @@ export function UsHeatmap({ activity, sessions, periodLabel }: Props) {
     return map;
   }, [tracts]);
 
-  // Real place names only for tracts with actual activity — Nominatim is rate-limited to
-  // ~1req/sec, so geocoding every tract in a county (often 1,000+) isn't viable.
+  // Real place names for every visible tract. Photon is primary (via `/api/place-reverse`);
+  // hovered tracts jump to the front so the tooltip upgrades from "Tract …" quickly.
   useEffect(() => {
-    if (!tracts || tractStatsById.size === 0) return;
-    let cancelled = false;
-    void (async () => {
-      for (const geoid of tractStatsById.keys()) {
-        if (attemptedGeocodesRef.current.has(geoid)) continue;
-        attemptedGeocodesRef.current.add(geoid);
-        const feature = tracts.features.find((f) => (f as TractFeature).properties?.GEOID === geoid) as
-          | TractFeature
-          | undefined;
-        const centroid = feature ? tractCentroid(feature) : null;
-        if (!centroid) continue;
-        const name = await reverseGeocodePlaceName(geoid, centroid[0], centroid[1]);
-        if (cancelled || !name) continue;
-        setNeighborhoodNames((prev) => new Map(prev).set(geoid, name));
+    tractsRef.current = tracts;
+  }, [tracts]);
+
+  useEffect(() => {
+    if (!tracts) {
+      geocodeQueueRef.current = [];
+      return;
+    }
+
+    const enqueue = (geoids: string[], front = false) => {
+      for (const geoid of geoids) {
+        if (!geoid || attemptedGeocodesRef.current.has(geoid)) continue;
+        geocodeQueueRef.current = geocodeQueueRef.current.filter((id) => id !== geoid);
+        if (front) geocodeQueueRef.current.unshift(geoid);
+        else geocodeQueueRef.current.push(geoid);
       }
-    })();
-    return () => {
-      cancelled = true;
+      pumpGeocodeQueueRef.current();
     };
+
+    // Activity tracts first (likely hovered / listed), then the rest of the county.
+    const withActivity: string[] = [];
+    const withoutActivity: string[] = [];
+    for (const raw of tracts.features) {
+      const geoid = (raw as TractFeature).properties?.GEOID ?? '';
+      if (!geoid) continue;
+      if (tractStatsById.has(geoid)) withActivity.push(geoid);
+      else withoutActivity.push(geoid);
+    }
+    enqueue([...withActivity, ...withoutActivity], false);
   }, [tracts, tractStatsById]);
 
-  /** `tractStatsById` with real place names layered on where Nominatim resolved one. */
+  // Jump the hovered tract to the front of the reverse-geocode queue.
+  useEffect(() => {
+    if (!hoveredId || drill.level !== 'county') return;
+    if (attemptedGeocodesRef.current.has(hoveredId)) return;
+    geocodeQueueRef.current = geocodeQueueRef.current.filter((id) => id !== hoveredId);
+    geocodeQueueRef.current.unshift(hoveredId);
+    pumpGeocodeQueueRef.current();
+  }, [hoveredId, drill.level]);
+
+  /** `tractStatsById` with real place names layered on where reverse-geocode resolved one. */
   const resolvedTractStatsById = useMemo(() => {
     if (neighborhoodNames.size === 0) return tractStatsById;
     const map = new Map<string, GeoUnitStats>();
@@ -193,7 +246,13 @@ export function UsHeatmap({ activity, sessions, periodLabel }: Props) {
     return map;
   }, [tractStatsById, neighborhoodNames]);
 
-  const resolvedNameIds = useMemo(() => new Set(neighborhoodNames.keys()), [neighborhoodNames]);
+  const displayTractNameById = useMemo(() => {
+    const map = new Map(tractNameById);
+    for (const [id, name] of neighborhoodNames) {
+      map.set(id, name);
+    }
+    return map;
+  }, [tractNameById, neighborhoodNames]);
 
   const stateCounties = useMemo(() => {
     if (!countiesFc || drill.level === 'nation') return null;
@@ -288,16 +347,35 @@ export function UsHeatmap({ activity, sessions, periodLabel }: Props) {
 
   const hoveredStats = useMemo(() => {
     if (!hoveredId) return null;
-    return (
+    const fromActivity =
       byState.get(hoveredId) ??
       byCounty.get(hoveredId) ??
       resolvedTractStatsById.get(hoveredId) ??
       countyBubbles.find((b) => b.id === hoveredId) ??
-      (tractNameById.has(hoveredId)
-        ? { id: hoveredId, name: tractNameById.get(hoveredId)!, sessionCount: 0, hours: 0, underReview: 0 }
-        : null)
-    );
-  }, [hoveredId, byState, byCounty, resolvedTractStatsById, countyBubbles, tractNameById]);
+      null;
+    if (fromActivity) {
+      const placeName = neighborhoodNames.get(hoveredId);
+      return placeName ? { ...fromActivity, name: placeName } : fromActivity;
+    }
+    if (displayTractNameById.has(hoveredId)) {
+      return {
+        id: hoveredId,
+        name: displayTractNameById.get(hoveredId)!,
+        sessionCount: 0,
+        hours: 0,
+        underReview: 0,
+      };
+    }
+    return null;
+  }, [
+    hoveredId,
+    byState,
+    byCounty,
+    resolvedTractStatsById,
+    countyBubbles,
+    displayTractNameById,
+    neighborhoodNames,
+  ]);
 
   const title =
     drill.level === 'nation'
@@ -405,7 +483,7 @@ export function UsHeatmap({ activity, sessions, periodLabel }: Props) {
                 key={drill.fips}
                 tracts={tracts}
                 statsById={resolvedTractStatsById}
-                resolvedNameIds={resolvedNameIds}
+                placeNamesById={neighborhoodNames}
                 maxCount={maxCount}
                 hoveredId={hoveredId}
                 onHoverId={setHoveredId}

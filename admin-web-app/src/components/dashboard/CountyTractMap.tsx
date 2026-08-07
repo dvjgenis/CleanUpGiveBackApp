@@ -25,9 +25,9 @@ const SELECTED_LINE_LAYER_ID = "county-tracts-selected-outline";
 type Props = {
   tracts: FeatureCollection;
   statsById: Map<string, GeoUnitStats>;
-  /** Geoids with a real, Nominatim-resolved place name — everything else is still
-   *  showing a fallback tract ID and should read as visibly provisional on hover. */
-  resolvedNameIds: Set<string>;
+  /** GEOID → colloquial place name once reverse-geocoded. Missing keys still show a
+   *  muted tract-ID fallback on hover. */
+  placeNamesById: Map<string, string>;
   maxCount: number;
   hoveredId: string | null;
   onHoverId: (id: string | null) => void;
@@ -85,7 +85,7 @@ function boundsOf(fc: FeatureCollection): maplibregl.LngLatBoundsLike | null {
 function toStyledCollection(
   tracts: FeatureCollection,
   statsById: Map<string, GeoUnitStats>,
-  resolvedNameIds: Set<string>,
+  placeNamesById: Map<string, string>,
   maxCount: number,
 ): FeatureCollection {
   return {
@@ -95,10 +95,10 @@ function toStyledCollection(
       const geoid = f.properties?.GEOID ?? "";
       const stat = statsById.get(geoid);
       const count = stat?.sessionCount ?? 0;
-      // stat.name is the real place name once Nominatim resolves one (see UsHeatmap's
-      // resolvedTractStatsById); tracts with no activity never get geocoded, so they
-      // fall back to a cleaned-up tract ID.
-      const displayName = stat?.name ?? formatTractName(f.properties?.NAME ?? geoid);
+      // Prefer reverse-geocoded colloquial names (Lincoln Park, …); fall back to a
+      // cleaned census tract ID until the queue resolves that GEOID.
+      const displayName =
+        placeNamesById.get(geoid) ?? stat?.name ?? formatTractName(f.properties?.NAME ?? geoid);
       return {
         ...f,
         id: geoid,
@@ -107,7 +107,7 @@ function toStyledCollection(
           sessionCount: count,
           fillColor: heatFill(maxCount > 0 ? count / maxCount : 0),
           displayName,
-          isResolvedName: resolvedNameIds.has(geoid),
+          isResolvedName: placeNamesById.has(geoid),
         },
       };
     }),
@@ -117,7 +117,7 @@ function toStyledCollection(
 export function CountyTractMap({
   tracts,
   statsById,
-  resolvedNameIds,
+  placeNamesById,
   maxCount,
   hoveredId,
   onHoverId,
@@ -163,7 +163,7 @@ export function CountyTractMap({
     map.on("load", () => {
       map.addSource(SOURCE_ID, {
         type: "geojson",
-        data: toStyledCollection(tracts, statsById, resolvedNameIds, maxCount),
+        data: toStyledCollection(tracts, statsById, placeNamesById, maxCount),
       });
       map.addLayer({
         id: FILL_LAYER_ID,
@@ -229,18 +229,34 @@ export function CountyTractMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Keep fill colors in sync as stats/hover/selection change without re-mounting the map.
+  // Keep fill colors + hover label in sync as stats/names change without re-mounting the map.
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
     const source = map.getSource(SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
     if (source) {
-      source.setData(toStyledCollection(tracts, statsById, resolvedNameIds, maxCount));
+      source.setData(toStyledCollection(tracts, statsById, placeNamesById, maxCount));
     }
     if (map.getLayer(SELECTED_LINE_LAYER_ID)) {
       map.setFilter(SELECTED_LINE_LAYER_ID, ["==", ["get", "GEOID"], hoveredId ?? ""]);
     }
-  }, [tracts, statsById, resolvedNameIds, maxCount, hoveredId]);
+    // Refresh the open popup when a name resolves while the cursor is still over a tract.
+    const popup = popupRef.current;
+    if (popup?.isOpen() && hoveredId) {
+      const feature = tracts.features.find(
+        (f) => (f as TractFeature).properties?.GEOID === hoveredId,
+      ) as TractFeature | undefined;
+      const displayName =
+        placeNamesById.get(hoveredId) ??
+        statsById.get(hoveredId)?.name ??
+        formatTractName(feature?.properties?.NAME ?? hoveredId);
+      popup.setText(displayName);
+      const content = popup.getElement()?.querySelector<HTMLElement>(".maplibregl-popup-content");
+      if (content) {
+        content.style.color = placeNamesById.has(hoveredId) ? HOVER_TEXT_RESOLVED : HOVER_TEXT_FALLBACK;
+      }
+    }
+  }, [tracts, statsById, placeNamesById, maxCount, hoveredId]);
 
   useEffect(() => {
     if (!fullscreen) return;

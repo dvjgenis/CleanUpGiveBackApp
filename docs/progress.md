@@ -2,13 +2,23 @@
 
 ---
 
+## [2026-08-07] — Tract hover shows real neighborhood names
+
+**R:** County map hover showed muted `Tract 8080.01`-style IDs; Donna wants colloquial names like Lincoln Park. Browser Nominatim was also unreliable (User-Agent / CORS).
+
+**A:** Added `/api/place-reverse` (`lib/place-reverse.ts`: Photon → Nominatim). `UsHeatmap` queues every visible tract for reverse-geocode (activity first), prioritizes the hovered GEOID, and `CountyTractMap` uses `placeNamesById` for tooltips (muted tract fallback until resolved).
+
+**P:** Hover on a neighborhood upgrades from `Tract …` to a real place name within about one reverse-geocode round-trip when prioritized.
+
+---
+
 ## [2026-08-07] — Heatmap fullscreen Places autocomplete
 
-**R:** Full-screen county map search only Nominatim-on-submit; prior “Google Maps-style” work was the UsHeatmap ranked-list portal filter, not real Places. Need a durable free path without Google.
+**R:** Photon/OSM miss many US streets; need free coverage for both streets and places without Google.
 
-**A:** Free chain **Photon → Nominatim** via `lib/place-search.ts` + `/api/place-search` (server User-Agent / no browser CORS). `PlaceSearchField` typeahead + Search/Enter use that API. Optional Google Places only when `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` is set; `.pac-container` z-index raised. Reused Places loader in event `AddressAutocomplete`.
+**A:** Free search = parallel **US Census** (street-like queries) + **Photon** (places), Census hits listed first, **Nominatim** fills remaining slots (`lib/census-geocode.ts` + `lib/place-search.ts` + `/api/place-search`). Optional Google Places only when a Maps key is set.
 
-**P:** No Google key needed — typing or Search on full-screen county map resolves via Photon, then Nominatim.
+**P:** Full-screen heatmap search works without Google; street addresses lean on Census, parks/landmarks on Photon/Nominatim.
 
 ---
 
