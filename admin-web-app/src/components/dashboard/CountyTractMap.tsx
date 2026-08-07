@@ -142,16 +142,26 @@ export function CountyTractMap({
     if (!map) return;
     clearSearchMarker();
 
+    // Escape so a weird address never injects markup into the popup.
+    const safeLabel = place.label
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+
+    // Offset lifts the card clear of the default ~41px teardrop pin (anchor bottom).
+    const popup = new maplibregl.Popup({
+      offset: 44,
+      anchor: "bottom",
+      closeButton: true,
+      closeOnClick: false,
+      maxWidth: "260px",
+      className: "heatmap-search-popup",
+    }).setHTML(`<p class="heatmap-search-popup__label">${safeLabel}</p>`);
+
     const marker = new maplibregl.Marker({ color: "#007536" })
       .setLngLat([place.longitude, place.latitude])
-      .setPopup(
-        new maplibregl.Popup({
-          offset: 18,
-          closeButton: true,
-          closeOnClick: false,
-          maxWidth: "280px",
-        }).setText(place.label),
-      )
+      .setPopup(popup)
       .addTo(map);
     marker.togglePopup();
     searchMarkerRef.current = marker;

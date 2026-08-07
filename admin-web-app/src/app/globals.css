@@ -126,3 +126,45 @@ html, body {
 .pac-container {
   z-index: 11000 !important;
 }
+
+/* Search-result address popup on the fullscreen county map — high contrast above the pin. */
+.heatmap-search-popup.maplibregl-popup {
+  z-index: 5;
+}
+
+.heatmap-search-popup .maplibregl-popup-content {
+  color: #1c1b1b;
+  background: #ffffff;
+  padding: 10px 28px 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #bdcaba;
+  box-shadow: 0 4px 5px rgba(0, 0, 0, 0.15);
+  font-family: var(--font-noto-sans), system-ui, sans-serif;
+}
+
+.heatmap-search-popup .heatmap-search-popup__label {
+  margin: 0;
+  color: #1c1b1b;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.heatmap-search-popup .maplibregl-popup-close-button {
+  color: #1c1b1b;
+  font-size: 18px;
+  line-height: 1;
+  padding: 4px 8px;
+  opacity: 0.7;
+}
+
+.heatmap-search-popup .maplibregl-popup-close-button:hover {
+  background: transparent;
+  color: #007536;
+  opacity: 1;
+}
+
+.heatmap-search-popup .maplibregl-popup-tip {
+  border-top-color: #ffffff;
+}

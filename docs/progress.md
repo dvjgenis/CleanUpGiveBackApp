@@ -2,6 +2,16 @@
 
 ---
 
+## [2026-08-07] — Heatmap search pin popup contrast
+
+**R:** Address popup text was low-contrast and sat on top of the green pin tip.
+
+**A:** Dedicated `.heatmap-search-popup` styles (dark `#1c1b1b` text, border, shadow) and bottom-anchored offset `44px` so the card sits clear above the marker.
+
+**P:** Selected-address label is readable and sits above the pin.
+
+---
+
 ## [2026-08-07] — Heatmap search pin + sticky dropdown fix
 
 **R:** Picking a suggestion rewrote the input, which re-fetched typeahead and reopened the list while panning. Fly-to alone also didn't show the exact address.
