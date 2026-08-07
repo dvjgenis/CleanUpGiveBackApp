@@ -125,7 +125,10 @@ export default async function AuditLogPage({
               name="action"
               defaultValue={actionFilter}
               aria-label="Filter by what happened"
-              className="h-11 px-md rounded-full border border-border-outline bg-bg-surface font-data text-[12px] text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+              className="h-11 w-fit max-w-full pl-md pr-8 rounded-full border border-border-outline bg-bg-surface font-data text-[12px] text-text-primary field-sizing-content appearance-none bg-no-repeat bg-[length:12px_12px] bg-[position:right_12px_center] focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+              style={{
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%233e4a3d' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E")`,
+              }}
             >
               <option value="">All actions</option>
               {AUDIT_ACTION_OPTIONS.map((opt) => (

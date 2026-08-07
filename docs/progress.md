@@ -2,6 +2,16 @@
 
 ---
 
+## [2026-08-07] — Audit log action filter chevron spacing
+
+**R:** Native `<select>` width followed the longest option label, so “All actions” left a large gap before the chevron.
+
+**A:** `/audit-log` filter: `field-sizing-content` + `w-fit`, `appearance-none`, custom chevron inset `12px` (`admin-web-app/src/app/audit-log/page.tsx`).
+
+**P:** Chevron sits beside the selected label.
+
+---
+
 ## [2026-08-06] — Mild tighten of live GPS append gates
 
 **R:** Standing-still sessions were still occasionally growing junk trail points from GPS jitter; mild append-gate tighten preferred over lowering the 8 m replay collapse span.
@@ -7094,3 +7104,50 @@ useEffect(() => {
 - Supabase database passwords are write-only after project creation — no "reveal" option, only reset via Database settings; the "existing connections will break" warning on reset only matters for consumers still holding the old value (here, only the Fly `DATABASE_URL` secret — REST/Auth API consumers using anon/service_role keys are unaffected).
 - Docs' recommended **session pooler** host (`aws-1-us-east-1.pooler.supabase.com:5432`) differs from the **direct** host (`db.<ref>.supabase.co:5432`) — a secret update that still errors mentioning the direct host is a strong signal the wrong string got pasted in, not that the password is still wrong.
 - **Still open at end of session:** after the teammate's first `DATABASE_URL` update, `curl` reproduction still failed, still citing the direct host — teammate needs to re-run `flyctl secrets set` with the pooler host and confirm via `flyctl secrets list`/`flyctl releases` before this is verified fixed. Mobile session logging remains broken until that lands.
+
+---
+
+## [2026-08-07] — Session-trust admin tooling, US heatmap fixes, human-readable audit log
+
+**Session goal:** Build decision-support tooling for Donna's session review (per `docs/agents/session-abuse-checklist.md`), then fix a cluster of US-heatmap and audit-log UX bugs surfaced during review.
+**Workflow used:** Chat, with Explore/Plan subagents for research before the implementation plan; direct implementation after.
+
+### Skills Invoked
+
+| Skill | Purpose | Outcome |
+|---|---|---|
+| Agent (Explore ×2, Plan ×1) | Inventory existing session/court-order/audit-log infra and privacy-policy constraints before scoping the plan | Confirmed `admin_audit_log` + `writeAuditLog` already existed but had no viewer in `admin-web-app`; confirmed per-session GPS/photo fraud use is privacy-disclosed, cross-session pattern rollups were not (shipped anyway per explicit decision, with a policy-copy follow-up flagged) |
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Session photo-thumbnail toggle | `admin-web-app/src/components/sessions/SessionWalkingPathMap.tsx` | ✅ Show/hide checkpoint photo thumbnails on the route-replay map, on by default |
+| Court-order edit UI | `admin-web-app/src/actions/courtOrders.ts` (new), `components/ui/CourtOrderForm.tsx` (new), `app/volunteers/[id]/page.tsx` | ✅ Donna can edit required hours / due date / case reference inline (previously only in the archived `admin/` app) |
+| Court-hours overshoot guardrail | `lib/court-risk.ts`, `actions/sessions.ts`, `components/ui/SessionPreviewDrawer.tsx` | ✅ Typed `OVERRIDE` confirmation required before approving/adjusting hours past a court order's required hours |
+| Server-side GPS/speed plausibility check | `backend/sessions/src/lib/sessionPlausibility.ts` (new), `routes/sessions.ts`, `prisma/schema.prisma`, `admin/db/009_session_plausibility_signal.sql` (new) | ✅ Finalize now independently recomputes speed/tight-loop/idle signals server-side instead of trusting client-submitted route/distance; advisory only, never gates status |
+| Volunteer activity-pattern rollup | `lib/live-data.ts`, `app/volunteers/[id]/page.tsx` | ✅ Session frequency, invalid-rate, delete/resubmit count, near-court-deadline clustering — pure aggregation, no new data collected |
+| Red-flag badge in session drawer | `lib/session-red-flags.ts` (new), `components/ui/RedFlagBadge.tsx` (new), `SessionPreviewDrawer.tsx` | ✅ Non-blocking tooltip badge implementing the checklist's "quick red-flag bundle" |
+| Audit-log viewer | `app/audit-log/page.tsx` (new), `lib/audit-log-summary.ts` (new), `components/ui/sidebar-demo.tsx`, `Icons.tsx` | ✅ Ported from archived `admin/` app; rewritten twice — first pass showed raw before/after JSON (flagged as unreadable for Donna), rewritten to plain-language "field: old → new" summaries with friendly action labels; then added free-text search + action-type filter dropdown |
+| US heatmap period-filter bug | `components/pages/DashboardPage.tsx` | ✅ Fixed `mapSessions = scoped.length > 0 ? scoped : sessions` silently falling back to all-time counts (18 sessions) when the selected period (e.g. "Today") had zero activity |
+| US heatmap county names | `components/dashboard/UsHeatmap.tsx` | ✅ Hover panel showed raw `County 17031` instead of `Cook County` — `byCounty` now merges real TopoJSON-resolved names before use, instead of only the sidebar list resolving them |
+| US heatmap search autocomplete | `components/dashboard/UsHeatmap.tsx` | ✅ Added a Google Maps-style suggestion dropdown while typing; discovered it was being clipped by the card's `overflow-hidden` (needed for the map's rounded corners) — fixed by portaling the dropdown to `document.body`, positioned from the input's screen rect |
+| Court Progress card (Insights) | `components/ui/CourtProgressChart.tsx` | ✅ Replaced click-to-expand "View more" button with an in-place scrollable list past 5 rows |
+| Walking-path map corner bleed | `components/sessions/SessionWalkingPathMap.tsx` | ✅ MapLibre's WebGL canvas doesn't reliably respect an ancestor's rounded-corner clipping across browsers — rounded the canvas directly (`[&_.maplibregl-canvas]:!rounded-sm`) and added a matching container border as backstop |
+| Backend + admin deploys | Fly (`cleanup-sessions`), Vercel (`admin-web-app`) | ✅ Multiple rounds — SQL migration applied manually via Supabase SQL editor first, then `flyctl deploy` (image builds `prisma generate` automatically) and `vercel deploy --prod` |
+
+### Key Decisions
+
+- Every session-trust feature is advisory/human-reviewed only, per the checklist's explicit "do not treat absence of automated fraud scores as safe" rule — nothing auto-approves, auto-declines, or auto-adjusts
+- Court-hours overshoot requires a typed `OVERRIDE` confirmation (not a passive badge) — the checklist specifically flags "pressure for hours override" as a real threat vector for court-ordered volunteers
+- Volunteer activity-pattern rollup (cross-session aggregation) shipped without blocking on a privacy-policy copy update, per explicit instruction — the copy update is tracked as a required parallel-track follow-up, not a gate, since no new data category is collected
+- Photo perceptual-hash dedupe across a volunteer's history was scoped but deliberately **not built** — flagged as needing product/legal sign-off first (new derived-data store, retention-window purge design, possible new processor/DPA question)
+- Dropped `target_id.ilike` from the audit-log free-text search filter — `ilike` on a `uuid` column throws in Postgres, which would have broken the entire `.or()` query, not just that clause
+
+### Learnings
+
+- **Fallback-to-unfiltered-data bugs hide behind "looks fine most of the time":** `scoped.length > 0 ? scoped : sessions` reads like a reasonable empty-state guard but silently defeats the period filter whenever the period genuinely has zero activity — exactly when a user is most likely to be checking "did anything happen today."
+- **`overflow-hidden` clips descendants regardless of `z-index` or `position: absolute`** — an absolutely-positioned dropdown inside a clipped ancestor is still clipped if it visually extends past that ancestor's laid-out box (position:absolute removes it from flow but not from the ancestor's paint clip). The fix is a portal to `document.body` with `position: fixed`, not a higher z-index.
+- **WebGL canvases (MapLibre, video elements) can bleed past an ancestor's `border-radius` + `overflow: hidden`** in some browsers — a known GPU-compositing quirk. A canvas always clips its own painted content to its own `border-radius`, so rounding the canvas element directly (via `[&_.maplibregl-canvas]:!rounded-sm`) is the robust fix, not relying on ancestor clipping alone.
+- `flyctl` isn't on `PATH` in this shell — binary lives at `~/.fly/bin/flyctl`.
+- When a user says "commit everything including work you did not do," that's explicit authorization to stage and commit concurrent/unrelated changes found in the working tree — but `.gitignore` stayed excluded per a separate, more specific instruction ("do not push gitignore file"), showing the specific instruction overrides the broader one issued moments earlier.
