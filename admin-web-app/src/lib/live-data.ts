@@ -113,6 +113,8 @@ export async function loadLiveSessions(): Promise<LiveResult<MockSession[]>> {
         state_fips: stateFips ?? ILLINOIS_FIPS,
         state_fips_placeholder: stateFips == null,
         county_fips: countyFips,
+        latitude: point?.latitude ?? null,
+        longitude: point?.longitude ?? null,
       };
     }),
   );

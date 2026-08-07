@@ -10,27 +10,9 @@
 import { useEffect, useRef } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+import { VOYAGER_RASTER_STYLE } from "@/lib/maplibre-basemap";
 
 const PRIMARY = "#009540";
-
-/** Carto Voyager raster — same look as the GL style, without vector tile hosts. */
-const VOYAGER_RASTER_STYLE: maplibregl.StyleSpecification = {
-  version: 8,
-  sources: {
-    voyager: {
-      type: "raster",
-      tiles: [
-        "https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png",
-        "https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png",
-        "https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png",
-        "https://d.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png",
-      ],
-      tileSize: 256,
-      attribution: "© CARTO © OpenStreetMap",
-    },
-  },
-  layers: [{ id: "voyager", type: "raster", source: "voyager" }],
-};
 
 export type EventMapCoordinate = {
   latitude: number;

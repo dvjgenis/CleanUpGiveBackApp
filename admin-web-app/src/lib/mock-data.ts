@@ -31,6 +31,10 @@ export type MockSession = {
   state_fips_placeholder?: boolean;
   /** US county FIPS code (5-digit), when geocoded — powers the heatmap's county drill-down. */
   county_fips?: string | null;
+  /** Geocoded WGS84 point (session's first route point, or a checkpoint pin) — powers the
+   *  heatmap's census-tract drill-down, computed client-side once tract boundaries load. */
+  latitude?: number | null;
+  longitude?: number | null;
   /** Internal-only note, never shown to the volunteer. Optional — not set on the base fixtures. */
   admin_notes?: string | null;
   /** Populated when `declineSession` is called with a reason. */

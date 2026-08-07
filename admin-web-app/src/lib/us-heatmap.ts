@@ -1,4 +1,4 @@
-/** US activity heatmap — shared heat colors, FIPS labels, and Cook County neighborhoods. */
+/** US activity heatmap — shared heat colors, FIPS labels, and stats types. */
 
 export type GeoUnitStats = {
   id: string;
@@ -11,94 +11,12 @@ export type GeoUnitStats = {
 export type GeoActivityBundle = {
   byState: GeoUnitStats[];
   byCounty: GeoUnitStats[];
+  /** @deprecated Neighborhood-tier stats are now computed client-side from real census
+   *  tracts in `UsHeatmap` — always empty here. Kept only to avoid a breaking type change. */
   byNeighborhood: GeoUnitStats[];
 };
 
-/** Schematic neighborhoods under Cook County (IL) for the deepest drill level. */
-export type CountyNeighborhood = {
-  id: string;
-  name: string;
-  countyFips: string;
-  path: string;
-  labelX: number;
-  labelY: number;
-};
-
-export const COOK_COUNTY_FIPS = '17031';
 export const ILLINOIS_FIPS = '17';
-
-export const COUNTY_NEIGHBORHOODS: CountyNeighborhood[] = [
-  {
-    id: 'harbor',
-    name: 'Harbor Point',
-    countyFips: COOK_COUNTY_FIPS,
-    path: 'M20 40 L140 28 L155 110 L35 125 Z',
-    labelX: 85,
-    labelY: 75,
-  },
-  {
-    id: 'lakefront',
-    name: 'Lakefront',
-    countyFips: COOK_COUNTY_FIPS,
-    path: 'M140 28 L260 20 L275 105 L155 110 Z',
-    labelX: 205,
-    labelY: 65,
-  },
-  {
-    id: 'riverside',
-    name: 'Riverside',
-    countyFips: COOK_COUNTY_FIPS,
-    path: 'M260 20 L380 35 L365 120 L275 105 Z',
-    labelX: 320,
-    labelY: 70,
-  },
-  {
-    id: 'midtown',
-    name: 'Midtown',
-    countyFips: COOK_COUNTY_FIPS,
-    path: 'M35 125 L155 110 L170 195 L50 210 Z',
-    labelX: 100,
-    labelY: 160,
-  },
-  {
-    id: 'university',
-    name: 'University District',
-    countyFips: COOK_COUNTY_FIPS,
-    path: 'M155 110 L275 105 L290 190 L170 195 Z',
-    labelX: 220,
-    labelY: 150,
-  },
-  {
-    id: 'oak-hills',
-    name: 'Oak Hills',
-    countyFips: COOK_COUNTY_FIPS,
-    path: 'M275 105 L365 120 L380 200 L290 190 Z',
-    labelX: 325,
-    labelY: 155,
-  },
-  {
-    id: 'southside',
-    name: 'Southside',
-    countyFips: COOK_COUNTY_FIPS,
-    path: 'M50 210 L170 195 L185 290 L40 300 Z',
-    labelX: 110,
-    labelY: 250,
-  },
-  {
-    id: 'industrial',
-    name: 'Industrial Corridor',
-    countyFips: COOK_COUNTY_FIPS,
-    path: 'M170 195 L290 190 L310 285 L185 290 Z',
-    labelX: 235,
-    labelY: 240,
-  },
-];
-
-/** @deprecated Prefer COUNTY_NEIGHBORHOODS — kept for older imports. */
-export const METRO_NEIGHBORHOODS = COUNTY_NEIGHBORHOODS;
-export const METRO_NAME = 'United States';
-
-export type NeighborhoodStats = GeoUnitStats;
 
 export const STATE_FIPS_NAME: Record<string, string> = {
   '01': 'Alabama',
@@ -166,8 +84,4 @@ export function heatFill(intensity: number): string {
 
 export function heatText(intensity: number): string {
   return intensity >= 0.5 ? '#ffffff' : '#1c1b1b';
-}
-
-export function neighborhoodsForCounty(countyFips: string): CountyNeighborhood[] {
-  return COUNTY_NEIGHBORHOODS.filter((n) => n.countyFips === countyFips);
 }

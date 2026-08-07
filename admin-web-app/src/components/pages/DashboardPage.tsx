@@ -273,8 +273,10 @@ function DashboardPageInner({
   const openOrders = orders.filter((o) => o.status === "pending" || o.status === "paid" || o.status === "shipped");
   const ordersRevenueCents = orders.filter((o) => o.status !== "cancelled").reduce((sum, o) => sum + o.totalCents, 0);
 
-  const geoActivity = buildGeoActivity(scoped.length > 0 ? scoped : sessions);
-  const hasPlaceholderLocations = isMock || sessions.some((s) => s.state_fips_placeholder);
+  // Always real here (Dashboard/Sessions never fall back to fixtures) — the US map never
+  // reflects demo data.
+  const mapSessions = scoped.length > 0 ? scoped : sessions;
+  const geoActivity = buildGeoActivity(mapSessions);
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -439,7 +441,7 @@ function DashboardPageInner({
       </div>
 
       <div className="grid grid-cols-1 gap-md mt-md">
-        <UsHeatmap activity={geoActivity} periodLabel={periodLabelText} isMock={hasPlaceholderLocations} />
+        <UsHeatmap activity={geoActivity} sessions={mapSessions} periodLabel={periodLabelText} />
       </div>
 
       {/* Commerce preview — payments + orders at a glance, deeper detail on their own tabs */}

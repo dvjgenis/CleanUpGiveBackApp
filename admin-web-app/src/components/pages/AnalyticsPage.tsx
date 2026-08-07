@@ -36,10 +36,15 @@ const ACTIVITY_COLORS = ["#007536", "#5a8f3a", "#835400", "#3d8f5c", "#6e7a6c"];
 
 export function AnalyticsPage({
   sessions = [],
+  realSessions,
   courtProgress = [],
   isMock = false,
 }: {
   sessions?: MockSession[];
+  /** Never-mocked live sessions — feeds the US activity map so it never shows fixture data,
+   *  even when `sessions` falls back to demo fixtures for the rest of the page. Defaults to
+   *  `sessions` for callers that haven't wired a real-only source yet. */
+  realSessions?: MockSession[];
   courtProgress?: MockCourtVolunteer[];
   isMock?: boolean;
 }) {
@@ -51,17 +56,24 @@ export function AnalyticsPage({
         </div>
       }
     >
-      <AnalyticsPageInner sessions={sessions} courtProgress={courtProgress} isMock={isMock} />
+      <AnalyticsPageInner
+        sessions={sessions}
+        realSessions={realSessions ?? sessions}
+        courtProgress={courtProgress}
+        isMock={isMock}
+      />
     </Suspense>
   );
 }
 
 function AnalyticsPageInner({
   sessions,
+  realSessions,
   courtProgress,
   isMock,
 }: {
   sessions: MockSession[];
+  realSessions: MockSession[];
   courtProgress: MockCourtVolunteer[];
   isMock: boolean;
 }) {
@@ -71,6 +83,8 @@ function AnalyticsPageInner({
 
   // Filter sessions by the selected period
   const filteredSessions = filterByPeriod(sessions, selection, now);
+  // Map-only: real sessions, never the mock/fixture fallback used for the other charts.
+  const mapSessions = filterByPeriod(realSessions, selection, now);
 
   const underReview = filteredSessions.filter((s) => s.status === "under_review");
   const approved = filteredSessions.filter((s) => s.status === "approved");
@@ -106,8 +120,6 @@ function AnalyticsPageInner({
     { name: "Voluntary", value: voluntary, color: "#007536" },
     { name: "Court-ordered", value: courtOrdered, color: "#835400" },
   ].filter((s) => s.value > 0);
-
-  const hasPlaceholderLocations = isMock || filteredSessions.some((s) => s.state_fips_placeholder);
 
   const exportColumns = [
     { key: "id", label: "id" },
@@ -186,11 +198,7 @@ function AnalyticsPageInner({
             index={6}
           />
         </div>
-        <UsHeatmap
-          activity={buildGeoActivity(filteredSessions)}
-          periodLabel={periodLabelText}
-          isMock={hasPlaceholderLocations}
-        />
+        <UsHeatmap activity={buildGeoActivity(mapSessions)} sessions={mapSessions} periodLabel={periodLabelText} />
       </div>
     </div>
   );

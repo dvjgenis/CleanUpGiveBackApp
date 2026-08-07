@@ -3,11 +3,10 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import type { FeatureCollection } from 'geojson';
+import { geoContains } from 'd3-geo';
 import {
-  COOK_COUNTY_FIPS,
   heatFill,
   heatText,
-  neighborhoodsForCounty,
   STATE_FIPS_NAME,
   type GeoActivityBundle,
   type GeoUnitStats,
@@ -22,6 +21,9 @@ import {
   makeRegionalPathForCollection,
   type UsGeoFeature,
 } from '@/lib/us-geo';
+import { computedHours, type MockSession } from '@/lib/mock-data';
+import { loadCountyTracts, type TractFeature } from '@/lib/census-tracts';
+import { CountyTractMap } from '@/components/dashboard/CountyTractMap';
 
 type Drill =
   | { level: 'nation' }
@@ -30,8 +32,11 @@ type Drill =
 
 type Props = {
   activity: GeoActivityBundle;
+  /** Session list backing `activity` — used to bucket sessions into real census tracts
+   *  once a county is drilled into (point-in-polygon against tract boundaries fetched
+   *  on demand). Should always be real data; never pass mock/fixture sessions here. */
+  sessions: MockSession[];
   periodLabel: string;
-  isMock?: boolean;
 };
 
 const MAP_W = 640;
@@ -41,16 +46,22 @@ function statsMap(rows: GeoUnitStats[]): Map<string, GeoUnitStats> {
   return new Map(rows.map((r) => [r.id, r]));
 }
 
-function emptyStats(id: string, name: string): GeoUnitStats {
-  return { id, name, sessionCount: 0, hours: 0, underReview: 0 };
-}
-
-export function UsHeatmap({ activity, periodLabel, isMock = false }: Props) {
+export function UsHeatmap({ activity, sessions, periodLabel }: Props) {
   const [drill, setDrill] = useState<Drill>({ level: 'nation' });
   const [statesFc, setStatesFc] = useState<FeatureCollection | null>(null);
   const [countiesFc, setCountiesFc] = useState<FeatureCollection | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [tracts, setTracts] = useState<FeatureCollection | null>(null);
+  const [tractsError, setTractsError] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  // Clears any in-progress search when the drilled-into level changes underneath it —
+  // adjusted during render (React's recommended pattern) rather than a dedicated effect.
+  const [searchDrill, setSearchDrill] = useState(drill);
+  if (searchDrill !== drill) {
+    setSearchDrill(drill);
+    setSearch('');
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -70,12 +81,69 @@ export function UsHeatmap({ activity, periodLabel, isMock = false }: Props) {
     };
   }, []);
 
+  useEffect(() => {
+    if (drill.level !== 'county') {
+      setTracts(null);
+      setTractsError(null);
+      return;
+    }
+    let cancelled = false;
+    setTracts(null);
+    setTractsError(null);
+    loadCountyTracts(drill.stateFips, drill.fips)
+      .then((fc) => {
+        if (!cancelled) setTracts(fc);
+      })
+      .catch((err) => {
+        if (!cancelled) setTractsError(err instanceof Error ? err.message : 'Could not load county map');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [drill]);
+
   const byState = useMemo(() => statsMap(activity.byState), [activity.byState]);
   const byCounty = useMemo(() => statsMap(activity.byCounty), [activity.byCounty]);
-  const byNeighborhood = useMemo(
-    () => statsMap(activity.byNeighborhood),
-    [activity.byNeighborhood],
-  );
+
+  /** Buckets this county's sessions into real tract polygons via point-in-polygon. */
+  const tractStatsById = useMemo(() => {
+    const map = new Map<string, GeoUnitStats>();
+    if (!tracts || drill.level !== 'county') return map;
+    for (const s of sessions) {
+      if (s.county_fips !== drill.fips || s.latitude == null || s.longitude == null) continue;
+      const point: [number, number] = [s.longitude, s.latitude];
+      for (const raw of tracts.features) {
+        const f = raw as TractFeature;
+        if (!geoContains(f as never, point)) continue;
+        const geoid = f.properties?.GEOID ?? '';
+        const cur = map.get(geoid) ?? {
+          id: geoid,
+          name: f.properties?.NAME ?? geoid,
+          sessionCount: 0,
+          hours: 0,
+          underReview: 0,
+        };
+        cur.sessionCount += 1;
+        cur.hours += computedHours(s.duration_seconds, s.adjusted_hours);
+        if (s.status === 'under_review') cur.underReview += 1;
+        map.set(geoid, cur);
+        break;
+      }
+    }
+    return map;
+  }, [tracts, sessions, drill]);
+
+  /** Every tract's name, regardless of activity — lets hovering show a name even at 0 sessions. */
+  const tractNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    if (!tracts) return map;
+    for (const raw of tracts.features) {
+      const f = raw as TractFeature;
+      const geoid = f.properties?.GEOID ?? '';
+      if (geoid) map.set(geoid, f.properties?.NAME ?? geoid);
+    }
+    return map;
+  }, [tracts]);
 
   const stateCounties = useMemo(() => {
     if (!countiesFc || drill.level === 'nation') return null;
@@ -116,24 +184,36 @@ export function UsHeatmap({ activity, periodLabel, isMock = false }: Props) {
         .map((c) => ({ ...c, name: countyNameById.get(c.id) ?? c.name }))
         .sort((a, b) => b.sessionCount - a.sessionCount);
     }
-    const neigh = neighborhoodsForCounty(drill.fips);
-    return neigh
-      .map((n) => byNeighborhood.get(n.id) ?? emptyStats(n.id, n.name))
-      .sort((a, b) => b.sessionCount - a.sessionCount);
-  }, [activity.byState, activity.byCounty, byNeighborhood, drill, stateCounties]);
+    // County (deepest) level: real census tracts, sourced entirely from tractStatsById
+    // so every row already has sessionCount > 0 — no need to pad with empty entries.
+    return [...tractStatsById.values()].sort((a, b) => b.sessionCount - a.sessionCount);
+  }, [activity.byState, activity.byCounty, tractStatsById, drill, stateCounties]);
 
   const maxCount = Math.max(1, ...activeStatsList.map((s) => s.sessionCount));
+
+  // Search filters the sidebar list only — maxCount (and therefore heat color) stays
+  // anchored to the full unfiltered set so intensity doesn't jump around while typing.
+  const filteredStatsList = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return activeStatsList;
+    return activeStatsList.filter((row) => row.name.toLowerCase().includes(q));
+  }, [activeStatsList, search]);
+
+  const searchPlaceholder =
+    drill.level === 'nation' ? 'Search states' : drill.level === 'state' ? 'Search counties' : 'Search neighborhoods';
 
   const hoveredStats = useMemo(() => {
     if (!hoveredId) return null;
     return (
       byState.get(hoveredId) ??
       byCounty.get(hoveredId) ??
-      byNeighborhood.get(hoveredId) ??
+      tractStatsById.get(hoveredId) ??
       countyBubbles.find((b) => b.id === hoveredId) ??
-      null
+      (tractNameById.has(hoveredId)
+        ? { id: hoveredId, name: tractNameById.get(hoveredId)!, sessionCount: 0, hours: 0, underReview: 0 }
+        : null)
     );
-  }, [hoveredId, byState, byCounty, byNeighborhood, countyBubbles]);
+  }, [hoveredId, byState, byCounty, tractStatsById, countyBubbles, tractNameById]);
 
   const title =
     drill.level === 'nation'
@@ -147,7 +227,7 @@ export function UsHeatmap({ activity, periodLabel, isMock = false }: Props) {
       ? `State heat · ${periodLabel}`
       : drill.level === 'state'
         ? `County bubble heat · ${periodLabel}`
-        : `Neighborhood tile heat · ${periodLabel}`;
+        : `Neighborhood heat · ${periodLabel}`;
 
   function featureName(f: UsGeoFeature, fallbackFips: string): string {
     return f.properties?.name ?? STATE_FIPS_NAME[fallbackFips] ?? fallbackFips;
@@ -230,13 +310,23 @@ export function UsHeatmap({ activity, periodLabel, isMock = false }: Props) {
               {loadError}
             </p>
           ) : drill.level === 'county' ? (
-            <NeighborhoodMap
-              countyFips={drill.fips}
-              byNeighborhood={byNeighborhood}
-              maxCount={maxCount}
-              hoveredId={hoveredId}
-              setHoveredId={setHoveredId}
-            />
+            tractsError ? (
+              <p className="font-body text-[14px] text-[#ba1a1a]" role="alert">
+                {tractsError}
+              </p>
+            ) : !tracts ? (
+              <div className="h-[320px] sm:h-[400px] rounded-sm bg-bg-surface-elevated animate-pulse" aria-hidden />
+            ) : (
+              <CountyTractMap
+                key={drill.fips}
+                tracts={tracts}
+                statsById={tractStatsById}
+                maxCount={maxCount}
+                hoveredId={hoveredId}
+                onHoverId={setHoveredId}
+                onSelectTract={(id) => setHoveredId(id)}
+              />
+            )
           ) : !statesFc || (drill.level === 'state' && !countyPath) ? (
             <div className="h-[240px] rounded-sm bg-bg-surface-elevated animate-pulse" aria-hidden />
           ) : drill.level === 'nation' && nationPath ? (
@@ -389,11 +479,6 @@ export function UsHeatmap({ activity, periodLabel, isMock = false }: Props) {
               {hoveredStats.underReview > 0 ? ` · ${hoveredStats.underReview} under review` : ''}
             </p>
           )}
-          {isMock && (
-            <p className="mt-xs font-body text-[12px] text-text-tertiary">
-              Some sessions have no GPS data and default to Illinois / Cook County.
-            </p>
-          )}
         </div>
 
         <div className="border-t lg:border-t-0 lg:border-l border-border-outline p-md sm:p-lg">
@@ -405,16 +490,27 @@ export function UsHeatmap({ activity, periodLabel, isMock = false }: Props) {
               ? 'Top states'
               : drill.level === 'state'
                 ? 'Top counties'
-                : 'Neighborhoods'}
+                : 'Top neighborhoods'}
           </p>
-          {activeStatsList.every((s) => s.sessionCount === 0) ? (
+          {activeStatsList.length > 0 && (
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={searchPlaceholder}
+              aria-label={searchPlaceholder}
+              className="mb-sm w-full h-11 px-md rounded-full border border-border-outline bg-bg-surface font-body text-[13px] text-text-primary placeholder:text-text-tertiary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+            />
+          )}
+          {activeStatsList.length === 0 ? (
             <p className="font-body text-[13px] text-text-tertiary">
               No sessions in this area for the selected period.
             </p>
+          ) : filteredStatsList.length === 0 ? (
+            <p className="font-body text-[13px] text-text-tertiary">No matches for &ldquo;{search}&rdquo;.</p>
           ) : (
             <ul className="flex flex-col gap-xs max-h-[360px] overflow-y-auto" role="list" aria-labelledby="us-heatmap-rank-label">
-              {activeStatsList
-                .filter((s) => s.sessionCount > 0 || drill.level === 'county')
+              {filteredStatsList
                 .slice(0, drill.level === 'county' ? 20 : 12)
                 .map((row, i) => {
                   const selected =
@@ -493,127 +589,5 @@ export function UsHeatmap({ activity, periodLabel, isMock = false }: Props) {
         </div>
       </div>
     </section>
-  );
-}
-
-function NeighborhoodMap({
-  countyFips,
-  byNeighborhood,
-  maxCount,
-  hoveredId,
-  setHoveredId,
-}: {
-  countyFips: string;
-  byNeighborhood: Map<string, GeoUnitStats>;
-  maxCount: number;
-  hoveredId: string | null;
-  setHoveredId: (id: string | null) => void;
-}) {
-  const neighborhoods = neighborhoodsForCounty(countyFips);
-
-  if (neighborhoods.length === 0) {
-    return (
-      <div className="rounded-sm border border-dashed border-border-outline bg-bg-surface-elevated px-md py-xl text-center">
-        <p className="font-body text-[14px] text-text-tertiary">
-          Neighborhood breakdown is available for Cook County, IL
-          {countyFips !== COOK_COUNTY_FIPS ? ' — pick Cook County to explore.' : '.'}
-        </p>
-      </div>
-    );
-  }
-
-  const tiles = neighborhoods
-    .map((n) => {
-      const stat = byNeighborhood.get(n.id);
-      return {
-        id: n.id,
-        name: n.name,
-        sessionCount: stat?.sessionCount ?? 0,
-        hours: stat?.hours ?? 0,
-        underReview: stat?.underReview ?? 0,
-      };
-    })
-    .sort((a, b) => b.sessionCount - a.sessionCount || a.name.localeCompare(b.name));
-
-  const totalSessions = tiles.reduce((sum, t) => sum + t.sessionCount, 0);
-
-  return (
-    <div
-      className="flex flex-col gap-md"
-      role="img"
-      aria-label="Neighborhood tile heat map for this county"
-    >
-      {/* Proportional heat strip — share of county sessions */}
-      <div
-        className="flex h-3 w-full overflow-hidden rounded-full border border-border-outline"
-        aria-hidden
-      >
-        {totalSessions === 0 ? (
-          <span className="flex-1 bg-[#f0eded]" />
-        ) : (
-          tiles
-            .filter((t) => t.sessionCount > 0)
-            .map((t) => (
-              <button
-                key={`strip-${t.id}`}
-                type="button"
-                title={`${t.name}: ${t.sessionCount}`}
-                className="h-full min-w-[4px] transition-[filter] hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
-                style={{
-                  flexGrow: t.sessionCount,
-                  backgroundColor: heatFill(t.sessionCount / maxCount),
-                }}
-                onMouseEnter={() => setHoveredId(t.id)}
-                onMouseLeave={() => setHoveredId(null)}
-                onClick={() => setHoveredId(t.id)}
-              />
-            ))
-        )}
-      </div>
-
-      {/* Heat tiles — size emphasis via min-height + count, color via intensity */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-sm">
-        {tiles.map((t) => {
-          const intensity = t.sessionCount / maxCount;
-          const hovered = hoveredId === t.id;
-          const fill = heatFill(t.sessionCount > 0 ? Math.max(0.15, intensity) : 0);
-          const textColor = heatText(t.sessionCount > 0 ? Math.max(0.15, intensity) : 0);
-          const minH = t.sessionCount > 0 ? 88 + Math.round(intensity * 36) : 72;
-
-          return (
-            <button
-              key={t.id}
-              type="button"
-              onMouseEnter={() => setHoveredId(t.id)}
-              onMouseLeave={() => setHoveredId(null)}
-              onClick={() => setHoveredId(t.id)}
-              aria-pressed={hovered}
-              aria-label={`${t.name}, ${t.sessionCount} sessions, ${t.hours.toFixed(1)} hours`}
-              className={`rounded-sm border px-sm py-sm text-left transition-shadow focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
-                hovered ? 'border-[#1c1b1b] shadow-bar-top ring-1 ring-[#1c1b1b]/20' : 'border-border-outline'
-              }`}
-              style={{ backgroundColor: fill, minHeight: minH }}
-            >
-              <p
-                className="font-data text-[10px] uppercase tracking-[0.6px] leading-tight mb-xs truncate"
-                style={{ color: textColor, opacity: 0.85 }}
-              >
-                {t.name}
-              </p>
-              <p
-                className="font-data text-[28px] leading-[32px] font-semibold tabular-nums"
-                style={{ color: textColor }}
-              >
-                {t.sessionCount}
-              </p>
-              <p className="font-data text-[11px] mt-xs" style={{ color: textColor, opacity: 0.8 }}>
-                {t.hours.toFixed(1)}h
-                {t.underReview > 0 ? ` · ${t.underReview} waiting` : ''}
-              </p>
-            </button>
-          );
-        })}
-      </div>
-    </div>
   );
 }

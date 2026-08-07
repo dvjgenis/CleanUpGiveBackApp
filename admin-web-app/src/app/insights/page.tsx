@@ -28,7 +28,12 @@ export default async function Insights({
   return (
     <div className="w-full h-dvh">
       <SidebarDemo>
-        <AnalyticsPage sessions={sessions} courtProgress={courtProgress} isMock={isMock} />
+        <AnalyticsPage
+          sessions={sessions}
+          realSessions={liveSessions}
+          courtProgress={courtProgress}
+          isMock={isMock}
+        />
       </SidebarDemo>
     </div>
   );
