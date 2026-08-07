@@ -374,3 +374,41 @@ Canonical detailed log: [`docs/progress.md`](docs/progress.md).
 - Paying a Fly.io bill does not fix a broken `DATABASE_URL` secret — those are orthogonal failure modes (billing/suspension vs. a stale DB credential). Always verify with a live write, not just `/health`.
 - `EXPO_PUBLIC_*` vars in a gitignored `.env` are invisible to EAS cloud builds unless mirrored into `eas env:create` — local `expo start` dev testing can look fully wired while a real device build silently falls back to mock data.
 - `ServiceType` had been mobile-only, in-memory, unpersisted (`onboardingStore.ts` comment: "no persistence yet") despite already having onboarding UI for it — a good reminder to check persistence, not just UI presence, when asked "does X get logged accurately."
+
+---
+
+## [2026-08-06 Session 10] — Real GPS geocoding + real neighborhood map for the admin US activity heatmap
+
+**Session goal:** Make the admin dashboard's "US activity" map plot real session locations instead of a hardcoded Illinois placeholder, and give the county drill-down a real map (not a schematic tile mockup) with usable names, search, and full-screen controls.
+**Workflow used:** Chat, iterative — each round driven by a live browser-tested bug report or follow-up ask.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Wire dead Waiting/Approved/Hours dashboard tiles to `/sessions` | `components/pages/DashboardPage.tsx` | ✅ Tiles linked to `/dashboard` (no-op self-link) |
+| Geocode real session GPS (route/checkpoint) → state + county FIPS | `lib/live-data.ts`, `lib/us-geo.ts` | ✅ Point-in-polygon against states/counties TopoJSON, no external geocoding API/cost; sessions with no GPS fall back to the IL placeholder with `state_fips_placeholder` flagged |
+| Fix 0-session county drill-down | `lib/mock-data.ts` (`buildGeoActivity`) | ✅ `byCounty` was always empty for live sessions — now aggregated from geocoded `county_fips` |
+| Ensure the map never shows mock/fixture data | `app/analytics/page.tsx`, `app/insights/page.tsx`, `components/pages/AnalyticsPage.tsx`, `DashboardPage.tsx` | ✅ Added a `realSessions` prop threaded separately from the page's mock-fallback `sessions`, so Insights/Analytics map stays real even when other charts show demo fixtures |
+| Replace schematic 8-tile Cook-County-only neighborhood mockup with a real map | new `components/dashboard/CountyTractMap.tsx`, `lib/census-tracts.ts` | ✅ MapLibre GL (Carto Voyager basemap, already used elsewhere in the app) + real US Census tract boundaries (Census Bureau TIGERweb `Generalized_ACS2023` REST API, free/no-key), fetched per-county on demand — works for any US county, not just Chicago |
+| Real neighborhood names on hover (not "Census Tract 8080.01") | new `lib/nominatim.ts`, `UsHeatmap.tsx`, `CountyTractMap.tsx` | ✅ Reverse-geocodes via OpenStreetMap Nominatim, but only for tracts with actual session activity (rate-limited to ~1req/sec — can't geocode a county's full 1,000+ tract set); zero-activity tracts fall back to a cleaned tract ID |
+| Search box for counties/neighborhoods in the sidebar list | `UsHeatmap.tsx` | ✅ Client-side name filter over the existing ranked list, state reset via render-time adjustment (not an effect) to avoid a `set-state-in-effect` lint violation |
+| Full-screen mode for the county map | `CountyTractMap.tsx` | ✅ Same fixed-overlay pattern as the existing `SessionWalkingPathMap.tsx`; Escape-to-exit |
+| Zoom controls + address/place search in full-screen mode | `CountyTractMap.tsx`, `lib/nominatim.ts` (`searchPlace`) | ✅ MapLibre `NavigationControl` added/removed on fullscreen toggle; Nominatim forward-geocode search flies the map to the result |
+| Fix map bleeding past its rounded card corner | `CountyTractMap.tsx` | ✅ WebGL canvas can composite to a layer that ignores parent `overflow-hidden`/`border-radius` — fixed by applying the radius directly to `.maplibregl-canvas` |
+| Distinguish resolved vs. fallback names on hover | `CountyTractMap.tsx`, `UsHeatmap.tsx` | ✅ Real Nominatim names render full-contrast black; unresolved tract-ID fallbacks stay muted gray |
+| Delete dead, unwired earlier attempt at this same feature | removed `components/ui/EnhancedUsHeatmap.tsx`, `GeocodingStats.tsx`, `lib/enhanced-geo-activity.ts` | ✅ Confirmed nothing imported them before deleting |
+
+### Key Decisions
+
+- Chose point-in-polygon against bundled TopoJSON/Census tract data over a paid geocoding API — zero marginal cost, and the states/counties TopoJSON was already being fetched for the map's own rendering.
+- Census tracts (not city-specific "community area" datasets like Chicago's 77) were chosen for the neighborhood tier specifically so the feature works for *any* county nationwide, not just Cook County — confirmed with the user before building.
+- Real place names are only fetched for tracts with actual session activity, never a county's full tract set, to respect Nominatim's ~1 req/sec usage policy. This means zero-activity tracts permanently show a tract-ID fallback on hover, not a real name — an accepted tradeoff, not a bug.
+- Deleted rather than patched an old unused `EnhancedUsHeatmap`/`enhanced-geo-activity.ts` attempt at the same feature once it started failing `tsc` after the `UsHeatmap` prop change — verified zero importers first.
+
+### Learnings
+
+- `admin-web-app` already had MapLibre GL JS + Carto Voyager raster tiles standardized in two other components (`EventLocationMap.tsx`, `SessionWalkingPathMap.tsx`) — worth checking for an existing mapping pattern before reaching for a new library when a "real map" feature comes up again. Extracted the shared style into `lib/maplibre-basemap.ts` to stop the third copy-paste.
+- The Census Bureau's TIGERweb has both full-resolution (`Tracts_Blocks`) and pre-generalized (`Generalized_ACS2023`) tract layers — the generalized one is ~8x smaller (Cook County: 1.1MB vs 9.5MB) and plenty precise for a session-count choropleth; worth defaulting to generalized boundary layers for any future Census geometry fetch.
+- `sessions.route` (GPS trail, `[lng,lat]` pairs) and `checkpoints.latitude/longitude` were already being captured by the mobile app but silently unused by admin-web-app's map — a reminder to check what data a table already carries before assuming a feature needs new instrumentation.
+- React's `set-state-in-effect` lint rule flags `useEffect(() => setX(...), [dep])` reset patterns; the recommended fix is adjusting state during render (`if (trackedDep !== dep) { setTrackedDep(dep); setX(...) }`) instead — avoids an extra render pass and keeps the lint clean.
