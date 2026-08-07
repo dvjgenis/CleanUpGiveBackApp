@@ -21,6 +21,23 @@ export type CourtRiskItem = {
   dueDate: string;
 };
 
+export type OvershootCheck = { overshoots: boolean; overBy: number };
+
+/**
+ * Whether approving/adjusting a session to `candidateHours` would push a volunteer's
+ * completed court-ordered hours past `order.required_hours`. Advisory only — callers
+ * decide what to do with the result (e.g. require a typed confirmation).
+ */
+export function wouldOvershootCourtOrder(
+  order: Pick<CourtOrderRow, 'required_hours'>,
+  currentCompletedHours: number,
+  candidateHours: number,
+): OvershootCheck {
+  const projected = currentCompletedHours + candidateHours;
+  const overBy = projected - order.required_hours;
+  return { overshoots: overBy > 0, overBy: Math.max(0, overBy) };
+}
+
 type SessionLike = {
   user_id: string;
   status: string;

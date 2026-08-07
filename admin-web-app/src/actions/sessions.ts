@@ -10,15 +10,76 @@
  * live `sessions.route` + `checkpoints` (signed via `session-photos` bucket).
  */
 import { revalidatePath } from 'next/cache';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { writeAuditLog } from '@/lib/audit';
 import { notifyVolunteerSessionDecision } from '@/lib/notify';
+import { computedHours } from '@/lib/mock-data';
+import { wouldOvershootCourtOrder } from '@/lib/court-risk';
+import { loadVolunteerActivityPattern, type VolunteerActivityPattern } from '@/lib/live-data';
 import {
   fetchSessionEvidence,
   type SessionEvidence,
 } from '@/lib/session-evidence';
 
+export type { VolunteerActivityPattern } from '@/lib/live-data';
+
 export type { SessionEvidence, SessionPhoto } from '@/lib/session-evidence';
+
+/** Prefix parsed by `SessionPreviewDrawer.tsx` to render the typed-confirmation flow. */
+const OVERSHOOT_PREFIX = 'COURT_HOURS_OVERSHOOT';
+
+/**
+ * Checks whether setting this session's court-ordered hours to `candidateHours` would
+ * push the volunteer's completed court-ordered total past `court_orders.required_hours`.
+ * Throws a parseable error (see `OVERSHOOT_PREFIX`) unless the caller passed the typed
+ * `confirmOverride: 'OVERRIDE'` — advisory only, never blocks a write outright.
+ */
+async function assertNoCourtHoursOvershoot(
+  supabase: SupabaseClient,
+  {
+    userId,
+    sessionId,
+    courtOrdered,
+    candidateHours,
+    confirmOverride,
+  }: {
+    userId: string;
+    sessionId: string;
+    courtOrdered: boolean;
+    candidateHours: number;
+    confirmOverride?: string;
+  },
+) {
+  if (!courtOrdered || confirmOverride === 'OVERRIDE') return;
+
+  const { data: order } = await supabase
+    .from('court_orders')
+    .select('required_hours')
+    .eq('user_id', userId)
+    .single();
+  if (!order) return;
+
+  const { data: approvedSessions } = await supabase
+    .from('sessions')
+    .select('id, duration_seconds, adjusted_hours')
+    .eq('user_id', userId)
+    .eq('status', 'approved')
+    .eq('court_ordered', true)
+    .neq('id', sessionId);
+
+  const currentCompletedHours = (approvedSessions ?? []).reduce(
+    (sum, s) => sum + computedHours(s.duration_seconds, s.adjusted_hours),
+    0,
+  );
+
+  const { overshoots, overBy } = wouldOvershootCourtOrder(order, currentCompletedHours, candidateHours);
+  if (overshoots) {
+    throw new Error(
+      `${OVERSHOOT_PREFIX}:${overBy.toFixed(2)}:${(currentCompletedHours + candidateHours).toFixed(2)}:${order.required_hours}`,
+    );
+  }
+}
 
 async function getAdminUser() {
   if (process.env.BYPASS_AUTH === 'true') {
@@ -40,13 +101,13 @@ function revalidateSessionPaths() {
   revalidatePath('/sessions');
 }
 
-export async function approveSession(sessionId: string) {
+export async function approveSession(sessionId: string, confirmOverride?: string) {
   const user = await getAdminUser();
   const supabase = await createServiceClient();
 
   const { data: before, error: fetchError } = await supabase
     .from('sessions')
-    .select('status, user_id, activity')
+    .select('status, user_id, activity, duration_seconds, adjusted_hours, court_ordered')
     .eq('id', sessionId)
     .single();
 
@@ -57,6 +118,14 @@ export async function approveSession(sessionId: string) {
   if (before.status !== 'under_review') {
     throw new Error(`Cannot approve session: status is "${before.status}", expected "under_review"`);
   }
+
+  await assertNoCourtHoursOvershoot(supabase, {
+    userId: before.user_id,
+    sessionId,
+    courtOrdered: before.court_ordered,
+    candidateHours: computedHours(before.duration_seconds, before.adjusted_hours),
+    confirmOverride,
+  });
 
   const { error } = await supabase.from('sessions').update({ status: 'approved' }).eq('id', sessionId);
   if (error) throw new Error(error.message);
@@ -124,15 +193,28 @@ export async function declineSession(sessionId: string, reason?: string) {
   revalidateSessionPaths();
 }
 
-export async function adjustHours(sessionId: string, hours: number) {
+export async function adjustHours(sessionId: string, hours: number, confirmOverride?: string) {
   const user = await getAdminUser();
   const supabase = await createServiceClient();
 
   const { data: before } = await supabase
     .from('sessions')
-    .select('adjusted_hours, duration_seconds, user_id')
+    .select('adjusted_hours, duration_seconds, user_id, status, court_ordered')
     .eq('id', sessionId)
     .single();
+
+  // Only an *approved* court-ordered session's hours count toward the requirement —
+  // adjusting an under_review session's hours doesn't overshoot until it's approved
+  // (approveSession's own check covers that case).
+  if (before?.status === 'approved') {
+    await assertNoCourtHoursOvershoot(supabase, {
+      userId: before.user_id,
+      sessionId,
+      courtOrdered: before.court_ordered,
+      candidateHours: hours,
+      confirmOverride,
+    });
+  }
 
   const { error } = await supabase.from('sessions').update({ adjusted_hours: hours }).eq('id', sessionId);
   if (error) throw new Error(error.message);
@@ -190,7 +272,7 @@ export async function approveSessionsBulk(sessionIds: string[]): Promise<BulkApp
     try {
       const { data: before, error: fetchError } = await supabase
         .from('sessions')
-        .select('status, user_id, activity')
+        .select('status, user_id, activity, duration_seconds, adjusted_hours, court_ordered')
         .eq('id', sessionId)
         .single();
 
@@ -204,6 +286,25 @@ export async function approveSessionsBulk(sessionIds: string[]): Promise<BulkApp
           sessionId,
           success: false,
           error: `Status is "${before.status}", expected "under_review"`,
+        });
+        continue;
+      }
+
+      // Bulk approve has no per-item typed-confirmation UI — skip and report instead of
+      // silently approving past a court order; Donna can confirm the override in the
+      // session drawer if it's genuinely intended.
+      try {
+        await assertNoCourtHoursOvershoot(supabase, {
+          userId: before.user_id,
+          sessionId,
+          courtOrdered: before.court_ordered,
+          candidateHours: computedHours(before.duration_seconds, before.adjusted_hours),
+        });
+      } catch {
+        results.push({
+          sessionId,
+          success: false,
+          error: 'Would exceed court-ordered hours — approve individually to confirm override',
         });
         continue;
       }
@@ -274,4 +375,9 @@ export async function markLetterheadGenerated(sessionId: string) {
 /** GPS route + signed checkpoint photos for the session preview drawer. */
 export async function loadSessionEvidence(sessionId: string): Promise<SessionEvidence | null> {
   return fetchSessionEvidence(sessionId);
+}
+
+/** Volunteer activity-pattern rollup for the drawer's red-flag badge (Phase 4/5). */
+export async function loadSessionVolunteerPattern(userId: string): Promise<VolunteerActivityPattern> {
+  return loadVolunteerActivityPattern(userId);
 }

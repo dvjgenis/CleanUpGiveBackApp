@@ -19,6 +19,7 @@ import { useEffect, useId, useState, useTransition } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { CourtBadge } from "@/components/ui/CourtBadge";
 import { ServiceTypeBadge } from "@/components/ui/ServiceTypeBadge";
+import { RedFlagBadge } from "@/components/ui/RedFlagBadge";
 import { CameraIcon, CloseIcon, CollapseIcon, ExpandIcon } from "@/components/ui/Icons";
 import { SessionPhotoGrid } from "@/components/sessions/SessionPhotoGrid";
 import {
@@ -30,9 +31,12 @@ import {
   approveSession,
   declineSession,
   loadSessionEvidence,
+  loadSessionVolunteerPattern,
   saveAdminNotes,
   type SessionEvidence,
+  type VolunteerActivityPattern,
 } from "@/actions/sessions";
+import { computeRedFlags } from "@/lib/session-red-flags";
 import {
   formatDateTime,
   formatDuration,
@@ -46,6 +50,71 @@ import {
 const EASE_OUT: [number, number, number, number] = [0.23, 1, 0.32, 1];
 const DRAWER_SPRING = { type: "spring" as const, stiffness: 320, damping: 34, mass: 0.85 };
 const PHOTO_LABELS = ["Selfie", "Progress", "Selfie"];
+
+type OvershootDetails = { overBy: number; projected: number; required: number };
+
+/** Parses the `COURT_HOURS_OVERSHOOT:<overBy>:<projected>:<required>` error thrown by
+ * `approveSession`/`adjustHours`/`approveSessionsBulk` in `@/actions/sessions.ts`. */
+function parseOvershootError(message: string): OvershootDetails | null {
+  const parts = message.split(":");
+  if (parts[0] !== "COURT_HOURS_OVERSHOOT" || parts.length < 4) return null;
+  const overBy = parseFloat(parts[1]);
+  const projected = parseFloat(parts[2]);
+  const required = parseFloat(parts[3]);
+  if ([overBy, projected, required].some(Number.isNaN)) return null;
+  return { overBy, projected, required };
+}
+
+/** Typed-confirmation gate shown when an approve/hours-adjust would push a volunteer's
+ * completed court-ordered hours past their order's required hours. Per the session-abuse
+ * checklist, "pressure for hours override" is a real threat vector for this population —
+ * a passive badge isn't enough friction, so this requires typing OVERRIDE to proceed. */
+function OvershootConfirm({
+  details,
+  isPending,
+  onConfirm,
+  onCancel,
+}: {
+  details: OvershootDetails;
+  isPending: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const [confirmText, setConfirmText] = useState("");
+  return (
+    <div className="rounded-sm border border-[#ba1a1a] bg-[#ffd9de] px-md py-sm flex flex-col gap-sm">
+      <p className="font-body text-[13px] text-[#ba1a1a]">
+        This will bring completed hours to {details.projected.toFixed(1)} of {details.required} required —{" "}
+        {details.overBy.toFixed(1)} over. Type <strong>OVERRIDE</strong> to proceed anyway.
+      </p>
+      <div className="flex gap-sm">
+        <input
+          type="text"
+          value={confirmText}
+          onChange={(e) => setConfirmText(e.target.value)}
+          placeholder="OVERRIDE"
+          className="flex-1 h-9 px-sm rounded-sm border border-[#ba1a1a] bg-white font-body text-[13px] text-text-primary focus:outline-none"
+        />
+        <button
+          type="button"
+          onClick={onConfirm}
+          disabled={isPending || confirmText !== "OVERRIDE"}
+          className="h-9 px-md rounded-sm bg-[#ba1a1a] text-white font-data text-[12px] font-semibold disabled:opacity-40"
+        >
+          Confirm override
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={isPending}
+          className="h-9 px-md rounded-sm border border-[#ba1a1a] bg-white text-[#ba1a1a] font-data text-[12px] font-semibold disabled:opacity-40"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
@@ -234,7 +303,10 @@ function AdminActionsSection({
   isMock,
   isPending,
   feedback,
+  overshoot,
   onApprove,
+  onConfirmOverride,
+  onCancelOverride,
   onDecline,
 }: {
   status: SessionStatus;
@@ -243,7 +315,10 @@ function AdminActionsSection({
   isMock: boolean;
   isPending: boolean;
   feedback: string | null;
+  overshoot: OvershootDetails | null;
   onApprove: () => void;
+  onConfirmOverride: () => void;
+  onCancelOverride: () => void;
   onDecline: () => void;
 }) {
   return (
@@ -277,7 +352,14 @@ function AdminActionsSection({
           </button>
         )}
       </div>
-      {feedback ? (
+      {overshoot ? (
+        <OvershootConfirm
+          details={overshoot}
+          isPending={isPending}
+          onConfirm={onConfirmOverride}
+          onCancel={onCancelOverride}
+        />
+      ) : feedback ? (
         <p className="font-body text-[12px] text-primary">{feedback}</p>
       ) : (
         <p className="font-body text-[12px] text-text-tertiary">
@@ -310,8 +392,9 @@ function HoursAndNotesSection({
   const [notesInput, setNotesInput] = useState(adminNotes);
   const [hoursMessage, setHoursMessage] = useState<string | null>(null);
   const [notesMessage, setNotesMessage] = useState<string | null>(null);
+  const [hoursOvershoot, setHoursOvershoot] = useState<OvershootDetails | null>(null);
 
-  function handleSaveHours() {
+  function handleSaveHours(confirmOverride?: string) {
     const hours = parseFloat(hoursInput);
     if (Number.isNaN(hours) || hours < 0) {
       setHoursMessage("Enter a valid number of hours (e.g. 1.5)");
@@ -324,11 +407,19 @@ function HoursAndNotesSection({
         return;
       }
       try {
-        await adjustHours(session.id, hours);
+        await adjustHours(session.id, hours, confirmOverride);
         onAdjustedHours(hours);
-        setHoursMessage("Saved");
+        setHoursMessage(confirmOverride ? "Saved (override confirmed)" : "Saved");
+        setHoursOvershoot(null);
       } catch (err) {
-        setHoursMessage(err instanceof Error ? err.message : "Failed to save hours");
+        const message = err instanceof Error ? err.message : "Failed to save hours";
+        const overshoot = parseOvershootError(message);
+        if (overshoot) {
+          setHoursOvershoot(overshoot);
+          setHoursMessage(null);
+        } else {
+          setHoursMessage(message);
+        }
       }
     });
   }
@@ -364,20 +455,32 @@ function HoursAndNotesSection({
             min="0"
             step="0.25"
             value={hoursInput}
-            onChange={(e) => setHoursInput(e.target.value)}
+            onChange={(e) => {
+              setHoursInput(e.target.value);
+              setHoursOvershoot(null);
+            }}
             placeholder="e.g. 1.5"
             className="flex-1 h-9 px-sm rounded-sm border border-border-outline font-body text-base text-text-primary focus:outline-none focus:border-primary"
           />
           <button
             type="button"
-            onClick={handleSaveHours}
+            onClick={() => handleSaveHours()}
             disabled={isPending}
             className="h-9 px-md rounded-sm border border-border-outline bg-bg-surface font-data text-[12px] font-semibold text-text-primary hover:bg-bg-surface-elevated transition-colors disabled:opacity-50"
           >
             Save
           </button>
         </div>
-        {hoursMessage && <p className="font-body text-[12px] text-primary">{hoursMessage}</p>}
+        {hoursOvershoot ? (
+          <OvershootConfirm
+            details={hoursOvershoot}
+            isPending={isPending}
+            onConfirm={() => handleSaveHours("OVERRIDE")}
+            onCancel={() => setHoursOvershoot(null)}
+          />
+        ) : (
+          hoursMessage && <p className="font-body text-[12px] text-primary">{hoursMessage}</p>
+        )}
       </div>
 
       <div className="flex flex-col gap-sm border-t border-border-outline pt-lg">
@@ -459,6 +562,7 @@ function SessionDrawerPanel({
   const [adminNotes, setAdminNotes] = useState(session.admin_notes ?? "");
   const [evidence, setEvidence] = useState<SessionEvidence | null>(null);
   const [evidenceLoading, setEvidenceLoading] = useState(!isMock);
+  const [volunteerPattern, setVolunteerPattern] = useState<VolunteerActivityPattern | null>(null);
   const [actionPending, startActionTransition] = useTransition();
   const [actionFeedback, setActionFeedback] = useState<string | null>(null);
 
@@ -510,10 +614,38 @@ function SessionDrawerPanel({
     };
   }, [session.id, isMock]);
 
+  useEffect(() => {
+    if (isMock) {
+      setVolunteerPattern(null);
+      return;
+    }
+    let cancelled = false;
+    loadSessionVolunteerPattern(session.user_id)
+      .then((result) => {
+        if (!cancelled) setVolunteerPattern(result);
+      })
+      .catch((err) => {
+        console.warn("[SessionPreviewDrawer] volunteer pattern load failed:", err);
+        if (!cancelled) setVolunteerPattern(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [session.user_id, isMock]);
+
+  const redFlags = computeRedFlags({
+    durationSeconds: session.duration_seconds,
+    checkpointCount: evidence?.checkpointCount ?? 0,
+    photoPins: evidence?.photoPins ?? [],
+    plausibilitySignal: evidence?.plausibilitySignal ?? null,
+    volunteerPattern,
+  });
+
   const canApprove = status !== "approved";
   const canDecline = status !== "not_approved";
+  const [approveOvershoot, setApproveOvershoot] = useState<OvershootDetails | null>(null);
 
-  function handleApprove() {
+  function handleApprove(confirmOverride?: string) {
     startActionTransition(async () => {
       if (isMock) {
         setStatus("approved");
@@ -521,11 +653,19 @@ function SessionDrawerPanel({
         return;
       }
       try {
-        await approveSession(session.id);
+        await approveSession(session.id, confirmOverride);
         setStatus("approved");
-        setActionFeedback("Approved");
+        setActionFeedback(confirmOverride ? "Approved (override confirmed)" : "Approved");
+        setApproveOvershoot(null);
       } catch (err) {
-        setActionFeedback(err instanceof Error ? err.message : "Approve failed");
+        const message = err instanceof Error ? err.message : "Approve failed";
+        const overshoot = parseOvershootError(message);
+        if (overshoot) {
+          setApproveOvershoot(overshoot);
+          setActionFeedback(null);
+        } else {
+          setActionFeedback(message);
+        }
       }
     });
   }
@@ -619,6 +759,7 @@ function SessionDrawerPanel({
                 <ServiceTypeBadge serviceType={session.volunteer_service_type} />
               )}
               <StatusChip status={status} />
+              <RedFlagBadge flags={redFlags} />
             </div>
           </div>
           <div className="flex items-center gap-xs shrink-0">
@@ -679,7 +820,10 @@ function SessionDrawerPanel({
                   isMock={isMock}
                   isPending={actionPending}
                   feedback={actionFeedback}
-                  onApprove={handleApprove}
+                  overshoot={approveOvershoot}
+                  onApprove={() => handleApprove()}
+                  onConfirmOverride={() => handleApprove("OVERRIDE")}
+                  onCancelOverride={() => setApproveOvershoot(null)}
                   onDecline={handleDecline}
                 />
                 <HoursAndNotesSection

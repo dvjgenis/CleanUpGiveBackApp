@@ -19,6 +19,7 @@ import {
   LuClipboardList,
   LuCopy,
   LuCreditCard,
+  LuHistory,
   LuHouse,
   LuMail,
   LuMaximize2,
@@ -86,3 +87,4 @@ export const ReplayIcon = makeIcon(LuRotateCcw);
 /** Password reveal — `react-icons/io5`, same pack as mobile onboarding. */
 export const EyeIcon = makeIcon(IoEye);
 export const EyeOffIcon = makeIcon(IoEyeOff);
+export const AuditLogIcon = makeIcon(LuHistory);

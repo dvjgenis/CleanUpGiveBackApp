@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { ChevronLeftIcon } from '@/components/ui/Icons';
 import { InfoRow } from '@/components/ui/InfoRow';
 import { StatusChip } from '@/components/ui/StatusChip';
+import { CourtOrderForm } from '@/components/ui/CourtOrderForm';
 import { formatDate, formatDateTime } from '@/lib/mock-data';
 import { loadLiveVolunteerById } from '@/lib/live-data';
 import { SidebarDemo } from '@/components/ui/sidebar-demo';
@@ -192,19 +193,51 @@ export default async function VolunteerProfilePage({
               <h2 className="font-heading text-[18px] leading-[26px] text-text-primary mb-md">
                 Court Order
               </h2>
+              <CourtOrderForm
+                userId={volunteer.id}
+                requiredHours={volunteer.requiredHours}
+                dueDate={volunteer.courtDueDate}
+                caseReference={volunteer.caseReference}
+                completedHours={courtCompletedHours}
+                formatDate={formatDate}
+              />
+            </>
+          )}
+
+          {volunteer.sessions.length > 0 && (
+            <>
+              <h2 className="font-heading text-[18px] leading-[26px] text-text-primary mb-md">
+                Activity Pattern
+              </h2>
               <div className="bg-bg-surface border border-border-outline rounded-md px-lg py-md mb-lg">
                 <dl>
                   <InfoRow
-                    label="Required hours"
-                    value={volunteer.requiredHours != null ? `${volunteer.requiredHours}h` : '—'}
+                    label="Recent frequency"
+                    value={`${volunteer.activityPattern.sessionsLast7Days} session${volunteer.activityPattern.sessionsLast7Days === 1 ? '' : 's'} in the last 7 days`}
+                    note={`avg ${volunteer.activityPattern.priorWeeklyAverage.toFixed(1)}/week over the prior month`}
                   />
-                  <InfoRow label="Completed hours" value={`${courtCompletedHours.toFixed(1)}h`} />
                   <InfoRow
-                    label="Due date"
-                    value={volunteer.courtDueDate ? formatDate(volunteer.courtDueDate) : '—'}
+                    label="Invalid sessions"
+                    value={`${volunteer.activityPattern.invalidSessionsLast30Days} in the last 30 days`}
                   />
-                  <InfoRow label="Case reference" value={displayOrDash(volunteer.caseReference)} />
+                  <InfoRow
+                    label="Deleted & resubmitted"
+                    value={`${volunteer.activityPattern.deleteCount} session${volunteer.activityPattern.deleteCount === 1 ? '' : 's'} deleted (all-time)`}
+                  />
+                  {volunteer.courtOrdered && (
+                    <InfoRow
+                      label="Near-deadline volume"
+                      value={
+                        volunteer.activityPattern.nearDeadlineVolumeSpike
+                          ? 'Multiple sessions clustered near the court due date'
+                          : 'No unusual clustering near the due date'
+                      }
+                    />
+                  )}
                 </dl>
+                <p className="font-body text-[12px] text-text-tertiary mt-sm">
+                  Trends only — not a score or a verdict. Cross-reference with the walking path and photos before declining.
+                </p>
               </div>
             </>
           )}

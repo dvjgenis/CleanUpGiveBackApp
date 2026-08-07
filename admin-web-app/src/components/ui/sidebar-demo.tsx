@@ -9,6 +9,7 @@ import React, { useEffect, useId, useLayoutEffect, useRef, useState } from "reac
 import { createPortal } from "react-dom";
 import { Sidebar, SidebarBody, SidebarLink, useSidebar } from "@/components/ui/sidebar";
 import {
+  AuditLogIcon,
   BellIcon,
   EventsIcon,
   FeedbackIcon,
@@ -75,6 +76,11 @@ export function SidebarDemo({ children }: { children: React.ReactNode }) {
       label: "Payments",
       href: "/payments",
       icon: <PaymentsIcon className="h-4 w-4 flex-shrink-0" />,
+    },
+    {
+      label: "Audit Log",
+      href: "/audit-log",
+      icon: <AuditLogIcon className="h-4 w-4 flex-shrink-0" />,
     },
   ];
 

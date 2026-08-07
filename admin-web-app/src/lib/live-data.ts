@@ -8,7 +8,16 @@
  *
  * Every table read here is the same shared Supabase project the mobile app writes to.
  */
-import { endOfMonth, isWithinInterval, parseISO, startOfMonth, subMonths, subYears } from 'date-fns';
+import {
+  differenceInCalendarDays,
+  endOfMonth,
+  isWithinInterval,
+  parseISO,
+  startOfMonth,
+  subDays,
+  subMonths,
+  subYears,
+} from 'date-fns';
 import { createDataClient, createServiceClient } from '@/lib/supabase/server';
 import {
   getVolunteerDirectory,
@@ -225,6 +234,66 @@ export async function loadLiveOrders(): Promise<LiveResult<OrderRow[]>> {
   return { data: orders, useMock: false };
 }
 
+/**
+ * Pure aggregation over a volunteer's own session/audit-log history — every input here
+ * is already individually visible to Donna one row at a time. Answers checklist red
+ * flags #5 ("court-ordered + near deadline + sudden session volume") and #6 ("repeated
+ * delete/resubmit or frequent invalid → dispute"). Advisory display only, not a score.
+ */
+export type VolunteerActivityPattern = {
+  sessionsLast7Days: number;
+  priorWeeklyAverage: number;
+  invalidSessionsLast30Days: number;
+  /** True when several sessions cluster in the run-up to a court due date. */
+  nearDeadlineVolumeSpike: boolean;
+  /** Count of volunteer-initiated session deletes (from `admin_audit_log`). */
+  deleteCount: number;
+};
+
+const NEAR_DEADLINE_WINDOW_DAYS = 14;
+const NEAR_DEADLINE_SPIKE_THRESHOLD = 3;
+
+function buildActivityPattern(
+  sessions: Array<{ started_at: string | null; status: string }>,
+  auditDeleteCount: number,
+  courtDueDate: string | null,
+  now: Date,
+): VolunteerActivityPattern {
+  const startedDates = sessions
+    .map((s) => (s.started_at ? parseISO(s.started_at) : null))
+    .filter((d): d is Date => d != null);
+
+  const last7 = { start: subDays(now, 7), end: now };
+  const prior28 = { start: subDays(now, 35), end: subDays(now, 7) };
+  const last30 = { start: subDays(now, 30), end: now };
+
+  const sessionsLast7Days = startedDates.filter((d) => isWithinInterval(d, last7)).length;
+  const priorSessions28Days = startedDates.filter((d) => isWithinInterval(d, prior28)).length;
+  const priorWeeklyAverage = priorSessions28Days / 4;
+
+  const invalidSessionsLast30Days = sessions.filter(
+    (s) => s.status === 'invalid' && s.started_at && isWithinInterval(parseISO(s.started_at), last30),
+  ).length;
+
+  let nearDeadlineVolumeSpike = false;
+  if (courtDueDate) {
+    const due = parseISO(courtDueDate);
+    const windowCount = startedDates.filter((d) => {
+      const daysBeforeDue = differenceInCalendarDays(due, d);
+      return daysBeforeDue >= 0 && daysBeforeDue <= NEAR_DEADLINE_WINDOW_DAYS;
+    }).length;
+    nearDeadlineVolumeSpike = windowCount >= NEAR_DEADLINE_SPIKE_THRESHOLD;
+  }
+
+  return {
+    sessionsLast7Days,
+    priorWeeklyAverage,
+    invalidSessionsLast30Days,
+    nearDeadlineVolumeSpike,
+    deleteCount: auditDeleteCount,
+  };
+}
+
 type VolunteerDetail = {
   id: string;
   name: string;
@@ -236,6 +305,7 @@ type VolunteerDetail = {
   requiredHours: number | null;
   courtDueDate: string | null;
   caseReference: string | null;
+  activityPattern: VolunteerActivityPattern;
   sessions: Array<{
     id: string;
     activity: string | null;
@@ -247,6 +317,41 @@ type VolunteerDetail = {
     court_ordered: boolean;
   }>;
 };
+
+/**
+ * Lean version of `loadLiveVolunteerById`'s activity-pattern computation, for the
+ * session drawer's red-flag badge — skips the Auth `getUserById` call since the
+ * drawer only needs the rollup, not the full volunteer profile.
+ */
+export async function loadVolunteerActivityPattern(userId: string): Promise<VolunteerActivityPattern> {
+  const supabase = await createDataClient();
+
+  const [{ data: sessions }, { data: courtOrders }, { count: deleteCount }] = await Promise.all([
+    supabase
+      .from('sessions')
+      .select('started_at, status')
+      .eq('user_id', userId)
+      .neq('status', 'active'),
+    supabase
+      .from('court_orders')
+      .select('due_date')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(1),
+    supabase
+      .from('admin_audit_log')
+      .select('id', { count: 'exact', head: true })
+      .eq('admin_user_id', userId)
+      .eq('action', 'volunteer deleted session'),
+  ]);
+
+  return buildActivityPattern(
+    sessions ?? [],
+    deleteCount ?? 0,
+    courtOrders?.[0]?.due_date ?? null,
+    new Date(),
+  );
+}
 
 /** Load a single volunteer profile with detailed information including sessions and court orders */
 export async function loadLiveVolunteerById(id: string): Promise<LiveResult<VolunteerDetail | null>> {
@@ -265,8 +370,8 @@ export async function loadLiveVolunteerById(id: string): Promise<LiveResult<Volu
     const name = meta.name || user.email?.split('@')[0] || 'Unknown';
     const phone = user.phone ?? (typeof meta.phone === 'string' ? meta.phone : null);
 
-    // Get sessions and court orders
-    const [{ data: sessions }, { data: courtOrders }] = await Promise.all([
+    // Get sessions, court orders, and delete-audit history (for the Activity Pattern rollup)
+    const [{ data: sessions }, { data: courtOrders }, { count: deleteCount }] = await Promise.all([
       supabase
         .from('sessions')
         .select('id, activity, started_at, duration_seconds, adjusted_hours, distance_miles, status, court_ordered')
@@ -278,12 +383,23 @@ export async function loadLiveVolunteerById(id: string): Promise<LiveResult<Volu
         .select('required_hours, due_date, case_reference, created_at')
         .eq('user_id', id)
         .order('created_at', { ascending: false }),
+      supabase
+        .from('admin_audit_log')
+        .select('id', { count: 'exact', head: true })
+        .eq('admin_user_id', id)
+        .eq('action', 'volunteer deleted session'),
     ]);
 
     const sessionRows = sessions ?? [];
     const courtOrderList = courtOrders ?? [];
     const courtOrder = courtOrderList[0] ?? null;
     const courtOrdered = courtOrderList.length > 0;
+    const activityPattern = buildActivityPattern(
+      sessionRows,
+      deleteCount ?? 0,
+      courtOrder?.due_date ?? null,
+      new Date(),
+    );
 
     return {
       data: {
@@ -297,6 +413,7 @@ export async function loadLiveVolunteerById(id: string): Promise<LiveResult<Volu
         requiredHours: courtOrder?.required_hours ?? null,
         courtDueDate: courtOrder?.due_date ?? null,
         caseReference: courtOrder?.case_reference ?? null,
+        activityPattern,
         sessions: sessionRows,
       },
       useMock: false

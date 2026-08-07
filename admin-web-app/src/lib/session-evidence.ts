@@ -9,6 +9,7 @@
  */
 import { createDataClient, tryCreateServiceClient } from '@/lib/supabase/server';
 import {
+  deltaMetersBetween,
   nearestPointOnRoute,
   parseSessionRoute,
   pointAlongRouteByProgress,
@@ -30,7 +31,22 @@ export type SessionPhotoPin = {
   progress: number;
   /** True when placed from stored lat/lng rather than time interpolation. */
   fromGps: boolean;
+  /** Distance from the raw GPS fix to the nearest point on the route (0 for
+   * time-interpolated pins, which are placed on the route line by construction). */
+  offRouteMeters: number;
   photos: SessionPhoto[];
+};
+
+/** Server-computed GPS/speed signal from finalize — see
+ * `backend/sessions/src/lib/sessionPlausibility.ts`. Advisory display only. */
+export type PlausibilitySignal = {
+  avgSpeedMps: number;
+  maxSpeedMps: number;
+  exceedsPlausibleSpeed: boolean;
+  sharpReversalCount: number;
+  routeSpanMeters: number;
+  tightLoop: boolean;
+  idleHighDuration: boolean;
 };
 
 export type SessionEvidence = {
@@ -40,6 +56,7 @@ export type SessionEvidence = {
   checkpointCount: number;
   /** True when checkpoints have storage paths but signing produced no URLs. */
   photoSignFailed: boolean;
+  plausibilitySignal: PlausibilitySignal | null;
 };
 
 type CheckpointRow = {
@@ -58,7 +75,7 @@ function resolvePinCoordinate(
   total: number,
   startedAt: string | null,
   endedAt: string | null,
-): { coordinate: RouteCoordinate; progress: number; fromGps: boolean } | null {
+): { coordinate: RouteCoordinate; progress: number; fromGps: boolean; offRouteMeters: number } | null {
   if (route.length < 2) return null;
 
   const lat = cp.latitude != null ? Number(cp.latitude) : NaN;
@@ -66,6 +83,7 @@ function resolvePinCoordinate(
   if (Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180) {
     const raw: RouteCoordinate = [lng, lat];
     const coordinate = nearestPointOnRoute(route, raw);
+    const offRouteMeters = deltaMetersBetween(raw, coordinate);
     const progress = progressFromCaptureTime({
       capturedAt: cp.captured_at,
       startedAt,
@@ -73,7 +91,7 @@ function resolvePinCoordinate(
       index,
       total,
     });
-    return { coordinate, progress, fromGps: true };
+    return { coordinate, progress, fromGps: true, offRouteMeters };
   }
 
   const progress = progressFromCaptureTime({
@@ -88,7 +106,7 @@ function resolvePinCoordinate(
   const nudged = Math.max(0.04, Math.min(0.96, progress));
   const along = pointAlongRouteByProgress(route, nudged);
   if (!along) return null;
-  return { coordinate: along, progress: nudged, fromGps: false };
+  return { coordinate: along, progress: nudged, fromGps: false, offRouteMeters: 0 };
 }
 
 export async function fetchSessionEvidence(sessionId: string): Promise<SessionEvidence | null> {
@@ -102,7 +120,7 @@ export async function fetchSessionEvidence(sessionId: string): Promise<SessionEv
     await Promise.all([
       supabase
         .from('sessions')
-        .select('id, route, started_at, ended_at')
+        .select('id, route, started_at, ended_at, plausibility_signal')
         .eq('id', sessionId)
         .maybeSingle(),
       supabase
@@ -138,7 +156,12 @@ export async function fetchSessionEvidence(sessionId: string): Promise<SessionEv
 }
 
 async function buildEvidence(
-  session: { route: unknown; started_at: string | null; ended_at: string | null },
+  session: {
+    route: unknown;
+    started_at: string | null;
+    ended_at: string | null;
+    plausibility_signal?: unknown;
+  },
   rowsIn: Array<
     Omit<CheckpointRow, 'latitude' | 'longitude'> & {
       latitude?: number | null;
@@ -215,6 +238,7 @@ async function buildEvidence(
         coordinate: placed.coordinate,
         progress: placed.progress,
         fromGps: placed.fromGps,
+        offRouteMeters: placed.offRouteMeters,
         photos: pinPhotos,
       });
     }
@@ -228,5 +252,6 @@ async function buildEvidence(
     photoPins,
     checkpointCount,
     photoSignFailed: hadPaths && photos.length === 0,
+    plausibilitySignal: (session.plausibility_signal as PlausibilitySignal | null) ?? null,
   };
 }

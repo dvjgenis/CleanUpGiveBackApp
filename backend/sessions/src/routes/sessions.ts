@@ -5,6 +5,7 @@ import { Resend } from 'resend';
 import type { AuthenticatedRequest } from '../auth.js';
 import { verifyAuth } from '../auth.js';
 import { prisma } from '../prisma.js';
+import { computePlausibilitySignal } from '../lib/sessionPlausibility.js';
 
 type CreateSessionBody = {
   activity?: string;
@@ -231,6 +232,15 @@ export async function registerSessionRoutes(app: FastifyInstance) {
           ? SessionStatus.invalid
           : SessionStatus.under_review;
 
+      // Advisory only — computed from the client's own submitted route/distance/duration,
+      // never used to change `nextStatus` or reject the finalize. See
+      // docs/agents/session-abuse-checklist.md section 1 and `sessionPlausibility.ts`.
+      const plausibilitySignal = computePlausibilitySignal(
+        body.route,
+        body.distanceMiles,
+        durationSeconds,
+      );
+
       const updated = await prisma.session.update({
         where: { id },
         data: {
@@ -239,6 +249,7 @@ export async function registerSessionRoutes(app: FastifyInstance) {
           distanceMiles: body.distanceMiles,
           route: body.route,
           status: nextStatus,
+          plausibilitySignal: plausibilitySignal as unknown as Prisma.InputJsonValue,
         },
       });
 
@@ -364,6 +375,15 @@ export async function registerSessionRoutes(app: FastifyInstance) {
       await prisma.session.delete({
         where: { id },
       });
+
+      // Feeds admin-web-app's volunteer pattern rollup (delete/resubmit detection,
+      // see docs/agents/session-abuse-checklist.md §3) — same `admin_audit_log` table
+      // `writeAuditLog` in admin-web-app writes to, inserted directly since this
+      // service has no Supabase client, only a direct Postgres connection via Prisma.
+      await prisma.$executeRaw`
+        INSERT INTO public.admin_audit_log (admin_user_id, action, target_table, target_id, before_value)
+        VALUES (${userId}::uuid, 'volunteer deleted session', 'sessions', ${id}::uuid, ${JSON.stringify(session)}::jsonb)
+      `;
 
       return reply.code(204).send();
     },
