@@ -1,11 +1,25 @@
 /** Ported from `admin/app/(admin)/audit-log/page.tsx` — reads the same shared
  * `admin_audit_log` table every mutating action in `@/actions/sessions.ts` and
- * `@/actions/courtOrders.ts` already writes to via `writeAuditLog`. */
+ * `@/actions/courtOrders.ts` already writes to via `writeAuditLog`.
+ *
+ * Rows are summarized in plain language via `@/lib/audit-log-summary` — this page is
+ * read by Donna, not a developer, so raw JSON never reaches it by default. Search (`q`)
+ * matches against the action, target table, and the session/case name captured in the
+ * before/after snapshot (not `target_id` — `ilike` on a `uuid` column errors in
+ * Postgres); the action dropdown filters to an exact action type. */
 import Link from 'next/link';
 import { createDataClient } from '@/lib/supabase/server';
 import { formatDateTime } from '@/lib/mock-data';
-import { ChevronLeftIcon, ChevronRightIcon } from '@/components/ui/Icons';
+import { ChevronLeftIcon, ChevronRightIcon, CloseIcon } from '@/components/ui/Icons';
 import { SidebarDemo } from '@/components/ui/sidebar-demo';
+import {
+  AUDIT_ACTION_OPTIONS,
+  auditActionLabel,
+  auditActionTone,
+  auditTargetLabel,
+  describeAuditChanges,
+  type AuditLogRow,
+} from '@/lib/audit-log-summary';
 
 // Live audit data — see admin-web-app/src/app/sessions/page.tsx for the same
 // static-prerender staleness issue this avoids.
@@ -16,6 +30,18 @@ const PAGE_SIZE = 50;
 interface SearchParams {
   page?: string;
   action?: string;
+  q?: string;
+}
+
+const TONE_CLASSNAME: Record<'positive' | 'negative' | 'neutral', string> = {
+  positive: 'bg-[#f7fff1] text-[#007536] border-[#007536]',
+  negative: 'bg-[#ffd9de] text-[#ba1a1a] border-[#ba1a1a]',
+  neutral: 'bg-[#f6f3f2] text-[#3e4a3d] border-[#bdcaba]',
+};
+
+/** PostreSQL `.or()` filter strings break on commas/parens — strip them from free text. */
+function sanitizeForOrFilter(value: string): string {
+  return value.replace(/[,()]/g, ' ').trim();
 }
 
 export default async function AuditLogPage({
@@ -25,6 +51,8 @@ export default async function AuditLogPage({
 }) {
   const params = await searchParams;
   const page = Math.max(1, parseInt(params.page ?? '1', 10) || 1);
+  const q = (params.q ?? '').trim();
+  const actionFilter = params.action ?? '';
   const supabase = await createDataClient();
 
   let query = supabase
@@ -32,29 +60,41 @@ export default async function AuditLogPage({
     .select('*', { count: 'exact' })
     .order('performed_at', { ascending: false });
 
-  if (params.action) {
-    query = query.ilike('action', `%${params.action}%`);
+  if (actionFilter) {
+    query = query.eq('action', actionFilter);
+  }
+
+  if (q) {
+    const term = sanitizeForOrFilter(q);
+    if (term) {
+      const like = `%${term}%`;
+      query = query.or(
+        [
+          `action.ilike.${like}`,
+          `target_table.ilike.${like}`,
+          `before_value->>activity.ilike.${like}`,
+          `after_value->>activity.ilike.${like}`,
+          `before_value->>case_reference.ilike.${like}`,
+          `after_value->>case_reference.ilike.${like}`,
+        ].join(','),
+      );
+    }
   }
 
   const from = (page - 1) * PAGE_SIZE;
   query = query.range(from, from + PAGE_SIZE - 1);
 
-  const { data: logs, count } = await query;
+  const { data, count } = await query;
+  const logs = (data ?? []) as AuditLogRow[];
   const totalPages = Math.ceil((count ?? 0) / PAGE_SIZE);
+  const hasFilters = Boolean(q || actionFilter);
 
-  function targetHref(targetTable: string, targetId: string): string | null {
-    switch (targetTable) {
-      case 'sessions':
-        return `/sessions/${targetId}`;
-      case 'court_orders':
-        return `/volunteers/${targetId}`;
-      case 'events':
-        return `/events/${targetId}`;
-      case 'shop_orders':
-        return `/orders/${targetId}`;
-      default:
-        return null;
-    }
+  function pageHref(targetPage: number): string {
+    const sp = new URLSearchParams();
+    if (q) sp.set('q', q);
+    if (actionFilter) sp.set('action', actionFilter);
+    sp.set('page', String(targetPage));
+    return `/audit-log?${sp.toString()}`;
   }
 
   return (
@@ -64,13 +104,59 @@ export default async function AuditLogPage({
           <h1 className="font-heading text-[28px] leading-[36px] text-text-primary mb-lg">
             Audit Log
           </h1>
+          <p className="font-body text-[13px] text-text-tertiary mb-lg">
+            A running history of every approval, decline, hours adjustment, and court-order
+            edit — who did it, when, and what changed.
+          </p>
+
+          <form
+            method="GET"
+            className="mb-lg flex flex-col sm:flex-row sm:items-center gap-sm"
+          >
+            <input
+              type="search"
+              name="q"
+              defaultValue={q}
+              placeholder="Search by session name or case reference"
+              aria-label="Search audit log"
+              className="flex-1 h-11 px-md rounded-full border border-border-outline bg-bg-surface font-body text-[13px] text-text-primary placeholder:text-text-tertiary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+            />
+            <select
+              name="action"
+              defaultValue={actionFilter}
+              aria-label="Filter by what happened"
+              className="h-11 px-md rounded-full border border-border-outline bg-bg-surface font-data text-[12px] text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+            >
+              <option value="">All actions</option>
+              {AUDIT_ACTION_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+            <button
+              type="submit"
+              className="h-11 px-lg rounded-full bg-primary text-white font-data text-[12px] font-semibold hover:bg-[#007d35] transition-colors"
+            >
+              Search
+            </button>
+            {hasFilters && (
+              <Link
+                href="/audit-log"
+                className="inline-flex items-center gap-xs h-11 px-md rounded-full border border-border-outline font-data text-[12px] font-semibold text-text-tertiary hover:bg-bg-surface-elevated transition-colors"
+              >
+                <CloseIcon className="w-3.5 h-3.5" />
+                Clear
+              </Link>
+            )}
+          </form>
 
           <div className="bg-bg-surface border border-border-outline rounded-md overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left">
                 <thead>
                   <tr className="border-b border-border-outline bg-bg-surface-elevated">
-                    {['Date/Time', 'Action', 'Target', 'Before', 'After'].map((h) => (
+                    {['When', 'What happened', 'On', 'What changed'].map((h) => (
                       <th
                         key={h}
                         className="px-lg py-sm font-data text-[12px] font-medium tracking-[0.96px] text-text-tertiary uppercase whitespace-nowrap"
@@ -81,60 +167,60 @@ export default async function AuditLogPage({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border-outline">
-                  {(logs ?? []).length === 0 && (
+                  {logs.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="px-lg py-xl text-center font-body text-base text-text-tertiary">
-                        No audit entries yet.
+                      <td colSpan={4} className="px-lg py-xl text-center font-body text-base text-text-tertiary">
+                        {hasFilters ? 'No audit entries match this search.' : 'No audit entries yet.'}
                       </td>
                     </tr>
                   )}
-                  {(logs ?? []).map((log) => {
-                    const href = log.target_id ? targetHref(log.target_table, log.target_id) : null;
+                  {logs.map((log) => {
+                    const target = auditTargetLabel(log);
+                    const changes = describeAuditChanges(log.before_value, log.after_value);
+                    const tone = auditActionTone(log.action);
+                    const isVolunteerAction = log.action === 'volunteer deleted session';
+
                     return (
-                      <tr key={log.id} className="hover:bg-bg-surface-elevated transition-colors">
-                        <td className="px-lg py-md font-body text-[14px] text-text-tertiary whitespace-nowrap">
+                      <tr key={log.id} className="hover:bg-bg-surface-elevated transition-colors align-top">
+                        <td className="px-lg py-md font-body text-[13px] text-text-tertiary whitespace-nowrap">
                           {formatDateTime(log.performed_at)}
                         </td>
-                        <td className="px-lg py-md font-body text-base text-text-primary capitalize">
-                          {log.action}
+                        <td className="px-lg py-md">
+                          <span
+                            className={`inline-flex items-center px-2 py-0.5 rounded-sm border font-data text-[12px] font-semibold leading-[16px] whitespace-nowrap ${TONE_CLASSNAME[tone]}`}
+                          >
+                            {auditActionLabel(log.action)}
+                          </span>
+                          {isVolunteerAction && (
+                            <p className="mt-xs font-body text-[11px] text-text-tertiary">
+                              Done by the volunteer, not an admin
+                            </p>
+                          )}
                         </td>
                         <td className="px-lg py-md">
-                          {log.target_id ? (
-                            href ? (
-                              <Link href={href} className="font-data text-[12px] text-primary hover:underline">
-                                {log.target_table} / {log.target_id.slice(0, 8)}
-                              </Link>
-                            ) : (
-                              <span className="font-data text-[12px] text-text-tertiary">
-                                {log.target_table} / {log.target_id.slice(0, 8)}
-                              </span>
-                            )
+                          {target.href ? (
+                            <Link href={target.href} className="font-body text-[14px] text-primary hover:underline">
+                              {target.label}
+                            </Link>
                           ) : (
-                            <span className="font-body text-[14px] text-text-tertiary">{log.target_table}</span>
+                            <span className="font-body text-[14px] text-text-primary">{target.label}</span>
+                          )}
+                          {target.shortId && (
+                            <p className="font-data text-[11px] text-text-tertiary">#{target.shortId}</p>
                           )}
                         </td>
-                        <td className="px-lg py-md max-w-xs">
-                          {log.before_value && (
-                            <details className="cursor-pointer">
-                              <summary className="font-data text-[11px] text-text-tertiary hover:text-text-primary">
-                                View
-                              </summary>
-                              <pre className="mt-xs font-data text-[11px] text-text-tertiary bg-bg-surface-elevated p-xs rounded overflow-auto max-h-32">
-                                {JSON.stringify(log.before_value, null, 2)}
-                              </pre>
-                            </details>
-                          )}
-                        </td>
-                        <td className="px-lg py-md max-w-xs">
-                          {log.after_value && (
-                            <details className="cursor-pointer">
-                              <summary className="font-data text-[11px] text-text-tertiary hover:text-text-primary">
-                                View
-                              </summary>
-                              <pre className="mt-xs font-data text-[11px] text-text-tertiary bg-bg-surface-elevated p-xs rounded overflow-auto max-h-32">
-                                {JSON.stringify(log.after_value, null, 2)}
-                              </pre>
-                            </details>
+                        <td className="px-lg py-md min-w-[220px]">
+                          {changes.length > 0 ? (
+                            <ul className="flex flex-col gap-xs">
+                              {changes.map((c) => (
+                                <li key={c.label} className="font-body text-[13px] text-text-primary">
+                                  <span className="text-text-tertiary">{c.label}:</span>{' '}
+                                  {c.from} <span aria-hidden>→</span> {c.to}
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <span className="font-body text-[13px] text-text-tertiary">No field changes recorded</span>
                           )}
                         </td>
                       </tr>
@@ -149,7 +235,7 @@ export default async function AuditLogPage({
             <div className="flex items-center justify-center gap-md mt-lg">
               {page > 1 && (
                 <Link
-                  href={`/audit-log?page=${page - 1}`}
+                  href={pageHref(page - 1)}
                   className="h-9 px-md rounded-sm border border-border-outline font-data text-[12px] font-semibold text-text-tertiary hover:bg-bg-surface-elevated transition-colors inline-flex items-center gap-2"
                 >
                   <ChevronLeftIcon className="w-3.5 h-3.5" color="currentColor" />
@@ -161,7 +247,7 @@ export default async function AuditLogPage({
               </span>
               {page < totalPages && (
                 <Link
-                  href={`/audit-log?page=${page + 1}`}
+                  href={pageHref(page + 1)}
                   className="h-9 px-md rounded-sm border border-border-outline font-data text-[12px] font-semibold text-text-tertiary hover:bg-bg-surface-elevated transition-colors inline-flex items-center gap-2"
                 >
                   Next

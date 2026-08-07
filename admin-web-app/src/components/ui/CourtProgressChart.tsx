@@ -1,15 +1,17 @@
 'use client';
 
-/** Port of `admin/components/ui/CourtProgressChart.tsx` with View more when >5 rows. */
-import { useState } from 'react';
+/** Port of `admin/components/ui/CourtProgressChart.tsx` — scrolls in place past
+ * `VISIBLE_LIMIT` rows instead of a click-to-expand button, so the card's height
+ * stays fixed on the page regardless of how many volunteers are court-ordered. */
 import { motion, useReducedMotion } from 'framer-motion';
 import { useHasMounted } from '@/hooks/useHasMounted';
-import { Button } from '@/components/ui/Button';
 
 const shell =
   'bg-bg-surface border border-border-outline rounded-md p-lg flex flex-col gap-md';
 
 const VISIBLE_LIMIT = 5;
+/** Fits ~VISIBLE_LIMIT rows before scrolling kicks in. */
+const SCROLL_MAX_HEIGHT_PX = 320;
 
 export type CourtProgressRow = {
   name: string;
@@ -30,11 +32,8 @@ type Props = {
 export function CourtProgressChart({ title, subtitle, data, index = 0 }: Props) {
   const prefersReduced = useReducedMotion() ?? false;
   const mounted = useHasMounted();
-  const [expanded, setExpanded] = useState(false);
 
-  const needsViewMore = data.length > VISIBLE_LIMIT;
-  const visible = needsViewMore && !expanded ? data.slice(0, VISIBLE_LIMIT) : data;
-  const hiddenCount = data.length - VISIBLE_LIMIT;
+  const scrolls = data.length > VISIBLE_LIMIT;
 
   const body = (
     <>
@@ -52,8 +51,12 @@ export function CourtProgressChart({ title, subtitle, data, index = 0 }: Props) 
         </div>
       ) : (
         <>
-          <ul className="flex flex-col gap-md" role="list">
-            {visible.map((row) => {
+          <ul
+            className={`flex flex-col gap-md ${scrolls ? 'overflow-y-auto pr-xs' : ''}`}
+            style={scrolls ? { maxHeight: SCROLL_MAX_HEIGHT_PX } : undefined}
+            role="list"
+          >
+            {data.map((row) => {
               const behind = row.status === 'at_risk';
               const widthPct = Math.round(row.pct);
               return (
@@ -92,18 +95,6 @@ export function CourtProgressChart({ title, subtitle, data, index = 0 }: Props) 
               );
             })}
           </ul>
-          {needsViewMore ? (
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              className="w-full"
-              onClick={() => setExpanded((v) => !v)}
-              aria-expanded={expanded}
-            >
-              {expanded ? 'View less' : `View more (${hiddenCount} more)`}
-            </Button>
-          ) : null}
         </>
       )}
     </>

@@ -274,8 +274,10 @@ function DashboardPageInner({
   const ordersRevenueCents = orders.filter((o) => o.status !== "cancelled").reduce((sum, o) => sum + o.totalCents, 0);
 
   // Always real here (Dashboard/Sessions never fall back to fixtures) — the US map never
-  // reflects demo data.
-  const mapSessions = scoped.length > 0 ? scoped : sessions;
+  // reflects demo data. Must respect the selected period — falling back to unscoped
+  // `sessions` when the period has zero activity would silently show all-time counts
+  // under a "Today" (or any other) period label.
+  const mapSessions = scoped;
   const geoActivity = buildGeoActivity(mapSessions);
 
   return (

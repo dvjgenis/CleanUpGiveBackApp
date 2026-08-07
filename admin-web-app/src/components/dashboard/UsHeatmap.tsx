@@ -60,6 +60,7 @@ export function UsHeatmap({ activity, sessions, periodLabel }: Props) {
   const [neighborhoodNames, setNeighborhoodNames] = useState<Map<string, string>>(new Map());
   const attemptedGeocodesRef = useRef<Set<string>>(new Set());
   const [search, setSearch] = useState('');
+  const [searchFocused, setSearchFocused] = useState(false);
   // Clears any in-progress search when the drilled-into level changes underneath it —
   // adjusted during render (React's recommended pattern) rather than a dedicated effect.
   const [searchDrill, setSearchDrill] = useState(drill);
@@ -108,7 +109,7 @@ export function UsHeatmap({ activity, sessions, periodLabel }: Props) {
   }, [drill]);
 
   const byState = useMemo(() => statsMap(activity.byState), [activity.byState]);
-  const byCounty = useMemo(() => statsMap(activity.byCounty), [activity.byCounty]);
+  const byCountyRaw = useMemo(() => statsMap(activity.byCounty), [activity.byCounty]);
 
   /** Buckets this county's sessions into real tract polygons via point-in-polygon. */
   const tractStatsById = useMemo(() => {
@@ -203,6 +204,28 @@ export function UsHeatmap({ activity, sessions, periodLabel }: Props) {
     return makeRegionalPathForCollection(stateCounties, MAP_W, MAP_H);
   }, [stateCounties]);
 
+  /** Real county names from TopoJSON, keyed by FIPS — `activity.byCounty` only carries a
+   * `County <fips>` placeholder name (`buildGeoActivity` has no geometry to resolve from). */
+  const countyNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    if (!stateCounties) return map;
+    for (const raw of stateCounties.features) {
+      const f = raw as UsGeoFeature;
+      const id = fipsId(f);
+      map.set(id, featureName(f, id));
+    }
+    return map;
+  }, [stateCounties]);
+
+  const byCounty = useMemo(() => {
+    const map = new Map(byCountyRaw);
+    for (const [id, stat] of map) {
+      const realName = countyNameById.get(id);
+      if (realName) map.set(id, { ...stat, name: realName });
+    }
+    return map;
+  }, [byCountyRaw, countyNameById]);
+
   const countyBubbles = useMemo(() => {
     if (!stateCounties || !countyPath || drill.level !== 'state') return [];
     return countyBubblesForState(stateCounties, countyPath.projection, byCounty);
@@ -213,23 +236,15 @@ export function UsHeatmap({ activity, sessions, periodLabel }: Props) {
       return [...activity.byState].sort((a, b) => b.sessionCount - a.sessionCount);
     }
     if (drill.level === 'state') {
-      const countyNameById = new Map<string, string>();
-      if (stateCounties) {
-        for (const raw of stateCounties.features) {
-          const f = raw as UsGeoFeature;
-          const id = fipsId(f);
-          countyNameById.set(id, featureName(f, id));
-        }
-      }
-      return activity.byCounty
+      // `byCounty` already carries real TopoJSON-resolved names (see above).
+      return [...byCounty.values()]
         .filter((c) => c.id.startsWith(drill.fips))
-        .map((c) => ({ ...c, name: countyNameById.get(c.id) ?? c.name }))
         .sort((a, b) => b.sessionCount - a.sessionCount);
     }
     // County (deepest) level: real census tracts, sourced entirely from resolvedTractStatsById
     // so every row already has sessionCount > 0 — no need to pad with empty entries.
     return [...resolvedTractStatsById.values()].sort((a, b) => b.sessionCount - a.sessionCount);
-  }, [activity.byState, activity.byCounty, resolvedTractStatsById, drill, stateCounties]);
+  }, [activity.byState, byCounty, resolvedTractStatsById, drill]);
 
   const maxCount = Math.max(1, ...activeStatsList.map((s) => s.sessionCount));
 
@@ -243,6 +258,26 @@ export function UsHeatmap({ activity, sessions, periodLabel }: Props) {
 
   const searchPlaceholder =
     drill.level === 'nation' ? 'Search states' : drill.level === 'state' ? 'Search counties' : 'Search neighborhoods';
+
+  /** Drills into (or, at the deepest level, highlights) a row — shared by the ranked
+   * list and the type-ahead suggestion dropdown so both select the same way. */
+  function selectStatRow(row: GeoUnitStats) {
+    if (drill.level === 'nation') {
+      setDrill({ level: 'state', fips: row.id, name: row.name });
+    } else if (drill.level === 'state') {
+      setDrill({
+        level: 'county',
+        fips: row.id,
+        name: row.name,
+        stateFips: drill.fips,
+        stateName: drill.name,
+      });
+    } else {
+      setHoveredId(row.id);
+    }
+    setSearch('');
+    setSearchFocused(false);
+  }
 
   const hoveredStats = useMemo(() => {
     if (!hoveredId) return null;
@@ -536,14 +571,62 @@ export function UsHeatmap({ activity, sessions, periodLabel }: Props) {
                 : 'Top neighborhoods'}
           </p>
           {activeStatsList.length > 0 && (
-            <input
-              type="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={searchPlaceholder}
-              aria-label={searchPlaceholder}
-              className="mb-sm w-full h-11 px-md rounded-full border border-border-outline bg-bg-surface font-body text-[13px] text-text-primary placeholder:text-text-tertiary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
-            />
+            <div className="relative mb-sm">
+              <input
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onFocus={() => setSearchFocused(true)}
+                onBlur={() => setSearchFocused(false)}
+                placeholder={searchPlaceholder}
+                aria-label={searchPlaceholder}
+                role="combobox"
+                aria-expanded={searchFocused && search.trim().length > 0}
+                aria-controls="us-heatmap-suggestions"
+                autoComplete="off"
+                className="w-full h-11 px-md rounded-full border border-border-outline bg-bg-surface font-body text-[13px] text-text-primary placeholder:text-text-tertiary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+              />
+              {searchFocused && search.trim().length > 0 && (
+                <ul
+                  id="us-heatmap-suggestions"
+                  role="listbox"
+                  aria-label={`${searchPlaceholder} suggestions`}
+                  className="absolute left-0 right-0 top-full mt-xs z-20 max-h-72 overflow-y-auto rounded-md border border-border-outline bg-bg-app shadow-bar-top"
+                >
+                  {filteredStatsList.length === 0 ? (
+                    <li className="px-md py-sm font-body text-[13px] text-text-tertiary">
+                      No matches for &ldquo;{search}&rdquo;.
+                    </li>
+                  ) : (
+                    filteredStatsList.slice(0, 8).map((row) => (
+                      <li key={row.id}>
+                        <button
+                          type="button"
+                          // onMouseDown (not onClick) fires before the input's onBlur closes the dropdown.
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            selectStatRow(row);
+                          }}
+                          className="w-full min-h-11 px-md py-xs flex items-center gap-sm text-left hover:bg-bg-surface-elevated transition-colors"
+                        >
+                          <span
+                            className="w-2.5 h-2.5 rounded-full shrink-0"
+                            style={{ backgroundColor: heatFill(row.sessionCount / maxCount) }}
+                            aria-hidden
+                          />
+                          <span className="font-body text-[13px] font-medium text-text-primary flex-1 truncate">
+                            {row.name}
+                          </span>
+                          <span className="font-data text-[12px] text-text-tertiary shrink-0">
+                            {row.sessionCount} session{row.sessionCount === 1 ? '' : 's'}
+                          </span>
+                        </button>
+                      </li>
+                    ))
+                  )}
+                </ul>
+              )}
+            </div>
           )}
           {activeStatsList.length === 0 ? (
             <p className="font-body text-[13px] text-text-tertiary">
@@ -563,25 +646,7 @@ export function UsHeatmap({ activity, sessions, periodLabel }: Props) {
                     <li key={row.id}>
                       <button
                         type="button"
-                        onClick={() => {
-                          if (drill.level === 'nation') {
-                            setDrill({
-                              level: 'state',
-                              fips: row.id,
-                              name: row.name,
-                            });
-                          } else if (drill.level === 'state') {
-                            setDrill({
-                              level: 'county',
-                              fips: row.id,
-                              name: row.name,
-                              stateFips: drill.fips,
-                              stateName: drill.name,
-                            });
-                          } else {
-                            setHoveredId(row.id);
-                          }
-                        }}
+                        onClick={() => selectStatRow(row)}
                         aria-pressed={selected || hoveredId === row.id}
                         className={`w-full min-h-11 px-sm py-xs rounded-sm flex items-center gap-sm text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary ${
                           selected || hoveredId === row.id
