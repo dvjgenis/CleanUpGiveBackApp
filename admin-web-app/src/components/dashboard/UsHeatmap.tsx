@@ -1,7 +1,7 @@
 /** Ported verbatim from `admin/components/dashboard/UsHeatmap.tsx` — interactive nation → state → county → neighborhood drill-down over live TopoJSON. */
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FeatureCollection } from 'geojson';
 import { geoContains } from 'd3-geo';
 import {
@@ -22,7 +22,8 @@ import {
   type UsGeoFeature,
 } from '@/lib/us-geo';
 import { computedHours, type MockSession } from '@/lib/mock-data';
-import { loadCountyTracts, type TractFeature } from '@/lib/census-tracts';
+import { formatTractName, loadCountyTracts, tractCentroid, type TractFeature } from '@/lib/census-tracts';
+import { reverseGeocodePlaceName } from '@/lib/nominatim';
 import { CountyTractMap } from '@/components/dashboard/CountyTractMap';
 
 type Drill =
@@ -54,6 +55,10 @@ export function UsHeatmap({ activity, sessions, periodLabel }: Props) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [tracts, setTracts] = useState<FeatureCollection | null>(null);
   const [tractsError, setTractsError] = useState<string | null>(null);
+  /** Real place names (via Nominatim), resolved only for tracts with real activity —
+   *  never for the whole county's tract set, to stay within Nominatim's rate limit. */
+  const [neighborhoodNames, setNeighborhoodNames] = useState<Map<string, string>>(new Map());
+  const attemptedGeocodesRef = useRef<Set<string>>(new Set());
   const [search, setSearch] = useState('');
   // Clears any in-progress search when the drilled-into level changes underneath it —
   // adjusted during render (React's recommended pattern) rather than a dedicated effect.
@@ -118,7 +123,7 @@ export function UsHeatmap({ activity, sessions, periodLabel }: Props) {
         const geoid = f.properties?.GEOID ?? '';
         const cur = map.get(geoid) ?? {
           id: geoid,
-          name: f.properties?.NAME ?? geoid,
+          name: formatTractName(f.properties?.NAME ?? geoid),
           sessionCount: 0,
           hours: 0,
           underReview: 0,
@@ -140,10 +145,45 @@ export function UsHeatmap({ activity, sessions, periodLabel }: Props) {
     for (const raw of tracts.features) {
       const f = raw as TractFeature;
       const geoid = f.properties?.GEOID ?? '';
-      if (geoid) map.set(geoid, f.properties?.NAME ?? geoid);
+      if (geoid) map.set(geoid, formatTractName(f.properties?.NAME ?? geoid));
     }
     return map;
   }, [tracts]);
+
+  // Real place names only for tracts with actual activity — Nominatim is rate-limited to
+  // ~1req/sec, so geocoding every tract in a county (often 1,000+) isn't viable.
+  useEffect(() => {
+    if (!tracts || tractStatsById.size === 0) return;
+    let cancelled = false;
+    void (async () => {
+      for (const geoid of tractStatsById.keys()) {
+        if (attemptedGeocodesRef.current.has(geoid)) continue;
+        attemptedGeocodesRef.current.add(geoid);
+        const feature = tracts.features.find((f) => (f as TractFeature).properties?.GEOID === geoid) as
+          | TractFeature
+          | undefined;
+        const centroid = feature ? tractCentroid(feature) : null;
+        if (!centroid) continue;
+        const name = await reverseGeocodePlaceName(geoid, centroid[0], centroid[1]);
+        if (cancelled || !name) continue;
+        setNeighborhoodNames((prev) => new Map(prev).set(geoid, name));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [tracts, tractStatsById]);
+
+  /** `tractStatsById` with real place names layered on where Nominatim resolved one. */
+  const resolvedTractStatsById = useMemo(() => {
+    if (neighborhoodNames.size === 0) return tractStatsById;
+    const map = new Map<string, GeoUnitStats>();
+    for (const [id, stat] of tractStatsById) {
+      const resolvedName = neighborhoodNames.get(id);
+      map.set(id, resolvedName ? { ...stat, name: resolvedName } : stat);
+    }
+    return map;
+  }, [tractStatsById, neighborhoodNames]);
 
   const stateCounties = useMemo(() => {
     if (!countiesFc || drill.level === 'nation') return null;
@@ -184,10 +224,10 @@ export function UsHeatmap({ activity, sessions, periodLabel }: Props) {
         .map((c) => ({ ...c, name: countyNameById.get(c.id) ?? c.name }))
         .sort((a, b) => b.sessionCount - a.sessionCount);
     }
-    // County (deepest) level: real census tracts, sourced entirely from tractStatsById
+    // County (deepest) level: real census tracts, sourced entirely from resolvedTractStatsById
     // so every row already has sessionCount > 0 — no need to pad with empty entries.
-    return [...tractStatsById.values()].sort((a, b) => b.sessionCount - a.sessionCount);
-  }, [activity.byState, activity.byCounty, tractStatsById, drill, stateCounties]);
+    return [...resolvedTractStatsById.values()].sort((a, b) => b.sessionCount - a.sessionCount);
+  }, [activity.byState, activity.byCounty, resolvedTractStatsById, drill, stateCounties]);
 
   const maxCount = Math.max(1, ...activeStatsList.map((s) => s.sessionCount));
 
@@ -207,13 +247,13 @@ export function UsHeatmap({ activity, sessions, periodLabel }: Props) {
     return (
       byState.get(hoveredId) ??
       byCounty.get(hoveredId) ??
-      tractStatsById.get(hoveredId) ??
+      resolvedTractStatsById.get(hoveredId) ??
       countyBubbles.find((b) => b.id === hoveredId) ??
       (tractNameById.has(hoveredId)
         ? { id: hoveredId, name: tractNameById.get(hoveredId)!, sessionCount: 0, hours: 0, underReview: 0 }
         : null)
     );
-  }, [hoveredId, byState, byCounty, tractStatsById, countyBubbles, tractNameById]);
+  }, [hoveredId, byState, byCounty, resolvedTractStatsById, countyBubbles, tractNameById]);
 
   const title =
     drill.level === 'nation'
@@ -320,7 +360,7 @@ export function UsHeatmap({ activity, sessions, periodLabel }: Props) {
               <CountyTractMap
                 key={drill.fips}
                 tracts={tracts}
-                statsById={tractStatsById}
+                statsById={resolvedTractStatsById}
                 maxCount={maxCount}
                 hoveredId={hoveredId}
                 onHoverId={setHoveredId}

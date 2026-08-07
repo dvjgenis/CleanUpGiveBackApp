@@ -12,7 +12,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import type { FeatureCollection, Position } from "geojson";
 import { VOYAGER_RASTER_STYLE } from "@/lib/maplibre-basemap";
 import { heatFill, type GeoUnitStats } from "@/lib/us-heatmap";
-import type { TractFeature } from "@/lib/census-tracts";
+import { formatTractName, type TractFeature } from "@/lib/census-tracts";
 import { ExpandIcon, CollapseIcon } from "@/components/ui/Icons";
 
 const SOURCE_ID = "county-tracts";
@@ -78,6 +78,10 @@ function toStyledCollection(
       const geoid = f.properties?.GEOID ?? "";
       const stat = statsById.get(geoid);
       const count = stat?.sessionCount ?? 0;
+      // stat.name is the real place name once Nominatim resolves one (see UsHeatmap's
+      // resolvedTractStatsById); tracts with no activity never get geocoded, so they
+      // fall back to a cleaned-up tract ID.
+      const displayName = stat?.name ?? formatTractName(f.properties?.NAME ?? geoid);
       return {
         ...f,
         id: geoid,
@@ -85,6 +89,7 @@ function toStyledCollection(
           ...f.properties,
           sessionCount: count,
           fillColor: heatFill(maxCount > 0 ? count / maxCount : 0),
+          displayName,
         },
       };
     }),
@@ -95,6 +100,7 @@ export function CountyTractMap({ tracts, statsById, maxCount, hoveredId, onHover
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const hoveredIdRef = useRef<string | null>(null);
+  const popupRef = useRef<maplibregl.Popup | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
 
   // Mount once; source/layer data is kept in sync by the effect below.
@@ -110,6 +116,13 @@ export function CountyTractMap({ tracts, statsById, maxCount, hoveredId, onHover
       attributionControl: false,
     });
     mapRef.current = map;
+
+    const popup = new maplibregl.Popup({
+      closeButton: false,
+      closeOnClick: false,
+      offset: 12,
+    });
+    popupRef.current = popup;
 
     map.on("load", () => {
       map.addSource(SOURCE_ID, {
@@ -138,20 +151,25 @@ export function CountyTractMap({ tracts, statsById, maxCount, hoveredId, onHover
 
       map.on("mousemove", FILL_LAYER_ID, (e) => {
         const id = e.features?.[0]?.properties?.GEOID as string | undefined;
+        const name = e.features?.[0]?.properties?.displayName as string | undefined;
         if (id && id !== hoveredIdRef.current) {
           hoveredIdRef.current = id;
           onHoverId(id);
+        }
+        if (name) {
+          popup.setLngLat(e.lngLat).setText(name).addTo(map);
         }
         map.getCanvas().style.cursor = "pointer";
       });
       map.on("mouseleave", FILL_LAYER_ID, () => {
         hoveredIdRef.current = null;
         onHoverId(null);
+        popup.remove();
         map.getCanvas().style.cursor = "";
       });
       map.on("click", FILL_LAYER_ID, (e) => {
         const props = e.features?.[0]?.properties;
-        if (props?.GEOID) onSelectTract(props.GEOID as string, (props.NAME as string) ?? props.GEOID);
+        if (props?.GEOID) onSelectTract(props.GEOID as string, (props.displayName as string) ?? props.GEOID);
       });
     });
 
@@ -160,6 +178,8 @@ export function CountyTractMap({ tracts, statsById, maxCount, hoveredId, onHover
 
     return () => {
       resizeObserver.disconnect();
+      popup.remove();
+      popupRef.current = null;
       map.remove();
       mapRef.current = null;
     };

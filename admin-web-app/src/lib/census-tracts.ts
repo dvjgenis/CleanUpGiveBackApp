@@ -5,7 +5,7 @@
  * Peucker simplified) instead of full-resolution TIGER/Line — ~8x smaller payload,
  * same free/no-key access.
  */
-import type { Feature, FeatureCollection, Geometry } from 'geojson';
+import type { Feature, FeatureCollection, Geometry, Position } from 'geojson';
 
 export type TractFeature = Feature<Geometry, { GEOID: string; NAME: string }>;
 
@@ -17,6 +17,33 @@ const tractsCache = new Map<string, Promise<FeatureCollection>>();
 /** 5-digit county FIPS → its 3-digit county code (state prefix stripped). */
 export function countyCodeFromFips(countyFips: string): string {
   return countyFips.slice(2);
+}
+
+/** Census Bureau tract names read "Census Tract 8080.01" — trim to "Tract 8080.01" as a
+ *  fallback label for tracts with no reverse-geocoded place name (see `nominatim.ts`). */
+export function formatTractName(rawName: string): string {
+  return rawName.replace(/^Census\s+/i, '');
+}
+
+/** Approximate centroid (exterior-ring average) — good enough to anchor a reverse-geocode
+ *  lookup for a compact census tract; doesn't need to be a precise geometric centroid. */
+export function tractCentroid(feature: TractFeature): [number, number] | null {
+  const geometry = feature.geometry;
+  if (!geometry) return null;
+  let ring: Position[] | null = null;
+  if (geometry.type === 'Polygon') {
+    ring = geometry.coordinates[0] ?? null;
+  } else if (geometry.type === 'MultiPolygon') {
+    ring = geometry.coordinates[0]?.[0] ?? null;
+  }
+  if (!ring || ring.length === 0) return null;
+  let sumLng = 0;
+  let sumLat = 0;
+  for (const [lng, lat] of ring) {
+    sumLng += lng;
+    sumLat += lat;
+  }
+  return [sumLng / ring.length, sumLat / ring.length];
 }
 
 /**
