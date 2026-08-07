@@ -35,7 +35,8 @@ export async function GET(request: Request) {
     return NextResponse.json(result, {
       headers: { "Cache-Control": "public, max-age=30" },
     });
-  } catch {
+  } catch (err) {
+    console.error("[api/place-search] unhandled:", err instanceof Error ? err.message : err);
     return NextResponse.json({ hits: [], source: "none" }, { status: 502 });
   }
 }

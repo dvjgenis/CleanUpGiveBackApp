@@ -48,10 +48,12 @@ export async function searchCensusAddresses(
   url.searchParams.set("format", "json");
 
   try {
+    const timeoutSignal = AbortSignal.timeout(5000);
+    const signal = opts?.signal ? AbortSignal.any([opts.signal, timeoutSignal]) : timeoutSignal;
     const res = await fetch(url.toString(), {
       headers: { Accept: "application/json" },
       cache: "no-store",
-      signal: opts?.signal,
+      signal,
     });
     if (!res.ok) return [];
     const data = (await res.json()) as CensusResponse;

@@ -59,9 +59,12 @@ export async function searchPhoton(
     params.set("lon", String(opts.bias.longitude));
   }
 
+  const timeoutSignal = AbortSignal.timeout(5000);
+  const signal = opts?.signal ? AbortSignal.any([opts.signal, timeoutSignal]) : timeoutSignal;
+
   const res = await fetch(`https://photon.komoot.io/api/?${params.toString()}`, {
     headers: { Accept: "application/json" },
-    signal: opts?.signal,
+    signal,
   });
   if (!res.ok) return [];
 

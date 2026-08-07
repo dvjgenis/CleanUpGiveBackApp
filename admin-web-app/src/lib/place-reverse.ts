@@ -71,6 +71,7 @@ async function reversePhoton(longitude: number, latitude: number): Promise<strin
   });
   const res = await fetch(`${PHOTON_REVERSE}?${params.toString()}`, {
     headers: { Accept: "application/json" },
+    signal: AbortSignal.timeout(5000),
   });
   if (!res.ok) return null;
   const data = (await res.json()) as { features?: { properties?: PhotonProps }[] };
@@ -88,6 +89,7 @@ async function reverseNominatim(longitude: number, latitude: number): Promise<st
   });
   const res = await fetch(`${NOMINATIM_REVERSE}?${params.toString()}`, {
     headers: { Accept: "application/json", "User-Agent": UA },
+    signal: AbortSignal.timeout(5000),
   });
   if (!res.ok) return null;
   const data = (await res.json()) as { address?: NominatimAddress };
@@ -118,15 +120,15 @@ export async function reversePlaceName(
   try {
     const photonName = await reversePhoton(longitude, latitude);
     if (photonName) return { name: photonName, source: "photon" };
-  } catch {
-    // fall through
+  } catch (err) {
+    console.error("[place-reverse] photon failed:", err instanceof Error ? err.message : err);
   }
 
   try {
     const nominatimName = await reverseNominatim(longitude, latitude);
     if (nominatimName) return { name: nominatimName, source: "nominatim" };
-  } catch {
-    // total miss
+  } catch (err) {
+    console.error("[place-reverse] nominatim failed:", err instanceof Error ? err.message : err);
   }
 
   return { name: null, source: "none" };

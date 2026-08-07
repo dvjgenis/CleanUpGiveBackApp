@@ -72,9 +72,12 @@ async function searchNominatimMany(
     params.set("bounded", "0");
   }
 
+  const timeoutSignal = AbortSignal.timeout(5000);
+  const signal = opts?.signal ? AbortSignal.any([opts.signal, timeoutSignal]) : timeoutSignal;
+
   const res = await fetch(`${NOMINATIM_SEARCH}?${params.toString()}`, {
     headers: { Accept: "application/json", "User-Agent": UA },
-    signal: opts?.signal,
+    signal,
   });
   if (!res.ok) return [];
 
@@ -109,7 +112,10 @@ export async function searchPlacesFree(
     bias: opts?.bias,
     limit,
     signal: opts?.signal,
-  }).catch(() => [] as PlaceHit[]);
+  }).catch((err) => {
+    console.error("[place-search] photon failed:", err instanceof Error ? err.message : err);
+    return [] as PlaceHit[];
+  });
 
   const censusPromise = wantCensus
     ? searchCensusAddresses(trimmed, { limit, signal: opts?.signal })
@@ -142,8 +148,8 @@ export async function searchPlacesFree(
           source = before === 0 ? "nominatim" : source === "none" ? "nominatim" : "mixed";
         }
       }
-    } catch {
-      // ignore — keep whatever we have
+    } catch (err) {
+      console.error("[place-search] nominatim failed:", err instanceof Error ? err.message : err);
     }
   }
 

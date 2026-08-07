@@ -20,7 +20,8 @@ export async function GET(request: Request) {
     return NextResponse.json(result, {
       headers: { "Cache-Control": "public, max-age=86400" },
     });
-  } catch {
+  } catch (err) {
+    console.error("[api/place-reverse] unhandled:", err instanceof Error ? err.message : err);
     return NextResponse.json({ name: null, source: "none" }, { status: 502 });
   }
 }
