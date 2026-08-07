@@ -2,6 +2,16 @@
 
 ---
 
+## [2026-08-07] — Heatmap fullscreen Places autocomplete
+
+**R:** Full-screen county map search only Nominatim-on-submit; prior “Google Maps-style” work was the UsHeatmap ranked-list portal filter, not real Places. Need a durable free path without Google.
+
+**A:** Free chain **Photon → Nominatim** via `lib/place-search.ts` + `/api/place-search` (server User-Agent / no browser CORS). `PlaceSearchField` typeahead + Search/Enter use that API. Optional Google Places only when `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` is set; `.pac-container` z-index raised. Reused Places loader in event `AddressAutocomplete`.
+
+**P:** No Google key needed — typing or Search on full-screen county map resolves via Photon, then Nominatim.
+
+---
+
 ## [2026-08-07] — Audit log action filter chevron spacing
 
 **R:** Native `<select>` width followed the longest option label, so “All actions” left a large gap before the chevron.

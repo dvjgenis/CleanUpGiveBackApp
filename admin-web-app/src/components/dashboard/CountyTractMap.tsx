@@ -6,15 +6,16 @@
  * county (suburbs and unincorporated areas included), so this works for any US county,
  * not just Chicago proper.
  */
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { FeatureCollection, Position } from "geojson";
 import { VOYAGER_RASTER_STYLE } from "@/lib/maplibre-basemap";
 import { heatFill, type GeoUnitStats } from "@/lib/us-heatmap";
 import { formatTractName, type TractFeature } from "@/lib/census-tracts";
-import { searchPlace } from "@/lib/nominatim";
+import { PlaceSearchField } from "@/components/dashboard/PlaceSearchField";
 import { ExpandIcon, CollapseIcon } from "@/components/ui/Icons";
+import type { PlaceSelection } from "@/lib/google-places";
 
 const SOURCE_ID = "county-tracts";
 const FILL_LAYER_ID = "county-tracts-fill";
@@ -129,8 +130,14 @@ export function CountyTractMap({
   const navControlRef = useRef<maplibregl.NavigationControl | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [searching, setSearching] = useState(false);
-  const [searchError, setSearchError] = useState<string | null>(null);
+
+  function flyToPlace(place: PlaceSelection) {
+    const map = mapRef.current;
+    if (!map) return;
+    const go = () => map.flyTo({ center: [place.longitude, place.latitude], zoom: 14 });
+    if (map.loaded()) go();
+    else map.once("load", go);
+  }
 
   // Mount once; source/layer data is kept in sync by the effect below.
   useEffect(() => {
@@ -258,21 +265,6 @@ export function CountyTractMap({
     }
   }, [fullscreen]);
 
-  async function handleSearch(e: FormEvent) {
-    e.preventDefault();
-    const map = mapRef.current;
-    if (!map || !searchQuery.trim()) return;
-    setSearching(true);
-    setSearchError(null);
-    const result = await searchPlace(searchQuery, flatBoundsOf(tracts) ?? undefined);
-    setSearching(false);
-    if (!result) {
-      setSearchError(`No results for "${searchQuery}"`);
-      return;
-    }
-    map.flyTo({ center: [result.longitude, result.latitude], zoom: 14 });
-  }
-
   return (
     <div
       className={fullscreen ? "fixed inset-0 z-[100] bg-bg-app flex flex-col" : "relative"}
@@ -283,23 +275,18 @@ export function CountyTractMap({
       {fullscreen && (
         <header className="shrink-0 flex flex-wrap items-center justify-between gap-md px-lg py-md border-b border-border-outline bg-bg-surface">
           <p className="font-heading text-[20px] leading-[28px] text-text-primary shrink-0">Full screen map</p>
-          <form onSubmit={handleSearch} className="flex-1 min-w-[220px] max-w-md flex items-center gap-sm">
-            <input
-              type="search"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search for an address or place"
-              aria-label="Search for an address or place"
-              className="w-full h-11 px-md rounded-full border border-border-outline bg-bg-app font-body text-[13px] text-text-primary placeholder:text-text-tertiary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
-            />
-            <button
-              type="submit"
-              disabled={searching || !searchQuery.trim()}
-              className="shrink-0 h-11 px-md rounded-full border border-border-outline bg-bg-app font-data text-[12px] font-semibold text-text-primary hover:bg-bg-surface-elevated disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
-            >
-              {searching ? "Searching…" : "Search"}
-            </button>
-          </form>
+          <PlaceSearchField
+            value={searchQuery}
+            onChange={setSearchQuery}
+            onPlaceSelected={(place) => {
+              flyToPlace(place);
+              setSearchQuery(place.label);
+            }}
+            viewboxBounds={flatBoundsOf(tracts) ?? undefined}
+            showSubmitButton
+            className="flex-1 min-w-[220px] max-w-md"
+            placeholder="Search for an address or place"
+          />
           <button
             type="button"
             onClick={() => setFullscreen(false)}
@@ -310,11 +297,6 @@ export function CountyTractMap({
             Exit full screen
           </button>
         </header>
-      )}
-      {fullscreen && searchError && (
-        <p className="shrink-0 px-lg py-xs font-body text-[12px] text-[#ba1a1a] bg-bg-surface border-b border-border-outline">
-          {searchError}
-        </p>
       )}
       <div className={fullscreen ? "relative flex-1 min-h-0" : "relative"}>
         <div

@@ -10,57 +10,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { MapPinIcon } from "@/components/ui/Icons";
 import { verifyEventAddress } from "@/actions/geocode";
 import { FIELD, LABEL } from "./formStyles";
-
-const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-const SCRIPT_ID = "google-maps-places-script";
-
-type PlacesAutocomplete = {
-  addListener: (event: string, handler: () => void) => void;
-  getPlace: () => {
-    formatted_address?: string;
-    geometry?: { location?: { lat: () => number; lng: () => number } };
-  };
-};
-
-declare global {
-  interface Window {
-    google?: {
-      maps: {
-        places: {
-          Autocomplete: new (
-            input: HTMLInputElement,
-            opts: { fields: string[]; types: string[] },
-          ) => PlacesAutocomplete;
-        };
-      };
-    };
-  }
-}
-
-let scriptPromise: Promise<void> | null = null;
-
-function loadPlacesScript(): Promise<void> {
-  if (typeof window === "undefined") return Promise.resolve();
-  if (window.google?.maps?.places) return Promise.resolve();
-  if (scriptPromise) return scriptPromise;
-
-  scriptPromise = new Promise((resolve, reject) => {
-    const existing = document.getElementById(SCRIPT_ID);
-    if (existing) {
-      existing.addEventListener("load", () => resolve());
-      existing.addEventListener("error", () => reject(new Error("Failed to load Google Maps")));
-      return;
-    }
-    const script = document.createElement("script");
-    script.id = SCRIPT_ID;
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places&loading=async`;
-    script.async = true;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error("Failed to load Google Maps"));
-    document.head.appendChild(script);
-  });
-  return scriptPromise;
-}
+import { hasGoogleMapsKey, loadPlacesScript } from "@/lib/google-places";
 
 export function AddressAutocomplete({
   defaultAddress = "",
@@ -73,9 +23,7 @@ export function AddressAutocomplete({
   defaultLng?: number | null;
   onValidityChange?: (valid: boolean) => void;
 }) {
-  const hasGoogleKey = Boolean(GOOGLE_MAPS_API_KEY);
-
-  if (hasGoogleKey) {
+  if (hasGoogleMapsKey()) {
     return (
       <GooglePlacesAddressField
         defaultAddress={defaultAddress}
