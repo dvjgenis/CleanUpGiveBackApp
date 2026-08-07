@@ -6,13 +6,14 @@
  * county (suburbs and unincorporated areas included), so this works for any US county,
  * not just Chicago proper.
  */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { FeatureCollection, Position } from "geojson";
 import { VOYAGER_RASTER_STYLE } from "@/lib/maplibre-basemap";
 import { heatFill, type GeoUnitStats } from "@/lib/us-heatmap";
 import { formatTractName, type TractFeature } from "@/lib/census-tracts";
+import { searchPlace } from "@/lib/nominatim";
 import { ExpandIcon, CollapseIcon } from "@/components/ui/Icons";
 
 const SOURCE_ID = "county-tracts";
@@ -41,7 +42,8 @@ function collectPositions(coords: unknown, out: Position[]): void {
   }
 }
 
-function boundsOf(fc: FeatureCollection): maplibregl.LngLatBoundsLike | null {
+/** Flat `[minLng, minLat, maxLng, maxLat]` — for `boundsOf` consumers that need it unnested. */
+function flatBoundsOf(fc: FeatureCollection): [number, number, number, number] | null {
   const points: Position[] = [];
   for (const f of fc.features) {
     if (f.geometry && "coordinates" in f.geometry) {
@@ -59,6 +61,13 @@ function boundsOf(fc: FeatureCollection): maplibregl.LngLatBoundsLike | null {
     if (lng > maxLng) maxLng = lng;
     if (lat > maxLat) maxLat = lat;
   }
+  return [minLng, minLat, maxLng, maxLat];
+}
+
+function boundsOf(fc: FeatureCollection): maplibregl.LngLatBoundsLike | null {
+  const flat = flatBoundsOf(fc);
+  if (!flat) return null;
+  const [minLng, minLat, maxLng, maxLat] = flat;
   return [
     [minLng, minLat],
     [maxLng, maxLat],
@@ -101,7 +110,11 @@ export function CountyTractMap({ tracts, statsById, maxCount, hoveredId, onHover
   const mapRef = useRef<maplibregl.Map | null>(null);
   const hoveredIdRef = useRef<string | null>(null);
   const popupRef = useRef<maplibregl.Popup | null>(null);
+  const navControlRef = useRef<maplibregl.NavigationControl | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
 
   // Mount once; source/layer data is kept in sync by the effect below.
   useEffect(() => {
@@ -210,6 +223,35 @@ export function CountyTractMap({ tracts, statsById, maxCount, hoveredId, onHover
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [fullscreen]);
 
+  // Zoom controls only in full screen — the small card view doesn't have room for them.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (fullscreen) {
+      if (!navControlRef.current) {
+        navControlRef.current = new maplibregl.NavigationControl({ showCompass: false });
+      }
+      map.addControl(navControlRef.current, "top-right");
+    } else if (navControlRef.current) {
+      map.removeControl(navControlRef.current);
+    }
+  }, [fullscreen]);
+
+  async function handleSearch(e: FormEvent) {
+    e.preventDefault();
+    const map = mapRef.current;
+    if (!map || !searchQuery.trim()) return;
+    setSearching(true);
+    setSearchError(null);
+    const result = await searchPlace(searchQuery, flatBoundsOf(tracts) ?? undefined);
+    setSearching(false);
+    if (!result) {
+      setSearchError(`No results for "${searchQuery}"`);
+      return;
+    }
+    map.flyTo({ center: [result.longitude, result.latitude], zoom: 14 });
+  }
+
   return (
     <div
       className={fullscreen ? "fixed inset-0 z-[100] bg-bg-app flex flex-col" : "relative"}
@@ -218,18 +260,40 @@ export function CountyTractMap({ tracts, statsById, maxCount, hoveredId, onHover
       aria-label={fullscreen ? "Full screen county map" : undefined}
     >
       {fullscreen && (
-        <header className="shrink-0 flex items-center justify-between gap-md px-lg py-md border-b border-border-outline bg-bg-surface">
-          <p className="font-heading text-[20px] leading-[28px] text-text-primary">Full screen map</p>
+        <header className="shrink-0 flex flex-wrap items-center justify-between gap-md px-lg py-md border-b border-border-outline bg-bg-surface">
+          <p className="font-heading text-[20px] leading-[28px] text-text-primary shrink-0">Full screen map</p>
+          <form onSubmit={handleSearch} className="flex-1 min-w-[220px] max-w-md flex items-center gap-sm">
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search for an address or place"
+              aria-label="Search for an address or place"
+              className="w-full h-11 px-md rounded-full border border-border-outline bg-bg-app font-body text-[13px] text-text-primary placeholder:text-text-tertiary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+            />
+            <button
+              type="submit"
+              disabled={searching || !searchQuery.trim()}
+              className="shrink-0 h-11 px-md rounded-full border border-border-outline bg-bg-app font-data text-[12px] font-semibold text-text-primary hover:bg-bg-surface-elevated disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+            >
+              {searching ? "Searching…" : "Search"}
+            </button>
+          </form>
           <button
             type="button"
             onClick={() => setFullscreen(false)}
-            className="inline-flex h-11 items-center gap-sm px-md rounded-sm border border-border-outline bg-bg-app font-data text-[12px] font-semibold text-text-primary hover:bg-bg-surface-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+            className="shrink-0 inline-flex h-11 items-center gap-sm px-md rounded-sm border border-border-outline bg-bg-app font-data text-[12px] font-semibold text-text-primary hover:bg-bg-surface-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
             aria-label="Exit full screen"
           >
             <CollapseIcon className="w-4 h-4" />
             Exit full screen
           </button>
         </header>
+      )}
+      {fullscreen && searchError && (
+        <p className="shrink-0 px-lg py-xs font-body text-[12px] text-[#ba1a1a] bg-bg-surface border-b border-border-outline">
+          {searchError}
+        </p>
       )}
       <div className={fullscreen ? "relative flex-1 min-h-0" : "relative"}>
         <div
@@ -239,7 +303,7 @@ export function CountyTractMap({ tracts, statsById, maxCount, hoveredId, onHover
           className={
             fullscreen
               ? "absolute inset-0 [&_.maplibregl-canvas]:!outline-none"
-              : "h-[320px] sm:h-[400px] w-full rounded-sm overflow-hidden border border-border-outline [&_.maplibregl-canvas]:!outline-none"
+              : "h-[320px] sm:h-[400px] w-full rounded-sm overflow-hidden border border-border-outline [&_.maplibregl-canvas]:!outline-none [&_.maplibregl-canvas]:rounded-sm [&_.maplibregl-canvas-container]:rounded-sm"
           }
         />
         {!fullscreen && (
