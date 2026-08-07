@@ -674,9 +674,16 @@ export function SessionWalkingPathMap({
       )}
 
       <div className={fullscreen ? "relative flex-1 min-h-0" : "absolute inset-0"}>
+        {/* MapLibre's WebGL canvas is GPU-composited and can bleed square corners past an
+            ancestor's `overflow-hidden` + rounded border (a known cross-browser clipping
+            bug for canvas/video elements) — round the canvas itself, since a canvas always
+            clips its own content to its own border-radius, and back it with a matching
+            border on the container as a visual seam in case of residual bleed. */}
         <div
           ref={containerRef}
-          className="absolute inset-0 h-full w-full [&_.maplibregl-canvas]:!outline-none"
+          className={`absolute inset-0 h-full w-full overflow-hidden [&_.maplibregl-canvas]:!outline-none ${
+            fullscreen ? "" : "rounded-sm border border-border-outline [&_.maplibregl-canvas]:!rounded-sm"
+          }`}
         />
 
         {!fullscreen && (

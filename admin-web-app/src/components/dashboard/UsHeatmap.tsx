@@ -2,6 +2,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { FeatureCollection } from 'geojson';
 import { geoContains } from 'd3-geo';
 import {
@@ -61,6 +62,12 @@ export function UsHeatmap({ activity, sessions, periodLabel }: Props) {
   const attemptedGeocodesRef = useRef<Set<string>>(new Set());
   const [search, setSearch] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  /** Viewport-relative — the suggestion dropdown portals to `document.body` so it isn't
+   * clipped by the card's `overflow-hidden` (see the `<section>` wrapping this component). */
+  const [dropdownRect, setDropdownRect] = useState<{ top: number; left: number; width: number } | null>(
+    null,
+  );
   // Clears any in-progress search when the drilled-into level changes underneath it —
   // adjusted during render (React's recommended pattern) rather than a dedicated effect.
   const [searchDrill, setSearchDrill] = useState(drill);
@@ -573,10 +580,15 @@ export function UsHeatmap({ activity, sessions, periodLabel }: Props) {
           {activeStatsList.length > 0 && (
             <div className="relative mb-sm">
               <input
+                ref={searchInputRef}
                 type="search"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                onFocus={() => setSearchFocused(true)}
+                onFocus={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  setDropdownRect({ top: rect.bottom, left: rect.left, width: rect.width });
+                  setSearchFocused(true);
+                }}
                 onBlur={() => setSearchFocused(false)}
                 placeholder={searchPlaceholder}
                 aria-label={searchPlaceholder}
@@ -586,46 +598,57 @@ export function UsHeatmap({ activity, sessions, periodLabel }: Props) {
                 autoComplete="off"
                 className="w-full h-11 px-md rounded-full border border-border-outline bg-bg-surface font-body text-[13px] text-text-primary placeholder:text-text-tertiary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
               />
-              {searchFocused && search.trim().length > 0 && (
-                <ul
-                  id="us-heatmap-suggestions"
-                  role="listbox"
-                  aria-label={`${searchPlaceholder} suggestions`}
-                  className="absolute left-0 right-0 top-full mt-xs z-20 max-h-72 overflow-y-auto rounded-md border border-border-outline bg-bg-app shadow-bar-top"
-                >
-                  {filteredStatsList.length === 0 ? (
-                    <li className="px-md py-sm font-body text-[13px] text-text-tertiary">
-                      No matches for &ldquo;{search}&rdquo;.
-                    </li>
-                  ) : (
-                    filteredStatsList.slice(0, 8).map((row) => (
-                      <li key={row.id}>
-                        <button
-                          type="button"
-                          // onMouseDown (not onClick) fires before the input's onBlur closes the dropdown.
-                          onMouseDown={(e) => {
-                            e.preventDefault();
-                            selectStatRow(row);
-                          }}
-                          className="w-full min-h-11 px-md py-xs flex items-center gap-sm text-left hover:bg-bg-surface-elevated transition-colors"
-                        >
-                          <span
-                            className="w-2.5 h-2.5 rounded-full shrink-0"
-                            style={{ backgroundColor: heatFill(row.sessionCount / maxCount) }}
-                            aria-hidden
-                          />
-                          <span className="font-body text-[13px] font-medium text-text-primary flex-1 truncate">
-                            {row.name}
-                          </span>
-                          <span className="font-data text-[12px] text-text-tertiary shrink-0">
-                            {row.sessionCount} session{row.sessionCount === 1 ? '' : 's'}
-                          </span>
-                        </button>
+              {searchFocused &&
+                search.trim().length > 0 &&
+                dropdownRect &&
+                typeof document !== 'undefined' &&
+                createPortal(
+                  <ul
+                    id="us-heatmap-suggestions"
+                    role="listbox"
+                    aria-label={`${searchPlaceholder} suggestions`}
+                    // Portalled to <body> and positioned fixed from the input's own rect —
+                    // the card this input lives in has `overflow-hidden` (for the map's
+                    // rounded corners), which would otherwise clip a dropdown positioned
+                    // relative to an in-card ancestor.
+                    style={{ top: dropdownRect.top + 4, left: dropdownRect.left, width: dropdownRect.width }}
+                    className="fixed z-[100] max-h-72 overflow-y-auto rounded-md border border-border-outline bg-bg-app shadow-bar-top"
+                  >
+                    {filteredStatsList.length === 0 ? (
+                      <li className="px-md py-sm font-body text-[13px] text-text-tertiary">
+                        No matches for &ldquo;{search}&rdquo;.
                       </li>
-                    ))
-                  )}
-                </ul>
-              )}
+                    ) : (
+                      filteredStatsList.slice(0, 8).map((row) => (
+                        <li key={row.id}>
+                          <button
+                            type="button"
+                            // onMouseDown (not onClick) + preventDefault stops the input
+                            // from blurring (and the dropdown closing) before the click lands.
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              selectStatRow(row);
+                            }}
+                            className="w-full min-h-11 px-md py-xs flex items-center gap-sm text-left hover:bg-bg-surface-elevated transition-colors"
+                          >
+                            <span
+                              className="w-2.5 h-2.5 rounded-full shrink-0"
+                              style={{ backgroundColor: heatFill(row.sessionCount / maxCount) }}
+                              aria-hidden
+                            />
+                            <span className="font-body text-[13px] font-medium text-text-primary flex-1 truncate">
+                              {row.name}
+                            </span>
+                            <span className="font-data text-[12px] text-text-tertiary shrink-0">
+                              {row.sessionCount} session{row.sessionCount === 1 ? '' : 's'}
+                            </span>
+                          </button>
+                        </li>
+                      ))
+                    )}
+                  </ul>,
+                  document.body,
+                )}
             </div>
           )}
           {activeStatsList.length === 0 ? (
