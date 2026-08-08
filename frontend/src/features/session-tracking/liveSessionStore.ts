@@ -70,6 +70,8 @@ export type LiveSessionSetup = {
   description: string;
 };
 
+export type CheckpointSyncStatus = 'pending' | 'synced' | 'failed';
+
 export type PhotoCheckpointSubmission = {
   id: string;
   selfieUri: string;
@@ -80,6 +82,13 @@ export type PhotoCheckpointSubmission = {
   /** WGS84 at capture — embedded on the Fly checkpoint row for trail pins. */
   latitude: number | null;
   longitude: number | null;
+  /**
+   * Upload status for this checkpoint's photos. The photos themselves are always
+   * already saved to persistent on-device storage by the time this is 'failed' —
+   * see `persistCheckpointPhotos.ts` — so 'failed' only ever means "not yet synced
+   * to the server," never "photo lost."
+   */
+  syncStatus: CheckpointSyncStatus;
 };
 
 export type CompletedSessionSnapshot = {
@@ -877,12 +886,21 @@ async function postCheckpointToRemote(
   });
 }
 
+function updateCheckpointSyncStatus(checkpointId: string, syncStatus: CheckpointSyncStatus) {
+  setState({
+    submittedCheckpoints: state.submittedCheckpoints.map((cp) =>
+      cp.id === checkpointId ? { ...cp, syncStatus } : cp,
+    ),
+  });
+}
+
 async function persistCheckpointToRemote(
   checkpoint: PhotoCheckpointSubmission,
   retried = false,
 ): Promise<boolean> {
   let sessionId = await ensureRemoteSession();
   if (!sessionId) {
+    updateCheckpointSyncStatus(checkpoint.id, 'failed');
     return false;
   }
 
@@ -891,6 +909,7 @@ async function persistCheckpointToRemote(
   try {
     await postCheckpointToRemote(sessionId, withCoords);
     setSessionSyncWarning(null);
+    updateCheckpointSyncStatus(checkpoint.id, 'synced');
     return true;
   } catch (error) {
     if (!retried && isActiveSessionNotFoundError(error)) {
@@ -903,8 +922,20 @@ async function persistCheckpointToRemote(
 
     console.warn('[sessions] checkpoint persist failed:', error);
     setSessionSyncWarning('Could not sync checkpoint to the server. Photos are saved on device.');
+    updateCheckpointSyncStatus(checkpoint.id, 'failed');
     return false;
   }
+}
+
+/** Re-attempts upload for just one checkpoint — e.g. from a per-item "Retry" button. */
+export async function retryCheckpointSync(checkpointId: string): Promise<boolean> {
+  const checkpoint = state.submittedCheckpoints.find((cp) => cp.id === checkpointId);
+  if (!checkpoint) {
+    return false;
+  }
+
+  updateCheckpointSyncStatus(checkpointId, 'pending');
+  return persistCheckpointToRemote(checkpoint);
 }
 
 function rememberCompletedRemoteSessionId(sessionId: string) {
@@ -1170,6 +1201,7 @@ export function addPhotoCheckpoint(submission: {
     submittedEarly,
     latitude,
     longitude,
+    syncStatus: 'pending',
   };
 
   setState({
@@ -1414,6 +1446,9 @@ export async function resumeLiveSessionFromDraft(draft: LiveSessionDraft) {
       ...cp,
       latitude: cp.latitude ?? null,
       longitude: cp.longitude ?? null,
+      // DraftPhotoCheckpoint doesn't persist syncStatus — resume optimistically and
+      // let the store's normal ensureRemoteSession()/persist path resolve it.
+      syncStatus: 'pending' as const,
     })),
     sessionSyncWarning: null,
     backgroundLocationEnabled: false,

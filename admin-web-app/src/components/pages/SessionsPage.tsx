@@ -18,6 +18,7 @@
  */
 import { Suspense, useEffect, useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useSessionsRealtimeRefresh } from "@/lib/useSessionsRealtimeRefresh";
 import { CourtBadge } from "@/components/ui/CourtBadge";
 import { ServiceTypeBadge } from "@/components/ui/ServiceTypeBadge";
@@ -64,23 +65,63 @@ export function SessionsPage({ sessions = [], isMock = false }: { sessions?: Moc
 
 function SessionsPageInner({ sessions, isMock }: { sessions: MockSession[]; isMock: boolean }) {
   useSessionsRealtimeRefresh();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const openId = searchParams.get("open");
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<"all" | SessionStatus>("all");
   const [courtOnly, setCourtOnly] = useState(false);
   const [previewId, setPreviewId] = useState<string | null>(null);
+  const [syncedOpenId, setSyncedOpenId] = useState<string | null>(null);
   const [localSessions, setLocalSessions] = useState(sessions);
   const [declineId, setDeclineId] = useState<string | null>(null);
   const [declineReason, setDeclineReason] = useState("");
   const [feedback, setFeedback] = useState<{ id: string; message: string; kind: "success" | "error" } | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [compareMode, setCompareMode] = useState(false);
+  const [compareIds, setCompareIds] = useState<string[]>([]);
   const [isPending, startTransition] = useTransition();
   const [isBulkPending, startBulkTransition] = useTransition();
   const selection = usePeriodSelection();
   const rangeLabel = useListPeriodLabel();
 
+  function toggleCompareMode() {
+    setCompareMode((prev) => !prev);
+    setCompareIds([]);
+  }
+
+  function toggleCompareSelected(session: MockSession) {
+    setCompareIds((prev) => {
+      if (prev.includes(session.id)) return prev.filter((id) => id !== session.id);
+      if (prev.length >= 2) return [prev[1], session.id];
+      return [...prev, session.id];
+    });
+  }
+
+  const compareSessionsPicked = compareIds
+    .map((id) => localSessions.find((s) => s.id === id))
+    .filter((s): s is MockSession => s != null);
+  const compareSameVolunteer =
+    compareSessionsPicked.length === 2 && compareSessionsPicked[0].user_id === compareSessionsPicked[1].user_id;
+
+  function handleCompareGo() {
+    if (compareIds.length !== 2 || !compareSameVolunteer) return;
+    router.push(`/sessions/compare?a=${compareIds[0]}&b=${compareIds[1]}`);
+  }
+
   useEffect(() => {
     setLocalSessions(sessions);
   }, [sessions]);
+
+  // Deep link from Attention/Audit Log (`/sessions?open=<id>`) — there's no
+  // `/sessions/[id]` route, so those pages link here and this opens the
+  // preview drawer once the matching session is in `localSessions`. Adjusted
+  // during render (not an effect) per this file's existing set-state-in-effect
+  // convention — see docs/progress.md.
+  if (openId && openId !== syncedOpenId && localSessions.some((s) => s.id === openId)) {
+    setSyncedOpenId(openId);
+    setPreviewId(openId);
+  }
 
   useEffect(() => {
     setSelectedIds(new Set());
@@ -272,10 +313,44 @@ function SessionsPageInner({ sessions, isMock }: { sessions: MockSession[]; isMo
           <span className="font-data text-[12px] font-semibold text-text-tertiary">Court-ordered only</span>
         </label>
 
+        <button
+          type="button"
+          aria-pressed={compareMode}
+          onClick={toggleCompareMode}
+          className={`h-11 shrink-0 inline-flex items-center px-md rounded-full border font-data text-[12px] font-semibold whitespace-nowrap transition-colors ${
+            compareMode
+              ? "bg-primary text-white border-primary"
+              : "bg-bg-surface text-text-tertiary border-border-outline hover:border-primary hover:text-primary"
+          }`}
+        >
+          {compareMode ? "Exit compare" : "Compare sessions"}
+        </button>
+
         <span className="lg:ml-auto font-body text-[14px] text-text-tertiary self-start lg:self-center shrink-0">
           {filtered.length} session{filtered.length !== 1 ? "s" : ""}
         </span>
       </div>
+
+      {compareMode && (
+        <div className="flex items-center gap-md mb-md px-md py-sm rounded-sm border border-primary/30 bg-[#f7fff1] flex-wrap">
+          <span className="font-body text-[13px] text-text-primary">
+            {compareIds.length === 0
+              ? "Select two sessions from the same volunteer to compare."
+              : `${compareIds.length} session${compareIds.length !== 1 ? "s" : ""} selected`}
+          </span>
+          {compareIds.length === 2 && !compareSameVolunteer && (
+            <span className="font-body text-[12px] text-[#ba1a1a]">Both sessions must be from the same volunteer.</span>
+          )}
+          <button
+            type="button"
+            onClick={handleCompareGo}
+            disabled={compareIds.length !== 2 || !compareSameVolunteer}
+            className="h-9 px-md rounded-sm bg-primary text-white font-data text-[12px] font-semibold hover:bg-[#007d35] transition-colors disabled:opacity-40"
+          >
+            Compare selected
+          </button>
+        </div>
+      )}
 
       {selectedIds.size > 0 && (
         <div className="flex items-center gap-md mb-md px-md py-sm rounded-sm border border-primary/30 bg-[#f7fff1]">
@@ -342,14 +417,24 @@ function SessionsPageInner({ sessions, isMock }: { sessions: MockSession[]; isMo
                     className="hover:bg-bg-surface-elevated transition-colors cursor-pointer"
                   >
                     <td className="px-lg py-md" onClick={(e) => e.stopPropagation()}>
-                      {canModerate && (
+                      {compareMode ? (
                         <input
                           type="checkbox"
-                          checked={selectedIds.has(session.id)}
-                          onChange={() => toggleSelected(session.id)}
-                          aria-label={`Select session ${shortId(session.id)} for bulk approve`}
+                          checked={compareIds.includes(session.id)}
+                          onChange={() => toggleCompareSelected(session)}
+                          aria-label={`Select session ${shortId(session.id)} for comparison`}
                           className="w-4 h-4 accent-primary"
                         />
+                      ) : (
+                        canModerate && (
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(session.id)}
+                            onChange={() => toggleSelected(session.id)}
+                            aria-label={`Select session ${shortId(session.id)} for bulk approve`}
+                            className="w-4 h-4 accent-primary"
+                          />
+                        )
                       )}
                     </td>
                     <td className="px-lg py-md font-body text-[14px] text-text-tertiary whitespace-nowrap">
@@ -487,7 +572,19 @@ function SessionsPageInner({ sessions, isMock }: { sessions: MockSession[]; isMo
                   <span>{formatDuration(session.duration_seconds, session.adjusted_hours)}</span>
                   {session.court_ordered && <CourtBadge />}
                 </button>
-                {canModerate && (
+                {compareMode && (
+                  <label className="flex items-center gap-xs mt-sm">
+                    <input
+                      type="checkbox"
+                      checked={compareIds.includes(session.id)}
+                      onChange={() => toggleCompareSelected(session)}
+                      aria-label={`Select session ${shortId(session.id)} for comparison`}
+                      className="w-4 h-4 accent-primary"
+                    />
+                    <span className="font-data text-[12px] text-text-tertiary">Select to compare</span>
+                  </label>
+                )}
+                {!compareMode && canModerate && (
                   <div className="flex items-center gap-sm mt-sm">
                     <label className="flex items-center gap-xs shrink-0">
                       <input

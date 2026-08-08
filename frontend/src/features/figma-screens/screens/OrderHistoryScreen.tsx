@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BottomNavBar } from '@/components/navigation/BottomNavBar';
 import { SessionSetupTopAppBar } from '@/components/session-setup/SessionSetupTopAppBar';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { useLiveSession } from '@/features/session-tracking/liveSessionStore';
 
 import { EmailReceiptChip } from '../components/EmailReceiptChip';
@@ -63,11 +64,21 @@ export function OrderHistoryScreen({ orders = defaultOrderHistory }: { orders?: 
       >
         <Text style={s.intro}>Review your past equipment requests and purchases.</Text>
 
-        <View style={s.list}>
-          {orders.map((order) => (
-            <OrderCard key={order.id} order={order} />
-          ))}
-        </View>
+        {orders.length === 0 ? (
+          <EmptyState
+            title="No orders yet"
+            body="Browse the shop to request cleanup gear."
+            ctaLabel="Browse Shop"
+            ctaAccessibilityLabel="Go to shop"
+            onCtaPress={() => router.push('/shop' as Href)}
+          />
+        ) : (
+          <View style={s.list}>
+            {orders.map((order) => (
+              <OrderCard key={order.id} order={order} />
+            ))}
+          </View>
+        )}
       </ScrollView>
 
       <View style={[s.bottomStack, { paddingBottom: bottomInset }]}>

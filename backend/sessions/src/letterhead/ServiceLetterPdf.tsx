@@ -17,6 +17,17 @@ export type ServiceLetterSessionEvidence = {
   milesLabel: string;
   mapImageDataUri: string | null;
   photos: ServiceLetterPhoto[];
+  /** Set when `adjustedHours` differs from the raw logged duration — shown on the
+   * session's evidence page so a court packet doesn't silently substitute hours. */
+  adjustmentNote: string | null;
+};
+
+export type CourtCoverSheetProps = {
+  caseReference: string | null;
+  dueDateLabel: string | null;
+  requiredHoursLabel: string;
+  completedHoursLabel: string;
+  completionPercentLabel: string;
 };
 
 export type ServiceLetterPdfProps = {
@@ -28,6 +39,7 @@ export type ServiceLetterPdfProps = {
   logoDataUri: string;
   signatureDataUri: string;
   sessions: ServiceLetterSessionEvidence[];
+  courtCoverSheet?: CourtCoverSheetProps;
 };
 
 const styles = StyleSheet.create({
@@ -108,6 +120,32 @@ const styles = StyleSheet.create({
     fontSize: 9,
     marginTop: 4,
   },
+  coverTitle: {
+    fontFamily: 'Times-Bold',
+    fontSize: 18,
+    marginBottom: 20,
+  },
+  coverRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#dddddd',
+  },
+  coverLabel: {
+    fontSize: 11,
+    color: '#555555',
+  },
+  coverValue: {
+    fontFamily: 'Times-Bold',
+    fontSize: 11,
+  },
+  adjustmentNote: {
+    fontSize: 10,
+    color: '#7a4a00',
+    marginTop: 4,
+    marginBottom: 6,
+  },
 });
 
 function LetterPage({
@@ -151,6 +189,58 @@ function LetterPage({
   );
 }
 
+function CourtCoverSheet({
+  volunteerName,
+  rangeStart,
+  rangeEnd,
+  coverSheet,
+}: {
+  volunteerName: string;
+  rangeStart: string;
+  rangeEnd: string;
+  coverSheet: CourtCoverSheetProps;
+}) {
+  return (
+    <Page size="LETTER" style={styles.page}>
+      <Text style={styles.coverTitle}>Court Service Packet</Text>
+      <View style={styles.coverRow}>
+        <Text style={styles.coverLabel}>Volunteer</Text>
+        <Text style={styles.coverValue}>{volunteerName}</Text>
+      </View>
+      <View style={styles.coverRow}>
+        <Text style={styles.coverLabel}>Case reference</Text>
+        <Text style={styles.coverValue}>{coverSheet.caseReference ?? '—'}</Text>
+      </View>
+      <View style={styles.coverRow}>
+        <Text style={styles.coverLabel}>Due date</Text>
+        <Text style={styles.coverValue}>{coverSheet.dueDateLabel ?? '—'}</Text>
+      </View>
+      <View style={styles.coverRow}>
+        <Text style={styles.coverLabel}>Session date range</Text>
+        <Text style={styles.coverValue}>
+          {rangeStart} – {rangeEnd}
+        </Text>
+      </View>
+      <View style={styles.coverRow}>
+        <Text style={styles.coverLabel}>Required hours</Text>
+        <Text style={styles.coverValue}>{coverSheet.requiredHoursLabel}</Text>
+      </View>
+      <View style={styles.coverRow}>
+        <Text style={styles.coverLabel}>Completed hours (approved only)</Text>
+        <Text style={styles.coverValue}>{coverSheet.completedHoursLabel}</Text>
+      </View>
+      <View style={styles.coverRow}>
+        <Text style={styles.coverLabel}>Completion</Text>
+        <Text style={styles.coverValue}>{coverSheet.completionPercentLabel}</Text>
+      </View>
+      <Text style={styles.evidenceMeta}>
+        {'\n'}Only approved sessions count toward the completed-hours total above. The pages that
+        follow document each approved session included in this packet.
+      </Text>
+    </Page>
+  );
+}
+
 function EvidencePage({ session }: { session: ServiceLetterSessionEvidence }) {
   return (
     <Page size="LETTER" style={styles.page}>
@@ -160,6 +250,7 @@ function EvidencePage({ session }: { session: ServiceLetterSessionEvidence }) {
       <Text style={styles.evidenceMeta}>
         Duration: {session.hoursLabel} hours · Distance: {session.milesLabel} miles
       </Text>
+      {session.adjustmentNote && <Text style={styles.adjustmentNote}>{session.adjustmentNote}</Text>}
 
       {session.mapImageDataUri ? (
         <Image src={session.mapImageDataUri} style={styles.map} />
@@ -189,6 +280,14 @@ function EvidencePage({ session }: { session: ServiceLetterSessionEvidence }) {
 export function ServiceLetterDocument(props: ServiceLetterPdfProps) {
   return (
     <Document>
+      {props.courtCoverSheet && (
+        <CourtCoverSheet
+          volunteerName={props.volunteerName}
+          rangeStart={props.rangeStart}
+          rangeEnd={props.rangeEnd}
+          coverSheet={props.courtCoverSheet}
+        />
+      )}
       <LetterPage {...props} />
       {props.sessions.map((session, index) => (
         <EvidencePage session={session} key={`evidence-${index}`} />

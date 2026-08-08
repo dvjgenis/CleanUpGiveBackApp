@@ -12,6 +12,7 @@ import { createDataClient } from '@/lib/supabase/server';
 import { formatDateTime } from '@/lib/mock-data';
 import { ChevronLeftIcon, ChevronRightIcon, CloseIcon } from '@/components/ui/Icons';
 import { SidebarDemo } from '@/components/ui/sidebar-demo';
+import { AuditDiffCard } from '@/components/ui/AuditDiffCard';
 import {
   AUDIT_ACTION_OPTIONS,
   auditActionLabel,
@@ -212,19 +213,8 @@ export default async function AuditLogPage({
                             <p className="font-data text-[11px] text-text-tertiary">#{target.shortId}</p>
                           )}
                         </td>
-                        <td className="px-lg py-md min-w-[220px]">
-                          {changes.length > 0 ? (
-                            <ul className="flex flex-col gap-xs">
-                              {changes.map((c) => (
-                                <li key={c.label} className="font-body text-[13px] text-text-primary">
-                                  <span className="text-text-tertiary">{c.label}:</span>{' '}
-                                  {c.from} <span aria-hidden>→</span> {c.to}
-                                </li>
-                              ))}
-                            </ul>
-                          ) : (
-                            <span className="font-body text-[13px] text-text-tertiary">No field changes recorded</span>
-                          )}
+                        <td className="px-lg py-md">
+                          <AuditDiffCard changes={changes} />
                         </td>
                       </tr>
                     );

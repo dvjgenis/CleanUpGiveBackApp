@@ -55,19 +55,49 @@ function getFromAddress(): string {
   return process.env.EMAIL_FROM ?? 'noreply@cleanupgiveback.org';
 }
 
+/** Mirrors admin-web-app's `lib/email-log.ts` — this service has no Supabase client, only Prisma. */
+async function logEmailSend(params: {
+  userId?: string | null;
+  sessionId?: string | null;
+  templateType: 'approved' | 'declined' | 'shipped' | 'event_registration' | 'at_risk_nudge' | 'other';
+  toEmail: string;
+  subject: string;
+  status: 'sent' | 'failed';
+  resendMessageId?: string | null;
+}): Promise<void> {
+  try {
+    await prisma.$executeRaw`
+      INSERT INTO public.email_log (user_id, session_id, template_type, to_email, subject, status, resend_message_id)
+      VALUES (
+        ${params.userId ?? null}::uuid,
+        ${params.sessionId ?? null}::uuid,
+        ${params.templateType},
+        ${params.toEmail},
+        ${params.subject},
+        ${params.status},
+        ${params.resendMessageId ?? null}
+      )
+    `;
+  } catch (err) {
+    // Soft-fail — table may not exist yet if the migration hasn't been applied.
+    console.warn('[email-log] failed to record email send:', err);
+  }
+}
+
 async function sendDonnaReviewEmail(sessionId: string, activity: string | null): Promise<void> {
   const resend = getResendClient();
   const donnaEmail = process.env.DONNA_EMAIL;
-  
+
   if (!resend || !donnaEmail) {
     return;
   }
 
+  const subject = 'Session ready for review';
   try {
-    await resend.emails.send({
+    const { data, error } = await resend.emails.send({
       from: getFromAddress(),
       to: donnaEmail,
-      subject: 'Session ready for review',
+      subject,
       text: [
         'A volunteer session is ready for review.',
         '',
@@ -77,8 +107,17 @@ async function sendDonnaReviewEmail(sessionId: string, activity: string | null):
         'Please review in the admin portal.',
       ].join('\n'),
     });
+    await logEmailSend({
+      sessionId,
+      templateType: 'other',
+      toEmail: donnaEmail,
+      subject,
+      status: error ? 'failed' : 'sent',
+      resendMessageId: data?.id ?? null,
+    });
   } catch {
     // Soft-fail: log only, don't throw
+    await logEmailSend({ sessionId, templateType: 'other', toEmail: donnaEmail, subject, status: 'failed' });
   }
 }
 

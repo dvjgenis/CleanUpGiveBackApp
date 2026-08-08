@@ -8,6 +8,7 @@ Shared UI components in `frontend/src/components/`.
 |-----------|------|------|
 | ThemedText | `themed-text.tsx` | Theme-aware text |
 | ThemedView | `themed-view.tsx` | Theme-aware container |
+| EmptyState | `ui/EmptyState.tsx` | Shared blank-state card (title/body/CTA) — used by Sessions, Cart, Orders, Donations, Events; previously each screen hand-rolled its own |
 | LiveSessionResumeGate | `LiveSessionResumeGate.tsx` | Cold-start modal after process death — **Resume** / **Discard** when an AsyncStorage live-session draft exists and the remote session is still `active` (or local-only); on resume, auto-finalizes if checkpoint grace expired; mounted from root `_layout.tsx` |
 | CheckpointMissNavigationGate | `CheckpointMissNavigationGate.tsx` | Routes to `/missed-checkpoint` when finalize ran without `LiveSessionScreen` mounted |
 | CheckpointNotificationBootstrap | `CheckpointNotificationBootstrap.tsx` | Local notification presentation + tap-through to checkpoint / missed screens |

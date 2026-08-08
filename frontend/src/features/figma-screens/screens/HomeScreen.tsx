@@ -19,6 +19,12 @@ import {
   useSessionStats,
 } from '@/features/session-tracking/sessionStatsStore';
 import {
+  hydrateCourtProgressFromApi,
+  shouldShowCourtProgress,
+  useCourtProgress,
+  type CourtProgressState,
+} from '@/features/session-tracking/courtProgressStore';
+import {
   buildImpactStats,
   buildWeeklyHoursChart,
   computeWeeklyStreakHours,
@@ -26,6 +32,7 @@ import {
   formatWeekServiceHoursTotal,
 } from '@/features/session-tracking/utils/homeDashboardStats';
 
+import { CourtProgressCard } from '../components/CourtProgressCard';
 import { EventsViewAllModal } from '../components/EventsViewAllModal';
 import { RecentSessionCard } from '../components/RecentSessionCard';
 import { UpcomingEventCard } from '../components/UpcomingEventCard';
@@ -376,9 +383,11 @@ function LiveSessionBar({ barStyle, onExpand }: LiveSessionBarProps) {
 export function HomeScreenWithData({
   data,
   onWeekStartChange = () => {},
+  courtProgress,
 }: {
   data: HomeDashboardData;
   onWeekStartChange?: (weekStartIso: string) => void;
+  courtProgress?: CourtProgressState;
 }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -437,6 +446,9 @@ export function HomeScreenWithData({
           )}
         </View>
 
+        {courtProgress && shouldShowCourtProgress(courtProgress) && (
+          <CourtProgressCard state={courtProgress} />
+        )}
         <ServiceHoursCard
           serviceHoursTotalLabel={data.serviceHoursTotalLabel}
           weekStartIso={data.weekStartIso}
@@ -496,6 +508,7 @@ export function HomeScreen() {
   const recentSessions = useRecentSessions();
   const preferredName = usePreferredName();
   const sessionStats = useSessionStats();
+  const courtProgress = useCourtProgress();
   const [selectedWeekStartIso, setSelectedWeekStartIso] = useState(
     () => getCurrentWeekMeta().weekStartIso,
   );
@@ -505,6 +518,7 @@ export function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       void hydrateSessionStatsFromApi();
+      void hydrateCourtProgressFromApi();
       let cancelled = false;
       void (async () => {
         const [upcoming, catalog] = await Promise.all([
@@ -555,7 +569,11 @@ export function HomeScreen() {
   ]);
 
   return (
-    <HomeScreenWithData data={data} onWeekStartChange={setSelectedWeekStartIso} />
+    <HomeScreenWithData
+      data={data}
+      onWeekStartChange={setSelectedWeekStartIso}
+      courtProgress={courtProgress}
+    />
   );
 }
 

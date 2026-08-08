@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BottomNavBar } from '@/components/navigation/BottomNavBar';
 import { SessionSetupTopAppBar } from '@/components/session-setup/SessionSetupTopAppBar';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { useLiveSession } from '@/features/session-tracking/liveSessionStore';
 
 import { DonateCardIcon } from '../components/AccountIcons';
@@ -61,11 +62,21 @@ export function DonationHistoryScreen({
           Thank you for supporting clean-up efforts. Review your past donations below.
         </Text>
 
-        <View style={s.list}>
-          {donations.map((donation) => (
-            <DonationCard key={donation.id} donation={donation} />
-          ))}
-        </View>
+        {donations.length === 0 ? (
+          <EmptyState
+            title="No donations yet"
+            body="Make a donation to support clean-up efforts."
+            ctaLabel="Make a Donation"
+            ctaAccessibilityLabel="Make a donation"
+            onCtaPress={() => router.push('/donate' as Href)}
+          />
+        ) : (
+          <View style={s.list}>
+            {donations.map((donation) => (
+              <DonationCard key={donation.id} donation={donation} />
+            ))}
+          </View>
+        )}
       </ScrollView>
 
       <View style={[s.bottomStack, { paddingBottom: bottomInset }]}>

@@ -9,12 +9,14 @@ import React, { useEffect, useId, useLayoutEffect, useRef, useState } from "reac
 import { createPortal } from "react-dom";
 import { Sidebar, SidebarBody, SidebarLink, useSidebar } from "@/components/ui/sidebar";
 import {
+  AlertTriangleIcon,
   AuditLogIcon,
   BellIcon,
   EventsIcon,
   FeedbackIcon,
   HomeIcon,
   InsightsIcon,
+  MailIcon,
   OrdersIcon,
   PaymentsIcon,
   SessionsIcon,
@@ -43,6 +45,11 @@ export function SidebarDemo({ children }: { children: React.ReactNode }) {
       icon: <HomeIcon className="h-4 w-4 flex-shrink-0" />,
     },
     {
+      label: "Attention",
+      href: "/attention",
+      icon: <BellIcon className="h-4 w-4 flex-shrink-0" />,
+    },
+    {
       label: "Sessions",
       href: "/sessions",
       icon: <SessionsIcon className="h-4 w-4 flex-shrink-0" />,
@@ -51,6 +58,11 @@ export function SidebarDemo({ children }: { children: React.ReactNode }) {
       label: "Users",
       href: "/users",
       icon: <VolunteerIcon className="h-4 w-4 flex-shrink-0" />,
+    },
+    {
+      label: "Court Risk",
+      href: "/court-risk",
+      icon: <AlertTriangleIcon className="h-4 w-4 flex-shrink-0" />,
     },
     {
       label: "Insights",
@@ -81,6 +93,11 @@ export function SidebarDemo({ children }: { children: React.ReactNode }) {
       label: "Audit Log",
       href: "/audit-log",
       icon: <AuditLogIcon className="h-4 w-4 flex-shrink-0" />,
+    },
+    {
+      label: "Emails",
+      href: "/emails",
+      icon: <MailIcon className="h-4 w-4 flex-shrink-0" />,
     },
   ];
 

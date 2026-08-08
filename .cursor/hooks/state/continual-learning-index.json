@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAtMs": 1786033149672,
+  "updatedAtMs": 1786081560431,
   "transcripts": {
     "/Users/shivpat/.cursor/projects/Users-shivpat-Desktop-CleanUpGiveBackApp/agent-transcripts/06c2854e-a338-4d52-bfae-be2c5f0cb27a/06c2854e-a338-4d52-bfae-be2c5f0cb27a.jsonl": {
       "mtimeMs": 1785802145704
@@ -62,6 +62,9 @@
     "/Users/shivpat/.cursor/projects/Users-shivpat-Desktop-CleanUpGiveBackApp/agent-transcripts/1822ebdf-31f3-41aa-8976-98fc8693e46c/subagents/4ef89b7c-ed50-49b4-894e-1810ffb5affd.jsonl": {
       "mtimeMs": 1784260672856
     },
+    "/Users/shivpat/.cursor/projects/Users-shivpat-Desktop-CleanUpGiveBackApp/agent-transcripts/18a6e935-4a9e-47ed-b71a-f8023789a95d/18a6e935-4a9e-47ed-b71a-f8023789a95d.jsonl": {
+      "mtimeMs": 1786037271654
+    },
     "/Users/shivpat/.cursor/projects/Users-shivpat-Desktop-CleanUpGiveBackApp/agent-transcripts/198e7d85-8602-44c6-b76d-d6e303f94453/198e7d85-8602-44c6-b76d-d6e303f94453.jsonl": {
       "mtimeMs": 1785801051279
     },
@@ -81,10 +84,10 @@
       "mtimeMs": 1785386247364
     },
     "/Users/shivpat/.cursor/projects/Users-shivpat-Desktop-CleanUpGiveBackApp/agent-transcripts/223041ac-616b-4be6-b32f-60d4f0f53268/223041ac-616b-4be6-b32f-60d4f0f53268.jsonl": {
-      "mtimeMs": 1786032915734
+      "mtimeMs": 1786033169086
     },
     "/Users/shivpat/.cursor/projects/Users-shivpat-Desktop-CleanUpGiveBackApp/agent-transcripts/223041ac-616b-4be6-b32f-60d4f0f53268/subagents/bbe66d17-56b0-4827-b2d4-50ebd61d743d.jsonl": {
-      "mtimeMs": 1786032986372
+      "mtimeMs": 1786033163353
     },
     "/Users/shivpat/.cursor/projects/Users-shivpat-Desktop-CleanUpGiveBackApp/agent-transcripts/22d00ae7-f71e-407e-b9fa-3324c5dcce42/22d00ae7-f71e-407e-b9fa-3324c5dcce42.jsonl": {
       "mtimeMs": 1785872890927
@@ -112,6 +115,9 @@
     },
     "/Users/shivpat/.cursor/projects/Users-shivpat-Desktop-CleanUpGiveBackApp/agent-transcripts/2b12ddd0-3bfd-4f2b-a255-4506d007c6f3/2b12ddd0-3bfd-4f2b-a255-4506d007c6f3.jsonl": {
       "mtimeMs": 1784526361544
+    },
+    "/Users/shivpat/.cursor/projects/Users-shivpat-Desktop-CleanUpGiveBackApp/agent-transcripts/2c09a0bf-e97c-47d5-88f8-ef7a3937f6c0/2c09a0bf-e97c-47d5-88f8-ef7a3937f6c0.jsonl": {
+      "mtimeMs": 1786033225670
     },
     "/Users/shivpat/.cursor/projects/Users-shivpat-Desktop-CleanUpGiveBackApp/agent-transcripts/2cab3e5d-c846-4120-a8e7-18cd483ed817/2cab3e5d-c846-4120-a8e7-18cd483ed817.jsonl": {
       "mtimeMs": 1785352917539
@@ -227,6 +233,12 @@
     "/Users/shivpat/.cursor/projects/Users-shivpat-Desktop-CleanUpGiveBackApp/agent-transcripts/5403689a-7424-4bf5-94dc-fa903e95b33a/subagents/072f4ce4-4623-4c60-8fcf-0a6cf70a7e27.jsonl": {
       "mtimeMs": 1785734698281
     },
+    "/Users/shivpat/.cursor/projects/Users-shivpat-Desktop-CleanUpGiveBackApp/agent-transcripts/59975d55-37ca-4ddf-825f-8420338ab54e/59975d55-37ca-4ddf-825f-8420338ab54e.jsonl": {
+      "mtimeMs": 1786081389967
+    },
+    "/Users/shivpat/.cursor/projects/Users-shivpat-Desktop-CleanUpGiveBackApp/agent-transcripts/59975d55-37ca-4ddf-825f-8420338ab54e/subagents/aa1fee26-dd3d-4270-a7da-a6423adc7126.jsonl": {
+      "mtimeMs": 1786081430854
+    },
     "/Users/shivpat/.cursor/projects/Users-shivpat-Desktop-CleanUpGiveBackApp/agent-transcripts/5a95a5af-2305-444d-b2e1-a021b11944de/5a95a5af-2305-444d-b2e1-a021b11944de.jsonl": {
       "mtimeMs": 1785518925413
     },
@@ -235,6 +247,9 @@
     },
     "/Users/shivpat/.cursor/projects/Users-shivpat-Desktop-CleanUpGiveBackApp/agent-transcripts/5fb095bc-a5e4-4007-8dec-4eb7e65760a5/5fb095bc-a5e4-4007-8dec-4eb7e65760a5.jsonl": {
       "mtimeMs": 1784527060351
+    },
+    "/Users/shivpat/.cursor/projects/Users-shivpat-Desktop-CleanUpGiveBackApp/agent-transcripts/60c27619-e7fd-499f-b7fb-1940ecdd7a15/60c27619-e7fd-499f-b7fb-1940ecdd7a15.jsonl": {
+      "mtimeMs": 1786076667197
     },
     "/Users/shivpat/.cursor/projects/Users-shivpat-Desktop-CleanUpGiveBackApp/agent-transcripts/62404d2e-b733-4d97-9d8d-51af7a8f8f62/62404d2e-b733-4d97-9d8d-51af7a8f8f62.jsonl": {
       "mtimeMs": 1785369749529
@@ -247,6 +262,9 @@
     },
     "/Users/shivpat/.cursor/projects/Users-shivpat-Desktop-CleanUpGiveBackApp/agent-transcripts/645a86ec-f0ec-4361-bfa7-6ad57650b51c/645a86ec-f0ec-4361-bfa7-6ad57650b51c.jsonl": {
       "mtimeMs": 1785264298234
+    },
+    "/Users/shivpat/.cursor/projects/Users-shivpat-Desktop-CleanUpGiveBackApp/agent-transcripts/64d1dace-a0a5-4a3d-a83f-f86a4348df78/64d1dace-a0a5-4a3d-a83f-f86a4348df78.jsonl": {
+      "mtimeMs": 1786075744944
     },
     "/Users/shivpat/.cursor/projects/Users-shivpat-Desktop-CleanUpGiveBackApp/agent-transcripts/678908ef-b743-4532-8c94-c6537c93bb68/678908ef-b743-4532-8c94-c6537c93bb68.jsonl": {
       "mtimeMs": 1785433080489
@@ -400,6 +418,9 @@
     },
     "/Users/shivpat/.cursor/projects/Users-shivpat-Desktop-CleanUpGiveBackApp/agent-transcripts/99d6c075-341f-49d4-8ae8-5c9802209b9e/99d6c075-341f-49d4-8ae8-5c9802209b9e.jsonl": {
       "mtimeMs": 1785887341515
+    },
+    "/Users/shivpat/.cursor/projects/Users-shivpat-Desktop-CleanUpGiveBackApp/agent-transcripts/9ad4e205-08ac-4d61-bc8f-cf13b3957416/9ad4e205-08ac-4d61-bc8f-cf13b3957416.jsonl": {
+      "mtimeMs": 1786081320277
     },
     "/Users/shivpat/.cursor/projects/Users-shivpat-Desktop-CleanUpGiveBackApp/agent-transcripts/9ae01b7a-c5d4-4814-a567-cb13a9cabb4c/9ae01b7a-c5d4-4814-a567-cb13a9cabb4c.jsonl": {
       "mtimeMs": 1784310328937
@@ -706,6 +727,9 @@
     },
     "/Users/shivpat/.cursor/projects/Users-shivpat-Desktop-CleanUpGiveBackApp/agent-transcripts/fba0537a-7ef7-4124-86d4-95f5bff850c1/fba0537a-7ef7-4124-86d4-95f5bff850c1.jsonl": {
       "mtimeMs": 1784521428954
+    },
+    "/Users/shivpat/.cursor/projects/Users-shivpat-Desktop-CleanUpGiveBackApp/agent-transcripts/fc3ac64b-2226-406a-8df0-025710f26c9e/fc3ac64b-2226-406a-8df0-025710f26c9e.jsonl": {
+      "mtimeMs": 1786077288398
     },
     "/Users/shivpat/.cursor/projects/Users-shivpat-Desktop-CleanUpGiveBackApp/agent-transcripts/fdc1820f-fd71-4156-afe2-8a3bc09eaaf2/fdc1820f-fd71-4156-afe2-8a3bc09eaaf2.jsonl": {
       "mtimeMs": 1785209317690

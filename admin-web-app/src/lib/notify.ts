@@ -1,6 +1,10 @@
 /** Ported from `admin/lib/notify.ts` — same volunteer email/push soft-fail behavior. */
 import { createServiceClient } from '@/lib/supabase/server';
 import { getResendClient, getFromAddress } from './resend';
+import { writeAuditLog } from './audit';
+import { logEmailSend } from './email-log';
+import { getTemplate } from './email-templates';
+import { renderTemplate } from './email-template-render';
 
 interface NotifyVolunteerSessionDecisionParams {
   userId: string;
@@ -8,6 +12,9 @@ interface NotifyVolunteerSessionDecisionParams {
   decision: 'approved' | 'declined';
   declineReason?: string;
   activity?: string | null;
+  /** Admin who triggered the decision — logged against the "email sent" audit entry so it
+   * shows up on the volunteer's risk timeline (`loadVolunteerTimeline` in `live-data.ts`). */
+  adminUserId?: string;
 }
 
 export async function notifyVolunteerSessionDecision({
@@ -16,6 +23,7 @@ export async function notifyVolunteerSessionDecision({
   decision,
   declineReason,
   activity,
+  adminUserId,
 }: NotifyVolunteerSessionDecisionParams): Promise<void> {
   const supabase = await createServiceClient();
 
@@ -30,43 +38,55 @@ export async function notifyVolunteerSessionDecision({
   const email = user.email;
   const pushToken = user.user_metadata?.push_token as string | undefined;
 
-  const subject =
-    decision === 'approved'
-      ? 'Your volunteer session has been approved!'
-      : 'Update on your volunteer session';
-
-  let emailBody = '';
-  if (decision === 'approved') {
-    emailBody = `
-      <p>Good news! Your volunteer session has been approved.</p>
-      ${activity ? `<p>Activity: ${activity}</p>` : ''}
-      <p>Thank you for your service to the community.</p>
-    `;
-  } else {
-    emailBody = `
-      <p>We have reviewed your volunteer session and it has not been approved.</p>
-      ${declineReason ? `<p>Reason: ${declineReason}</p>` : ''}
-      ${activity ? `<p>Activity: ${activity}</p>` : ''}
-      <p>If you have questions, please reach out to us.</p>
-    `;
-  }
+  const template = await getTemplate(decision === 'approved' ? 'approved' : 'declined');
+  const templateVars = { activity: activity ?? null, decline_reason: declineReason ?? null };
+  const subject = renderTemplate(template.subject, templateVars);
+  const emailBody = renderTemplate(template.bodyHtml, templateVars, { escapeHtml: true });
 
   if (email) {
     try {
       const resend = getResendClient();
       if (resend) {
-        await resend.emails.send({
+        const { data, error: sendError } = await resend.emails.send({
           from: getFromAddress(),
           to: email,
           subject,
           html: emailBody,
         });
         console.log(`[notify] Email sent to ${email} for session ${sessionId}`);
+        await logEmailSend(supabase, {
+          userId,
+          sessionId,
+          templateType: decision === 'approved' ? 'approved' : 'declined',
+          toEmail: email,
+          subject,
+          status: sendError ? 'failed' : 'sent',
+          resendMessageId: data?.id ?? null,
+          adminUserId: adminUserId ?? null,
+        });
+        if (adminUserId) {
+          await writeAuditLog(supabase, {
+            adminUserId,
+            action: 'email sent',
+            targetTable: 'sessions',
+            targetId: sessionId,
+            afterValue: { decision, to: email },
+          });
+        }
       } else {
         console.log(`[notify] Resend not configured; skipping email to ${email}`);
       }
     } catch (err) {
       console.error(`[notify] Failed to send email to ${email}:`, err);
+      await logEmailSend(supabase, {
+        userId,
+        sessionId,
+        templateType: decision === 'approved' ? 'approved' : 'declined',
+        toEmail: email,
+        subject,
+        status: 'failed',
+        adminUserId: adminUserId ?? null,
+      });
     }
   }
 

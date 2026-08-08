@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { BottomNavBar } from '@/components/navigation/BottomNavBar';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { useLiveSession } from '@/features/session-tracking/liveSessionStore';
 import { removeVolunteerSessions } from '@/features/session-tracking/removeVolunteerSession';
 import {
@@ -632,20 +633,22 @@ export function SessionsScreen() {
           </View>
         ) : filteredSessions.length === 0 ? (
           sessionSource.length === 0 ? (
-            <View style={s.emptyCtaWrap}>
-              <Text style={s.emptyCtaText}>No sessions logged yet.</Text>
-              <AnimatedPressable
-                scaleTo={0.98}
-                onPress={() => router.push('/session-setup-guide')}
-                accessibilityRole="button"
-                accessibilityLabel="Log session"
-                style={s.retryButton}
-              >
-                <Text style={s.retryLabel}>Log session?</Text>
-              </AnimatedPressable>
-            </View>
+            <EmptyState
+              title="No sessions logged yet."
+              ctaLabel="Log session?"
+              ctaAccessibilityLabel="Log session"
+              onCtaPress={() => router.push('/session-setup-guide')}
+            />
           ) : (
-            <Text style={s.emptyText}>No sessions match your filter.</Text>
+            <EmptyState
+              title="No sessions match your filter."
+              ctaLabel="Clear filters"
+              ctaAccessibilityLabel="Clear filters"
+              onCtaPress={() => {
+                setFilter('all');
+                setQuery('');
+              }}
+            />
           )
         ) : (
           <View style={s.rows}>
@@ -985,30 +988,10 @@ const s = StyleSheet.create({
     textAlign: 'center',
     paddingVertical: 24,
   },
-  emptyCtaWrap: {
-    alignItems: 'center',
-    gap: 4,
-    paddingVertical: 24,
-  },
-  emptyCtaText: {
-    fontFamily: fontFamilies.notoSansRegular,
-    fontSize: 14,
-    color: colors.textNavInactive,
-    textAlign: 'center',
-  },
   loadingWrap: {
     alignItems: 'center',
     gap: 12,
     paddingVertical: 24,
-  },
-  retryButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  retryLabel: {
-    fontFamily: fontFamilies.notoSansSemiBold,
-    fontSize: 14,
-    color: colors.primary,
   },
   viewMore: {
     alignItems: 'center',

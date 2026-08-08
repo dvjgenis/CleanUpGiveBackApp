@@ -18,6 +18,7 @@ import {
 } from './formatters.js';
 import {
   ServiceLetterDocument,
+  type CourtCoverSheetProps,
   type ServiceLetterPdfProps,
   type ServiceLetterSessionEvidence,
 } from './ServiceLetterPdf.js';
@@ -113,6 +114,12 @@ async function buildSessionEvidence(session: SessionWithCheckpoints): Promise<Se
   const title = session.activity?.trim() || session.description?.trim() || 'Cleanup session';
   const hours = sessionHours(session);
 
+  const rawHours = session.durationSeconds != null ? session.durationSeconds / 3600 : null;
+  const adjustmentNote =
+    session.adjustedHours != null && rawHours != null && Math.abs(Number(session.adjustedHours) - rawHours) > 0.05
+      ? `Adjusted from ${formatHoursValue(rawHours)}h to ${formatHoursValue(Number(session.adjustedHours))}h by admin.`
+      : null;
+
   return {
     title,
     startLabel: formatSessionDateTime(session.startedAt),
@@ -121,6 +128,7 @@ async function buildSessionEvidence(session: SessionWithCheckpoints): Promise<Se
     milesLabel: formatMiles(session.distanceMiles),
     mapImageDataUri,
     photos,
+    adjustmentNote,
   };
 }
 
@@ -165,9 +173,41 @@ export async function loadSessionsForServiceLetter(
   return sessions;
 }
 
+async function buildCourtCoverSheet(
+  volunteerId: string,
+  totalHours: number,
+): Promise<CourtCoverSheetProps> {
+  const courtOrder = await prisma.courtOrder.findFirst({
+    where: { userId: volunteerId },
+    orderBy: { createdAt: 'desc' },
+  });
+  if (!courtOrder) {
+    throw new ServiceLetterError('This volunteer has no court order on file', 400);
+  }
+
+  const requiredHours = Number(courtOrder.requiredHours);
+  // Completed hours only count *approved* court-ordered sessions — this mirrors
+  // admin-web-app's `lib/court-risk.ts`, kept deliberately duplicated here since
+  // backend/sessions is a separate deployable (see `routes/courtProgress.ts`).
+  const completedSessions = await prisma.session.findMany({
+    where: { userId: volunteerId, status: SessionStatus.approved, courtOrdered: true },
+    select: { durationSeconds: true, adjustedHours: true },
+  });
+  const completedHours = completedSessions.reduce((sum, session) => sum + sessionHours(session), 0);
+  const completionPercent = requiredHours > 0 ? Math.min(100, (completedHours / requiredHours) * 100) : 0;
+
+  return {
+    caseReference: courtOrder.caseReference,
+    dueDateLabel: courtOrder.dueDate ? formatSessionDate(courtOrder.dueDate) : null,
+    requiredHoursLabel: `${formatHoursValue(requiredHours)}h`,
+    completedHoursLabel: `${formatHoursValue(completedHours)}h`,
+    completionPercentLabel: `${Math.round(completionPercent)}%`,
+  };
+}
+
 export async function buildServiceLetterPdf(
   sessionIds: string[],
-  options: { userId?: string; isAdmin: boolean },
+  options: { userId?: string; isAdmin: boolean; includeCourtCoverSheet?: boolean },
 ): Promise<{ buffer: Buffer; filename: string }> {
   const sessions = await loadSessionsForServiceLetter(sessionIds, options);
   const volunteerId = sessions[0]?.userId;
@@ -179,9 +219,10 @@ export async function buildServiceLetterPdf(
   const totalHours = sessions.reduce((sum, session) => sum + sessionHours(session), 0);
   const { start, end } = sessionRangeBounds(sessions);
 
-  const [logoDataUri, signatureDataUri, ...sessionEvidence] = await Promise.all([
+  const [logoDataUri, signatureDataUri, courtCoverSheet, ...sessionEvidence] = await Promise.all([
     readAssetDataUri('logo-icon-78x94.jpg', 'image/jpeg'),
     readAssetDataUri('DonnaAdamSignature.png', 'image/png'),
+    options.includeCourtCoverSheet ? buildCourtCoverSheet(volunteerId, totalHours) : Promise.resolve(undefined),
     ...sessions.map((session) => buildSessionEvidence(session)),
   ]);
 
@@ -194,6 +235,7 @@ export async function buildServiceLetterPdf(
     logoDataUri,
     signatureDataUri,
     sessions: sessionEvidence,
+    courtCoverSheet,
   };
 
   const buffer = await renderToBuffer(<ServiceLetterDocument {...props} />);
@@ -204,10 +246,8 @@ export async function buildServiceLetterPdf(
   });
 
   const today = new Date().toISOString().slice(0, 10);
-  const filename =
-    sessions.length > 1
-      ? `CGB-Service-Letter-${today}-multi.pdf`
-      : `CGB-Service-Letter-${today}.pdf`;
+  const prefix = options.includeCourtCoverSheet ? 'CGB-Court-Packet' : 'CGB-Service-Letter';
+  const filename = sessions.length > 1 ? `${prefix}-${today}-multi.pdf` : `${prefix}-${today}.pdf`;
 
   return { buffer: Buffer.from(buffer), filename };
 }

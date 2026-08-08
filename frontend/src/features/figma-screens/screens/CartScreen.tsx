@@ -5,6 +5,7 @@ import { useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { SessionSetupBackChevronIcon } from '@/components/session-setup/icons/SessionSetupBackChevronIcon';
 
 import {
@@ -251,19 +252,13 @@ export function CartScreen() {
 
         <View style={s.mainStack}>
           {items.length === 0 ? (
-            <View style={s.emptyCard}>
-              <Text style={s.emptyTitle}>Your cart is empty</Text>
-              <Text style={s.emptyBody}>Browse the shop to add cleanup gear.</Text>
-              <AnimatedPressable
-                scaleTo={0.98}
-                style={s.emptyCta}
-                onPress={() => router.replace('/shop' as Href)}
-                accessibilityRole="button"
-                accessibilityLabel="Go to shop"
-              >
-                <Text style={s.emptyCtaText}>Browse Shop</Text>
-              </AnimatedPressable>
-            </View>
+            <EmptyState
+              title="Your cart is empty"
+              body="Browse the shop to add cleanup gear."
+              ctaLabel="Browse Shop"
+              ctaAccessibilityLabel="Go to shop"
+              onCtaPress={() => router.replace('/shop' as Href)}
+            />
           ) : (
             items.map((item) => (
               <CartItemCard
@@ -705,39 +700,5 @@ const s = StyleSheet.create({
     fontFamily: fontFamilies.notoSansRegular,
     fontSize: 12,
     color: colors.textNavInactive,
-  },
-  emptyCard: {
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.borderOutline,
-    borderRadius: 12,
-    padding: 24,
-    gap: 8,
-    alignItems: 'center',
-  },
-  emptyTitle: {
-    fontFamily: fontFamilies.notoSansMedium,
-    fontSize: 16,
-    color: colors.textPrimary,
-  },
-  emptyBody: {
-    fontFamily: fontFamilies.notoSansRegular,
-    fontSize: 14,
-    color: colors.textNavInactive,
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  emptyCta: {
-    height: 44,
-    paddingHorizontal: 20,
-    borderRadius: radius.md,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyCtaText: {
-    fontFamily: fontFamilies.notoSansSemiBold,
-    fontSize: 14,
-    color: colors.textOnPrimary,
   },
 });

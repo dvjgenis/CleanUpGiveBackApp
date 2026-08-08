@@ -1,19 +1,25 @@
 /**
- * Admin has no dedicated Settings nav page, so this is not a port of any
- * specific admin route — just a placeholder that stays visually consistent
- * with the shared design tokens (loosely modeled on the Account page's
- * card/typography style, per the task's explicit guidance not to fabricate
- * "real" admin copy for a page that doesn't exist).
+ * Admin has no dedicated Settings nav page beyond this one, loosely modeled on the
+ * Account page's card/typography style. The Notifications section below is still a
+ * placeholder (no real preferences wiring exists yet); Production Readiness is live —
+ * see `lib/health-checks.ts` / `actions/health.ts` / `ProductionReadinessPanel.tsx`.
  */
-export function SettingsPage() {
+import { runAllHealthChecks } from "@/lib/health-checks";
+import { ProductionReadinessPanel } from "@/components/ui/ProductionReadinessPanel";
+
+export async function SettingsPage() {
+  const initialChecks = await runAllHealthChecks();
+
   return (
-    <div className="max-w-2xl mx-auto">
-      <header className="mb-lg">
+    <div className="max-w-2xl mx-auto flex flex-col gap-lg">
+      <header>
         <h1 className="font-heading text-[28px] leading-[36px] text-text-primary">Settings</h1>
         <p className="mt-xs font-body text-[14px] text-text-tertiary">
-          Preferences and notifications for the CleanUpGiveBack admin portal.
+          Preferences and system health for the CleanUpGiveBack admin portal.
         </p>
       </header>
+
+      <ProductionReadinessPanel initialChecks={initialChecks} />
 
       <section className="bg-bg-surface border border-border-outline rounded-md overflow-hidden">
         <div className="px-lg py-md border-b border-border-outline">
@@ -33,8 +39,8 @@ export function SettingsPage() {
         </div>
       </section>
 
-      <p className="mt-lg font-body text-[13px] text-text-tertiary">
-        This is a placeholder page — admin has no dedicated Settings route today.
+      <p className="font-body text-[13px] text-text-tertiary">
+        Notifications preferences are a placeholder — admin has no dedicated wiring for them today.
       </p>
     </div>
   );

@@ -423,6 +423,123 @@ export async function loadLiveVolunteerById(id: string): Promise<LiveResult<Volu
   }
 }
 
+export type TimelineEvent = {
+  id: string;
+  action: string;
+  targetTable: string;
+  targetId: string | null;
+  beforeValue: unknown;
+  afterValue: unknown;
+  createdAt: string;
+};
+
+/**
+ * Chronological review timeline for the volunteer profile page — sessions' status changes,
+ * declines, hours adjustments, admin notes, court-order edits, emails sent, and volunteer
+ * deletes, all sourced from `admin_audit_log`.
+ *
+ * `admin_audit_log.target_id` means different things per action: for `sessions` rows it's
+ * the session id; for `court_orders` rows `upsertCourtOrder` (`actions/courtOrders.ts`)
+ * stores the *volunteer's* user id (not the court-order row's own id, since a volunteer has
+ * at most one order); for `volunteer deleted session` it's the (now-deleted) session id, so
+ * that branch is matched by `admin_user_id = userId` instead — see `backend/sessions/src/
+ * routes/sessions.ts` where the volunteer's own id is written as the audit's admin_user_id.
+ */
+export async function loadVolunteerTimeline(
+  userId: string,
+  sessionIds: string[],
+): Promise<TimelineEvent[]> {
+  const supabase = await createDataClient();
+
+  const sessionIdList = sessionIds.filter(Boolean);
+  const orFilters = [
+    `and(target_table.eq.court_orders,target_id.eq.${userId})`,
+    `and(admin_user_id.eq.${userId},action.eq.volunteer deleted session)`,
+  ];
+  if (sessionIdList.length > 0) {
+    orFilters.unshift(`and(target_table.eq.sessions,target_id.in.(${sessionIdList.join(',')}))`);
+  }
+
+  const { data, error } = await supabase
+    .from('admin_audit_log')
+    .select('id, action, target_table, target_id, before_value, after_value, performed_at')
+    .or(orFilters.join(','))
+    .order('performed_at', { ascending: false });
+
+  if (error || !data) return [];
+
+  return data.map((row) => ({
+    id: row.id,
+    action: row.action,
+    targetTable: row.target_table,
+    targetId: row.target_id,
+    beforeValue: row.before_value,
+    afterValue: row.after_value,
+    createdAt: row.performed_at,
+  }));
+}
+
+export type EmailLogEntry = {
+  id: string;
+  templateType: string;
+  toEmail: string;
+  subject: string;
+  status: string;
+  sentAt: string;
+};
+
+/** Every logged email send to this volunteer, for the profile's Communication section. */
+export async function loadVolunteerEmailLog(userId: string): Promise<EmailLogEntry[]> {
+  const supabase = await createDataClient();
+  const { data, error } = await supabase
+    .from('email_log')
+    .select('id, template_type, to_email, subject, status, sent_at')
+    .eq('user_id', userId)
+    .order('sent_at', { ascending: false });
+
+  // Table may not exist yet if the migration hasn't been applied — degrade to empty.
+  if (error || !data) return [];
+
+  return data.map((row) => ({
+    id: row.id,
+    templateType: row.template_type,
+    toEmail: row.to_email,
+    subject: row.subject,
+    status: row.status,
+    sentAt: row.sent_at,
+  }));
+}
+
+export type ContactNoteEntry = {
+  id: string;
+  note: string;
+  adminUserId: string;
+  performedAt: string;
+};
+
+/** Manual "called/texted the volunteer" notes logged via `logManualContactNote`. */
+export async function loadVolunteerContactNotes(userId: string): Promise<ContactNoteEntry[]> {
+  const supabase = await createDataClient();
+  const { data, error } = await supabase
+    .from('admin_audit_log')
+    .select('id, admin_user_id, after_value, performed_at')
+    .eq('target_table', 'volunteers')
+    .eq('target_id', userId)
+    .eq('action', 'logged contact note')
+    .order('performed_at', { ascending: false });
+
+  if (error || !data) return [];
+
+  return data
+    .map((row) => {
+      const note = row.after_value && typeof row.after_value === 'object' ? (row.after_value as { note?: string }).note : null;
+      return note
+        ? { id: row.id, note, adminUserId: row.admin_user_id, performedAt: row.performed_at }
+        : null;
+    })
+    .filter((entry): entry is ContactNoteEntry => entry != null);
+}
+
 /** Load a single order by ID with full details including shipping, tracking, and line items */
 export async function loadLiveOrderById(id: string): Promise<LiveResult<OrderRow | null>> {
   const supabase = await createDataClient();
@@ -505,6 +622,100 @@ function parseLineItems(itemsData: any): OrderLineItem[] {
       };
     })
     .filter(Boolean) as OrderLineItem[];
+}
+
+export type CourtRiskDashboardRow = {
+  id: string;
+  name: string;
+  requiredHours: number;
+  completedHours: number;
+  status: 'in_progress' | 'at_risk' | 'completed';
+  dueDate: string;
+  invalidSessionsLast30Days: number;
+  nearDeadlineVolumeSpike: boolean;
+};
+
+/**
+ * Court-risk dashboard row per volunteer, extending `buildCourtRisk()`'s
+ * in_progress/at_risk/completed classification with the other two signals
+ * requested (invalid-session count, sudden session spike) — both already
+ * computed per-volunteer by `buildActivityPattern` for the profile page's
+ * Activity Pattern card, just batched here across every court-ordered
+ * volunteer in 3 queries total instead of N.
+ */
+export async function loadCourtRiskDashboard(): Promise<LiveResult<CourtRiskDashboardRow[]>> {
+  const supabase = await createDataClient();
+  const { data: courtOrders } = await supabase
+    .from('court_orders')
+    .select('user_id, required_hours, due_date');
+
+  if (!courtOrders || courtOrders.length === 0) {
+    return { data: [], useMock: false };
+  }
+
+  const orderRows = courtOrders as CourtRiskOrderRow[];
+  const userIds = orderRows.map((o) => o.user_id);
+
+  const [{ data: sessions }, { data: deleteRows }, directory] = await Promise.all([
+    supabase
+      .from('sessions')
+      .select('user_id, status, court_ordered, duration_seconds, adjusted_hours, started_at')
+      .neq('status', 'active')
+      .in('user_id', userIds),
+    supabase
+      .from('admin_audit_log')
+      .select('admin_user_id')
+      .eq('action', 'volunteer deleted session')
+      .in('admin_user_id', userIds),
+    getVolunteerDirectory(),
+  ]);
+
+  const sessionRows = (sessions ?? []) as {
+    user_id: string;
+    status: string;
+    court_ordered: boolean;
+    duration_seconds: number | null;
+    adjusted_hours: number | null;
+    started_at: string | null;
+  }[];
+
+  const deleteCountByUser = new Map<string, number>();
+  for (const row of deleteRows ?? []) {
+    deleteCountByUser.set(row.admin_user_id, (deleteCountByUser.get(row.admin_user_id) ?? 0) + 1);
+  }
+
+  const sessionsByUser = new Map<string, typeof sessionRows>();
+  for (const s of sessionRows) {
+    const list = sessionsByUser.get(s.user_id) ?? [];
+    list.push(s);
+    sessionsByUser.set(s.user_id, list);
+  }
+
+  const risk = buildCourtRisk(orderRows, sessionRows, directory, new Date());
+  const riskByUser = new Map(risk.map((r) => [r.id, r]));
+
+  const now = new Date();
+  const rows: CourtRiskDashboardRow[] = orderRows.map((order) => {
+    const r = riskByUser.get(order.user_id);
+    const pattern = buildActivityPattern(
+      sessionsByUser.get(order.user_id) ?? [],
+      deleteCountByUser.get(order.user_id) ?? 0,
+      order.due_date,
+      now,
+    );
+    return {
+      id: order.user_id,
+      name: r?.name ?? getVolunteerName(directory, order.user_id),
+      requiredHours: order.required_hours,
+      completedHours: r?.completedHours ?? 0,
+      status: r?.status ?? 'in_progress',
+      dueDate: order.due_date ?? '',
+      invalidSessionsLast30Days: pattern.invalidSessionsLast30Days,
+      nearDeadlineVolumeSpike: pattern.nearDeadlineVolumeSpike,
+    };
+  });
+
+  return { data: rows, useMock: false };
 }
 
 type CourtOrderRow = { user_id: string; required_hours: number; due_date: string | null };

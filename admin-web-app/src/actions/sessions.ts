@@ -144,6 +144,7 @@ export async function approveSession(sessionId: string, confirmOverride?: string
     sessionId,
     decision: 'approved',
     activity: before.activity,
+    adminUserId: user.id,
   });
 
   revalidateSessionPaths();
@@ -188,6 +189,7 @@ export async function declineSession(sessionId: string, reason?: string) {
     decision: 'declined',
     declineReason: reason,
     activity: before.activity,
+    adminUserId: user.id,
   });
 
   revalidateSessionPaths();

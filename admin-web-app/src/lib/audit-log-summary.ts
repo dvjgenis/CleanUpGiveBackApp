@@ -26,6 +26,12 @@ const ACTION_LABELS: Record<string, string> = {
   'created court order': 'Created court order',
   'updated court order': 'Updated court order',
   'volunteer deleted session': 'Volunteer deleted a session',
+  'email sent': 'Emailed volunteer',
+  'logged contact note': 'Logged contact note',
+  'updated email template': 'Updated email template',
+  'created email template': 'Created email template',
+  'deleted email template': 'Deleted email template',
+  'sent email': 'Sent email',
 };
 
 /** Title-cases anything not in the map above, so a new action type never shows raw. */
@@ -61,10 +67,15 @@ const FIELD_LABELS: Record<string, string> = {
   due_date: 'Due date',
   case_reference: 'Case reference',
   letterhead_generated_at: 'Letterhead',
+  note: 'Note',
+  subject: 'Subject',
+  body_html: 'Body',
+  name: 'Name',
+  to_email: 'To',
 };
 
 /** Fields that only exist to identify the row, never worth showing as a "change." */
-const SKIP_FIELDS = new Set(['id', 'user_id']);
+const SKIP_FIELDS = new Set(['id', 'user_id', 'template_type']);
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -82,7 +93,28 @@ function formatFieldValue(field: string, value: unknown): string {
   return String(value);
 }
 
-export type AuditChangeLine = { label: string; from: string; to: string };
+export type AuditValueTone = 'positive' | 'negative' | 'neutral';
+
+export type AuditChangeLine = {
+  label: string;
+  from: string;
+  to: string;
+  /** Tone per side, driven by the actual value (e.g. "Declined" is negative on
+   * either side of the diff) — never by column position. Undefined for fields
+   * with no inherent good/bad reading (hours, notes, dates, ...). */
+  fromTone?: AuditValueTone;
+  toTone?: AuditValueTone;
+};
+
+/** Only `status` currently carries an inherent positive/negative reading —
+ * reuses the same tone as the session status chip so "Declined" is never
+ * colored the same as "Approved" regardless of which column it lands in. */
+function fieldValueTone(field: string, value: unknown): AuditValueTone | undefined {
+  if (field !== 'status' || typeof value !== 'string' || value === '') return undefined;
+  if (value === 'approved') return 'positive';
+  if (value === 'not_approved' || value === 'invalid') return 'negative';
+  return 'neutral';
+}
 
 /** One line per field that actually changed between before/after — empty array if the
  * action didn't record a comparable diff (e.g. a plain create with no prior row). */
@@ -99,6 +131,8 @@ export function describeAuditChanges(before: unknown, after: unknown): AuditChan
       label: FIELD_LABELS[key] ?? key,
       from: formatFieldValue(key, prev),
       to: formatFieldValue(key, value),
+      fromTone: fieldValueTone(key, prev),
+      toTone: fieldValueTone(key, value),
     });
   }
   return lines;
@@ -118,7 +152,7 @@ export function auditTargetLabel(log: AuditLogRow): AuditTarget {
     return {
       label: typeof activity === 'string' && activity ? activity : 'Cleanup session',
       shortId,
-      href: log.target_id ? `/sessions/${log.target_id}` : null,
+      href: log.target_id ? `/sessions?period=all&open=${log.target_id}` : null,
     };
   }
 
@@ -137,6 +171,28 @@ export function auditTargetLabel(log: AuditLogRow): AuditTarget {
 
   if (log.target_table === 'shop_orders') {
     return { label: 'Shop order', shortId, href: log.target_id ? `/orders/${log.target_id}` : null };
+  }
+
+  if (log.target_table === 'volunteers') {
+    return { label: 'Volunteer contact note', shortId, href: log.target_id ? `/volunteers/${log.target_id}` : null };
+  }
+
+  if (log.target_table === 'email_templates') {
+    const name = before.name ?? after.name ?? before.template_type ?? after.template_type;
+    return {
+      label: typeof name === 'string' ? `Email template · ${name}` : 'Email template',
+      shortId: null,
+      href: '/emails?tab=templates',
+    };
+  }
+
+  if (log.target_table === 'email') {
+    const toEmail = after.to_email;
+    return {
+      label: typeof toEmail === 'string' ? `Email to ${toEmail}` : 'Email',
+      shortId: null,
+      href: log.target_id ? `/volunteers/${log.target_id}` : '/emails',
+    };
   }
 
   return { label: log.target_table, shortId, href: null };

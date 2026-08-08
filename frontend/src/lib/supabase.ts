@@ -80,6 +80,18 @@ export async function getUserId(): Promise<string | null> {
   return session?.user?.id ?? null;
 }
 
+/** `user_metadata.service_type` synced at onboarding via `syncVolunteerProfile` — used
+ * to gate the Court Progress card even before an admin has entered a court order. */
+export async function getServiceType(): Promise<string | null> {
+  if (!supabase) {
+    return null;
+  }
+
+  const session = (await ensureAnonymousAuth()) ?? (await supabase.auth.getSession()).data.session;
+  const serviceType = session?.user?.user_metadata?.service_type;
+  return typeof serviceType === 'string' && serviceType ? serviceType : null;
+}
+
 const SYNC_VOLUNTEER_PROFILE_RETRY_DELAYS_MS = [500, 1500, 3000];
 
 function delay(ms: number): Promise<void> {

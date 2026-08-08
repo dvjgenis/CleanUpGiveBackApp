@@ -20,6 +20,7 @@ export async function GET(request: Request, context: { params: Promise<{ volunte
   const { searchParams } = new URL(request.url);
   const from = searchParams.get('from');
   const to = searchParams.get('to');
+  const courtPacket = searchParams.get('courtPacket') === 'true';
 
   const serviceClient = await createServiceClient();
   let query = serviceClient
@@ -51,7 +52,7 @@ export async function GET(request: Request, context: { params: Promise<{ volunte
       'Content-Type': 'application/json',
       'x-admin-key': adminKey,
     },
-    body: JSON.stringify({ sessionIds }),
+    body: JSON.stringify({ sessionIds, courtPacket }),
   });
 
   if (!upstream.ok) {

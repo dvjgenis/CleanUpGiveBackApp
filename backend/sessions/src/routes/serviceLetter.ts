@@ -6,6 +6,7 @@ import { buildServiceLetterPdf, ServiceLetterError } from '../letterhead/buildSe
 
 type BulkBody = {
   sessionIds?: string[];
+  courtPacket?: boolean;
 };
 
 function authContext(request: AuthenticatedRequest) {
@@ -19,6 +20,7 @@ async function sendServiceLetterPdf(
   sessionIds: string[],
   request: AuthenticatedRequest,
   reply: import('fastify').FastifyReply,
+  courtPacket: boolean,
 ) {
   try {
     const ctx = authContext(request);
@@ -29,6 +31,7 @@ async function sendServiceLetterPdf(
     const { buffer, filename } = await buildServiceLetterPdf(sessionIds, {
       userId: ctx.userId,
       isAdmin: ctx.isAdmin,
+      includeCourtCoverSheet: courtPacket,
     });
 
     return reply
@@ -51,17 +54,17 @@ export async function registerServiceLetterRoutes(app: FastifyInstance) {
     async (request, reply) => {
       const authRequest = request as AuthenticatedRequest;
       const sessionIds = request.body?.sessionIds ?? [];
-      return sendServiceLetterPdf(sessionIds, authRequest, reply);
+      return sendServiceLetterPdf(sessionIds, authRequest, reply, request.body?.courtPacket ?? false);
     },
   );
 
-  app.get<{ Params: { id: string } }>(
+  app.get<{ Params: { id: string }; Querystring: { courtPacket?: string } }>(
     '/sessions/:id/service-letter.pdf',
     { preHandler: verifyAuthOrAdmin },
     async (request, reply) => {
       const authRequest = request as AuthenticatedRequest;
       const { id } = request.params;
-      return sendServiceLetterPdf([id], authRequest, reply);
+      return sendServiceLetterPdf([id], authRequest, reply, request.query?.courtPacket === 'true');
     },
   );
 }

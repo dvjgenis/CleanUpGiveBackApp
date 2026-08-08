@@ -9,6 +9,8 @@ const JWKS = SUPABASE_URL
 
 export type AuthenticatedRequest = FastifyRequest & {
   userId: string;
+  /** From the JWT's `email` claim — undefined for anonymous/no-email accounts. */
+  email?: string;
   isAdmin?: boolean;
 };
 
@@ -41,6 +43,9 @@ export async function verifyAuth(
     }
 
     (request as AuthenticatedRequest).userId = sub;
+    if (typeof payload.email === 'string') {
+      (request as AuthenticatedRequest).email = payload.email;
+    }
   } catch {
     reply.code(401).send({ error: 'Invalid or expired token' });
   }

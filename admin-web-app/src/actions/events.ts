@@ -12,6 +12,9 @@ import { redirect } from 'next/navigation';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { writeAuditLog } from '@/lib/audit';
+import { logEmailSend } from '@/lib/email-log';
+import { getTemplate } from '@/lib/email-templates';
+import { renderTemplate } from '@/lib/email-template-render';
 import { getResendClient, getFromAddress } from '@/lib/resend';
 import { getVolunteerDirectory } from '@/lib/volunteers';
 import { fromDatetimeLocalValue, formatEventWhen, type EventRow } from '@/lib/events';
@@ -298,7 +301,7 @@ export async function notifyAtRiskVolunteers(
   const directory = await getVolunteerDirectory();
   const resend = getResendClient();
   const when = formatEventWhen(event.starts_at, event.ends_at);
-  const mapsUrl = eventMapsUrl(event);
+  const template = await getTemplate('at_risk_nudge');
 
   let sent = 0;
   let failed = 0;
@@ -315,27 +318,29 @@ export async function notifyAtRiskVolunteers(
       continue;
     }
 
-    const { error } = await resend.emails.send({
+    const templateVars = {
+      volunteer_name: entry.name,
+      event_title: event.title,
+      event_when: when,
+      event_address: event.address?.trim() || event.location?.trim() || null,
+      event_maps_url: eventMapsUrl(event),
+    };
+    const subject = renderTemplate(template.subject, templateVars);
+    const { data, error } = await resend.emails.send({
       from: getFromAddress(),
       to: entry.email,
-      subject: `Catch up on your court hours: ${event.title}`,
-      text: [
-        `Hi ${entry.name},`,
-        '',
-        "You still have court-ordered hours remaining. Here's an upcoming Clean Up Give Back event you can join:",
-        '',
-        event.title,
-        when,
-        event.location?.trim() || null,
-        event.address?.trim() || null,
-        mapsUrl ? `Directions: ${mapsUrl}` : null,
-        '',
-        'Open the Clean Up Give Back app to register.',
-        '',
-        '— Clean Up Give Back',
-      ]
-        .filter((line): line is string => line != null)
-        .join('\n'),
+      subject,
+      html: renderTemplate(template.bodyHtml, templateVars, { escapeHtml: true }),
+    });
+
+    await logEmailSend(supabase, {
+      userId,
+      templateType: 'at_risk_nudge',
+      toEmail: entry.email,
+      subject,
+      status: error ? 'failed' : 'sent',
+      resendMessageId: data?.id ?? null,
+      adminUserId: user.id,
     });
 
     if (error) failed += 1;

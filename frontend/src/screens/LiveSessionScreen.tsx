@@ -49,6 +49,7 @@ import {
   isCheckpointInGracePeriod,
   isCheckpointMissed,
   requestLiveSessionMapRecenter,
+  retryCheckpointSync,
   setLiveSessionMapFollow,
   setLiveSessionMapLayer,
   useLiveSession,
@@ -298,6 +299,21 @@ export function LiveSessionScreen() {
   const submittedCheckpointCount = submittedCheckpoints.length;
   const showSubmissionCount = shouldShowCheckpointSubmissionCount(submittedCheckpoints);
   const submittedCheckpointLabel = formatSubmittedCheckpointCount(submittedCheckpointCount);
+  const failedCheckpoints = useMemo(
+    () => submittedCheckpoints.filter((cp) => cp.syncStatus === 'failed'),
+    [submittedCheckpoints],
+  );
+  const [retryingCheckpoints, setRetryingCheckpoints] = useState(false);
+
+  const handleRetryFailedCheckpoints = useCallback(async () => {
+    if (retryingCheckpoints || failedCheckpoints.length === 0) return;
+    setRetryingCheckpoints(true);
+    try {
+      await Promise.all(failedCheckpoints.map((cp) => retryCheckpointSync(cp.id)));
+    } finally {
+      setRetryingCheckpoints(false);
+    }
+  }, [failedCheckpoints, retryingCheckpoints]);
   const viewerPhotos = useMemo(
     () => buildCheckpointViewerPhotos(submittedCheckpoints),
     [submittedCheckpoints],
@@ -566,6 +582,28 @@ export function LiveSessionScreen() {
                           />
                         </AnimatedPressable>
                       ))}
+                    </View>
+                  )}
+                  {showSubmissionCount && (
+                    <View style={s.checkpointSyncRow}>
+                      <Text style={[s.checkpointSyncText, { color: chrome.textTertiary }]}>
+                        {failedCheckpoints.length > 0
+                          ? `Saved on this device · ${failedCheckpoints.length} not yet synced`
+                          : 'Saved on this device'}
+                      </Text>
+                      {failedCheckpoints.length > 0 && (
+                        <AnimatedPressable
+                          scaleTo={0.98}
+                          onPress={handleRetryFailedCheckpoints}
+                          disabled={retryingCheckpoints}
+                          accessibilityRole="button"
+                          accessibilityLabel="Retry checkpoint upload"
+                        >
+                          <Text style={[s.checkpointSyncRetry, { color: chrome.primary }]}>
+                            {retryingCheckpoints ? 'Retrying…' : 'Retry upload'}
+                          </Text>
+                        </AnimatedPressable>
+                      )}
                     </View>
                   )}
                   <View style={s.nextPhotoBlock}>
@@ -846,6 +884,20 @@ function createStyles(_chrome: TrackerChromeColors) {
       width: CHECKPOINT_THUMB_SIZE,
       height: CHECKPOINT_THUMB_SIZE,
       borderRadius: radius.sm,
+    },
+    checkpointSyncRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: 2,
+    },
+    checkpointSyncText: {
+      fontFamily: 'NotoSans_400Regular',
+      fontSize: 11,
+    },
+    checkpointSyncRetry: {
+      fontFamily: 'NotoSans_500Medium',
+      fontSize: 11,
     },
     nextPhotoBlock: {
       gap: 10,

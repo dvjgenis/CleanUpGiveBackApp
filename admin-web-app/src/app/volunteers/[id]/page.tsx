@@ -4,8 +4,15 @@ import { ChevronLeftIcon } from '@/components/ui/Icons';
 import { InfoRow } from '@/components/ui/InfoRow';
 import { StatusChip } from '@/components/ui/StatusChip';
 import { CourtOrderForm } from '@/components/ui/CourtOrderForm';
+import { VolunteerTimeline } from '@/components/ui/VolunteerTimeline';
+import { VolunteerCommunicationLog } from '@/components/ui/VolunteerCommunicationLog';
 import { formatDate, formatDateTime } from '@/lib/mock-data';
-import { loadLiveVolunteerById } from '@/lib/live-data';
+import {
+  loadLiveVolunteerById,
+  loadVolunteerTimeline,
+  loadVolunteerEmailLog,
+  loadVolunteerContactNotes,
+} from '@/lib/live-data';
 import { SidebarDemo } from '@/components/ui/sidebar-demo';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -78,8 +85,17 @@ export default async function VolunteerProfilePage({
   
   try {
     const { data: volunteer, useMock } = await loadLiveVolunteerById(id);
-    
+
     if (!volunteer) notFound();
+
+  const [timelineEvents, emailLog, contactNotes] = await Promise.all([
+    loadVolunteerTimeline(
+      volunteer.id,
+      volunteer.sessions.map((s) => s.id),
+    ),
+    loadVolunteerEmailLog(volunteer.id),
+    loadVolunteerContactNotes(volunteer.id),
+  ]);
 
   const approvedSessions = volunteer.sessions.filter((s) => s.status === 'approved');
 
@@ -241,6 +257,16 @@ export default async function VolunteerProfilePage({
               </div>
             </>
           )}
+
+          <h2 className="font-heading text-[18px] leading-[26px] text-text-primary mb-md">
+            Communication
+          </h2>
+          <VolunteerCommunicationLog volunteerId={volunteer.id} emails={emailLog} notes={contactNotes} />
+
+          <h2 className="font-heading text-[18px] leading-[26px] text-text-primary mb-md">
+            Timeline
+          </h2>
+          <VolunteerTimeline events={timelineEvents} />
 
           <h2 className="font-heading text-[18px] leading-[26px] text-text-primary mb-md">
             Session History

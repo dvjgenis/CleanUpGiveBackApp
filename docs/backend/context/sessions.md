@@ -17,15 +17,17 @@ Fastify service in `backend/sessions/` on Fly.io (`https://cleanup-sessions.fly.
 | Method | Route | Purpose |
 |--------|-------|---------|
 | GET | `/health` | Fly health check |
+| GET | `/health/deep` | Checks Prisma DB connectivity (`SELECT 1`); polled by admin-web-app's `/settings` production readiness page |
 | POST | `/sessions` | Create + start session |
 | POST | `/sessions/:id/checkpoints` | Record photo checkpoint metadata |
 | PATCH | `/sessions/:id/finalize` | End session → `under_review` or `invalid` |
 | GET | `/sessions` | List user's sessions (includes `checkpointCount` / `photoCount`) |
 | GET | `/sessions/:id` | Session detail + checkpoints |
 | PATCH | `/sessions/:id/approval` | Admin status change |
-| DELETE | `/sessions/:id` | Volunteer delete (not when `approved`) |
-| GET | `/sessions/:id/service-letter.pdf` | Approved service letter PDF (letter + evidence) |
-| POST | `/sessions/service-letter.pdf` | Multi-session service letter PDF |
+| DELETE | `/sessions/:id` | Volunteer delete (not when `approved`); writes an `admin_audit_log` row (`volunteer deleted session`) feeding admin-web-app's volunteer activity-pattern rollup |
+| GET | `/sessions/:id/service-letter.pdf` | Approved service letter PDF (letter + evidence); `?courtPacket=true` adds a court cover sheet + adjusted-hours annotations |
+| POST | `/sessions/service-letter.pdf` | Multi-session service letter PDF; body `courtPacket: true` for the court-packet variant |
+| GET | `/me/court-progress` | Caller's court-order progress (required/completed/remaining hours, due date, risk status) — mirrors admin-web-app's `lib/court-risk.ts` math server-side so mobile never reads `court_orders` directly (that table's RLS stays admin-only) |
 | POST | `/emails/event-registration` | Event Register confirmation (Resend) |
 | POST | `/emails/email-change/request` | Send email-change OTP |
 | POST | `/emails/email-change/confirm` | Validate email-change OTP |
@@ -35,9 +37,13 @@ Auth: Supabase JWT verified via JWKS (ES256). Requires `SUPABASE_URL` + `DATABAS
 ## Data model
 
 - **`sessions`** — lifecycle, route jsonb polyline, duration (wall-clock `started_at` → `ended_at`), distance, status enum (`active` → `under_review` → `approved` / `not_approved` / `invalid`)
+- **`sessions.plausibility_signal`** (jsonb, nullable) — server-computed GPS/speed signal from `computePlausibilitySignal()` (`backend/sessions/src/lib/sessionPlausibility.ts`), written at finalize. Advisory only — never gates `status`; feeds admin-web-app's red-flag badge in the session drawer. See `docs/agents/session-abuse-checklist.md` §1 and `admin/db/009_session_plausibility_signal.sql`.
 - **`checkpoints`** — selfie/progress Storage paths, `captured_at`, `submitted_early`
+- **`court_orders`** (Prisma `CourtOrder` model, added 2026-08-07) — maps the existing `court_orders` table (`admin/db/001_admin_portal_migration.sql`); admin-managed via `upsertCourtOrder` in admin-web-app, read here by `/me/court-progress` and the court-packet cover sheet
 - **Storage bucket `session-photos`** — private; client uploads; API stores paths only
 - **List enrichment:** `GET /sessions` returns `checkpointCount` and `photoCount` (`checkpointCount * 2`) for Home impact hydration
+- **`email_log`** (new, `admin/db/010_email_log.sql`, 2026-08-07) — every outbound volunteer email (this service has no Supabase client, only Prisma, so `routes/sessions.ts`/`routes/emails.ts` insert via `prisma.$executeRaw`, mirroring admin-web-app's `lib/email-log.ts`). Feeds the admin "Communication" section and the attention-inbox failed-email bucket.
+- **`email_templates`** (new, `admin/db/011_email_templates.sql`, 2026-08-07) — `routes/emails.ts`'s event-registration send reads an admin-editable override here (falling back to a hardcoded default), same pattern as admin-web-app's `lib/email-templates.ts`
 
 Full schema: [supabase.md](../../supabase.md) §2.
 

@@ -4,7 +4,7 @@ import { getAdminApiKey, getSessionsApiUrl } from '@/lib/sessionsApiConfig';
 import { assertAdminRequest } from '@/lib/assertAdmin';
 import { markLetterheadGenerated } from '@/actions/sessions';
 
-export async function GET(_request: Request, context: { params: Promise<{ sessionId: string }> }) {
+export async function GET(request: Request, context: { params: Promise<{ sessionId: string }> }) {
   const user = await assertAdminRequest();
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -17,9 +17,12 @@ export async function GET(_request: Request, context: { params: Promise<{ sessio
   }
 
   const { sessionId } = await context.params;
-  const upstream = await fetch(`${apiUrl}/sessions/${sessionId}/service-letter.pdf`, {
-    headers: { 'x-admin-key': adminKey },
-  });
+  const { searchParams } = new URL(request.url);
+  const courtPacket = searchParams.get('courtPacket') === 'true';
+  const upstream = await fetch(
+    `${apiUrl}/sessions/${sessionId}/service-letter.pdf${courtPacket ? '?courtPacket=true' : ''}`,
+    { headers: { 'x-admin-key': adminKey } },
+  );
 
   if (!upstream.ok) {
     const text = await upstream.text();

@@ -7,6 +7,95 @@ Canonical detailed log: [`docs/progress.md`](docs/progress.md).
 
 ---
 
+## [2026-08-07] — Decision templates, volunteer timeline, readiness page, court packet export, mobile court progress
+
+**Session goal:** User requested five features from a single ask: admin decision templates (decline reasons + note snippets), a volunteer risk timeline, a production readiness page, court packet PDF export, and a mobile "court progress" card for court-ordered volunteers.
+
+**Workflow used:** Plan mode — two parallel Explore agents (admin-web-app, mobile) → four clarifying questions via AskUserQuestion (templates storage, timeline placement, court packet approach, mobile RLS-vs-backend routing) → one Plan agent for the full implementation plan → user approval → sequential implementation with `tsc --noEmit` after each feature.
+
+### Tasks Completed
+
+| Task | Location | Status |
+|---|---|---|
+| Decline-reason templates + admin-note snippets | `admin-web-app/src/lib/decisionTemplates.ts`, `SessionPreviewDrawer.tsx` | ✅ hardcoded templates fill an editable field; `declineSession` reason now reaches `admin_audit_log.after_value` |
+| Volunteer risk timeline | `admin-web-app/src/lib/live-data.ts` (`loadVolunteerTimeline`), `components/ui/VolunteerTimeline.tsx`, `app/volunteers/[id]/page.tsx` | ✅ chronological view sourced from `admin_audit_log`; added a new `'email sent'` audit action in `lib/notify.ts` |
+| Production readiness page | `admin-web-app/src/lib/health-checks.ts`, `actions/health.ts`, `components/ui/ProductionReadinessPanel.tsx`, `/settings`; `backend/sessions/src/server.ts` `GET /health/deep` | ✅ probes Resend, Sessions API, admin API key, Supabase Auth/data, both storage buckets, and a Realtime **round-trip** check (not just connection status) |
+| Court packet export | `backend/sessions/src/letterhead/{buildServiceLetter,ServiceLetterPdf}.tsx`, `routes/serviceLetter.ts`, `prisma/schema.prisma` (`CourtOrder` model), admin proxy routes | ✅ extends the existing service-letter PDF with a cover sheet (case reference/due date/required+completed hours/completion %) and per-session "Adjusted from Xh to Yh by admin" annotations |
+| Mobile Court Progress card | `backend/sessions/src/routes/courtProgress.ts` (`GET /me/court-progress`), `frontend/src/lib/courtProgressApi.ts`, `features/session-tracking/courtProgressStore.ts`, `features/figma-screens/components/CourtProgressCard.tsx`, `HomeScreen.tsx` | ✅ gated on `serviceType === 'Court Ordered'` (`user_metadata.service_type`) OR an active order — corrected mid-build per explicit user direction, saved to memory as `court-progress-gating` |
+| Docs sync | `docs/admin-web-app.md`, `docs/backend/context/sessions.md`, `docs/frontend/context/app.md`, `docs/current.md`, `docs/progress.md` | ✅ |
+| Backpressure | `admin-web-app` (`tsc --noEmit` + `next build`), `backend/sessions` (`tsc --noEmit`), `frontend` (`tsc --noEmit`) | ✅ all clean |
+
+### Key Decisions
+
+- Decision templates are hardcoded constants, not a DB-editable table (user's explicit call over the DB-table alternative).
+- Volunteer timeline lives on the **existing** `/volunteers/[id]` page, not a new route.
+- Court packet **extends** the existing service-letter generator rather than a new standalone generator.
+- Mobile court progress routes through a **new backend endpoint**; `court_orders` RLS stays admin-only (no new self-read policy).
+- Did not touch unrelated pre-existing working-tree changes present at session start/end — a large concurrent batch of attention-inbox / court-risk dashboard / communication log / session-compare / editable-email-template work (`admin-web-app/src/app/{attention,court-risk,email-templates,sessions/compare}/`, `admin/db/010_email_log.sql`, `011_email_templates.sql`, `frontend/src/components/ui/EmptyState.tsx`, checkpoint-sync-status work in `liveSessionStore.ts`, etc.) is present in the tree but was not authored by this session — left as-is, not reverted, not claimed here.
+
+### Learnings
+
+- `admin_audit_log.target_id` for `court_orders` rows is the **volunteer's user id**, not the court-order row's own id — `upsertCourtOrder` (`actions/courtOrders.ts`) upserts with `onConflict: 'user_id'` and logs `targetId: userId`. This simplified the timeline query considerably (no need to fetch/thread a separate court-order id).
+- `'volunteer deleted session'` audit rows are written with `admin_user_id` = the volunteer's own id (`backend/sessions/src/routes/sessions.ts`), not an actual admin — matched in the timeline query via `admin_user_id = userId AND action = 'volunteer deleted session'` rather than `target_id`.
+- `audit-log-summary.ts`'s `auditActionLabel`/`auditActionTone`/`describeAuditChanges` were directly reusable for the new volunteer timeline — no need to duplicate label-formatting logic.
+
+---
+
+## [2026-08-07] — Verified heatmap search fix live; shipped county choropleth fill
+
+**Session goal:** User reported the full-screen heatmap search dropdown/Search button still broken after the prior session's fix; investigate, then (separately) fill in real county-shape choropleth for the state drill-down map.
+
+**Workflow used:** Live repro against local dev + production (already-authenticated Chrome MCP tab) with real and simulated-slow-network clicks → could not reproduce → asked user for repro specifics → re-tested directly on production with the exact reported click sequence, still no repro → reported findings and asked to move on. Then: code investigation → implementation → local browser verification across multiple states → typecheck → commit → push → confirmed Vercel prod deploy READY.
+
+### Tasks Completed
+
+| Task | Location | Status |
+|---|---|---|
+| Re-verified prior session's search/dropdown fix (`bd7c73f`) against live prod, not just local | `cleanupgiveback-web-app.vercel.app` full-screen county map search | ✅ suggestion click flies to location + drops pin immediately; Search button works right after picking a suggestion — both symptoms from the original report no longer reproduce, including under artificially throttled network |
+| Replaced county-level circle-bubble markers with a real polygon choropleth | `admin-web-app/src/components/dashboard/UsHeatmap.tsx` | ✅ every county in a drilled-into state now renders its actual shape, filled by session-count intensity (same treatment as the nation-level state view); zero-session counties render unfilled instead of not appearing |
+| Confirmed the choropleth isn't Illinois-specific | same file, `stateCounties` derived from nationwide `us-atlas` counties-10m.json | ✅ spot-checked California in-browser — full county shape set renders correctly with no data |
+| Typecheck + commit + deploy | `admin-web-app` | ✅ `tsc --noEmit` clean, commit `f240a81`, pushed to `main`, Vercel prod deploy `dpl_AfKionP6raCfuMvk9p85Jd7f4CGK` confirmed READY |
+
+### Key Decisions
+
+- Did not touch the pre-existing unrelated working-tree diffs present at session start/end (`.cursor/hooks/state/*`, `.gitignore`, `AGENTS.md`, `docs/backend/context/sessions.md`, `admin-web-app/src/components/ui/SessionPreviewDrawer.tsx`, `admin-web-app/src/lib/decisionTemplates.ts`) — out of scope, not from this session's work, left untouched and uncommitted.
+- Committed only the single file this session actually changed (`UsHeatmap.tsx`), not a broad `git add -A`, per [[broad-commit-authorization-scope]].
+
+### Learnings
+
+- Confirms [[verify-before-fixing-ui-bug-reports]]: this time the live-production repro genuinely found nothing wrong (unlike the prior incident) — exercising the actual deployed feature, including with an authenticated real session and artificially slowed network, is what makes "I can't reproduce this" a trustworthy answer instead of a guess.
+- `loadUsCounties()` (`admin-web-app/src/lib/us-geo.ts`) already loads the full nationwide `us-atlas` counties topology once — any "add county data for state X" request is almost always a rendering/UI gap, not a missing-data gap; check what's already loaded before assuming new geo data needs to be sourced.
+
+---
+
+## [2026-08-07] — Fixed silently-broken heatmap search in production (Photon/Nominatim geocoding)
+
+**Session goal:** User reported the admin heatmap search dropdown / location pin+popup "worked on localhost but not on Vercel"; determine root cause and fix.
+
+**Workflow used:** Vercel deployment audit → live browser repro against the deployed prod URL (Chrome MCP, already-authenticated tab) → network/log inspection → fix → redeploy → re-verify live.
+
+### Tasks Completed
+
+| Task | Location | Status |
+|---|---|---|
+| Confirmed prod deploy matches `HEAD` (ruled out "changes didn't ship") | Vercel project `cleanupgiveback-web-app` | ✅ latest READY deploy at session start = commit `56c1029`, aliased to prod |
+| Live-tested the actual feature on the deployed prod URL, not just visual inspection | `cleanupgiveback-web-app.vercel.app` heatmap fullscreen search | ✅ found `/api/place-search` returning `{hits:[],source:"none"}` / one-off `503` — search dropdown never populated, so the pin/popup (which only renders on selection) could never appear |
+| Traced root cause to silent fetch failures | `admin-web-app/src/lib/{place-search,photon,census-geocode,place-reverse}.ts` | ✅ every Photon/Nominatim/Census call had no fetch timeout and a bare `catch {}`, so a slow/refused connection from Vercel's egress produced empty results with nothing logged |
+| Added timeouts + error logging | same 4 lib files + `app/api/place-search/route.ts`, `app/api/place-reverse/route.ts` | ✅ 5s `AbortSignal.timeout()` on every upstream fetch, `console.error` on each fallback path — commit `bd7c73f` |
+| Redeployed and re-verified live | Vercel + Chrome MCP | ✅ `/api/place-search?q=Willis+Tower` now returns real hits (`source:"photon"`); selecting a suggestion flies the map, drops the pin, shows the readable popup with top-right close button |
+
+### Key Decisions
+
+- Superseded the prior same-day entry below (now corrected) that concluded "no fix needed, prod already matches HEAD" — that check only ruled out a stale deploy, it never exercised the feature's actual server-side API calls against production.
+- Did not touch the pre-existing unrelated working-tree diffs (`.cursor/hooks/state/*`, `.gitignore`, `AGENTS.md`, `docs/backend/context/sessions.md`) — out of scope, not touched this session.
+
+### Learnings
+
+- Matching Vercel's deployed `githubCommitSha` to `HEAD` proves the right code shipped — it does **not** prove a feature works if that feature depends on third-party server-side calls. Must exercise the live prod endpoint directly (see [[verify-before-fixing-ui-bug-reports]]).
+- Free geocoding APIs (Photon, Nominatim, Census) can behave differently from Vercel's serverless egress vs. a developer's home network; combined with bare `catch {}` blocks, failures were completely invisible in both the UI and the logs. Always add a fetch timeout + logged catch for any external call reachable only server-side (see [[silent-geocoding-failures-vercel]]).
+
+---
+
 ## [2026-07-26] — Approved session service letter PDF
 
 **Session goal:** Ship shared volunteer + admin PDF (letter page + per-session evidence maps/photos); sync Supabase schema for letterhead columns.

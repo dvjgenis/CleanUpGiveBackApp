@@ -5,6 +5,7 @@ import { Resend } from 'resend';
 
 import type { AuthenticatedRequest } from '../auth.js';
 import { verifyAuth } from '../auth.js';
+import { prisma } from '../prisma.js';
 
 type EventRegistrationBody = {
   to?: string;
@@ -56,6 +57,82 @@ function generateCode(): string {
   return String(randomInt(0, 1_000_000)).padStart(6, '0');
 }
 
+const DEFAULT_EVENT_REGISTRATION_TEMPLATE = {
+  subject: "You're registered: {{event_title}}",
+  bodyHtml:
+    '<p>Thanks for registering with Clean Up Give Back.</p><p>Event: {{event_title}}{{event_when}}</p><p>We look forward to seeing you there.</p>',
+};
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/**
+ * Mirrors admin-web-app's `{{var}}`/`{{#if}}` renderer in `lib/email-template-render.ts`.
+ * `escapeHtml: true` must be passed when rendering into an HTML body — `eventTitle` here is
+ * client-submitted request-body text, so unescaped interpolation into `bodyHtml` is an
+ * HTML-injection / phishing vector (subject stays plain-text, no escaping needed there).
+ */
+function renderTemplate(
+  text: string,
+  variables: Record<string, string | null | undefined>,
+  options?: { escapeHtml?: boolean },
+): string {
+  const withConditionals = text.replace(/{{#if (\w+)}}([\s\S]*?){{\/if}}/g, (_match, key: string, inner: string) =>
+    variables[key] ? inner : '',
+  );
+  return withConditionals.replace(/{{(\w+)}}/g, (_match, key: string) => {
+    const value = variables[key] ?? '';
+    return options?.escapeHtml ? escapeHtml(value) : value;
+  });
+}
+
+/** Reads the admin-editable override for `event_registration`; falls back to the hardcoded default. */
+async function getEventRegistrationTemplate(): Promise<{ subject: string; bodyHtml: string }> {
+  try {
+    const rows = await prisma.$queryRaw<[{ subject: string; body_html: string }]>`
+      SELECT subject, body_html FROM public.email_templates WHERE template_type = 'event_registration' LIMIT 1
+    `;
+    if (rows[0]) {
+      return { subject: rows[0].subject, bodyHtml: rows[0].body_html };
+    }
+  } catch (err) {
+    console.warn('[email-templates] failed to load template, using default:', err);
+  }
+  return DEFAULT_EVENT_REGISTRATION_TEMPLATE;
+}
+
+/** Mirrors admin-web-app's `lib/email-log.ts` — this service has no Supabase client, only Prisma. */
+async function logEmailSend(params: {
+  userId?: string | null;
+  templateType: 'approved' | 'declined' | 'shipped' | 'event_registration' | 'at_risk_nudge' | 'other';
+  toEmail: string;
+  subject: string;
+  status: 'sent' | 'failed';
+  resendMessageId?: string | null;
+}): Promise<void> {
+  try {
+    await prisma.$executeRaw`
+      INSERT INTO public.email_log (user_id, template_type, to_email, subject, status, resend_message_id)
+      VALUES (
+        ${params.userId ?? null}::uuid,
+        ${params.templateType},
+        ${params.toEmail},
+        ${params.subject},
+        ${params.status},
+        ${params.resendMessageId ?? null}
+      )
+    `;
+  } catch (err) {
+    console.warn('[email-log] failed to record email send:', err);
+  }
+}
+
 function pruneExpiredCodes(now = Date.now()): void {
   for (const [key, entry] of pendingEmailCodes) {
     if (entry.expiresAt <= now) {
@@ -70,14 +147,22 @@ export async function registerEmailRoutes(app: FastifyInstance): Promise<void> {
     { preHandler: verifyAuth },
     async (request, reply) => {
       const body = (request.body ?? {}) as EventRegistrationBody;
-      const to = typeof body.to === 'string' ? normalizeEmail(body.to) : '';
+      // The recipient is always the authenticated caller's own account email — never
+      // request-body-supplied — so this endpoint can't be used to relay arbitrary
+      // attacker-chosen content to third-party addresses under our sending domain.
+      const to = (request as AuthenticatedRequest).email
+        ? normalizeEmail((request as AuthenticatedRequest).email as string)
+        : '';
       const eventTitle =
         typeof body.eventTitle === 'string' ? body.eventTitle.trim() : '';
       const eventDateTime =
         typeof body.eventDateTime === 'string' ? body.eventDateTime.trim() : '';
 
-      if (!isValidEmail(to) || !eventTitle) {
-        return reply.code(400).send({ error: 'to and eventTitle are required' });
+      if (!isValidEmail(to)) {
+        return reply.code(400).send({ error: 'No email address on file for this account' });
+      }
+      if (!eventTitle) {
+        return reply.code(400).send({ error: 'eventTitle is required' });
       }
 
       const resend = getResendClient();
@@ -87,19 +172,23 @@ export async function registerEmailRoutes(app: FastifyInstance): Promise<void> {
       }
 
       const when = eventDateTime ? ` on ${eventDateTime}` : '';
-      const { error } = await resend.emails.send({
+      const templateVars = { event_title: eventTitle, event_when: when };
+      const template = await getEventRegistrationTemplate();
+      const subject = renderTemplate(template.subject, templateVars);
+      const { data, error } = await resend.emails.send({
         from: getFromAddress(),
         to,
-        subject: `You're registered: ${eventTitle}`,
-        text: [
-          `Thanks for registering with Clean Up Give Back.`,
-          '',
-          `Event: ${eventTitle}${when}`,
-          '',
-          'We look forward to seeing you there.',
-          '',
-          '— Clean Up Give Back',
-        ].join('\n'),
+        subject,
+        html: renderTemplate(template.bodyHtml, templateVars, { escapeHtml: true }),
+      });
+
+      await logEmailSend({
+        userId: (request as AuthenticatedRequest).userId,
+        templateType: 'event_registration',
+        toEmail: to,
+        subject,
+        status: error ? 'failed' : 'sent',
+        resendMessageId: data?.id ?? null,
       });
 
       if (error) {

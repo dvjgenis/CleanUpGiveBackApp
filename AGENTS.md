@@ -12,7 +12,7 @@
 - Admin sessions/users must stay on real Supabase data (no fixture fallback); service-role reads must be cookie-free so signed-in admin JWTs do not empty RLS-scoped lists.
 - On admin session walking-path maps, use square rounded photo thumbnails that open a lightbox (not circular pins).
 - On admin home, Payments and Orders cards should stay clickable without chevron affordances.
-- Live session walk maps must not draw a path until real GPS movement points exist (no synthetic straight line when stationary).
+- Live and replay maps must not draw a path until real GPS movement exists (no synthetic stationary line); prefer tightening live append gates over lowering the ~8 m stationary collapse span much under ~5–6 m.
 - Prefer the mobile-app style password-field icon on the admin web login.
 
 ## Learned Workspace Facts
@@ -28,3 +28,4 @@
 - Mobile session checkpoint photos should persist lat/long so admin walking-path maps can pin them by capture location.
 - Shipping research for Donna: Phase 1 Pirate Ship labels + paste tracking in existing Orders UI + Resend email; Phase 2 Shippo at higher volume (see `docs/research/shipping-integration-2026-08.md`).
 - Mobile shop catalog/cart remain largely client-side; Stripe checkout and live shipping are not fully backend-wired yet.
+- Onboarding service type (Court Ordered / Volunteering / School / Other) syncs to Auth `user_metadata.service_type` and shows in admin Sessions; it is distinct from per-session `sessions.court_ordered` and `court_orders` rows.

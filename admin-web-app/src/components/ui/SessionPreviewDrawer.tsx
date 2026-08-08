@@ -37,6 +37,7 @@ import {
   type VolunteerActivityPattern,
 } from "@/actions/sessions";
 import { computeRedFlags } from "@/lib/session-red-flags";
+import { ADMIN_NOTE_SNIPPETS, DECLINE_REASON_TEMPLATES } from "@/lib/decisionTemplates";
 import {
   formatDateTime,
   formatDuration,
@@ -296,6 +297,71 @@ function PhotosSection({
   );
 }
 
+/** Decline-reason template picker + editable text, shown inline once "Decline" is pressed.
+ * Selecting a template fills the textarea (still freely editable) — declineSession always
+ * receives whatever text is in the box, so a freeform reason stays fully supported. */
+function DeclineReasonPicker({
+  isPending,
+  onConfirm,
+  onCancel,
+}: {
+  isPending: boolean;
+  onConfirm: (reason?: string) => void;
+  onCancel: () => void;
+}) {
+  const [reasonText, setReasonText] = useState("");
+  return (
+    <div className="rounded-sm border border-[#ba1a1a] bg-[#ffd9de] px-md py-sm flex flex-col gap-sm">
+      <label className="font-data text-[11px] tracking-[0.88px] uppercase text-[#ba1a1a]">
+        Decline reason
+      </label>
+      <select
+        onChange={(e) => {
+          const template = DECLINE_REASON_TEMPLATES.find((t) => t.id === e.target.value);
+          if (template) setReasonText(template.text);
+          e.target.value = "";
+        }}
+        defaultValue=""
+        className="h-9 px-sm rounded-sm border border-[#ba1a1a] bg-white font-body text-[13px] text-text-primary focus:outline-none"
+      >
+        <option value="" disabled>
+          Choose a template…
+        </option>
+        {DECLINE_REASON_TEMPLATES.map((t) => (
+          <option key={t.id} value={t.id}>
+            {t.label}
+          </option>
+        ))}
+      </select>
+      <textarea
+        value={reasonText}
+        onChange={(e) => setReasonText(e.target.value)}
+        rows={3}
+        placeholder="Reason shown in the audit log (optional)"
+        className="w-full rounded-sm border border-[#ba1a1a] bg-white p-sm font-body text-[13px] text-text-primary focus:outline-none resize-none"
+      />
+      <div className="flex gap-sm">
+        <button
+          type="button"
+          onClick={() => onConfirm(reasonText.trim() || undefined)}
+          disabled={isPending}
+          className="h-9 px-md rounded-sm bg-[#ba1a1a] text-white font-data text-[12px] font-semibold disabled:opacity-40"
+        >
+          Confirm decline
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={isPending}
+          className="h-9 px-md rounded-sm border border-[#ba1a1a] bg-white text-[#ba1a1a] font-data text-[12px] font-semibold disabled:opacity-40"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function AdminActionsSection({
   status,
   canApprove,
@@ -304,10 +370,13 @@ function AdminActionsSection({
   isPending,
   feedback,
   overshoot,
+  showDeclinePicker,
   onApprove,
   onConfirmOverride,
   onCancelOverride,
-  onDecline,
+  onStartDecline,
+  onConfirmDecline,
+  onCancelDecline,
 }: {
   status: SessionStatus;
   canApprove: boolean;
@@ -316,10 +385,13 @@ function AdminActionsSection({
   isPending: boolean;
   feedback: string | null;
   overshoot: OvershootDetails | null;
+  showDeclinePicker: boolean;
   onApprove: () => void;
   onConfirmOverride: () => void;
   onCancelOverride: () => void;
-  onDecline: () => void;
+  onStartDecline: () => void;
+  onConfirmDecline: (reason?: string) => void;
+  onCancelDecline: () => void;
 }) {
   return (
     <section className="bg-bg-surface border border-border-outline rounded-md p-lg flex flex-col gap-lg">
@@ -341,10 +413,10 @@ function AdminActionsSection({
             Approve
           </button>
         )}
-        {canDecline && (
+        {canDecline && !showDeclinePicker && (
           <button
             type="button"
-            onClick={onDecline}
+            onClick={onStartDecline}
             disabled={isPending}
             className="w-full h-11 px-lg rounded-sm border border-[#ba1a1a] bg-[#ffd9de] text-[#ba1a1a] font-data text-[13px] font-semibold hover:bg-[#ffc5ca] transition-colors disabled:opacity-50"
           >
@@ -352,6 +424,13 @@ function AdminActionsSection({
           </button>
         )}
       </div>
+      {showDeclinePicker && (
+        <DeclineReasonPicker
+          isPending={isPending}
+          onConfirm={onConfirmDecline}
+          onCancel={onCancelDecline}
+        />
+      )}
       {overshoot ? (
         <OvershootConfirm
           details={overshoot}
@@ -484,9 +563,32 @@ function HoursAndNotesSection({
       </div>
 
       <div className="flex flex-col gap-sm border-t border-border-outline pt-lg">
-        <p className="font-data text-[12px] text-text-tertiary tracking-[0.96px] uppercase">
-          Admin Notes
-        </p>
+        <div className="flex items-center justify-between gap-sm">
+          <p className="font-data text-[12px] text-text-tertiary tracking-[0.96px] uppercase">
+            Admin Notes
+          </p>
+          <select
+            onChange={(e) => {
+              const snippet = ADMIN_NOTE_SNIPPETS.find((s) => s.id === e.target.value);
+              if (snippet) {
+                setNotesInput((prev) => (prev ? `${prev}\n${snippet.text}` : snippet.text));
+              }
+              e.target.value = "";
+            }}
+            defaultValue=""
+            className="h-8 px-xs rounded-sm border border-border-outline bg-bg-surface font-body text-[12px] text-text-tertiary focus:outline-none focus:border-primary"
+            aria-label="Insert note snippet"
+          >
+            <option value="" disabled>
+              Insert snippet…
+            </option>
+            {ADMIN_NOTE_SNIPPETS.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+        </div>
         <textarea
           value={notesInput}
           onChange={(e) => setNotesInput(e.target.value)}
@@ -524,17 +626,32 @@ function LetterheadSection({ session, isMock }: { session: MockSession; isMock: 
           Demo only — letterhead PDFs generate once this session is backed by the live sessions table.
         </p>
       ) : (
-        <a
-          href={`/api/service-letter/${session.id}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-disabled={!canGenerate}
-          className={`interactive inline-flex items-center justify-center h-9 px-md rounded-sm border border-border-outline bg-bg-surface font-data text-[12px] font-semibold text-text-primary transition-colors ${
-            canGenerate ? "hover:bg-bg-surface-elevated" : "opacity-50 pointer-events-none"
-          }`}
-        >
-          Generate Letterhead PDF
-        </a>
+        <div className="flex flex-col gap-sm">
+          <a
+            href={`/api/service-letter/${session.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-disabled={!canGenerate}
+            className={`interactive inline-flex items-center justify-center h-9 px-md rounded-sm border border-border-outline bg-bg-surface font-data text-[12px] font-semibold text-text-primary transition-colors ${
+              canGenerate ? "hover:bg-bg-surface-elevated" : "opacity-50 pointer-events-none"
+            }`}
+          >
+            Generate Letterhead PDF
+          </a>
+          {session.court_ordered && (
+            <a
+              href={`/api/service-letter/${session.id}?courtPacket=true`}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-disabled={!canGenerate}
+              className={`interactive inline-flex items-center justify-center h-9 px-md rounded-sm border border-border-outline bg-bg-surface font-data text-[12px] font-semibold text-text-primary transition-colors ${
+                canGenerate ? "hover:bg-bg-surface-elevated" : "opacity-50 pointer-events-none"
+              }`}
+            >
+              Export Court Packet
+            </a>
+          )}
+        </div>
       )}
       {!canGenerate && !isMock && (
         <p className="font-body text-[12px] text-text-tertiary">
@@ -644,6 +761,7 @@ function SessionDrawerPanel({
   const canApprove = status !== "approved";
   const canDecline = status !== "not_approved";
   const [approveOvershoot, setApproveOvershoot] = useState<OvershootDetails | null>(null);
+  const [showDeclinePicker, setShowDeclinePicker] = useState(false);
 
   function handleApprove(confirmOverride?: string) {
     startActionTransition(async () => {
@@ -670,17 +788,19 @@ function SessionDrawerPanel({
     });
   }
 
-  function handleDecline() {
+  function handleDecline(reason?: string) {
     startActionTransition(async () => {
       if (isMock) {
         setStatus("not_approved");
         setActionFeedback("Declined (demo — not saved)");
+        setShowDeclinePicker(false);
         return;
       }
       try {
-        await declineSession(session.id);
+        await declineSession(session.id, reason);
         setStatus("not_approved");
         setActionFeedback("Declined");
+        setShowDeclinePicker(false);
       } catch (err) {
         setActionFeedback(err instanceof Error ? err.message : "Decline failed");
       }
@@ -821,10 +941,13 @@ function SessionDrawerPanel({
                   isPending={actionPending}
                   feedback={actionFeedback}
                   overshoot={approveOvershoot}
+                  showDeclinePicker={showDeclinePicker}
                   onApprove={() => handleApprove()}
                   onConfirmOverride={() => handleApprove("OVERRIDE")}
                   onCancelOverride={() => setApproveOvershoot(null)}
-                  onDecline={handleDecline}
+                  onStartDecline={() => setShowDeclinePicker(true)}
+                  onConfirmDecline={(reason) => handleDecline(reason)}
+                  onCancelDecline={() => setShowDeclinePicker(false)}
                 />
                 <HoursAndNotesSection
                   session={session}

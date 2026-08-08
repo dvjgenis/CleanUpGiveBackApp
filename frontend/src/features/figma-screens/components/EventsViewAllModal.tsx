@@ -19,6 +19,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { durations, easing, modalSpring, sheetDismissSpring } from '@/motion';
 
 import type { UpcomingEventSummary } from '../mocks/home.types';
@@ -212,7 +213,16 @@ export function EventsViewAllModal({ visible, events, onClose, onSelectEvent }: 
               keyboardShouldPersistTaps="handled"
             >
               {filteredEvents.length === 0 ? (
-                <Text style={s.emptyText}>No events match your date range.</Text>
+                events.length === 0 ? (
+                  <Text style={s.emptyText}>No upcoming events yet — check back soon.</Text>
+                ) : (
+                  <EmptyState
+                    title="No events match your date range."
+                    ctaLabel="Clear filters"
+                    ctaAccessibilityLabel="Clear date filters"
+                    onCtaPress={() => setFiltersTouched(false)}
+                  />
+                )
               ) : (
                 filteredEvents.map((event) => (
                   <UpcomingEventCard

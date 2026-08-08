@@ -9,6 +9,7 @@ import type { IconType } from "react-icons";
 import { IoEye, IoEyeOff } from "react-icons/io5";
 import {
   LuBell,
+  LuBold,
   LuCalendar,
   LuCalendarDays,
   LuCamera,
@@ -19,18 +20,31 @@ import {
   LuClipboardList,
   LuCopy,
   LuCreditCard,
+  LuEraser,
   LuHistory,
   LuHouse,
+  LuImage,
+  LuItalic,
+  LuLink,
+  LuList,
+  LuListOrdered,
   LuMail,
   LuMaximize2,
   LuMenu,
   LuMessageSquare,
   LuMinimize2,
   LuMapPin,
+  LuPaperclip,
   LuPause,
   LuPlay,
   LuRotateCcw,
+  LuPencil,
+  LuPlus,
+  LuSend,
   LuShoppingBag,
+  LuTrash2,
+  LuTriangleAlert,
+  LuUnderline,
   LuUpload,
   LuUser,
   LuUsers,
@@ -88,3 +102,17 @@ export const ReplayIcon = makeIcon(LuRotateCcw);
 export const EyeIcon = makeIcon(IoEye);
 export const EyeOffIcon = makeIcon(IoEyeOff);
 export const AuditLogIcon = makeIcon(LuHistory);
+export const AlertTriangleIcon = makeIcon(LuTriangleAlert);
+export const BoldIcon = makeIcon(LuBold);
+export const ItalicIcon = makeIcon(LuItalic);
+export const UnderlineIcon = makeIcon(LuUnderline);
+export const ListIcon = makeIcon(LuList);
+export const ListOrderedIcon = makeIcon(LuListOrdered);
+export const LinkIcon = makeIcon(LuLink);
+export const ImageIcon = makeIcon(LuImage);
+export const EraserIcon = makeIcon(LuEraser);
+export const PaperclipIcon = makeIcon(LuPaperclip);
+export const SendIcon = makeIcon(LuSend);
+export const TrashIcon = makeIcon(LuTrash2);
+export const PlusIcon = makeIcon(LuPlus);
+export const PencilIcon = makeIcon(LuPencil);
