@@ -7,6 +7,12 @@ Canonical detailed log: [`docs/progress.md`](docs/progress.md).
 
 ---
 
+## [2026-08-09 Session 2] — Schedule-send time picker, court-risk terminology/severity fixes, fixed volunteer-profile crash
+
+Custom time picker for email schedule-send; seeded tagged mock demo data into `/court-risk` (empty in prod); fixed a real crash where court-ordered volunteer profiles 404'd (server component passed a function prop to a client component across the RSC boundary); renamed confusing "Invalid"/"Spike" columns and gave the Deadline column a real overdue > due-soon > at-risk severity ladder after user feedback that it all looked equally red; fixed a second 404 — volunteer profile Session History linked to a `/sessions/[id]` route that doesn't exist, now opens the shared session drawer instead. Full detail: [`docs/progress.md`](docs/progress.md#2026-08-09-session-2--schedule-send-time-picker-court-risk-terminologyseverity-fixes-fixed-volunteer-profile-crash).
+
+---
+
 ## [2026-08-07] — Decision templates, volunteer timeline, readiness page, court packet export, mobile court progress
 
 **Session goal:** User requested five features from a single ask: admin decision templates (decline reasons + note snippets), a volunteer risk timeline, a production readiness page, court packet PDF export, and a mobile "court progress" card for court-ordered volunteers.

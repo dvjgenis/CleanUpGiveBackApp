@@ -2,6 +2,36 @@
 
 ---
 
+## [2026-08-09 Session 2] — Schedule-send time picker, court-risk terminology/severity fixes, fixed volunteer-profile crash
+
+**Session goal:** Follow-up requests on the same-day Emails/court-risk work: (1) custom time picker for schedule-send, (2) mock demo data for `/court-risk` (empty in prod), (3) fix a 404 clicking a volunteer from `/court-risk`, (4) fix confusing court-risk UI wording/color, (5) fix a second 404 clicking a session on the volunteer profile.
+
+**Workflow used:** Chat-driven, iterative — each fix verified against a local dev server + Chrome devtools screenshot before committing/deploying, since these were live bug reports.
+
+### Tasks Completed
+
+| Task | Location | Status |
+|---|---|---|
+| Schedule-send time picker | `EmailsPage.tsx` (`ScheduleDateTimePicker`, `TIME_OPTIONS`) | ✅ replaces native `datetime-local` with date input + styled 15-min dropdown, shared by Compose and the Scheduled-tab edit drawer |
+| Attachments-optional clarity + disabled-button hint | `EmailsPage.tsx` | ✅ attachments were already optional (`canSend` never checked them) — labeled "(optional)"; added inline hint listing missing recipient/subject/message when Send/Schedule are disabled |
+| Mock court-risk demo data | shared prod Supabase (not code) | ✅ 4 `court_orders` + 13 `sessions` rows tagged `[mock-court-risk-demo]`, 4 real `auth.users` ids — see `court-risk-mock-seed-data` memory |
+| Fixed volunteer-profile crash for court-ordered volunteers | `CourtOrderForm.tsx`, `app/volunteers/[id]/page.tsx` | ✅ `CourtOrderForm` ('use client') was receiving `formatDate` as a function prop from the server component — functions can't cross the RSC boundary, so any court-ordered volunteer's profile threw at render (looked like a 404 to the user). Fixed by importing `formatDate` directly inside the client component |
+| Court-risk table wording/severity | `CourtRiskDashboardPage.tsx`, `app/volunteers/[id]/page.tsx` | ✅ "Invalid (30d)" → "Missed checkpoints" (header tooltip); "Spike" → "Late rush" ("Rushed"/"Steady"); Deadline column got a real 3-step severity ladder (solid dark red overdue > light red due-within-5-days > amber due-within-14-days) after user feedback that overdue and due-soon looked equally urgent |
+| Fixed dead `/sessions/[id]` links on volunteer profile | new `components/ui/VolunteerSessionHistory.tsx`, `lib/live-data.ts` (`loadLiveVolunteerById` now selects `ended_at`) | ✅ no `/sessions/[id]` route exists anywhere in admin-web-app; every other session view uses `SessionPreviewDrawer`. New client component opens that same drawer on row click instead of linking to a route that never existed |
+
+### Key Decisions
+
+- Seeded demo data directly into the shared production Supabase project rather than standing up a separate dev DB — confirmed with the user first, since there's no staging environment; tagged every row for easy cleanup.
+- Deadline severity uses a 3-tier color ladder (not a new status/filter tab) — kept the fix presentational/client-side in `CourtRiskDashboardPage.tsx` rather than touching `buildCourtRisk`'s at_risk/in_progress/completed classification, since the ask was "make urgency legible," not "add a new filter."
+
+### Learnings
+
+- A server component passing a function as a prop to a `'use client'` component is a silent, `tsc`-invisible crash in Next.js RSC — only surfaces at render time, and only for the code path that actually uses the prop (here, only court-ordered volunteers ever rendered `CourtOrderForm`). Worth grep-checking for other function-prop-across-boundary cases if similar "works for some records, 404s for others" reports come in.
+- Inserting mock rows to populate an intentionally-fixture-free live dashboard (`/court-risk` has no mock fallback by design, see `us-map-no-mock-data`) is a legitimate one-off demo need, but it's real production data — always confirm the target DB and tag rows before inserting.
+- User bug reports of "404" were, twice this session, not literal 404s: once a server-render crash (RSC function-prop) and once a genuinely-missing route (`/sessions/[id]`) — both needed reproduction in a browser to diagnose correctly rather than trusting the reported symptom at face value.
+
+---
+
 ## [2026-08-09] — Emails: From, Cc/Bcc, typography, schedule log
 
 **R:** Donna needs Cc/Bcc, font controls, schedule-send with a cancel/edit/send-now log, everyday-language template fields (no mustache), a unified To field, select chevron spacing, and a clear **From** address on Compose.

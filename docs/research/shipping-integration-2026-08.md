@@ -88,18 +88,32 @@ No new shipping vendor account required beyond Pirate Ship (and we already use R
 
 ## 6. Cost & ops notes (~20–100 packages/month)
 
-*Verify prices on vendor pages before signing up; they change.*
+*Verify prices on vendor pages before signing up; they change — figures below are current as of research date.*
 
-| Item | Rough cost |
-|------|------------|
-| **Pirate Ship** | $0 software; postage only |
-| **Shippo App** | Free up to ~30 labels/mo; Pro roughly **$17–19/mo** covers ~1–200 labels (postage extra) |
-| **Shippo API Starter** | **30 free labels/mo**, then about **7¢ per label** ([API pricing](https://goshippo.com/pricing/api)) |
-| **Shippo tracking** | Included for labels bought through Shippo; ~**$0.01** per external tracking number if registered for live updates |
-| **Resend** | Already configured — shipping mail is templates + triggers, not a new vendor |
-| **Postage** | Main ongoing cost either way (kits/totes → typically USPS Priority / Ground Advantage–class range) |
+### Recommended path (Phase 1 → Phase 2)
 
-At 20–100 packages/month, Phase 1 stays cheapest. Phase 2 Shippo fees stay small relative to postage.
+| Item | Rough cost | Notes |
+|------|------------|-------|
+| **Pirate Ship** | $0 software; postage only | No API, so this is a Phase 1 (manual) tool only |
+| **Shippo App** (web UI) | Free up to ~30 labels/mo; Pro roughly **$17–19/mo** covers ~1–200 labels | Postage extra |
+| **Shippo API Starter** | **30 free labels/mo**, then about **7¢ per label** | [API pricing](https://goshippo.com/pricing/api) |
+| **Shippo tracking** | Included for labels bought through Shippo; ~**$0.01** per external tracking number if registered for live updates | |
+| **Resend** | Already configured — shipping mail is templates + triggers, not a new vendor | $0 incremental |
+| **Postage** | Main ongoing cost either way | Kits/totes → typically USPS Priority / Ground Advantage–class range |
+
+At 20–100 packages/month, Phase 1 (Pirate Ship + manual paste) stays cheapest — effectively $0 software cost. Phase 2 Shippo fees stay small relative to postage: at 100 labels/mo that's ~30 free + 70 × $0.07 ≈ **$5/mo** on the API Starter tier, or a flat **$17–19/mo** on the App Pro tier if Donna wants the hosted UI instead of us building one.
+
+### Costs for the other options considered (why they lost)
+
+| Option | Cost | Why it's not the pick |
+|--------|------|------------------------|
+| **EasyPost API** | First 3,000 labels/mo free on the Free Access wallet plan, then **~$0.08/label**; BYOCA plan adds a flat **$20/mo**; standalone trackers ~$0.02–0.03 each; a new 3% fee on USPS postage spend applies from 2026 ([pricing](https://www.easypost.com/pricing/), [3% fee](https://goshippo.com/blog/what-easyposts-new-3-fee-means-for-your-usps-shipping-costs)) | Comparable or pricier than Shippo at our volume, and its strength (API-first, thin UI) matters less than Shippo's Donna-friendly web app |
+| **AfterShip** | Free plan caps at 50 shipments/mo; Essentials **$11/mo** for 100 shipments; Premium **$70/mo** for 500 ([pricing](https://checkthat.ai/brands/aftership/pricing)) | Tracking-only — still need a separate label vendor, so it's an extra subscription on top of Pirate Ship/Shippo rather than a replacement |
+| **Shopify Shipping** | Requires a paid Shopify plan — Basic **$39/mo** ($29/mo billed annually) minimum, plus 2.9% + 30¢ per transaction if using Shopify Payments ([pricing](https://sherocommerce.com/blogs/insights/shopify-pricing)) | Would mean paying monthly for a whole storefront platform just to get label/rate tooling, on top of migrating the existing Expo shop + admin |
+| **USPS Web Tools / native API** | Free to use, but limited/rate-capped capabilities and its own OAuth + account setup | Free, but the eng cost of building and maintaining a direct carrier integration (vs. Shippo's unified API) isn't worth it at 20–100 pkgs/mo |
+| **UPS Developer Kit** | Free to license, no documented hidden fees ([UPS Developer Kit FAQ](https://www.ups.com/us/en/support/developer-tools/faq.page)) | Same issue as USPS — free per-carrier access still means building/maintaining a bespoke integration instead of one multi-carrier API |
+
+**Takeaway:** every alternative either (a) costs as much or more than Shippo at our volume, or (b) is "free" only in the licensing sense while pushing real cost into engineering time to integrate and maintain a single-carrier API. Shippo is the only option that's both cheap at 20–100 pkgs/mo *and* multi-carrier out of the box.
 
 **Ops tip:** One fixed ship-from address (home/warehouse) and standard box sizes for kit vs tote make both Pirate Ship and Shippo much faster.
 
@@ -137,6 +151,10 @@ At 20–100 packages/month, Phase 1 stays cheapest. Phase 2 Shippo fees stay sma
 
 - Pirate Ship — [Does Pirate Ship have an API?](https://support.pirateship.com/en/articles/2309246-does-pirate-ship-have-an-api) (no public API)
 - Shippo — [API pricing](https://goshippo.com/pricing/api), [App pricing](https://www.shippo.com/pricing), [Tracking](https://docs.goshippo.com/docs/Tracking/Tracking), [Webhooks](https://docs.goshippo.com/docs/Tracking/Webhooks)
+- EasyPost — [Pricing](https://www.easypost.com/pricing/), [3% USPS spend fee (2026)](https://goshippo.com/blog/what-easyposts-new-3-fee-means-for-your-usps-shipping-costs)
+- AfterShip — [Pricing 2026](https://checkthat.ai/brands/aftership/pricing)
+- Shopify — [Pricing plans 2026](https://sherocommerce.com/blogs/insights/shopify-pricing)
+- UPS Developer Kit — [FAQ](https://www.ups.com/us/en/support/developer-tools/faq.page)
 - Internal ground truth — `shop_orders` schema (`admin/db/001_admin_portal_migration.sql`), admin order fulfillment UI (`admin-web-app`), Resend status (`docs/backend/context/payments.md`)
 
 ---
