@@ -215,7 +215,6 @@ export default async function VolunteerProfilePage({
                 dueDate={volunteer.courtDueDate}
                 caseReference={volunteer.caseReference}
                 completedHours={courtCompletedHours}
-                formatDate={formatDate}
               />
             </>
           )}

@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { upsertCourtOrder } from '@/actions/courtOrders';
 import { InfoRow } from '@/components/ui/InfoRow';
+import { formatDate } from '@/lib/mock-data';
 
 function displayOrDash(value: string | null | undefined) {
   if (value == null) return '—';
@@ -18,14 +19,12 @@ export function CourtOrderForm({
   dueDate,
   caseReference,
   completedHours,
-  formatDate,
 }: {
   userId: string;
   requiredHours: number | null;
   dueDate: string | null;
   caseReference: string | null;
   completedHours: number;
-  formatDate: (value: string) => string;
 }) {
   const [editing, setEditing] = useState(false);
   const [isPending, startTransition] = useTransition();

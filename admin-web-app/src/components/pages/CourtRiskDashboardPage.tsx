@@ -24,12 +24,29 @@ const STATUS_TONE: Record<CourtRiskDashboardRow["status"], string> = {
   completed: "bg-[#f7fff1] text-[#007536]",
 };
 
+/** Due within this many days gets the strongest visual treatment in the Deadline column. */
+const CRITICAL_WINDOW_DAYS = 5;
+
 function daysToDeadlineLabel(dueDate: string, now: Date): string {
   if (!dueDate) return "No due date";
   const days = differenceInCalendarDays(new Date(dueDate), now);
   if (days < 0) return `${Math.abs(days)}d overdue`;
   if (days === 0) return "Due today";
   return `${days}d left`;
+}
+
+/** Pill styling for the Deadline column — overdue and "due within 5 days" both read as
+ * urgent at a glance, distinct from the calmer amber used for the rest of the at-risk window. */
+function deadlineTone(dueDate: string, now: Date): string {
+  if (!dueDate) return "text-text-tertiary";
+  const days = differenceInCalendarDays(new Date(dueDate), now);
+  if (days < CRITICAL_WINDOW_DAYS) {
+    return "bg-[#ffd9de] text-[#ba1a1a] font-semibold px-sm py-xs rounded-sm w-fit";
+  }
+  if (days <= 14) {
+    return "bg-[#fff2c9] text-[#8a6300] font-semibold px-sm py-xs rounded-sm w-fit";
+  }
+  return "text-text-tertiary";
 }
 
 export function CourtRiskDashboardPage({ rows }: { rows: CourtRiskDashboardRow[] }) {
@@ -75,7 +92,7 @@ export function CourtRiskDashboardPage({ rows }: { rows: CourtRiskDashboardRow[]
 
       <div className="bg-bg-surface border border-border-outline rounded-md overflow-hidden">
         <div className="hidden lg:grid lg:grid-cols-[1.5fr_7rem_9rem_8rem_8rem_6rem] gap-md px-lg py-sm bg-bg-surface-elevated border-b border-border-outline">
-          {["Volunteer", "Deadline", "Hours", "Invalid (30d)", "Spike", "Status"].map((col) => (
+          {["Volunteer", "Deadline", "Hours", "Invalid (30d)", "Late rush", "Status"].map((col) => (
             <span key={col} className="font-data text-[11px] tracking-[0.88px] uppercase text-text-tertiary">
               {col}
             </span>
@@ -94,7 +111,9 @@ export function CourtRiskDashboardPage({ rows }: { rows: CourtRiskDashboardRow[]
                   className="grid grid-cols-1 lg:grid-cols-[1.5fr_7rem_9rem_8rem_8rem_6rem] gap-xs lg:gap-md lg:items-center px-lg py-md hover:bg-bg-surface-elevated transition-colors no-underline text-inherit"
                 >
                   <p className="font-body text-[14px] font-medium text-text-primary truncate">{r.name}</p>
-                  <span className="font-data text-[13px] text-text-tertiary whitespace-nowrap">
+                  <span
+                    className={`font-data text-[13px] whitespace-nowrap ${deadlineTone(r.dueDate, now)}`}
+                  >
                     {r.dueDate ? daysToDeadlineLabel(r.dueDate, now) : "No due date"}
                   </span>
                   <span className="font-data text-[13px] text-text-primary whitespace-nowrap">
@@ -103,11 +122,14 @@ export function CourtRiskDashboardPage({ rows }: { rows: CourtRiskDashboardRow[]
                   <span className={`font-data text-[13px] whitespace-nowrap ${r.invalidSessionsLast30Days > 0 ? "text-[#ba1a1a]" : "text-text-tertiary"}`}>
                     {r.invalidSessionsLast30Days}
                   </span>
-                  <span className="font-data text-[13px] whitespace-nowrap">
+                  <span
+                    className="font-data text-[13px] whitespace-nowrap"
+                    title="Several sessions logged in the 14 days before the deadline — may mean hours are being rushed in at the last minute rather than completed steadily."
+                  >
                     {r.nearDeadlineVolumeSpike ? (
-                      <span className="font-semibold text-[#ba1a1a]">Yes</span>
+                      <span className="font-semibold text-[#ba1a1a]">Rushed</span>
                     ) : (
-                      <span className="text-text-tertiary">No</span>
+                      <span className="text-text-tertiary">Steady</span>
                     )}
                   </span>
                   <span className={`font-data text-[11px] font-semibold px-sm py-xs rounded-sm uppercase w-fit ${STATUS_TONE[r.status]}`}>
