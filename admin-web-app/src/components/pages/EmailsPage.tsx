@@ -582,6 +582,12 @@ function ComposeTab({
   const canSend =
     subject.trim().length > 0 && bodyHtml.trim().length > 0 && to != null;
 
+  const missingFields = [
+    !to && "a recipient",
+    !subject.trim() && "a subject",
+    !bodyHtml.trim() && "a message",
+  ].filter((v): v is string => Boolean(v));
+
   const tzHint = useMemo(() => {
     try {
       return Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -666,7 +672,7 @@ function ComposeTab({
 
         <div>
           <div className="flex items-center gap-sm mb-xs">
-            <label className="font-data text-[11px] tracking-[0.6px] uppercase text-text-tertiary">Attachments</label>
+            <label className="font-data text-[11px] tracking-[0.6px] uppercase text-text-tertiary">Attachments (optional)</label>
             <button
               type="button"
               onClick={() => attachmentInputRef.current?.click()}
@@ -761,6 +767,11 @@ function ComposeTab({
             </span>
           )}
         </div>
+        {!canSend && missingFields.length > 0 && (
+          <p className="font-body text-[12px] text-text-tertiary">
+            Add {missingFields.join(", ")} to send or schedule.
+          </p>
+        )}
       </div>
 
       <div className="bg-bg-surface border border-border-outline rounded-md p-lg">
