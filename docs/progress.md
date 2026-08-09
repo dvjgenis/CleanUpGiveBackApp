@@ -2,6 +2,48 @@
 
 ---
 
+## [2026-08-08] — Fix Vercel 500s on /attention and /emails (jsdom)
+
+**R:** Production `/attention` and `/emails` (and some `/sessions` actions) returned 500. Vercel logs: `Failed to load external module jsdom` → `ERR_REQUIRE_ESM` requiring `@exodus/bytes/encoding-lite.js` from `html-encoding-sniffer` under Node 24.
+
+**A:** Removed `isomorphic-dompurify` (jsdom). Rewrote `lib/sanitize-html.ts` to use `sanitize-html` (htmlparser2) with the same allowlist. Synced `docs/admin-web-app.md`.
+
+**L:** Any server import of the email/notify graph pulled jsdom into shared SSR chunks — so Attention failed even without calling the sanitizer.
+
+**P:** Local build green; needs a Vercel production deploy for the live fix.
+
+**H:** Do not reintroduce `isomorphic-dompurify`/`jsdom` on the admin serverless runtime.
+
+---
+
+## [2026-08-08] — Court progress card: search + name links + fullscreen
+
+**R:** Donna needs to find a court-ordered volunteer quickly on Insights/Analytics and open their profile without leaving the card’s list for a separate Volunteers search — and scan the full list without the card’s ~5-row scroll height.
+
+**A:** `CourtProgressChart` now has an in-card name search, each name links to `/volunteers/[id]`, and an expand control opens a full-screen dialog (Escape / Exit). `buildCourtProgressBars` passes through volunteer `id` for those links.
+
+**L:** —
+
+**P:** On `/insights` or `/analytics`, Court progress filters by typed name; clicking a name opens that volunteer’s detail page; expand shows the full searchable list.
+
+**H:** —
+
+---
+
+## [2026-08-08] — Empty session Photos placeholders: 4 cards
+
+**R:** Session preview drawer empty Photos state showed three dashed tiles (Selfie / Progress / Selfie); Donna expects two selfie+progress pairs → four tiles.
+
+**A:** Extended `PHOTO_LABELS` in `SessionPreviewDrawer.tsx` to Selfie → Progress → Selfie → Progress; mirrored default count/labels in archived `admin/.../PhotoPlaceholder.tsx`; noted in `docs/admin-web-app.md`.
+
+**L:** —
+
+**P:** Empty/mock Photos empty-state now renders four placeholders.
+
+**H:** —
+
+---
+
 ## [2026-08-07] — Fix session-link 404s (Attention/Audit Log) + audit diff color confusion
 
 **R:** `attention-inbox.ts` and `audit-log-summary.ts` linked session items to `/sessions/${id}`, but `admin-web-app` has no `src/app/sessions/[id]` route — Sessions is a filtered list + client-state preview drawer (`SessionsPage.tsx`'s `previewId`), not a routable per-session page, so every "view session" link from Attention or the Audit Log 404'd. Separately, `AuditDiffCard`'s Before/After grid tinted the Before column red and the After column green unconditionally, by column position — a session going to "Declined" rendered in the same green as "Approved" in the After column, since the tint didn't look at the actual value.

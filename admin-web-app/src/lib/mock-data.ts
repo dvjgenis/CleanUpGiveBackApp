@@ -303,13 +303,13 @@ export function resolveInsightsFixtures(
 
 /** Court volunteer completion toward required hours — mirrors `admin/lib/dashboard-charts.ts`. */
 export function buildCourtProgressBars(
-  volunteers: Pick<MockCourtVolunteer, "name" | "requiredHours" | "completedHours" | "status">[],
-): { name: string; completed: number; remaining: number; pct: number; status: string }[] {
+  volunteers: Pick<MockCourtVolunteer, "id" | "name" | "requiredHours" | "completedHours" | "status">[],
+): { id: string; name: string; completed: number; remaining: number; pct: number; status: string }[] {
   return volunteers.map((v) => {
     const completed = Math.min(v.completedHours, v.requiredHours);
     const remaining = Math.max(0, v.requiredHours - v.completedHours);
     const pct = v.requiredHours > 0 ? Math.min(100, (v.completedHours / v.requiredHours) * 100) : 0;
-    return { name: v.name, completed, remaining, pct, status: v.status };
+    return { id: v.id, name: v.name, completed, remaining, pct, status: v.status };
   });
 }
 

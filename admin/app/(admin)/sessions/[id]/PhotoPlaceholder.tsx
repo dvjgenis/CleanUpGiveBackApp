@@ -1,9 +1,9 @@
 import { CameraIcon } from '@/components/ui/Icons';
 
-const LABELS = ['Selfie', 'Progress', 'Selfie'];
+const LABELS = ['Selfie', 'Progress', 'Selfie', 'Progress'];
 
 /** Placeholder tiles shown wherever real checkpoint photos aren't available yet. */
-export function PhotoPlaceholder({ count = 3 }: { count?: number }) {
+export function PhotoPlaceholder({ count = 4 }: { count?: number }) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 gap-sm">
       {Array.from({ length: count }, (_, i) => (

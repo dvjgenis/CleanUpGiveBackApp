@@ -50,7 +50,7 @@ import {
 
 const EASE_OUT: [number, number, number, number] = [0.23, 1, 0.32, 1];
 const DRAWER_SPRING = { type: "spring" as const, stiffness: 320, damping: 34, mass: 0.85 };
-const PHOTO_LABELS = ["Selfie", "Progress", "Selfie"];
+const PHOTO_LABELS = ["Selfie", "Progress", "Selfie", "Progress"];
 
 type OvershootDetails = { overBy: number; projected: number; required: number };
 
