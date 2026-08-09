@@ -2,10 +2,10 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ChevronLeftIcon } from '@/components/ui/Icons';
 import { InfoRow } from '@/components/ui/InfoRow';
-import { StatusChip } from '@/components/ui/StatusChip';
 import { CourtOrderForm } from '@/components/ui/CourtOrderForm';
 import { VolunteerTimeline } from '@/components/ui/VolunteerTimeline';
 import { VolunteerCommunicationLog } from '@/components/ui/VolunteerCommunicationLog';
+import { VolunteerSessionHistory } from '@/components/ui/VolunteerSessionHistory';
 import { formatDate, formatDateTime } from '@/lib/mock-data';
 import {
   loadLiveVolunteerById,
@@ -31,13 +31,6 @@ function shortId(uuid: string): string {
   return uuid.substring(0, 8);
 }
 
-function formatDuration(seconds: number | null, adjustedHours: number | null): string {
-  if (adjustedHours != null) return `${adjustedHours.toFixed(1)}h`;
-  if (seconds == null) return '—';
-  const hours = seconds / 3600;
-  return `${hours.toFixed(1)}h`;
-}
-
 function formatMiles(miles: number | null): string {
   if (miles == null) return '—';
   return `${miles.toFixed(1)} mi`;
@@ -48,8 +41,6 @@ function computedHours(durationSeconds: number | null, adjustedHours: number | n
   if (durationSeconds == null) return 0;
   return durationSeconds / 3600;
 }
-
-type SessionStatus = 'pending' | 'approved' | 'declined';
 
 function ErrorFallback({ error, id }: { error: string; id: string }) {
   return (
@@ -271,59 +262,11 @@ export default async function VolunteerProfilePage({
           <h2 className="font-heading text-[18px] leading-[26px] text-text-primary mb-md">
             Session History
           </h2>
-          <div className="bg-bg-surface border border-border-outline rounded-md overflow-hidden">
-            <div className="hidden lg:grid grid-cols-[1fr_auto_auto_auto_auto] gap-md px-lg py-sm bg-bg-surface-elevated border-b border-border-outline">
-              {['Activity', 'Date', 'Duration', 'Distance', 'Status'].map((col) => (
-                <span
-                  key={col}
-                  className="font-data text-[11px] tracking-[0.88px] uppercase text-text-tertiary"
-                >
-                  {col}
-                </span>
-              ))}
-            </div>
-            {volunteer.sessions.length === 0 ? (
-              <div className="p-lg text-center">
-                <p className="font-body text-[14px] text-text-tertiary">No sessions yet.</p>
-              </div>
-            ) : (
-              <ul role="list" className="divide-y divide-border-outline">
-                {volunteer.sessions.map((session) => (
-                  <li
-                    key={session.id}
-                    className="lg:grid lg:grid-cols-[1fr_auto_auto_auto_auto] gap-md items-center px-lg py-md hover:bg-bg-surface-elevated transition-colors"
-                  >
-                    <div className="lg:contents flex flex-col gap-xs">
-                      {isUuid(session.id) ? (
-                        <Link
-                          href={`/sessions/${session.id}`}
-                          className="font-body text-[14px] font-medium text-text-primary hover:text-primary hover:underline"
-                        >
-                          {session.activity ?? 'Cleanup session'}
-                        </Link>
-                      ) : (
-                        <span className="font-body text-[14px] font-medium text-text-primary">
-                          {session.activity ?? 'Cleanup session'}
-                        </span>
-                      )}
-                      <div className="flex flex-wrap items-center gap-md lg:contents">
-                        <span className="font-data text-[13px] text-text-tertiary whitespace-nowrap">
-                          {formatDate(session.started_at)}
-                        </span>
-                        <span className="font-data text-[13px] font-medium text-text-primary whitespace-nowrap">
-                          {formatDuration(session.duration_seconds, session.adjusted_hours)}
-                        </span>
-                        <span className="font-data text-[13px] text-text-tertiary whitespace-nowrap">
-                          {formatMiles(session.distance_miles)}
-                        </span>
-                        <StatusChip status={session.status as SessionStatus} />
-                      </div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+          <VolunteerSessionHistory
+            volunteerId={volunteer.id}
+            volunteerName={volunteer.name}
+            sessions={volunteer.sessions}
+          />
         </div>
       </SidebarDemo>
     </div>

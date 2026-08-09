@@ -310,6 +310,7 @@ type VolunteerDetail = {
     id: string;
     activity: string | null;
     started_at: string | null;
+    ended_at: string | null;
     duration_seconds: number | null;
     adjusted_hours: number | null;
     distance_miles: number | null;
@@ -374,7 +375,7 @@ export async function loadLiveVolunteerById(id: string): Promise<LiveResult<Volu
     const [{ data: sessions }, { data: courtOrders }, { count: deleteCount }] = await Promise.all([
       supabase
         .from('sessions')
-        .select('id, activity, started_at, duration_seconds, adjusted_hours, distance_miles, status, court_ordered')
+        .select('id, activity, started_at, ended_at, duration_seconds, adjusted_hours, distance_miles, status, court_ordered')
         .eq('user_id', id)
         .neq('status', 'active')
         .order('started_at', { ascending: false }),
