@@ -35,11 +35,15 @@ function daysToDeadlineLabel(dueDate: string, now: Date): string {
   return `${days}d left`;
 }
 
-/** Pill styling for the Deadline column — overdue and "due within 5 days" both read as
- * urgent at a glance, distinct from the calmer amber used for the rest of the at-risk window. */
+/** Pill styling for the Deadline column — a 3-step severity ladder so overdue reads as
+ * strictly worse than "due within 5 days", which in turn reads as worse than the calmer
+ * amber used for the rest of the at-risk window. Solid dark red > light red > amber > gray. */
 function deadlineTone(dueDate: string, now: Date): string {
   if (!dueDate) return "text-text-tertiary";
   const days = differenceInCalendarDays(new Date(dueDate), now);
+  if (days < 0) {
+    return "bg-[#ba1a1a] text-white font-semibold px-sm py-xs rounded-sm w-fit";
+  }
   if (days < CRITICAL_WINDOW_DAYS) {
     return "bg-[#ffd9de] text-[#ba1a1a] font-semibold px-sm py-xs rounded-sm w-fit";
   }
@@ -92,9 +96,24 @@ export function CourtRiskDashboardPage({ rows }: { rows: CourtRiskDashboardRow[]
 
       <div className="bg-bg-surface border border-border-outline rounded-md overflow-hidden">
         <div className="hidden lg:grid lg:grid-cols-[1.5fr_7rem_9rem_8rem_8rem_6rem] gap-md px-lg py-sm bg-bg-surface-elevated border-b border-border-outline">
-          {["Volunteer", "Deadline", "Hours", "Invalid (30d)", "Late rush", "Status"].map((col) => (
-            <span key={col} className="font-data text-[11px] tracking-[0.88px] uppercase text-text-tertiary">
-              {col}
+          {[
+            { label: "Volunteer" },
+            { label: "Deadline" },
+            { label: "Hours" },
+            {
+              label: "Missed checkpoints",
+              title:
+                "Sessions in the last 30 days that were auto-invalidated for missing a required selfie/progress checkpoint — not necessarily fraud, but worth a look.",
+            },
+            { label: "Late rush" },
+            { label: "Status" },
+          ].map((col) => (
+            <span
+              key={col.label}
+              title={col.title}
+              className="font-data text-[11px] tracking-[0.88px] uppercase text-text-tertiary"
+            >
+              {col.label}
             </span>
           ))}
         </div>

@@ -232,8 +232,9 @@ export default async function VolunteerProfilePage({
                     note={`avg ${volunteer.activityPattern.priorWeeklyAverage.toFixed(1)}/week over the prior month`}
                   />
                   <InfoRow
-                    label="Invalid sessions"
+                    label="Missed checkpoints"
                     value={`${volunteer.activityPattern.invalidSessionsLast30Days} in the last 30 days`}
+                    note="Auto-invalidated for missing a required selfie/progress checkpoint"
                   />
                   <InfoRow
                     label="Deleted & resubmitted"
