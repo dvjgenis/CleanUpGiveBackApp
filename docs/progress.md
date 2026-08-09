@@ -10,7 +10,7 @@
 
 **L:** Own Supabase queue (not Resend `scheduledAt`) so attachment signed URLs mint at send time.
 
-**P:** Apply `013` in Supabase; set `CRON_SECRET` (+ existing `EMAIL_FROM`) on Vercel.
+**P:** Apply `013` in Supabase; set `CRON_SECRET` (+ existing `EMAIL_FROM`) on Vercel. Hobby blocks `* * * * *` cron — switched to daily `0 15 * * *` UTC so deploys succeed.
 
 **H:** Donna never authors `{{brackets}}` in the Templates UI; From stays env-driven / read-only.
 
