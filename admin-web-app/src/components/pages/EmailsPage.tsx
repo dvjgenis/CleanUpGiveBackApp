@@ -373,6 +373,83 @@ function SubjectTokenField({
   );
 }
 
+const TIME_OPTIONS = Array.from({ length: 24 * 4 }, (_, i) => {
+  const hour24 = Math.floor(i / 4);
+  const minute = (i % 4) * 15;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const value = `${pad(hour24)}:${pad(minute)}`;
+  const hour12 = hour24 % 12 === 0 ? 12 : hour24 % 12;
+  const label = `${hour12}:${pad(minute)} ${hour24 < 12 ? "AM" : "PM"}`;
+  return { value, label };
+});
+
+function ScheduleDateTimePicker({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (next: string) => void;
+}) {
+  const [timeOpen, setTimeOpen] = useState(false);
+  const [datePart, timePart] = value ? value.split("T") : ["", ""];
+  const selectedTime = TIME_OPTIONS.find((t) => t.value === timePart);
+
+  function setDatePart(next: string) {
+    onChange(`${next}T${timePart || "09:00"}`);
+  }
+
+  function setTimePart(next: string) {
+    if (!datePart) return;
+    onChange(`${datePart}T${next}`);
+  }
+
+  return (
+    <div className="flex flex-wrap gap-md">
+      <div>
+        <label className="font-data text-[11px] tracking-[0.6px] uppercase text-text-tertiary mb-xs block">Date</label>
+        <input
+          type="date"
+          value={datePart}
+          onChange={(e) => setDatePart(e.target.value)}
+          className="h-11 px-md rounded-sm border border-border-outline bg-bg-app font-body text-[14px] text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+        />
+      </div>
+      <div className="relative">
+        <label className="font-data text-[11px] tracking-[0.6px] uppercase text-text-tertiary mb-xs block">Time</label>
+        <button
+          type="button"
+          disabled={!datePart}
+          onClick={() => setTimeOpen((o) => !o)}
+          onBlur={() => setTimeout(() => setTimeOpen(false), 150)}
+          className="w-32 h-11 px-md rounded-sm border border-border-outline bg-bg-app font-body text-[14px] text-text-primary text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-50"
+        >
+          {selectedTime?.label ?? "Select…"}
+        </button>
+        {timeOpen && (
+          <ul className="absolute z-10 mt-xs w-32 max-h-64 overflow-y-auto bg-bg-surface border border-border-outline rounded-sm shadow-bar-top">
+            {TIME_OPTIONS.map((t) => (
+              <li key={t.value}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTimePart(t.value);
+                    setTimeOpen(false);
+                  }}
+                  className={`w-full text-left px-md py-sm hover:bg-bg-app transition-colors font-body text-[13px] ${
+                    t.value === timePart ? "text-primary font-semibold" : "text-text-primary"
+                  }`}
+                >
+                  {t.label}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ComposeTab({
   templates,
   volunteers,
@@ -385,6 +462,7 @@ function ComposeTab({
   const [to, setTo] = useState<Recipient | null>(null);
   const [cc, setCc] = useState<string[]>([]);
   const [bcc, setBcc] = useState<string[]>([]);
+  const [showCc, setShowCc] = useState(false);
   const [showBcc, setShowBcc] = useState(false);
   const [subject, setSubject] = useState("");
   const [bodyHtml, setBodyHtml] = useState("");
@@ -432,6 +510,8 @@ function ComposeTab({
     setTo(null);
     setCc([]);
     setBcc([]);
+    setShowCc(false);
+    setShowBcc(false);
     setScheduleAt("");
     setShowSchedule(false);
   }
@@ -515,17 +595,33 @@ function ComposeTab({
       <div className="bg-bg-surface border border-border-outline rounded-md p-lg flex flex-col gap-md">
         <FromLine fromAddress={fromAddress} />
         <RecipientPicker label="To" volunteers={volunteers} value={to} onChange={setTo} />
-        <EmailChipList label="Cc" volunteers={volunteers} emails={cc} onChange={setCc} />
+        {showCc ? (
+          <EmailChipList label="Cc (optional)" volunteers={volunteers} emails={cc} onChange={setCc} />
+        ) : null}
         {showBcc ? (
-          <EmailChipList label="Bcc" volunteers={volunteers} emails={bcc} onChange={setBcc} />
-        ) : (
-          <button
-            type="button"
-            onClick={() => setShowBcc(true)}
-            className="self-start font-data text-[11px] font-semibold text-primary hover:underline"
-          >
-            Add Bcc
-          </button>
+          <EmailChipList label="Bcc (optional)" volunteers={volunteers} emails={bcc} onChange={setBcc} />
+        ) : null}
+        {(!showCc || !showBcc) && (
+          <div className="flex items-center gap-md">
+            {!showCc && (
+              <button
+                type="button"
+                onClick={() => setShowCc(true)}
+                className="self-start font-data text-[11px] font-semibold text-primary hover:underline"
+              >
+                Add Cc
+              </button>
+            )}
+            {!showBcc && (
+              <button
+                type="button"
+                onClick={() => setShowBcc(true)}
+                className="self-start font-data text-[11px] font-semibold text-primary hover:underline"
+              >
+                Add Bcc
+              </button>
+            )}
+          </div>
         )}
 
         {templates.length > 0 && (
@@ -607,15 +703,10 @@ function ComposeTab({
 
         {showSchedule && (
           <div>
-            <label className="font-data text-[11px] tracking-[0.6px] uppercase text-text-tertiary mb-xs block">
+            <p className="font-data text-[11px] tracking-[0.6px] uppercase text-text-tertiary mb-xs">
               Send at ({tzHint})
-            </label>
-            <input
-              type="datetime-local"
-              value={scheduleAt}
-              onChange={(e) => setScheduleAt(e.target.value)}
-              className="w-full h-11 px-md rounded-sm border border-border-outline bg-bg-app font-body text-[14px] text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
-            />
+            </p>
+            <ScheduleDateTimePicker value={scheduleAt} onChange={setScheduleAt} />
           </div>
         )}
 
@@ -711,6 +802,8 @@ function EditScheduledDrawer({
   );
   const [cc, setCc] = useState(row.ccEmails);
   const [bcc, setBcc] = useState(row.bccEmails);
+  const [showCc, setShowCc] = useState(row.ccEmails.length > 0);
+  const [showBcc, setShowBcc] = useState(row.bccEmails.length > 0);
   const [subject, setSubject] = useState(row.subject);
   const [bodyHtml, setBodyHtml] = useState(row.bodyHtml);
   const [attachments, setAttachments] = useState<UploadedAttachment[]>(
@@ -758,8 +851,34 @@ function EditScheduledDrawer({
         </div>
         <FromLine fromAddress={fromAddress} />
         <RecipientPicker label="To" volunteers={volunteers} value={to} onChange={setTo} />
-        <EmailChipList label="Cc" volunteers={volunteers} emails={cc} onChange={setCc} />
-        <EmailChipList label="Bcc" volunteers={volunteers} emails={bcc} onChange={setBcc} />
+        {showCc ? (
+          <EmailChipList label="Cc (optional)" volunteers={volunteers} emails={cc} onChange={setCc} />
+        ) : null}
+        {showBcc ? (
+          <EmailChipList label="Bcc (optional)" volunteers={volunteers} emails={bcc} onChange={setBcc} />
+        ) : null}
+        {(!showCc || !showBcc) && (
+          <div className="flex items-center gap-md">
+            {!showCc && (
+              <button
+                type="button"
+                onClick={() => setShowCc(true)}
+                className="self-start font-data text-[11px] font-semibold text-primary hover:underline"
+              >
+                Add Cc
+              </button>
+            )}
+            {!showBcc && (
+              <button
+                type="button"
+                onClick={() => setShowBcc(true)}
+                className="self-start font-data text-[11px] font-semibold text-primary hover:underline"
+              >
+                Add Bcc
+              </button>
+            )}
+          </div>
+        )}
         <div>
           <label className="font-data text-[11px] tracking-[0.6px] uppercase text-text-tertiary mb-xs block">Subject</label>
           <input
@@ -770,13 +889,8 @@ function EditScheduledDrawer({
         </div>
         <RichTextEditor value={bodyHtml} onChange={setBodyHtml} onUploadImage={uploadInlineImage} />
         <div>
-          <label className="font-data text-[11px] tracking-[0.6px] uppercase text-text-tertiary mb-xs block">Send at</label>
-          <input
-            type="datetime-local"
-            value={scheduleAt}
-            onChange={(e) => setScheduleAt(e.target.value)}
-            className="w-full h-11 px-md rounded-sm border border-border-outline bg-bg-app font-body text-[14px] text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
-          />
+          <p className="font-data text-[11px] tracking-[0.6px] uppercase text-text-tertiary mb-xs">Send at</p>
+          <ScheduleDateTimePicker value={scheduleAt} onChange={setScheduleAt} />
         </div>
         <div className="flex items-center gap-sm">
           <button
