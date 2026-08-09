@@ -30,6 +30,9 @@ export const EMAIL_TEMPLATE_VARIABLES: Record<EmailTemplateType, string[]> = {
   at_risk_nudge: ['volunteer_name', 'event_title', 'event_when', 'event_address', 'event_maps_url'],
 };
 
+/** Re-export human labels — Templates UI inserts these as chips, never `{{brackets}}`. */
+export { EMAIL_VARIABLE_LABELS, labelForVariable } from '@/lib/email-template-tokens';
+
 export const EMAIL_TEMPLATE_SAMPLE_DATA: Record<EmailTemplateType, Record<string, string>> = {
   approved: { activity: 'Riverside Park Cleanup' },
   declined: { decline_reason: 'Photos submitted do not clearly show cleanup activity.', activity: 'Riverside Park Cleanup' },

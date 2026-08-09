@@ -24,6 +24,8 @@ export async function logEmailSend(
     sessionId?: string | null;
     templateType: EmailTemplateType;
     toEmail: string;
+    ccEmails?: string[] | null;
+    bccEmails?: string[] | null;
     subject: string;
     status: EmailLogStatus;
     resendMessageId?: string | null;
@@ -36,6 +38,8 @@ export async function logEmailSend(
       session_id: params.sessionId ?? null,
       template_type: params.templateType,
       to_email: params.toEmail,
+      cc_emails: params.ccEmails?.length ? params.ccEmails : null,
+      bcc_emails: params.bccEmails?.length ? params.bccEmails : null,
       subject: params.subject,
       status: params.status,
       resend_message_id: params.resendMessageId ?? null,

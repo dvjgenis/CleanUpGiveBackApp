@@ -13,6 +13,15 @@ import {
   updateCustomTemplate,
   type EmailTemplateType,
 } from '@/lib/email-templates';
+import { fromEditorHtml, fromEditorSubject } from '@/lib/email-template-tokens';
+
+/** Normalize editor HTML (chips) → mustache storage; safe if already mustache. */
+function normalizeTemplateFields(subject: string, bodyHtml: string) {
+  return {
+    subject: fromEditorSubject(subject),
+    bodyHtml: fromEditorHtml(bodyHtml).trim(),
+  };
+}
 
 async function getAdminUser() {
   if (process.env.BYPASS_AUTH === 'true') {
@@ -33,8 +42,7 @@ export async function updateEmailTemplate(
   subject: string,
   bodyHtml: string,
 ): Promise<void> {
-  const trimmedSubject = subject.trim();
-  const trimmedBody = bodyHtml.trim();
+  const { subject: trimmedSubject, bodyHtml: trimmedBody } = normalizeTemplateFields(subject, bodyHtml);
   if (!trimmedSubject || !trimmedBody) {
     throw new Error('Subject and body cannot be empty');
   }
@@ -60,8 +68,7 @@ export async function updateEmailTemplate(
 
 export async function createTemplate(name: string, subject: string, bodyHtml: string): Promise<string> {
   const trimmedName = name.trim();
-  const trimmedSubject = subject.trim();
-  const trimmedBody = bodyHtml.trim();
+  const { subject: trimmedSubject, bodyHtml: trimmedBody } = normalizeTemplateFields(subject, bodyHtml);
   if (!trimmedName || !trimmedSubject || !trimmedBody) {
     throw new Error('Name, subject, and body cannot be empty');
   }
@@ -83,8 +90,7 @@ export async function createTemplate(name: string, subject: string, bodyHtml: st
 
 export async function updateTemplate(id: string, name: string, subject: string, bodyHtml: string): Promise<void> {
   const trimmedName = name.trim();
-  const trimmedSubject = subject.trim();
-  const trimmedBody = bodyHtml.trim();
+  const { subject: trimmedSubject, bodyHtml: trimmedBody } = normalizeTemplateFields(subject, bodyHtml);
   if (!trimmedName || !trimmedSubject || !trimmedBody) {
     throw new Error('Name, subject, and body cannot be empty');
   }

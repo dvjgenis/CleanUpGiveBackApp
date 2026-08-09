@@ -2,6 +2,20 @@
 
 ---
 
+## [2026-08-09] — Emails: From, Cc/Bcc, typography, schedule log
+
+**R:** Donna needs Cc/Bcc, font controls, schedule-send with a cancel/edit/send-now log, everyday-language template fields (no mustache), a unified To field, select chevron spacing, and a clear **From** address on Compose.
+
+**A:** Migration `013_scheduled_emails.sql`; `dispatchAdHocEmail` + schedule actions + cron; RichTextEditor font/size/color; personalization chips; EmailsPage Compose/Scheduled/Templates with read-only From (`EMAIL_FROM`); docs synced. `tsc --noEmit` green.
+
+**L:** Own Supabase queue (not Resend `scheduledAt`) so attachment signed URLs mint at send time.
+
+**P:** Apply `013` in Supabase; set `CRON_SECRET` (+ existing `EMAIL_FROM`) on Vercel.
+
+**H:** Donna never authors `{{brackets}}` in the Templates UI; From stays env-driven / read-only.
+
+---
+
 ## [2026-08-08] — Fix Vercel 500s on /attention and /emails (jsdom)
 
 **R:** Production `/attention` and `/emails` (and some `/sessions` actions) returned 500. Vercel logs: `Failed to load external module jsdom` → `ERR_REQUIRE_ESM` requiring `@exodus/bytes/encoding-lite.js` from `html-encoding-sniffer` under Node 24.

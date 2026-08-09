@@ -11,14 +11,14 @@
 - Tote bag color variants should use earth/ocean labels in data/backend (not green/blue UI labels).
 - Admin sessions/users must stay on real Supabase data (no fixture fallback); service-role reads must be cookie-free so signed-in admin JWTs do not empty RLS-scoped lists.
 - On admin session walking-path maps, use square rounded photo thumbnails that open a lightbox (not circular pins).
-- On admin home, Payments and Orders cards should stay clickable without chevron affordances.
 - Live and replay maps must not draw a path until real GPS movement exists (no synthetic stationary line); prefer tightening live append gates over lowering the ~8 m stationary collapse span much under ~5–6 m.
-- Prefer the mobile-app style password-field icon on the admin web login.
+- Admin session empty photo state should show four placeholders (Selfie → Progress → Selfie → Progress), not three.
+- Court In Progress card should support search, clickable volunteer names, and a fullscreen expand view for Donna.
 
 ## Learned Workspace Facts
 
 - Production admin console lives in `admin-web-app/` (renamed from `web-app`); legacy `admin/` is archived — keep `admin/db/*.sql` for Supabase migrations only.
-- Admin event address autocomplete uses Photon first, with Google Maps Places as fallback when a key is available.
+- Admin place search: event address autocomplete uses Photon first with Google Places when a key is available; US heatmap/fullscreen map search uses Census (streets) + Photon (places) in parallel with Nominatim as backup (Google Places optional).
 - Transactional email for admin/mobile flows uses Resend (`RESEND_API_KEY` in env; never commit secrets).
 - Volunteer profile “Miles Walked” sums `sessions.distance_miles` for approved sessions only (same scope as Approved Hours).
 - `admin-web-app` deploys on Vercel; live session services run from `backend/sessions/` on Fly.

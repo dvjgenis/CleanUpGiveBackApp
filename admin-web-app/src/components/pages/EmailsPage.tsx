@@ -1,30 +1,79 @@
 "use client";
 
 /**
- * `/emails` — replaces the old raw-HTML-textarea template editor. Two tabs:
- * **Compose** sends a real email straight from the dashboard (to a volunteer
- * on file or a manual address, optionally started from a template, with
- * inline images + file attachments); **Templates** manages the 5 system
- * (automated-send) templates plus any custom templates Donna creates for
- * reuse in Compose. Bodies are edited with `RichTextEditor` — nobody writes
- * HTML by hand.
+ * `/emails` — Compose (send / schedule), Scheduled (edit / cancel / send now),
+ * Templates (natural-language personalization chips). Bodies use RichTextEditor.
  */
-import { useMemo, useRef, useState, useTransition } from "react";
-import { RichTextEditor, RichTextPreview } from "@/components/ui/RichTextEditor";
-import { PaperclipIcon, PencilIcon, PlusIcon, SendIcon, TrashIcon, CloseIcon } from "@/components/ui/Icons";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import {
+  EMAIL_SELECT_CHEVRON_STYLE,
+  EMAIL_SELECT_CLASS,
+  RichTextEditor,
+  RichTextPreview,
+  type RichTextEditorHandle,
+} from "@/components/ui/RichTextEditor";
+import { CloseIcon, PaperclipIcon, PencilIcon, PlusIcon, SendIcon, TrashIcon } from "@/components/ui/Icons";
 import { sendAdHocEmail } from "@/actions/emails";
 import { createTemplate, deleteTemplate, updateEmailTemplate, updateTemplate } from "@/actions/emailTemplates";
-import { uploadEmailAttachment, uploadEmailInlineImage, removeEmailAttachment, type UploadedAttachment } from "@/actions/emailAttachments";
-import { renderTemplate } from "@/lib/email-template-render";
+import {
+  uploadEmailAttachment,
+  uploadEmailInlineImage,
+  removeEmailAttachment,
+  type UploadedAttachment,
+} from "@/actions/emailAttachments";
+import {
+  cancelScheduledEmail,
+  scheduleAdHocEmail,
+  sendScheduledEmailNow,
+  updateScheduledEmail,
+} from "@/actions/scheduledEmails";
+import {
+  renderTemplate,
+  EMAIL_TEMPLATE_VARIABLES,
+  EMAIL_TEMPLATE_SAMPLE_DATA,
+  type EmailTemplateType,
+} from "@/lib/email-template-render";
+import {
+  chipHtml,
+  CUSTOM_TEMPLATE_INSERT_VARS,
+  fromEditorHtml,
+  fromEditorSubject,
+  labelForVariable,
+  toEditorHtml,
+} from "@/lib/email-template-tokens";
 import type { EmailTemplateRecord } from "@/lib/email-templates";
+import type { ScheduledEmail } from "@/lib/scheduled-emails";
+import { isValidEmail } from "@/lib/email-address";
 
 type Volunteer = { id: string; name: string; email: string };
-type Tab = "compose" | "templates";
+type Tab = "compose" | "scheduled" | "templates";
+type Recipient =
+  | { kind: "volunteer"; id: string; name: string; email: string }
+  | { kind: "custom"; email: string };
 
 function formatBytes(n: number): string {
   if (n < 1024) return `${n} B`;
   if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} KB`;
   return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function toDatetimeLocalValue(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function formatScheduledWhen(iso: string): string {
+  try {
+    return new Intl.DateTimeFormat(undefined, {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(new Date(iso));
+  } catch {
+    return iso;
+  }
 }
 
 async function uploadInlineImage(file: File): Promise<string> {
@@ -51,35 +100,308 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
   );
 }
 
-function ComposeTab({ templates, volunteers }: { templates: EmailTemplateRecord[]; volunteers: Volunteer[] }) {
-  const [recipientMode, setRecipientMode] = useState<"volunteer" | "custom">("volunteer");
-  const [volunteerQuery, setVolunteerQuery] = useState("");
-  const [volunteerDropdownOpen, setVolunteerDropdownOpen] = useState(false);
-  const [selectedVolunteer, setSelectedVolunteer] = useState<Volunteer | null>(null);
-  const [toEmail, setToEmail] = useState("");
-  const [subject, setSubject] = useState("");
-  const [bodyHtml, setBodyHtml] = useState("");
-  const [attachments, setAttachments] = useState<UploadedAttachment[]>([]);
-  const [uploadingAttachment, setUploadingAttachment] = useState(false);
-  const [isSending, startSending] = useTransition();
-  const [sendResult, setSendResult] = useState<{ ok: boolean; error?: string } | null>(null);
-  const attachmentInputRef = useRef<HTMLInputElement>(null);
+function FromLine({ fromAddress }: { fromAddress: string }) {
+  return (
+    <div>
+      <label className="font-data text-[11px] tracking-[0.6px] uppercase text-text-tertiary mb-xs block">From</label>
+      <div className="h-11 px-md rounded-sm border border-border-outline bg-bg-surface-elevated flex items-center">
+        <span className="font-body text-[14px] text-text-primary">{fromAddress}</span>
+      </div>
+      <p className="mt-xs font-body text-[12px] text-text-tertiary">
+        Sent as Clean Up Give Back from this address (set via EMAIL_FROM).
+      </p>
+    </div>
+  );
+}
 
-  const filteredVolunteers = useMemo(() => {
-    const needle = volunteerQuery.trim().toLowerCase();
+function RecipientPicker({
+  label,
+  volunteers,
+  value,
+  onChange,
+}: {
+  label: string;
+  volunteers: Volunteer[];
+  value: Recipient | null;
+  onChange: (next: Recipient | null) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+
+  const filtered = useMemo(() => {
+    const needle = query.trim().toLowerCase();
     if (!needle) return volunteers.slice(0, 8);
     return volunteers
       .filter((v) => v.name.toLowerCase().includes(needle) || v.email.toLowerCase().includes(needle))
       .slice(0, 8);
-  }, [volunteerQuery, volunteers]);
+  }, [query, volunteers]);
+
+  const trimmed = query.trim();
+  const canUseCustom = isValidEmail(trimmed);
+
+  if (value) {
+    return (
+      <div>
+        <label className="font-data text-[11px] tracking-[0.6px] uppercase text-text-tertiary mb-xs block">{label}</label>
+        <div className="flex items-center gap-sm h-11 px-md rounded-sm border border-border-outline bg-bg-app w-fit max-w-full">
+          <span className="font-body text-[14px] text-text-primary truncate">
+            {value.kind === "volunteer" ? (
+              <>
+                {value.name} <span className="text-text-tertiary">({value.email})</span>
+              </>
+            ) : (
+              value.email
+            )}
+          </span>
+          <button type="button" onClick={() => onChange(null)} aria-label={`Clear ${label}`}>
+            <CloseIcon className="w-3.5 h-3.5 text-text-tertiary" />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <label className="font-data text-[11px] tracking-[0.6px] uppercase text-text-tertiary mb-xs block">{label}</label>
+      <div className="relative">
+        <input
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setTimeout(() => setOpen(false), 150)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && canUseCustom) {
+              e.preventDefault();
+              onChange({ kind: "custom", email: trimmed });
+              setQuery("");
+              setOpen(false);
+            }
+          }}
+          placeholder="Search volunteers or type an email…"
+          className="w-full h-11 px-md rounded-sm border border-border-outline bg-bg-app font-body text-[14px] text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+        />
+        {open && (filtered.length > 0 || canUseCustom) && (
+          <ul className="absolute z-10 mt-xs w-full max-h-64 overflow-y-auto bg-bg-surface border border-border-outline rounded-sm shadow-bar-top">
+            {filtered.map((v) => (
+              <li key={v.id}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onChange({ kind: "volunteer", id: v.id, name: v.name, email: v.email });
+                    setQuery("");
+                    setOpen(false);
+                  }}
+                  className="w-full text-left px-md py-sm hover:bg-bg-app transition-colors"
+                >
+                  <p className="font-body text-[13px] text-text-primary">{v.name}</p>
+                  <p className="font-data text-[11px] text-text-tertiary">{v.email}</p>
+                </button>
+              </li>
+            ))}
+            {canUseCustom && (
+              <li>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onChange({ kind: "custom", email: trimmed });
+                    setQuery("");
+                    setOpen(false);
+                  }}
+                  className="w-full text-left px-md py-sm hover:bg-bg-app transition-colors border-t border-border-outline"
+                >
+                  <p className="font-body text-[13px] text-text-primary">Use {trimmed}</p>
+                  <p className="font-data text-[11px] text-text-tertiary">Custom email</p>
+                </button>
+              </li>
+            )}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function EmailChipList({
+  label,
+  volunteers,
+  emails,
+  onChange,
+}: {
+  label: string;
+  volunteers: Volunteer[];
+  emails: string[];
+  onChange: (next: string[]) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+
+  const filtered = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    const taken = new Set(emails.map((e) => e.toLowerCase()));
+    return volunteers
+      .filter((v) => !taken.has(v.email.toLowerCase()))
+      .filter((v) => !needle || v.name.toLowerCase().includes(needle) || v.email.toLowerCase().includes(needle))
+      .slice(0, 6);
+  }, [query, volunteers, emails]);
+
+  function addEmail(email: string) {
+    const normalized = email.trim().toLowerCase();
+    if (!isValidEmail(normalized) || emails.some((e) => e.toLowerCase() === normalized)) return;
+    onChange([...emails, normalized]);
+    setQuery("");
+    setOpen(false);
+  }
+
+  return (
+    <div>
+      <label className="font-data text-[11px] tracking-[0.6px] uppercase text-text-tertiary mb-xs block">{label}</label>
+      <div className="flex flex-wrap gap-xs mb-xs">
+        {emails.map((email) => (
+          <span
+            key={email}
+            className="inline-flex items-center gap-xs h-8 px-sm rounded-full border border-border-outline bg-bg-app font-body text-[12px] text-text-primary"
+          >
+            {email}
+            <button type="button" onClick={() => onChange(emails.filter((e) => e !== email))} aria-label={`Remove ${email}`}>
+              <CloseIcon className="w-3 h-3 text-text-tertiary" />
+            </button>
+          </span>
+        ))}
+      </div>
+      <div className="relative">
+        <input
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setTimeout(() => setOpen(false), 150)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === ",") {
+              e.preventDefault();
+              addEmail(query.replace(/,/g, ""));
+            }
+          }}
+          placeholder="Add email or search volunteer…"
+          className="w-full h-11 px-md rounded-sm border border-border-outline bg-bg-app font-body text-[14px] text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+        />
+        {open && (filtered.length > 0 || isValidEmail(query.trim())) && (
+          <ul className="absolute z-10 mt-xs w-full max-h-48 overflow-y-auto bg-bg-surface border border-border-outline rounded-sm shadow-bar-top">
+            {filtered.map((v) => (
+              <li key={v.id}>
+                <button
+                  type="button"
+                  onClick={() => addEmail(v.email)}
+                  className="w-full text-left px-md py-sm hover:bg-bg-app transition-colors"
+                >
+                  <p className="font-body text-[13px] text-text-primary">{v.name}</p>
+                  <p className="font-data text-[11px] text-text-tertiary">{v.email}</p>
+                </button>
+              </li>
+            ))}
+            {isValidEmail(query.trim()) && (
+              <li>
+                <button
+                  type="button"
+                  onClick={() => addEmail(query.trim())}
+                  className="w-full text-left px-md py-sm hover:bg-bg-app transition-colors"
+                >
+                  Add {query.trim()}
+                </button>
+              </li>
+            )}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SubjectTokenField({
+  value,
+  onChange,
+  onInsertRef,
+}: {
+  value: string;
+  onChange: (html: string) => void;
+  onInsertRef?: React.MutableRefObject<((html: string) => void) | null>;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const last = useRef(value);
+
+  useEffect(() => {
+    if (ref.current && value !== last.current && ref.current.innerHTML !== value) {
+      ref.current.innerHTML = value || "";
+      last.current = value;
+    }
+  }, [value]);
+
+  const emit = useCallback(() => {
+    const html = ref.current?.innerHTML ?? "";
+    last.current = html;
+    onChange(html);
+  }, [onChange]);
+
+  useEffect(() => {
+    if (!onInsertRef) return;
+    onInsertRef.current = (html: string) => {
+      ref.current?.focus();
+      document.execCommand("insertHTML", false, html);
+      emit();
+    };
+    return () => {
+      onInsertRef.current = null;
+    };
+  }, [onInsertRef, emit]);
+
+  return (
+    <div
+      ref={ref}
+      role="textbox"
+      aria-label="Subject"
+      contentEditable
+      suppressContentEditableWarning
+      onInput={emit}
+      onBlur={emit}
+      className="w-full min-h-11 px-md py-sm rounded-sm border border-border-outline bg-bg-app font-body text-[14px] text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary [&_.email-token]:inline-flex [&_.email-token]:items-center [&_.email-token]:px-1.5 [&_.email-token]:py-0.5 [&_.email-token]:mx-0.5 [&_.email-token]:rounded-sm [&_.email-token]:bg-primary/10 [&_.email-token]:text-primary [&_.email-token]:font-data [&_.email-token]:text-[12px] [&_.email-token]:font-semibold"
+    />
+  );
+}
+
+function ComposeTab({
+  templates,
+  volunteers,
+  fromAddress,
+}: {
+  templates: EmailTemplateRecord[];
+  volunteers: Volunteer[];
+  fromAddress: string;
+}) {
+  const [to, setTo] = useState<Recipient | null>(null);
+  const [cc, setCc] = useState<string[]>([]);
+  const [bcc, setBcc] = useState<string[]>([]);
+  const [showBcc, setShowBcc] = useState(false);
+  const [subject, setSubject] = useState("");
+  const [bodyHtml, setBodyHtml] = useState("");
+  const [attachments, setAttachments] = useState<UploadedAttachment[]>([]);
+  const [uploadingAttachment, setUploadingAttachment] = useState(false);
+  const [scheduleAt, setScheduleAt] = useState("");
+  const [showSchedule, setShowSchedule] = useState(false);
+  const [isSending, startSending] = useTransition();
+  const [sendResult, setSendResult] = useState<{ ok: boolean; error?: string } | null>(null);
+  const [statusNote, setStatusNote] = useState<string | null>(null);
+  const attachmentInputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
 
   function applyTemplate(templateId: string) {
     const template = templates.find((t) => t.id === templateId);
     if (!template) return;
-    // volunteer_name comes from the volunteer's own account display name — not
-    // admin-authored — so it must be escaped before landing in the HTML body,
-    // same reasoning as the automated-send templates (see email-template-render.ts).
-    const vars = { volunteer_name: selectedVolunteer?.name ?? "" };
+    const vars = { volunteer_name: to?.kind === "volunteer" ? to.name : "" };
     setSubject(renderTemplate(template.subject, vars));
     setBodyHtml(renderTemplate(template.bodyHtml, vars, { escapeHtml: true }));
   }
@@ -103,30 +425,41 @@ function ComposeTab({ templates, volunteers }: { templates: EmailTemplateRecord[
     }
   }
 
-  function handleRemoveAttachment(path: string) {
-    setAttachments((prev) => prev.filter((a) => a.path !== path));
-    void removeEmailAttachment(path);
+  function clearForm() {
+    setSubject("");
+    setBodyHtml("");
+    setAttachments([]);
+    setTo(null);
+    setCc([]);
+    setBcc([]);
+    setScheduleAt("");
+    setShowSchedule(false);
+  }
+
+  function recipientPayload() {
+    return {
+      recipientUserId: to?.kind === "volunteer" ? to.id : undefined,
+      toEmail: to?.kind === "custom" ? to.email : undefined,
+    };
   }
 
   function handleSend() {
     setSendResult(null);
+    setStatusNote(null);
     startSending(async () => {
       try {
         const result = await sendAdHocEmail({
-          recipientUserId: recipientMode === "volunteer" ? (selectedVolunteer?.id ?? undefined) : undefined,
-          toEmail: recipientMode === "custom" ? toEmail : undefined,
+          ...recipientPayload(),
+          ccEmails: cc,
+          bccEmails: bcc,
           subject,
           bodyHtml,
           attachments: attachments.map((a) => ({ path: a.path, filename: a.filename })),
         });
         setSendResult(result);
         if (result.ok) {
-          setSubject("");
-          setBodyHtml("");
-          setAttachments([]);
-          setSelectedVolunteer(null);
-          setVolunteerQuery("");
-          setToEmail("");
+          clearForm();
+          setStatusNote("Email sent");
         }
       } catch (err) {
         setSendResult({ ok: false, error: err instanceof Error ? err.message : "Failed to send" });
@@ -134,91 +467,66 @@ function ComposeTab({ templates, volunteers }: { templates: EmailTemplateRecord[
     });
   }
 
+  function handleSchedule() {
+    setSendResult(null);
+    setStatusNote(null);
+    if (!scheduleAt) {
+      setSendResult({ ok: false, error: "Pick a send time" });
+      return;
+    }
+    startSending(async () => {
+      try {
+        const result = await scheduleAdHocEmail({
+          ...recipientPayload(),
+          ccEmails: cc,
+          bccEmails: bcc,
+          subject,
+          bodyHtml,
+          attachments: attachments.map((a) => ({ path: a.path, filename: a.filename })),
+          scheduledFor: new Date(scheduleAt).toISOString(),
+        });
+        if (result.ok) {
+          clearForm();
+          setSendResult({ ok: true, error: undefined });
+          setStatusNote("Email scheduled");
+          router.refresh();
+        } else {
+          setSendResult({ ok: false, error: result.error });
+        }
+      } catch (err) {
+        setSendResult({ ok: false, error: err instanceof Error ? err.message : "Failed to schedule" });
+      }
+    });
+  }
+
   const canSend =
-    subject.trim().length > 0 &&
-    bodyHtml.trim().length > 0 &&
-    (recipientMode === "volunteer" ? selectedVolunteer != null : toEmail.trim().length > 0);
+    subject.trim().length > 0 && bodyHtml.trim().length > 0 && to != null;
+
+  const tzHint = useMemo(() => {
+    try {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone;
+    } catch {
+      return "local time";
+    }
+  }, []);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_280px] gap-lg items-start">
       <div className="bg-bg-surface border border-border-outline rounded-md p-lg flex flex-col gap-md">
-        <div>
-          <label className="font-data text-[11px] tracking-[0.6px] uppercase text-text-tertiary mb-xs block">To</label>
-          <div className="flex items-center gap-xs mb-sm">
-            <button
-              type="button"
-              onClick={() => setRecipientMode("volunteer")}
-              className={`h-8 px-md rounded-full border font-data text-[11px] font-semibold transition-colors ${
-                recipientMode === "volunteer" ? "bg-primary text-white border-primary" : "bg-bg-app text-text-tertiary border-border-outline"
-              }`}
-            >
-              Volunteer
-            </button>
-            <button
-              type="button"
-              onClick={() => setRecipientMode("custom")}
-              className={`h-8 px-md rounded-full border font-data text-[11px] font-semibold transition-colors ${
-                recipientMode === "custom" ? "bg-primary text-white border-primary" : "bg-bg-app text-text-tertiary border-border-outline"
-              }`}
-            >
-              Custom email
-            </button>
-          </div>
-
-          {recipientMode === "volunteer" ? (
-            selectedVolunteer ? (
-              <div className="flex items-center gap-sm h-11 px-md rounded-sm border border-border-outline bg-bg-app w-fit">
-                <span className="font-body text-[14px] text-text-primary">
-                  {selectedVolunteer.name} <span className="text-text-tertiary">({selectedVolunteer.email})</span>
-                </span>
-                <button type="button" onClick={() => setSelectedVolunteer(null)} aria-label="Clear recipient">
-                  <CloseIcon className="w-3.5 h-3.5 text-text-tertiary" />
-                </button>
-              </div>
-            ) : (
-              <div className="relative">
-                <input
-                  value={volunteerQuery}
-                  onChange={(e) => {
-                    setVolunteerQuery(e.target.value);
-                    setVolunteerDropdownOpen(true);
-                  }}
-                  onFocus={() => setVolunteerDropdownOpen(true)}
-                  onBlur={() => setTimeout(() => setVolunteerDropdownOpen(false), 150)}
-                  placeholder="Search volunteers by name or email…"
-                  className="w-full h-11 px-md rounded-sm border border-border-outline bg-bg-app font-body text-[14px] text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
-                />
-                {volunteerDropdownOpen && filteredVolunteers.length > 0 && (
-                  <ul className="absolute z-10 mt-xs w-full max-h-64 overflow-y-auto bg-bg-surface border border-border-outline rounded-sm shadow-bar-top">
-                    {filteredVolunteers.map((v) => (
-                      <li key={v.id}>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedVolunteer(v);
-                            setVolunteerQuery("");
-                          }}
-                          className="w-full text-left px-md py-sm hover:bg-bg-app transition-colors"
-                        >
-                          <p className="font-body text-[13px] text-text-primary">{v.name}</p>
-                          <p className="font-data text-[11px] text-text-tertiary">{v.email}</p>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            )
-          ) : (
-            <input
-              value={toEmail}
-              onChange={(e) => setToEmail(e.target.value)}
-              type="email"
-              placeholder="name@example.com"
-              className="w-full h-11 px-md rounded-sm border border-border-outline bg-bg-app font-body text-[14px] text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
-            />
-          )}
-        </div>
+        <FromLine fromAddress={fromAddress} />
+        <RecipientPicker label="To" volunteers={volunteers} value={to} onChange={setTo} />
+        <EmailChipList label="Cc" volunteers={volunteers} emails={cc} onChange={setCc} />
+        {showBcc ? (
+          <EmailChipList label="Bcc" volunteers={volunteers} emails={bcc} onChange={setBcc} />
+        ) : (
+          <button
+            type="button"
+            onClick={() => setShowBcc(true)}
+            className="self-start font-data text-[11px] font-semibold text-primary hover:underline"
+          >
+            Add Bcc
+          </button>
+        )}
 
         {templates.length > 0 && (
           <div>
@@ -231,7 +539,8 @@ function ComposeTab({ templates, volunteers }: { templates: EmailTemplateRecord[
                 if (e.target.value) applyTemplate(e.target.value);
                 e.target.value = "";
               }}
-              className="h-11 px-md rounded-sm border border-border-outline bg-bg-app font-body text-[13px] text-text-primary"
+              className={EMAIL_SELECT_CLASS}
+              style={EMAIL_SELECT_CHEVRON_STYLE}
             >
               <option value="" disabled>
                 Choose a template…
@@ -280,7 +589,14 @@ function ComposeTab({ templates, volunteers }: { templates: EmailTemplateRecord[
                   <span className="font-body text-[12px] text-text-primary truncate">
                     {a.filename} <span className="text-text-tertiary">({formatBytes(a.sizeBytes)})</span>
                   </span>
-                  <button type="button" onClick={() => handleRemoveAttachment(a.path)} aria-label={`Remove ${a.filename}`}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAttachments((prev) => prev.filter((x) => x.path !== a.path));
+                      void removeEmailAttachment(a.path);
+                    }}
+                    aria-label={`Remove ${a.filename}`}
+                  >
                     <CloseIcon className="w-3.5 h-3.5 text-text-tertiary" />
                   </button>
                 </li>
@@ -289,19 +605,68 @@ function ComposeTab({ templates, volunteers }: { templates: EmailTemplateRecord[
           )}
         </div>
 
-        <div className="flex items-center gap-md">
+        {showSchedule && (
+          <div>
+            <label className="font-data text-[11px] tracking-[0.6px] uppercase text-text-tertiary mb-xs block">
+              Send at ({tzHint})
+            </label>
+            <input
+              type="datetime-local"
+              value={scheduleAt}
+              onChange={(e) => setScheduleAt(e.target.value)}
+              className="w-full h-11 px-md rounded-sm border border-border-outline bg-bg-app font-body text-[14px] text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+            />
+          </div>
+        )}
+
+        <div className="flex flex-wrap items-center gap-md">
           <button
             type="button"
             onClick={handleSend}
-            disabled={!canSend || isSending}
+            disabled={!canSend || isSending || showSchedule}
             className="inline-flex items-center gap-sm h-11 px-lg rounded-full bg-primary text-white font-data text-[12px] font-semibold hover:bg-[#007d35] transition-colors disabled:opacity-50"
           >
             <SendIcon className="w-4 h-4" />
-            {isSending ? "Sending…" : "Send"}
+            {isSending && !showSchedule ? "Sending…" : "Send"}
           </button>
-          {sendResult && (
-            <span className={`font-body text-[13px] ${sendResult.ok ? "text-primary" : "text-[#ba1a1a]"}`}>
-              {sendResult.ok ? "Email sent" : sendResult.error}
+          {!showSchedule ? (
+            <button
+              type="button"
+              onClick={() => setShowSchedule(true)}
+              disabled={!canSend || isSending}
+              className="inline-flex items-center gap-sm h-11 px-lg rounded-full border border-border-outline font-data text-[12px] font-semibold text-text-primary hover:bg-bg-app transition-colors disabled:opacity-50"
+            >
+              Schedule send
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={handleSchedule}
+                disabled={!canSend || isSending || !scheduleAt}
+                className="inline-flex items-center gap-sm h-11 px-lg rounded-full bg-primary text-white font-data text-[12px] font-semibold hover:bg-[#007d35] transition-colors disabled:opacity-50"
+              >
+                {isSending ? "Scheduling…" : "Confirm schedule"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSchedule(false);
+                  setScheduleAt("");
+                }}
+                className="font-data text-[12px] font-semibold text-text-tertiary hover:text-text-primary"
+              >
+                Cancel
+              </button>
+            </>
+          )}
+          {(sendResult || statusNote) && (
+            <span
+              className={`font-body text-[13px] ${
+                sendResult && !sendResult.ok ? "text-[#ba1a1a]" : "text-primary"
+              }`}
+            >
+              {sendResult && !sendResult.ok ? sendResult.error : statusNote}
             </span>
           )}
         </div>
@@ -310,7 +675,10 @@ function ComposeTab({ templates, volunteers }: { templates: EmailTemplateRecord[
       <div className="bg-bg-surface border border-border-outline rounded-md p-lg">
         <p className="font-data text-[11px] tracking-[0.6px] uppercase text-text-tertiary mb-md">Preview</p>
         <div className="border border-border-outline rounded-sm overflow-hidden">
-          <div className="px-md py-sm bg-bg-surface-elevated border-b border-border-outline">
+          <div className="px-md py-sm bg-bg-surface-elevated border-b border-border-outline space-y-xs">
+            <p className="font-data text-[11px] text-text-tertiary">
+              From <span className="text-text-primary">{fromAddress}</span>
+            </p>
             <p className="font-body text-[13px] font-medium text-text-primary truncate">{subject || "(no subject)"}</p>
           </div>
           <div className="px-md py-md">
@@ -322,23 +690,283 @@ function ComposeTab({ templates, volunteers }: { templates: EmailTemplateRecord[
   );
 }
 
+function EditScheduledDrawer({
+  row,
+  volunteers,
+  fromAddress,
+  onClose,
+  onSaved,
+}: {
+  row: ScheduledEmail;
+  volunteers: Volunteer[];
+  fromAddress: string;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const initialVolunteer = volunteers.find((v) => v.id === row.userId);
+  const [to, setTo] = useState<Recipient | null>(
+    initialVolunteer
+      ? { kind: "volunteer", id: initialVolunteer.id, name: initialVolunteer.name, email: initialVolunteer.email }
+      : { kind: "custom", email: row.toEmail },
+  );
+  const [cc, setCc] = useState(row.ccEmails);
+  const [bcc, setBcc] = useState(row.bccEmails);
+  const [subject, setSubject] = useState(row.subject);
+  const [bodyHtml, setBodyHtml] = useState(row.bodyHtml);
+  const [attachments, setAttachments] = useState<UploadedAttachment[]>(
+    row.attachments.map((a) => ({ path: a.path, filename: a.filename, sizeBytes: 0 })),
+  );
+  const [scheduleAt, setScheduleAt] = useState(toDatetimeLocalValue(row.scheduledFor));
+  const [isSaving, startSaving] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const attachmentInputRef = useRef<HTMLInputElement>(null);
+
+  function handleSave() {
+    setError(null);
+    startSaving(async () => {
+      try {
+        const result = await updateScheduledEmail({
+          id: row.id,
+          recipientUserId: to?.kind === "volunteer" ? to.id : undefined,
+          toEmail: to?.kind === "custom" ? to.email : undefined,
+          ccEmails: cc,
+          bccEmails: bcc,
+          subject,
+          bodyHtml,
+          attachments: attachments.map((a) => ({ path: a.path, filename: a.filename })),
+          scheduledFor: new Date(scheduleAt).toISOString(),
+        });
+        if (!result.ok) {
+          setError(result.error ?? "Failed to save");
+          return;
+        }
+        onSaved();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to save");
+      }
+    });
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-md" role="dialog" aria-modal="true">
+      <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-bg-surface border border-border-outline rounded-md p-lg flex flex-col gap-md">
+        <div className="flex items-center justify-between gap-md">
+          <h2 className="font-heading text-[20px] text-text-primary">Edit scheduled email</h2>
+          <button type="button" onClick={onClose} aria-label="Close">
+            <CloseIcon className="w-5 h-5 text-text-tertiary" />
+          </button>
+        </div>
+        <FromLine fromAddress={fromAddress} />
+        <RecipientPicker label="To" volunteers={volunteers} value={to} onChange={setTo} />
+        <EmailChipList label="Cc" volunteers={volunteers} emails={cc} onChange={setCc} />
+        <EmailChipList label="Bcc" volunteers={volunteers} emails={bcc} onChange={setBcc} />
+        <div>
+          <label className="font-data text-[11px] tracking-[0.6px] uppercase text-text-tertiary mb-xs block">Subject</label>
+          <input
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            className="w-full h-11 px-md rounded-sm border border-border-outline bg-bg-app font-body text-[14px] text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+          />
+        </div>
+        <RichTextEditor value={bodyHtml} onChange={setBodyHtml} onUploadImage={uploadInlineImage} />
+        <div>
+          <label className="font-data text-[11px] tracking-[0.6px] uppercase text-text-tertiary mb-xs block">Send at</label>
+          <input
+            type="datetime-local"
+            value={scheduleAt}
+            onChange={(e) => setScheduleAt(e.target.value)}
+            className="w-full h-11 px-md rounded-sm border border-border-outline bg-bg-app font-body text-[14px] text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+          />
+        </div>
+        <div className="flex items-center gap-sm">
+          <button
+            type="button"
+            onClick={() => attachmentInputRef.current?.click()}
+            className="inline-flex items-center gap-xs h-8 px-sm rounded-sm border border-border-outline font-data text-[11px] font-semibold text-text-tertiary"
+          >
+            <PaperclipIcon className="w-3.5 h-3.5" /> Attach
+          </button>
+          <input
+            ref={attachmentInputRef}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={async (e) => {
+              const files = Array.from(e.target.files ?? []);
+              e.target.value = "";
+              for (const file of files) {
+                const formData = new FormData();
+                formData.append("file", file);
+                const uploaded = await uploadEmailAttachment(formData);
+                setAttachments((prev) => [...prev, uploaded]);
+              }
+            }}
+          />
+          {attachments.map((a) => (
+            <span key={a.path} className="font-data text-[11px] text-text-tertiary">
+              {a.filename}
+            </span>
+          ))}
+        </div>
+        {error && <p className="font-body text-[13px] text-[#ba1a1a]">{error}</p>}
+        <div className="flex items-center gap-md">
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={isSaving || !to || !subject.trim() || !bodyHtml.trim() || !scheduleAt}
+            className="h-11 px-lg rounded-full bg-primary text-white font-data text-[12px] font-semibold disabled:opacity-50"
+          >
+            {isSaving ? "Saving…" : "Save changes"}
+          </button>
+          <button type="button" onClick={onClose} className="font-data text-[12px] font-semibold text-text-tertiary">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ScheduledTab({
+  rows,
+  volunteers,
+  fromAddress,
+}: {
+  rows: ScheduledEmail[];
+  volunteers: Volunteer[];
+  fromAddress: string;
+}) {
+  const router = useRouter();
+  const [editing, setEditing] = useState<ScheduledEmail | null>(null);
+  const [pending, startPending] = useTransition();
+  const [message, setMessage] = useState<string | null>(null);
+
+  function runAction(fn: () => Promise<{ ok: boolean; error?: string }>, okMsg: string) {
+    setMessage(null);
+    startPending(async () => {
+      const result = await fn();
+      setMessage(result.ok ? okMsg : result.error ?? "Failed");
+      router.refresh();
+    });
+  }
+
+  return (
+    <div className="bg-bg-surface border border-border-outline rounded-md overflow-hidden">
+      <div className="px-lg py-md border-b border-border-outline flex items-center justify-between gap-md">
+        <div>
+          <p className="font-body text-[14px] text-text-primary">Scheduled emails</p>
+          <p className="font-body text-[12px] text-text-tertiary">From {fromAddress} · pending can be edited, sent now, or cancelled</p>
+        </div>
+        {message && <span className="font-body text-[13px] text-text-tertiary">{message}</span>}
+      </div>
+      {rows.length === 0 ? (
+        <p className="p-lg font-body text-[13px] text-text-tertiary">No scheduled emails yet.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="border-b border-border-outline font-data text-[11px] uppercase tracking-[0.6px] text-text-tertiary">
+                <th className="px-md py-sm font-semibold">When</th>
+                <th className="px-md py-sm font-semibold">To</th>
+                <th className="px-md py-sm font-semibold">Cc / Bcc</th>
+                <th className="px-md py-sm font-semibold">Subject</th>
+                <th className="px-md py-sm font-semibold">Status</th>
+                <th className="px-md py-sm font-semibold">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.id} className="border-b border-border-outline last:border-0 align-top">
+                  <td className="px-md py-sm font-body text-[13px] text-text-primary whitespace-nowrap">
+                    {formatScheduledWhen(row.scheduledFor)}
+                  </td>
+                  <td className="px-md py-sm font-body text-[13px] text-text-primary">{row.toEmail}</td>
+                  <td className="px-md py-sm font-body text-[12px] text-text-tertiary">
+                    {row.ccEmails.length || row.bccEmails.length
+                      ? `Cc ${row.ccEmails.length} · Bcc ${row.bccEmails.length}`
+                      : "—"}
+                  </td>
+                  <td className="px-md py-sm font-body text-[13px] text-text-primary max-w-[220px] truncate">{row.subject}</td>
+                  <td className="px-md py-sm font-data text-[11px] font-semibold uppercase text-text-tertiary">
+                    {row.status}
+                    {row.status === "failed" && row.errorMessage ? (
+                      <span className="block normal-case font-body text-[11px] text-[#ba1a1a] mt-xs">{row.errorMessage}</span>
+                    ) : null}
+                  </td>
+                  <td className="px-md py-sm">
+                    {row.status === "pending" ? (
+                      <div className="flex flex-wrap gap-xs">
+                        <button
+                          type="button"
+                          disabled={pending}
+                          onClick={() => setEditing(row)}
+                          className="h-8 px-sm rounded-full border border-border-outline font-data text-[11px] font-semibold"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          disabled={pending}
+                          onClick={() => runAction(() => sendScheduledEmailNow(row.id), "Sent")}
+                          className="h-8 px-sm rounded-full bg-primary text-white font-data text-[11px] font-semibold"
+                        >
+                          Send now
+                        </button>
+                        <button
+                          type="button"
+                          disabled={pending}
+                          onClick={() => runAction(() => cancelScheduledEmail(row.id), "Cancelled")}
+                          className="h-8 px-sm rounded-full border border-[#ba1a1a]/40 text-[#ba1a1a] font-data text-[11px] font-semibold"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="font-body text-[12px] text-text-tertiary">—</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {editing && (
+        <EditScheduledDrawer
+          row={editing}
+          volunteers={volunteers}
+          fromAddress={fromAddress}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            router.refresh();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
 function TemplatesTab({ templates }: { templates: EmailTemplateRecord[] }) {
-  const [selectedId, setSelectedId] = useState<string | null>(templates[0]?.id ?? null);
+  const initial = templates[0] ?? null;
+  const [selectedId, setSelectedId] = useState<string | null>(initial?.id ?? null);
   const [isCreatingNew, setIsCreatingNew] = useState(false);
-  const [draftName, setDraftName] = useState("");
-  const [draftSubject, setDraftSubject] = useState("");
-  const [draftBody, setDraftBody] = useState("");
+  const [draftName, setDraftName] = useState(initial?.name ?? "");
+  const [draftSubject, setDraftSubject] = useState(initial ? toEditorHtml(initial.subject) : "");
+  const [draftBody, setDraftBody] = useState(initial ? toEditorHtml(initial.bodyHtml) : "");
   const [isSaving, startSaving] = useTransition();
   const [status, setStatus] = useState<{ message: string; kind: "success" | "error" } | null>(null);
+  const bodyRef = useRef<RichTextEditorHandle>(null);
+  const subjectInsertRef = useRef<((html: string) => void) | null>(null);
 
-  const selected = isCreatingNew ? null : templates.find((t) => t.id === selectedId) ?? null;
+  const selected = isCreatingNew ? null : (templates.find((t) => t.id === selectedId) ?? null);
 
   function selectTemplate(t: EmailTemplateRecord) {
     setIsCreatingNew(false);
     setSelectedId(t.id);
     setDraftName(t.name);
-    setDraftSubject(t.subject);
-    setDraftBody(t.bodyHtml);
+    setDraftSubject(toEditorHtml(t.subject));
+    setDraftBody(toEditorHtml(t.bodyHtml));
     setStatus(null);
   }
 
@@ -351,18 +979,36 @@ function TemplatesTab({ templates }: { templates: EmailTemplateRecord[] }) {
     setStatus(null);
   }
 
+  const insertVars = useMemo(() => {
+    if (selected?.isSystem && selected.templateType) {
+      return EMAIL_TEMPLATE_VARIABLES[selected.templateType as EmailTemplateType] ?? [];
+    }
+    return [...CUSTOM_TEMPLATE_INSERT_VARS];
+  }, [selected]);
+
+  function insertField(varName: string) {
+    const html = chipHtml(varName);
+    bodyRef.current?.insertHtml(html);
+  }
+
+  function insertFieldInSubject(varName: string) {
+    subjectInsertRef.current?.(chipHtml(varName));
+  }
+
   function handleSave() {
     setStatus(null);
+    const subject = fromEditorSubject(draftSubject);
+    const body = fromEditorHtml(draftBody);
     startSaving(async () => {
       try {
         if (isCreatingNew) {
-          await createTemplate(draftName, draftSubject, draftBody);
+          await createTemplate(draftName, subject, body);
           setStatus({ message: "Template created", kind: "success" });
         } else if (selected?.isSystem && selected.templateType) {
-          await updateEmailTemplate(selected.templateType, draftSubject, draftBody);
+          await updateEmailTemplate(selected.templateType, subject, body);
           setStatus({ message: "Saved", kind: "success" });
         } else if (selected) {
-          await updateTemplate(selected.id, draftName, draftSubject, draftBody);
+          await updateTemplate(selected.id, draftName, subject, body);
           setStatus({ message: "Saved", kind: "success" });
         }
       } catch (err) {
@@ -385,8 +1031,19 @@ function TemplatesTab({ templates }: { templates: EmailTemplateRecord[] }) {
     });
   }
 
-  const previewSubject = renderTemplate(draftSubject, { volunteer_name: "Jordan Rivera" });
-  const previewBody = renderTemplate(draftBody, { volunteer_name: "Jordan Rivera" }, { escapeHtml: true });
+  const sampleVars = useMemo(() => {
+    if (selected?.isSystem && selected.templateType) {
+      return (
+        EMAIL_TEMPLATE_SAMPLE_DATA[selected.templateType as EmailTemplateType] ?? {
+          volunteer_name: "Jordan Rivera",
+        }
+      );
+    }
+    return { volunteer_name: "Jordan Rivera", activity: "Riverside Park Cleanup" };
+  }, [selected]);
+
+  const previewSubject = renderTemplate(fromEditorSubject(draftSubject), sampleVars);
+  const previewBody = renderTemplate(fromEditorHtml(draftBody), sampleVars, { escapeHtml: true });
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)_280px] gap-lg items-start">
@@ -430,22 +1087,49 @@ function TemplatesTab({ templates }: { templates: EmailTemplateRecord[] }) {
               </div>
             )}
             <div>
-              <label className="font-data text-[11px] tracking-[0.6px] uppercase text-text-tertiary mb-xs block">Subject</label>
-              <input
-                value={draftSubject}
-                onChange={(e) => setDraftSubject(e.target.value)}
-                className="w-full h-11 px-md rounded-sm border border-border-outline bg-bg-app font-body text-[14px] text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
-              />
+              <div className="flex items-center justify-between gap-sm mb-xs">
+                <label className="font-data text-[11px] tracking-[0.6px] uppercase text-text-tertiary">Subject</label>
+                <div className="flex flex-wrap gap-xs">
+                  {insertVars.map((v) => (
+                    <button
+                      key={`sub-${v}`}
+                      type="button"
+                      onClick={() => insertFieldInSubject(v)}
+                      className="h-7 px-sm rounded-full border border-border-outline font-data text-[10px] font-semibold text-text-tertiary hover:border-primary hover:text-primary"
+                    >
+                      + {labelForVariable(v)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <SubjectTokenField value={draftSubject} onChange={setDraftSubject} onInsertRef={subjectInsertRef} />
             </div>
             <div>
-              <label className="font-data text-[11px] tracking-[0.6px] uppercase text-text-tertiary mb-xs block">Body</label>
-              <RichTextEditor value={draftBody} onChange={setDraftBody} onUploadImage={uploadInlineImage} />
+              <div className="flex items-center justify-between gap-sm mb-xs">
+                <label className="font-data text-[11px] tracking-[0.6px] uppercase text-text-tertiary">Body</label>
+                <div className="flex flex-wrap gap-xs justify-end">
+                  {insertVars.map((v) => (
+                    <button
+                      key={`body-${v}`}
+                      type="button"
+                      onClick={() => insertField(v)}
+                      className="h-7 px-sm rounded-full border border-border-outline font-data text-[10px] font-semibold text-text-tertiary hover:border-primary hover:text-primary"
+                    >
+                      + {labelForVariable(v)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <RichTextEditor ref={bodyRef} value={draftBody} onChange={setDraftBody} onUploadImage={uploadInlineImage} />
+              <p className="mt-xs font-body text-[12px] text-text-tertiary">
+                Insert fields with everyday labels (e.g. Volunteer name). No code or brackets needed.
+              </p>
             </div>
             <div className="flex items-center gap-md">
               <button
                 type="button"
                 onClick={handleSave}
-                disabled={isSaving || !draftSubject.trim() || !draftBody.trim() || (isCreatingNew && !draftName.trim())}
+                disabled={isSaving || !fromEditorSubject(draftSubject) || !fromEditorHtml(draftBody).trim() || (isCreatingNew && !draftName.trim())}
                 className="inline-flex items-center gap-sm h-11 px-lg rounded-full bg-primary text-white font-data text-[12px] font-semibold hover:bg-[#007d35] transition-colors disabled:opacity-50"
               >
                 <PencilIcon className="w-4 h-4" />
@@ -490,10 +1174,14 @@ function TemplatesTab({ templates }: { templates: EmailTemplateRecord[] }) {
 export function EmailsPage({
   templates,
   volunteers,
+  scheduledEmails,
+  fromAddress,
   initialTab,
 }: {
   templates: EmailTemplateRecord[];
   volunteers: Volunteer[];
+  scheduledEmails: ScheduledEmail[];
+  fromAddress: string;
   initialTab: Tab;
 }) {
   const [tab, setTab] = useState<Tab>(initialTab);
@@ -503,20 +1191,29 @@ export function EmailsPage({
       <header className="mb-lg">
         <h1 className="font-heading text-[28px] leading-[36px] text-text-primary">Emails</h1>
         <p className="mt-xs font-body text-[14px] text-text-tertiary">
-          Send an email straight from the dashboard, or manage reusable templates.
+          Send or schedule email from {fromAddress}, or manage reusable templates.
         </p>
       </header>
 
-      <div className="flex items-center gap-xs mb-lg" role="tablist" aria-label="Emails view">
+      <div className="flex items-center gap-xs mb-lg flex-wrap" role="tablist" aria-label="Emails view">
         <TabButton active={tab === "compose"} onClick={() => setTab("compose")}>
           Compose
+        </TabButton>
+        <TabButton active={tab === "scheduled"} onClick={() => setTab("scheduled")}>
+          Scheduled
         </TabButton>
         <TabButton active={tab === "templates"} onClick={() => setTab("templates")}>
           Templates
         </TabButton>
       </div>
 
-      {tab === "compose" ? <ComposeTab templates={templates} volunteers={volunteers} /> : <TemplatesTab templates={templates} />}
+      {tab === "compose" ? (
+        <ComposeTab templates={templates} volunteers={volunteers} fromAddress={fromAddress} />
+      ) : tab === "scheduled" ? (
+        <ScheduledTab rows={scheduledEmails} volunteers={volunteers} fromAddress={fromAddress} />
+      ) : (
+        <TemplatesTab templates={templates} />
+      )}
     </div>
   );
 }

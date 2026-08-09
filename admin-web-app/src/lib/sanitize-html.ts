@@ -13,15 +13,27 @@
  */
 import sanitizeHtml from 'sanitize-html';
 
-const ALLOWED_TAGS = ['b', 'strong', 'i', 'em', 'u', 'ul', 'ol', 'li', 'a', 'img', 'p', 'br', 'div', 'span'];
-const ALLOWED_ATTR = ['href', 'src', 'alt', 'title'];
+const ALLOWED_TAGS = ['b', 'strong', 'i', 'em', 'u', 'ul', 'ol', 'li', 'a', 'img', 'p', 'br', 'div', 'span', 'font'];
 
 const SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
   allowedTags: ALLOWED_TAGS,
   allowedAttributes: {
-    a: ALLOWED_ATTR,
-    img: ALLOWED_ATTR,
-    // Other allowlisted tags carry no attributes.
+    a: ['href', 'title'],
+    img: ['src', 'alt', 'title'],
+    span: ['style', 'data-var', 'class'],
+    p: ['style'],
+    div: ['style'],
+    font: ['color', 'face', 'size', 'style'],
+  },
+  allowedStyles: {
+    '*': {
+      color: [/^#[0-9a-fA-F]{3,8}$/, /^rgb\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*\)$/, /^rgba\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*[\d.]+\s*\)$/],
+      'font-size': [/^\d+(?:\.\d+)?px$/],
+      'font-family': [/^[\w\s,"'-]+$/],
+    },
+  },
+  allowedClasses: {
+    span: ['email-token'],
   },
   allowedSchemes: ['http', 'https', 'mailto'],
   allowedSchemesByTag: {

@@ -3,13 +3,11 @@
 /**
  * Minimal WYSIWYG email-body editor — Donna edits formatted text, never raw
  * HTML. Zero-dependency `contentEditable` + `document.execCommand` for the
- * toolbar itself (bold/italic/underline/lists/link/image); paste and preview
- * are NOT trusted the same way — pasted clipboard HTML bypasses `execCommand`
- * entirely and can carry `onerror`/`onclick` handlers or `javascript:` hrefs,
- * so both are run through `sanitizeEmailHtml` (`lib/sanitize-html.ts`). The
- * link toolbar button also validates the URL scheme before creating a link.
+ * toolbar (bold/italic/underline/lists/link/image/font/size/color); paste and
+ * preview run through `sanitizeEmailHtml`. Personalization chips use
+ * `data-var` spans inserted via `insertHtml`.
  */
-import { useCallback, useEffect, useRef } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from "react";
 import {
   BoldIcon,
   EraserIcon,
@@ -24,7 +22,39 @@ import { sanitizeEmailHtml } from "@/lib/sanitize-html";
 
 const ALLOWED_LINK_SCHEMES = ["http:", "https:", "mailto:"];
 
-function ToolbarBtn({ label, icon: Icon, onPress }: { label: string; icon: React.ComponentType<{ className?: string }>; onPress: () => void }) {
+const FONT_FAMILIES = [
+  "Arial",
+  "Georgia",
+  "Times New Roman",
+  "Verdana",
+  "Courier New",
+  "Trebuchet MS",
+] as const;
+
+const FONT_SIZES = [
+  { label: "12", px: "12px" },
+  { label: "14", px: "14px" },
+  { label: "16", px: "16px" },
+  { label: "18", px: "18px" },
+  { label: "24", px: "24px" },
+] as const;
+
+const SELECT_CHEVRON_STYLE = {
+  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%233e4a3d' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E")`,
+} as const;
+
+const SELECT_CLASS =
+  "h-8 pl-sm pr-8 rounded-sm border border-border-outline bg-bg-app font-data text-[11px] text-text-primary appearance-none bg-no-repeat bg-[length:12px_12px] bg-[position:right_8px_center]";
+
+function ToolbarBtn({
+  label,
+  icon: Icon,
+  onPress,
+}: {
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  onPress: () => void;
+}) {
   return (
     <button
       type="button"
@@ -39,47 +69,62 @@ function ToolbarBtn({ label, icon: Icon, onPress }: { label: string; icon: React
   );
 }
 
-export function RichTextEditor({
-  value,
-  onChange,
-  onUploadImage,
-  placeholder = "Write your message…",
-}: {
-  value: string;
-  onChange: (html: string) => void;
-  /** Uploads a picked image and returns a persistent, publicly-readable URL to insert. */
-  onUploadImage?: (file: File) => Promise<string>;
-  placeholder?: string;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
+export type RichTextEditorHandle = {
+  insertHtml: (html: string) => void;
+  focus: () => void;
+};
+
+export const RichTextEditor = forwardRef<
+  RichTextEditorHandle,
+  {
+    value: string;
+    onChange: (html: string) => void;
+    onUploadImage?: (file: File) => Promise<string>;
+    placeholder?: string;
+  }
+>(function RichTextEditor({ value, onChange, onUploadImage, placeholder = "Write your message…" }, ref) {
+  const editorRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lastValueRef = useRef(value);
 
-  // Only push external `value` changes into the DOM (e.g. "start from template") —
-  // never on every render, or the cursor jumps to the start on each keystroke.
   useEffect(() => {
-    if (ref.current && value !== lastValueRef.current && ref.current.innerHTML !== value) {
-      // Defense-in-depth: `value` can come from a template/draft written before this
-      // sanitizer existed, or loaded from anywhere else that isn't this editor's own
-      // paste handler — never trust it's already clean just because it's "our" data.
-      ref.current.innerHTML = sanitizeEmailHtml(value);
+    if (editorRef.current && value !== lastValueRef.current && editorRef.current.innerHTML !== value) {
+      editorRef.current.innerHTML = sanitizeEmailHtml(value);
       lastValueRef.current = value;
     }
   }, [value]);
 
   const emitChange = useCallback(() => {
-    const html = ref.current?.innerHTML ?? "";
+    const html = editorRef.current?.innerHTML ?? "";
     lastValueRef.current = html;
     onChange(html);
   }, [onChange]);
 
   const exec = useCallback(
     (command: string, arg?: string) => {
-      ref.current?.focus();
+      editorRef.current?.focus();
       document.execCommand(command, false, arg);
       emitChange();
     },
     [emitChange],
+  );
+
+  const insertHtml = useCallback(
+    (html: string) => {
+      editorRef.current?.focus();
+      document.execCommand("insertHTML", false, sanitizeEmailHtml(html));
+      emitChange();
+    },
+    [emitChange],
+  );
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      insertHtml,
+      focus: () => editorRef.current?.focus(),
+    }),
+    [insertHtml],
   );
 
   const handleLink = useCallback(() => {
@@ -104,8 +149,10 @@ export function RichTextEditor({
       e.preventDefault();
       const html = e.clipboardData.getData("text/html");
       const text = e.clipboardData.getData("text/plain");
-      const safe = html ? sanitizeEmailHtml(html) : text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-      ref.current?.focus();
+      const safe = html
+        ? sanitizeEmailHtml(html)
+        : text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      editorRef.current?.focus();
       document.execCommand("insertHTML", false, safe);
       emitChange();
     },
@@ -132,11 +179,86 @@ export function RichTextEditor({
     [exec, onUploadImage],
   );
 
+  const applyFontSize = useCallback(
+    (px: string) => {
+      const selection = window.getSelection();
+      if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
+        insertHtml(`<span style="font-size: ${px}">&#8203;</span>`);
+        return;
+      }
+      const range = selection.getRangeAt(0);
+      const span = document.createElement("span");
+      span.style.fontSize = px;
+      try {
+        range.surroundContents(span);
+      } catch {
+        const frag = range.extractContents();
+        span.appendChild(frag);
+        range.insertNode(span);
+      }
+      emitChange();
+    },
+    [emitChange, insertHtml],
+  );
+
   const isEmpty = !value || value === "<br>" || value === "<div><br></div>";
 
   return (
     <div className="border border-border-outline rounded-sm overflow-hidden bg-bg-app">
       <div className="flex items-center gap-xs px-sm py-xs border-b border-border-outline bg-bg-surface-elevated flex-wrap">
+        <select
+          aria-label="Font"
+          defaultValue=""
+          onMouseDown={(e) => e.stopPropagation()}
+          onChange={(e) => {
+            if (e.target.value) exec("fontName", e.target.value);
+            e.target.value = "";
+          }}
+          className={SELECT_CLASS}
+          style={SELECT_CHEVRON_STYLE}
+        >
+          <option value="" disabled>
+            Font
+          </option>
+          {FONT_FAMILIES.map((f) => (
+            <option key={f} value={f}>
+              {f}
+            </option>
+          ))}
+        </select>
+        <select
+          aria-label="Font size"
+          defaultValue=""
+          onMouseDown={(e) => e.stopPropagation()}
+          onChange={(e) => {
+            if (e.target.value) applyFontSize(e.target.value);
+            e.target.value = "";
+          }}
+          className={SELECT_CLASS}
+          style={SELECT_CHEVRON_STYLE}
+        >
+          <option value="" disabled>
+            Size
+          </option>
+          {FONT_SIZES.map((s) => (
+            <option key={s.px} value={s.px}>
+              {s.label}
+            </option>
+          ))}
+        </select>
+        <label
+          className="w-8 h-8 inline-flex items-center justify-center rounded-sm text-text-tertiary hover:bg-bg-app cursor-pointer"
+          title="Text color"
+          aria-label="Text color"
+        >
+          <input
+            type="color"
+            defaultValue="#1a1c19"
+            className="w-5 h-5 p-0 border-0 bg-transparent cursor-pointer"
+            onMouseDown={(e) => e.preventDefault()}
+            onChange={(e) => exec("foreColor", e.target.value)}
+          />
+        </label>
         <ToolbarBtn label="Bold" icon={BoldIcon} onPress={() => exec("bold")} />
         <ToolbarBtn label="Italic" icon={ItalicIcon} onPress={() => exec("italic")} />
         <ToolbarBtn label="Underline" icon={UnderlineIcon} onPress={() => exec("underline")} />
@@ -154,7 +276,7 @@ export function RichTextEditor({
           </span>
         )}
         <div
-          ref={ref}
+          ref={editorRef}
           role="textbox"
           aria-multiline="true"
           aria-label="Email body"
@@ -163,12 +285,12 @@ export function RichTextEditor({
           onInput={emitChange}
           onBlur={emitChange}
           onPaste={handlePaste}
-          className="min-h-[220px] max-h-[480px] overflow-y-auto px-md py-sm font-body text-[14px] text-text-primary focus-visible:outline-none [&_ul]:list-disc [&_ul]:pl-lg [&_ol]:list-decimal [&_ol]:pl-lg [&_a]:text-primary [&_a]:underline [&_img]:max-w-full [&_img]:rounded-sm"
+          className="min-h-[220px] max-h-[480px] overflow-y-auto px-md py-sm font-body text-[14px] text-text-primary focus-visible:outline-none [&_ul]:list-disc [&_ul]:pl-lg [&_ol]:list-decimal [&_ol]:pl-lg [&_a]:text-primary [&_a]:underline [&_img]:max-w-full [&_img]:rounded-sm [&_.email-token]:inline-flex [&_.email-token]:items-center [&_.email-token]:px-1.5 [&_.email-token]:py-0.5 [&_.email-token]:mx-0.5 [&_.email-token]:rounded-sm [&_.email-token]:bg-primary/10 [&_.email-token]:text-primary [&_.email-token]:font-data [&_.email-token]:text-[12px] [&_.email-token]:font-semibold [&_.email-token]:select-none"
         />
       </div>
     </div>
   );
-}
+});
 
 /** Renders stored/live HTML the same way the editor's own contentEditable surface would. */
 export function RichTextPreview({ html }: { html: string }) {
@@ -179,3 +301,7 @@ export function RichTextPreview({ html }: { html: string }) {
     />
   );
 }
+
+export const EMAIL_SELECT_CHEVRON_STYLE = SELECT_CHEVRON_STYLE;
+export const EMAIL_SELECT_CLASS =
+  "h-11 w-full pl-md pr-8 rounded-sm border border-border-outline bg-bg-app font-body text-[13px] text-text-primary appearance-none bg-no-repeat bg-[length:12px_12px] bg-[position:right_12px_center] focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary";
