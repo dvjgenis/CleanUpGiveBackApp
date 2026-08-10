@@ -12,6 +12,7 @@ Variable exports from the Figma Design System page ([`1:3`](https://www.figma.co
 | [`radius.json`](radius.json) | Border radius scale |
 | [`typography-primitives.json`](typography-primitives.json) | Font families, weights, sizes |
 | [`typography.json`](typography.json) | 14 text styles |
+| [`shadow.json`](shadow.json) | Shadow/elevation styles (structural chrome only) |
 
 These JSON files are the **committed mirror** of the Figma DS. When Figma variables change, update the matching JSON and `docs/frontend/brand.md`, then confirm `frontend/src/constants/tokens.ts` still matches.
 
@@ -34,6 +35,7 @@ These JSON files are the **committed mirror** of the Figma DS. When Figma variab
 | **Radius** | `Value` | Border radius scale |
 | **Typography Primitives** | `Value` | Raw font families, weights (`FONT_STYLE` strings), sizes |
 | **Typography** | `Value` | Semantic aliases per text style × 3 properties (family, weight, size) |
+| **Shadow** | `Value` | 2 structural-chrome effect styles (Nav/Bottom, Bar/Top) — see `shadow.json` |
 
 Token count: **117 variables** (as of 2026-06-30; +13 `size/*` primitives added in text-token sweep for screen outliers: 9, 13, 15, 17, 19, 20, 24, 26, 30, 31, 32, 40, 50).
 

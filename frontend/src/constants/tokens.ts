@@ -24,11 +24,11 @@ export const primitives = {
   white: '#ffffff',
   cream50: '#fcf9f8',
   lime500: '#c2d832',
-  /** Tour mint — code-only until promoted to a Figma variable */
+  /** Figma `color/bg/tour` (promoted from code-only 2026-08-09) */
   tourMint: '#dcebe2',
-  /** Neutral chip fill — code-only (`color/chip/bg`) */
+  /** Figma `color/chip/bg` (promoted from code-only 2026-08-09) */
   chipBg: '#f0edec',
-  /** Figma `color/bg/surface` elevated fill */
+  /** Figma `color/bg/surface/elevated` (new variable, added 2026-08-09 — do not confuse with `color/bg/surface` = white) */
   surfaceElevated: '#f6f3f2',
   amber100: '#ffddb5',
   amber700: '#835400',
@@ -64,12 +64,12 @@ export const status = {
 export const colors = {
   bgApp: primitives.cream50,
   /**
-   * Card background (white). Named `bgSurface` in Figma but visually "below"
-   * `bgSurfaceElevated` (#f6f3f2) — use this for modal sheets and cards that
-   * sit on the cream app background. Do not confuse with `bgSurfaceElevated`.
+   * Card background (white). Figma `color/bg/surface` — use this for modal
+   * sheets and cards that sit on the cream app background. Do not confuse
+   * with `bgSurfaceElevated`.
    */
   bgSurface: primitives.white,
-  /** Figma `color/bg/surface` (`#f6f3f2`) */
+  /** Figma `color/bg/surface/elevated` (`#f6f3f2`) */
   bgSurfaceElevated: primitives.surfaceElevated,
   bgTour: primitives.tourMint,
   primary: primitives.green500,

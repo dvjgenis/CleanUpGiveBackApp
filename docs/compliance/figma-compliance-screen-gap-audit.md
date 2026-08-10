@@ -1,9 +1,11 @@
 # Figma Compliance Screen Gap Audit
 
-**Date:** 2026-06-30  
+**Date:** 2026-06-30 (original audit) · **updated 2026-08-09** (Figma catch-up sync, see ADR-002 consequences)  
 **Figma file:** `DrDcQH14n7ntDQ80F7au9S`  
 **Baseline inventory:** 33 screens in [manifest.yaml](../../frontend/design/figma/manifest.yaml)  
-**Target inventory:** 46 screens (+13 new routeKeys)
+**Target inventory:** 46 screens (+13 new routeKeys) — superseded 2026-08-09, manifest now tracks 81 entries against 71 live routes
+
+> **2026-08-09 update:** `age-gate`, all 3 `parental-consent-*` routeKeys, and `teen-privacy-notice` were removed from `manifest.yaml` entirely per product decision — out of scope, consistent with this audit's own "Not shipping" calls below for their siblings. The `account-privacy` hub and `privacy-permissions` remain tracked as `missing` (net-new design, not yet built). The privacy-policy screen tree (`privacy-policy` + 4 sub-pages) and `request-data`/`request-data-sent` are confirmed **implemented** as of 2026-08-09 — see manifest for current node ids. This audit's original tables below are left as historical record of the 2026-06-30 planning pass; treat `manifest.yaml` as the current source of truth for what's actually built.
 
 ---
 

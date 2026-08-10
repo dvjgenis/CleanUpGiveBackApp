@@ -506,4 +506,200 @@ Custom time picker for email schedule-send; seeded tagged mock demo data into `/
 - `admin-web-app` already had MapLibre GL JS + Carto Voyager raster tiles standardized in two other components (`EventLocationMap.tsx`, `SessionWalkingPathMap.tsx`) — worth checking for an existing mapping pattern before reaching for a new library when a "real map" feature comes up again. Extracted the shared style into `lib/maplibre-basemap.ts` to stop the third copy-paste.
 - The Census Bureau's TIGERweb has both full-resolution (`Tracts_Blocks`) and pre-generalized (`Generalized_ACS2023`) tract layers — the generalized one is ~8x smaller (Cook County: 1.1MB vs 9.5MB) and plenty precise for a session-count choropleth; worth defaulting to generalized boundary layers for any future Census geometry fetch.
 - `sessions.route` (GPS trail, `[lng,lat]` pairs) and `checkpoints.latitude/longitude` were already being captured by the mobile app but silently unused by admin-web-app's map — a reminder to check what data a table already carries before assuming a feature needs new instrumentation.
+
+---
+
+## [2026-08-09 Session 11, Phase 1 of 6] — Figma catch-up sync: Design System token fixes (in progress — see plan `imperative-frolicking-bachman.md`)
+
+**Session goal:** Sync the Figma file `DrDcQH14n7ntDQ80F7au9S` to match the repo — the repo has 71 live routes vs. 46 tracked in `manifest.yaml`, and the app has shipped multiple specs (session-tracking-expo-go, dual-capture, service-letter-pdf, map-theme) with no Figma update since the 2026-07-13 audit. Full 6-phase plan approved by user; this entry covers Phase 1 only.
+
+### Reasoning
+
+ADR-002 makes Figma the design ground truth (Figma → code direction); this sync is a one-time catch-up (user decision), not a reversal — Figma stays canonical going forward. Phase 1 (branding/tokens) had to run before Phase 2+ (screens) since screens bind to these tokens.
+
+### Actions Completed
+
+| Task | Detail | Status |
+|---|---|---|
+| Diff live Figma variables/text styles vs `frontend/src/constants/tokens.ts` | Pulled via Figma desktop MCP (`get_variable_defs`, `use_figma` — required desktop app open + a layer selected; remote-only `get_metadata`/`get_design_context` don't need this) | ✅ |
+| Fix 13 of 14 named Figma text styles | `Display/Hero`, `Headline/Page`, `Headline/Detail`, `Body/Default`, `Body/Large`, `Body/Small`, `Body/Emphasis`, `Body/Strong`, `Label/Overline`, `Label/Status`, `Nav/Tab`, `Data/Stat`, `Data/Timer` — all were bound to stale pre-a11y-fix values; code and the DS frame's own documentation labels already had the correct spec. `Label/Button` was already correct. | ✅ |
+| Create 3 missing Figma color variables | `color/bg/surface/elevated` (#f6f3f2, new), `color/bg/tour` (#dcebe2, promoted from code-only), `color/chip/bg` (#f0edec, promoted from code-only) — all in the `Color` collection, `Light` mode | ✅ |
+| Fix naming collision bug | `color/bg/surface` was incorrectly documented (in `tokens.ts` comment and `color.json`) as `#f6f3f2` — the live Figma variable is actually `#ffffff` (matches `colors.bgSurface`). Corrected both; `#f6f3f2` now correctly belongs only to the new `color/bg/surface/elevated`. | ✅ |
+| Sync `frontend/design/figma/tokens/color.json` | Updated `color/bg/surface`, added `color/bg/surface/elevated`, moved `chip/bg`/`bg/tour` out of `codeOnly` | ✅ |
+| Sync `docs/frontend/brand.md` | Updated color table rows + added a dated "Last token verification" note | ✅ |
+| Verify | `npx tsc --noEmit` clean; screenshot of Figma DS Typography section confirms corrected sizes render | ✅ |
+
+### Learnings
+
+- **Figma's `get_variable_defs`/`use_figma` require the Figma desktop app open with a layer selected** — remote nodeId+fileKey alone isn't enough (unlike `get_metadata`/`get_screenshot`, which work from fileKey+nodeId with no desktop dependency). Had to ask the user to open Figma desktop and select a node before these tools would work. Worth checking this early in any future Figma-write task.
+- **"Figma is behind the repo" understated the actual finding**: colors/spacing/radius had zero drift, and the code's typography tokens already matched the Figma DS frame's own written documentation exactly (including two logged a11y fixes). The drift was narrower than assumed — only the *bound* Figma text style objects were stale; the doc labels and code were both already correct. Don't assume "Figma is behind" means Figma's intent is wrong — check whether the live styles match the file's own documentation before treating code as the source to copy from.
+- `get_variable_defs` scoped to an arbitrary selected node only returns variables/styles actually bound within that node's subtree, not the full file's variable set — get a full picture via `figma.getLocalTextStylesAsync()` / `figma.variables.getLocalVariableCollectionsAsync()` through `use_figma` (read-only) instead of relying on `get_variable_defs` against one node.
+
+### Progression
+
+Phase 1 of 6 complete. Next: Phase 2 (gap reconciliation — walk full Figma document structure, cross-reference against all 71 routes, produce corrected `manifest.yaml`). See task list (Phase 2 = task #2) and plan file for the remaining 5 phases.
+
+### History
+
+Do not re-litigate: ADR-002 stays as-is (Figma remains ground truth going forward); this is a one-time catch-up per explicit user decision, not a supersession. Do not re-flip `color/bg/surface` back to `#f6f3f2` — that was a documented bug, not the correct value.
+
+---
+
+## [2026-08-09 Session 11, Phase 2 of 6] — Figma catch-up sync: gap reconciliation
+
+**Session goal:** Continuation of the Figma catch-up sync (see Phase 1 entry above and plan `imperative-frolicking-bachman.md`). Phase 2 walks the full live Figma document and cross-references it against all 71 app routes to produce a corrected `manifest.yaml` and a worklist for the 6 Phase 3 section agents.
+
+### Reasoning
+
+The remote `get_metadata` tool's no-nodeId "list top-level pages" call only ever surfaced the Design System page for this file — misleading, since real screen content clearly existed (confirmed via a direct nodeId query the user provided). Switched to the desktop-driven Plugin API (`use_figma` → `figma.root.children`) to get the true page list, which is authoritative where the remote tool is not.
+
+### Actions Completed
+
+| Task | Detail | Status |
+|---|---|---|
+| Discover true page structure | 6 real content pages, not 7 as the old manifest assumed: `1·Onboarding` (77:2), `2·Home & Events` (77:3), `3·Shop & Payments` (77:4), `4·Session Tracking` (77:5), `5·Sessions History` (77:6), `6·Account & Settings` (77:7). No dedicated "Compliance & Legal" page exists — those frames physically live on Account & Settings. Two pages are explicitly marked "DO NOT TOUCH" / "DO NOT VIEW" in-file — left untouched. | ✅ |
+| Full frame-level inventory per page | Used a depth-capped Plugin API walk (not full recursive `get_metadata`, which exceeded token limits on 4 of 6 pages) to list every top-level screen frame per page. | ✅ |
+| Cross-reference against 71 routes | Rewrote `frontend/design/figma/manifest.yaml` — corrected/confirmed 46 previously-tracked entries, added several previously-untracked-but-existing frames (`free_kit`→free-kit, `free_trial_done`→free-trial-done, `notifications`→notification-settings candidate, `account_teen`→account-privacy candidate, 7 unlabeled `session_setup_guide` frames→the setup wizard), and marked genuinely absent routes `status: missing` (account-phone, personal-details, map-theme, settings, terms-of-service, privacy-permissions, age-gate + parental-consent family, etc.). | ✅ |
+| Write Phase 3 worklist | New `frontend/design/figma/gap-worklist-2026-08-09.md` — per-section task list so each Phase 3 agent works its slice without re-deriving scope. | ✅ |
+| Validate | `manifest.yaml`: 89 tracked entries, structurally balanced (89 routeKey lines = 89 status lines), zero duplicate routeKeys (checked via grep since `pyyaml` isn't installed in this environment and it's not a JS dependency worth adding for one validation pass). | ✅ |
+
+### Learnings
+
+- **The remote Figma MCP tools and the desktop Plugin API (`use_figma`) can disagree on file structure** — `get_metadata` with no `nodeId` returned only 1 of 8 real top-level pages for this file. When page/file structure discovery matters (not just reading a known node), prefer `use_figma` → `figma.root.children`, which is authoritative.
+- **`get_metadata` with a nodeId returns full recursive XML down to every rectangle/vector/line** — fine for a single small frame, but blew the token limit on 4 of 6 pages here. A depth-capped `use_figma` script (`children` truncated to depth 2) is the right tool when only frame-level names/ids are needed, which is most of the time for gap analysis.
+- **A stale layer name doesn't mean a stale mapping.** Frame `251:439` is literally named `session_setup_guide` (matching 7 sibling frames) but is confirmed via its `Map` + `Main Container` children and its unchanged node id to still be `live-session` — content/structure, not the layer name, is the source of truth when disambiguating.
+- Several "missing" routes turned out to already exist in Figma under names that don't match their routeKey (`free_kit`, `notifications`→notification-settings, `account_teen`→possible account-privacy) — worth grepping frame *names* loosely, not just exact routeKey string matches, before concluding a screen needs net-new design.
+
+### Progression
+
+Phase 2 of 6 complete. `manifest.yaml` and `gap-worklist-2026-08-09.md` are the two artifacts Phase 3's 6 section agents (tasks #3–#8) consume. Several open product decisions were flagged for Phase 4, not resolved here (deferred, not forgotten):
+- Remove `donation-checkout`/`donation-confirmation` from manifest (no code route, no Figma frame)?
+- Remove `sessions-calendar` from manifest (both Figma frames are intentionally hidden/archived, no code route)?
+- Confirm `age-gate`/`parental-consent-*`/`teen-privacy-notice` are still in scope at all — PRD-referenced but not live code routes, and siblings were already marked "not shipping" in the 2026-06-30 compliance audit.
+- Is `privacy-rights-request` redundant with the already-implemented `request-data`/`request-data-sent`?
+
+Next: Phase 3 (6 parallel section agents building/confirming screens per the worklist). This is the largest and most Figma-write-heavy phase of the whole sync — checking with the user before launching it given the shared-file blast radius.
+
+### History
+
+`manifest.yaml`'s `figmaPage` field for the privacy-policy tree now correctly says "6·Account & Settings", not "7·Compliance & Legal" — do not revert this, the physical page location was verified directly via the Plugin API, not assumed.
+
+---
+
+## [2026-08-09 Session 11, Phase 3 of 6] — Figma catch-up sync: 6 parallel section agents
+
+**Session goal:** Continuation of the Figma catch-up sync. Phase 3 ran 6 background agents (one per Figma page/manifest section) to resolve the ambiguous frame mappings and spot-check already-implemented screens flagged in `gap-worklist-2026-08-09.md`. Scoped deliberately to exclude freehand net-new screen design (~15 genuinely-missing screens) since this repo's CLAUDE.md mandates a preview/confirmation gate for new component work — that's a separate follow-up, not bundled into this pass.
+
+### Reasoning
+
+Each agent returned findings as a report rather than editing `manifest.yaml` directly, to avoid 6 concurrent writers conflicting on one file. All manifest edits were applied centrally by the orchestrator after each agent's completion notification.
+
+### Actions Completed
+
+| Section | Result |
+|---|---|
+| Onboarding (3a) | 2 duplicate-frame pairs resolved. **Notable correction:** `account-phone` was wrongly marked `missing` — frame `712:323` (mislabeled `details_account`, shares a name with the real account-details frame) is actually the phone-number step, and `AccountPhoneScreen.tsx` already had a doc comment referencing this exact node. Flipped to `implemented`. The other "duplicate" (`welcome` vs `817:299`) turned out to be visually unrelated content (a splash mark, not a login screen) — left unbound. |
+| Home & Events (3b) | Clean — both screens pass structural spot-check, no manifest changes. |
+| Shop & Payments (3c) | Clean — all 5 SKU prices verified pixel-accurate against code, no drift. `donation-checkout`/`donation-confirmation` reconfirmed as having neither a code route nor a Figma frame. |
+| Session Tracking (3d) — heaviest | **All 7 ambiguous `session_setup_guide` frames resolved** by screenshot + code-comment cross-reference to their exact routeKeys (guide, step2–5, complete, and the `session-setup` form itself). 5 more corrections: `free-hour`/`session-free-hour` (share one frame, `1125:360`, mislabeled `disclaimer`), `free-kit`/`session-free-kit` (share `1126:451`), `session-feedback` (`1126:1516`, confirmed via matching default copy) all flipped `missing`/`designed`→`implemented`. `give-feedback` shares the same component but its copy override has no dedicated frame — kept at `designed` to flag the gap rather than over-claim. `photo-capture` confirmed distinct from `photo-checkpoint` and flipped to `implemented`. Found `order_placed` (`1168:3619`) is a misfiled duplicate of Shop's `purchase-confirmation` frame — noted there for Phase 4, not bound here. |
+| Sessions History (3e) | Clean — no drift. `sessions-calendar` removal from manifest reconfirmed safe (no code route, both Figma frames intentionally hidden). |
+| Account & Settings (3f) | `notification-settings` confirmed bound to frame `649:774` (toggle-preferences screen, distinct from both onboarding's notification-preference and the `/notifications` inbox, which remains genuinely missing). **`account-privacy`'s candidate frame (`account_teen`, `728:1074`) was REFUTED** — it's actually an unimplemented teen-badge variant of the main `account` screen, not a privacy hub; `account-privacy` reverted to `missing` (net-new, deferred). Flagged the orphaned `account_teen` frame on the `account` entry for a Phase 4 product decision. No drift on `privacy_policy`/`delete_account`. |
+
+`manifest.yaml` re-validated after all edits: 89 entries, 89/89 routeKey↔status balance, zero duplicate routeKeys. Status breakdown improved from Phase 2's snapshot to **68 implemented / 4 designed / 17 missing** (several `missing`→`implemented` flips from the corrections above).
+
+### Learnings
+
+- **Mislabeled Figma layer names were a bigger source of false "missing" screens than actual absent design work.** 6 routes (`account-phone`, `free-hour`, `session-free-hour`, `free-kit`, `session-free-kit`, `session-feedback`) were wrongly tracked as missing purely because their Figma frames were named after something else (`details_account`, `disclaimer`) or shared a component with a sibling route. Cross-referencing frame screenshots against the RN component's own code comments (several already documented their source node id) resolved these fast — worth checking component doc comments for `Figma node` references before assuming a screen needs net-new design.
+- **Ascending node-id order matched screen order** for the 7 `session_setup_guide` frames (confirmed independently via each frame's visible progress-pill state) — a useful heuristic when Figma layer names are uninformative and node ids were created in sequence during the original design pass, though this should be verified per-file, not assumed universally.
+- Component sharing across routes (one RN component serving 2+ routeKeys, e.g. `FreeKitScreen`/`FreeHourScreen`/`FeedbackScreen`) means a single Figma frame can legitimately satisfy multiple manifest entries — don't assume 1 frame = 1 route.
+
+### Progression
+
+Phase 3 of 6 complete, all 6 section agents finished clean or with corrections applied. Next: Phase 4 (docs & manifest sync-back) — several flagged decisions need a product/user call before finalizing, listed below. Not yet asked as of this entry; check the next entry or the live conversation for the resolution.
+
+**Decisions to resolve in Phase 4 (not yet made):**
+1. Remove `donation-checkout`/`donation-confirmation` from manifest (no code route, no Figma frame, reconfirmed twice now)?
+2. Remove `sessions-calendar` from manifest (Figma frames intentionally hidden, no code route)?
+3. Is `age-gate`/`parental-consent-*`/`teen-privacy-notice` still in scope at all — PRD-referenced, not live code routes, siblings already marked "not shipping" in the 2026-06-30 compliance audit?
+4. Is `privacy-rights-request` redundant with the already-implemented `request-data`/`request-data-sent`?
+5. The orphaned `account_teen` (728:1074) frame — future teen-badge feature to build, or abandoned exploration to ignore?
+6. `order_placed` (1168:3619) is misfiled on the Session Tracking page but is really a Shop & Payments `purchase-confirmation` duplicate — reconcile/relocate?
+7. `give-feedback` shares a component with `session-feedback` but has no frame depicting its own copy override — worth a dedicated frame, or is sharing fine?
+
+### History
+
+Do not re-run Phase 3's 6 agents — their findings are fully applied to `manifest.yaml`. Do not re-flag `account-phone`/`free-hour`/`session-free-hour`/`free-kit`/`session-free-kit`/`session-feedback`/`photo-capture` as missing — all confirmed implemented with real, verified frames.
+
+---
+
+## [2026-08-09 Session 11, Phase 4 of 6] — Figma catch-up sync: docs & manifest sync-back
+
+**Session goal:** Resolve the 7 decisions Phase 3 flagged, apply them to `manifest.yaml`, and sync `docs/adr/ADR-002-figma-design-ground-truth.md` + `docs/compliance/figma-compliance-screen-gap-audit.md` to match final state.
+
+### Actions Completed
+
+| Task | Detail | Status |
+|---|---|---|
+| Verify before deleting | User asked "is there no donation checkout/confirmation wired into the current flow?" before approving removal — good instinct, checked rather than assumed. Traced `DonateScreen.tsx`: `onContinue()` calls `router.replace('/purchase-confirmation?mode=donation&amount=...')` directly, no intermediate checkout step; `PurchaseConfirmationScreen.tsx` has dedicated `isDonation` mode handling (shorter receipt, no line items). Confirmed the flow **is** fully wired — it just never needed dedicated `donation-checkout`/`donation-confirmation` screens. | ✅ |
+| Remove dead manifest entries | Removed `donation-checkout`, `donation-confirmation`, `sessions-calendar` (all: no code route, no live Figma frame, reconfirmed twice) and `age-gate` + 3 `parental-consent-*` + `teen-privacy-notice` (out of scope per product decision, consistent with sibling "not shipping" calls in the 2026-06-30 audit). | ✅ |
+| `account_teen` frame disposition | Per user decision: left unbound, noted on the `account` manifest entry as a design exploration only — not forced into `account-privacy` or any other routeKey. | ✅ |
+| Sync ADR-002 | Added a "2026-08-09 catch-up sync" section to Consequences — explicitly a one-time catch-up, not a supersession; documents what was found/fixed and names the process gap (screens shipping before Figma) to prevent recurrence. | ✅ |
+| Sync compliance gap audit doc | Added a 2026-08-09 update note to `docs/compliance/figma-compliance-screen-gap-audit.md` pointing at the removed routes and confirming the privacy-policy tree + request-data flow are now implemented; left the original 2026-06-30 tables as historical record rather than rewriting. | ✅ |
+| Re-validate manifest | 81 entries (down from 89 after removals), 81/81 routeKey↔status balance, zero duplicates. Status breakdown: **68 implemented / 3 designed / 10 missing.** | ✅ |
+
+### Learnings
+
+- When a user pushes back with a clarifying question on a proposed deletion ("is there no X wired in?"), that's a signal to re-verify with actual evidence (trace the code) rather than restate the prior conclusion — the original "no route file exists" check was necessary but not sufficient to answer whether the *feature* was wired; tracing the actual navigation call was needed to give a real answer.
+
+### Progression
+
+Phase 4 of 6 complete. `manifest.yaml`, ADR-002, and the compliance audit doc are all in their final state for this sync. Next: Phase 5 (screenshot verification across all screens) and Phase 6 (final handover). Remaining known gaps, deliberately NOT designed this sync (confirmation-gated, separate follow-up): `personal-details`, `map-theme`, `settings`, `account-privacy`, `notifications` (inbox), `terms-of-service`, `privacy-permissions`, `feedback-thank-you`, `splash-loading`, and a handful of duplicate SKU/product-detail sub-routes already covered by their parent.
+
+### History
+
+`manifest.yaml` no longer has `donation-checkout`, `donation-confirmation`, `sessions-calendar`, `age-gate`, `parental-consent-notice`, `parental-consent-verify`, `parental-consent-pending`, or `teen-privacy-notice` entries — this was a deliberate, user-approved removal, not an oversight. Do not re-add without a fresh product ask.
 - React's `set-state-in-effect` lint rule flags `useEffect(() => setX(...), [dep])` reset patterns; the recommended fix is adjusting state during render (`if (trackedDep !== dep) { setTrackedDep(dep); setX(...) }`) instead — avoids an extra render pass and keeps the lint clean.
+
+---
+
+## [2026-08-09 Session 12] — Build out CleanUpGiveBack-Design-System Figma file (Foundation pages, Icons, Components)
+
+**Session goal:** Finish the separate `CleanUpGiveBack-Design-System` Figma file (key `rye7OGQxun1HxkrFSfrzU6`) — populate the Foundation/Components banner-style pages with real token data, audit and reimport missing icons, and build out the Components page with real component mockups.
+**Workflow used:** Chat, plan-mode approved plan, then iterative `use_figma` edits driven by live user feedback.
+
+### Skills Invoked
+
+| Skill | Purpose | Outcome |
+|---|---|---|
+| `figma-use` | Guidance for Figma Plugin API scripting via `use_figma` | Followed throughout all Figma edits this session |
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Add missing shadow token export | `frontend/design/figma/tokens/shadow.json`, `tokens/README.md` | ✅ mirrors `tokens.ts` `shadows.navBottom`/`barTop` |
+| Rebuild Elevation page | Figma `1:5` | ✅ real shadow specimens + real Figma Effect Styles (`Shadow/Nav/Bottom`, `Shadow/Bar/Top`) |
+| Rebuild Colours page | Figma `1:2` | ✅ 24 real tokens mapped into user's Primary/Secondary/Accent categories, renamed to real color names, reformatted to name/hex/token 3-line cards — left mid-edit per user request (concurrent editing) |
+| Rebuild Spacing & Radius page | Figma `1:4` | ✅ real 4–64px scale + 4 radius tokens, kept user's existing template structure |
+| Clean up Components page | Figma `1:7` | ✅ initial pass; user then continued their own edits on top |
+| Rebuild Typography page | Figma `1:3` | ✅ 15 canonical text styles + 1 outlier, real fonts rendering |
+| Rebuild Icons page | Figma `1:6` | ✅ ~136 real icons (not the originally-documented 37), grouped by feature area, uniform size/color |
+| Icon + component audit | — | ✅ 2 parallel Explore agents catalogued codebase vs. Figma; found 8 missing icons, 24 missing reusable components, and documented drift (Button Destructive→Text, dual BottomNav, missing canonical TopAppBar/Input/SearchBar/SessionRow) |
+| Import missing icons | Figma `1:6` | ✅ 6 of 8 reimported from real SVG source (2 leaf icons excluded per user) |
+| Import missing components | Figma `1:7` | ✅ 24 components rebuilt as real visual mockups (not text cards) across 8 new categories; fixed 2 documented-drift captions |
+
+### Key Decisions
+
+- User confirmed the new `rye7...Design-System` file is intentional ground truth, separate from the tracked `DrDcQH14n7ntDQ80F7au9S` app-screens file.
+- "Import a component" means build a real visual mockup using actual app colors/shapes, not a text description card — corrected mid-session after the first attempt was text-only.
+- Illustrations page explicitly skipped per user ("ignore the illustrations page").
+
+### Learnings
+
+- Figma multiplayer collisions: the user was live-editing the Colours page concurrently with agent scripts, causing repeated silent node loss that looked like tool bugs until the user said "can you stop updating the colors page."
+- When a user has already scaffolded categories/templates in Figma, fill them with real data rather than redesigning.
+- `figma.createNodeFromSvg()`-created text and cloned label nodes need an available font family before any character edit — the original import used "Uber Move," which isn't loadable in this environment; substitute an available family (Noto Sans) before editing.
+
+### Progression
+
+Design-system file has all 6 Foundation/Components pages populated with real data. Colours page was left mid-edit at the user's request (concurrent editing) — worth a follow-up check next session. Components page also has the user's own unreviewed edits layered on top of the imported mockups. Illustrations page not started (explicitly out of scope this session).
