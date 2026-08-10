@@ -703,3 +703,68 @@ Phase 4 of 6 complete. `manifest.yaml`, ADR-002, and the compliance audit doc ar
 ### Progression
 
 Design-system file has all 6 Foundation/Components pages populated with real data. Colours page was left mid-edit at the user's request (concurrent editing) — worth a follow-up check next session. Components page also has the user's own unreviewed edits layered on top of the imported mockups. Illustrations page not started (explicitly out of scope this session).
+
+---
+
+## [2026-08-10 Session 13] — Reorganize Components page into real Sections; strip code references from copy; fix icon counts
+
+**Session goal:** Continue polishing the `CleanUpGiveBack-Design-System` Figma file (key `rye7OGQxun1HxkrFSfrzU6`) — properly structure the Components page's 13 loosely-stacked topic groups, rewrite all component copy to be non-technical, and reconcile the Icons page category counts after the user's manual icon deletions.
+**Workflow used:** Plan mode (approved plan) → iterative `use_figma` edits driven by follow-up chat requests.
+
+### Skills Invoked
+
+| Skill | Purpose | Outcome |
+|---|---|---|
+| `figma-use` | Guidance for Figma Plugin API scripting via `use_figma` | Followed throughout all Figma edits this session |
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Reorganize Components page | Figma `1:7` | ✅ regrouped 13 loose topic stacks into 9 real Figma `SECTION` nodes (Actions, Navigation, Forms & Inputs, Tags & Chips, Cards, Overlays, Feedback, Charts, Badges & Motion); fixed miscategorized content (pickers/toggles wrongly filed under "Footer Actions"); renamed all default-named layers |
+| Rewrite component copy | Figma `1:7` | ✅ ~35 section descriptions and component captions rewritten in plain language, removing all `.tsx` paths, folder names, prop values, and "used in N places" notes |
+| Simplify Components banner description | Figma `1:7` | ✅ green header description no longer lists code component names (SessionButton, EmailReceiptChip, etc.) |
+| Fix Icons page category counts | Figma `1:6` | ✅ corrected 4 of 12 category labels (Session Tracking 29→28, Onboarding 15→16, Account 24→26, Event 10→11) to match actual icon counts after user's manual deletions/additions |
+
+### Key Decisions
+
+- Confirmed with the user before running structural Figma edits while they had the file open live — waited for explicit "I stepped away" before proceeding, per the established concurrent-edit risk protocol.
+- Investigated apparent "stray duplicate" section-header nodes before deleting them; confirmed via screenshot they were real content with stale layer names, not corruption — nothing was deleted.
+
+### Learnings
+
+- Figma `SECTION` nodes are page-only in the real product model: `frame.appendChild(sectionNode)` does not throw but silently re-parents the Section to `figma.currentPage` shortly after. A dry-run that only checks "did `appendChild` throw" gives a false positive — must re-check `node.parent` after the call.
+- A text layer's Figma *name* can go stale after duplicate-then-edit (name frozen at duplication time, characters edited later) — don't assume a name like "Voog shade of greys" means stray/placeholder content; screenshot the actual node before deleting.
+- Icons page: categories with only one icon (e.g. "Donate") skip the intermediate row-wrapper frame that multi-icon categories use — a generic "count the row's children" script will overcount by descending into the icon's own internal children (vector + label) instead of counting sibling icons.
+
+### Progression
+
+Components page (`1:7`) is now structurally organized (9 real Sections) with fully non-technical copy. Icons page (`1:6`) category counts are reconciled with actual content (131 icons total across 12 categories). Colours page (from Session 12) remains mid-edit per the user's earlier request — still an open follow-up. No repository code was touched this session; all work was in the external Figma design-system file.
+
+---
+
+## [2026-08-10 Session 13] — Replaced App Store icon; committed and pushed prior pending work
+
+**Session goal:** Started an asset-cleanup inventory (current vs. deprecated files in `frontend/assets/`), then pivoted mid-plan when the user provided a new source SVG and asked to swap in the real App Store icon; finished by committing and pushing everything sitting uncommitted in the working tree.
+
+**Workflow used:** Plan mode (Explore agent for asset inventory) → interrupted by user → direct execution for the icon swap → git commit/push.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Full inventory of `frontend/assets/` (338 files) vs. code references | — (research only, not persisted) | ⏸️ Abandoned mid-plan when user redirected to the icon task; findings were not written anywhere and are not recoverable from a fresh session |
+| Replace App Store icon | `frontend/assets/images/icon.png` | ✅ Rasterized `~/Downloads/app icon.svg` to a full-bleed 1024×1024 PNG via `sips -s format png ... -Z 1024` (native macOS SVG decoder — `cairosvg` CLI on this machine is broken, missing `libcairo`) |
+| Commit + push all pending working-tree changes | 14 files (icon + prior uncommitted docs/design-token/component work from earlier sessions) | ✅ `7f1bb72`, pushed to `origin/main` |
+| Type-check verification | `frontend/` | ✅ `npx tsc --noEmit` clean |
+
+### Key Decisions
+
+- User explicitly scoped the icon change to "do not make any other changes anywhere else" — did not touch `ios.icon` (`frontend/assets/expo.icon`, an Xcode Icon Composer bundle) even though it still contains the unconfigured default Expo template glyph and would override the plain `icon` field on iOS builds where that pipeline is active.
+- Asked before committing whether to scope the push to just the icon or everything pending; user chose everything.
+
+### Learnings
+
+- `frontend/assets/expo.icon/` (Icon Composer `.icon` bundle, referenced via `app.json`'s `ios.icon`) still has the stock Expo-template symbol/gradient — never customized. If iOS builds honor it, it silently overrides `assets/images/icon.png` for the real App Store/home-screen icon regardless of that file's contents. Needs a decision from the user on whether to customize or remove this override.
+- `cairosvg` CLI installed under the anaconda3 env is non-functional (`libcairo` not found via dlopen). `sips -s format png <file>.svg --out <out>.png -Z <size>` works natively on this macOS version for SVG→PNG rasterization at full bleed, no extra dependencies.
+- The `frontend/assets/` inventory work (338 files, ~184 referenced by code vs. ~90 clearly orphaned, plus several ambiguous buckets — prototype-only assets, legacy `stitch/` HTML viewer, icon-source SVGs behind generated barrel components, deferred-feature assets) was fully gathered by an Explore agent but never written to a plan file or memory — starting over from scratch is required if this task is picked back up.

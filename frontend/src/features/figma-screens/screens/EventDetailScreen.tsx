@@ -39,6 +39,7 @@ import { layout, colors, fontFamilies, radius, shadows } from '../tokens';
 import { promptAddEventToCalendar } from '../utils/addEventToCalendar';
 import { mapsLinkForLocation, openLocationInMaps } from '../utils/openLocationInMaps';
 import { getEmail } from '@/features/onboarding/onboardingStore';
+import { requestHomeFadeIn } from '@/features/onboarding/homeEnterTransition';
 import { sendEventRegistrationEmail } from '@/lib/emailsApi';
 import { fetchPublishedEventById } from '@/lib/eventsApi';
 
@@ -222,7 +223,8 @@ export function EventDetailScreen() {
 
   const handleGoHome = useCallback(() => {
     setRegistered(false);
-    router.replace('/' as Href);
+    requestHomeFadeIn();
+    router.replace({ pathname: '/', params: { enter: 'fade' } } as Href);
   }, [router]);
 
   return (

@@ -16,7 +16,7 @@ export function ExportRecordSuccessScreen() {
   const format = params.format === 'csv' ? 'CSV' : 'PDF';
 
   function handleContinue() {
-    router.replace('/account' as Href);
+    router.replace({ pathname: '/account', params: { enter: 'fade' } } as Href);
   }
 
   function handleViewFile() {

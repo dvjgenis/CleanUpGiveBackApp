@@ -7,6 +7,10 @@ import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { BottomNavBar } from '@/components/navigation/BottomNavBar';
 import { SessionSetupToggle } from '@/components/session-setup/SessionSetupToggle';
 import { TrackerMapDarkIcon } from '@/features/session-tracking/components/icons/TrackerMapThemeIcons';
+import {
+  shouldShowCourtProgress,
+  useCourtProgress,
+} from '@/features/session-tracking/courtProgressStore';
 import { useLiveSession } from '@/features/session-tracking/liveSessionStore';
 import {
   isValidCompanyCode,
@@ -52,6 +56,7 @@ import {
   CompanyCodeConfirmModal,
   CompanyCodeUpgradeSuccessModal,
 } from '../components/CompanyCodeModals';
+import { CourtProgressCard } from '../components/CourtProgressCard';
 import { PersonalDetailsIcon, PersonalDetailsRowIcon } from '../components/PersonalDetailsIcon';
 import { defaultAccountProfile, type AccountProfile } from '../mocks/account';
 import { firstTimeHomeDashboard } from '../mocks/home';
@@ -194,6 +199,7 @@ export function AccountScreen({ profile = defaultAccountProfile }: { profile?: A
   const insets = useSafeAreaInsets();
   const { isActive } = useLiveSession();
   const hasPaid = useTrackerHasPaid();
+  const courtProgress = useCourtProgress();
   const [cameraAccess, setCameraAccess] = useState(false);
   const [locationAccess, setLocationAccess] = useState(false);
   const [notificationsAccess, setNotificationsAccess] = useState(false);
@@ -310,6 +316,10 @@ export function AccountScreen({ profile = defaultAccountProfile }: { profile?: A
         showsVerticalScrollIndicator={false}
       >
         <ProfileHero profile={heroProfile} />
+
+        {shouldShowCourtProgress(courtProgress) && (
+          <CourtProgressCard state={courtProgress} />
+        )}
 
         <View style={s.sections}>
           <SectionCard

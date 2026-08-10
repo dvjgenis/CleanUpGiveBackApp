@@ -418,7 +418,7 @@ export function HomeScreenWithData({
           onPress={() => router.push('/notifications')}
           hitSlop={8}
         >
-          <NotificationIcon color={colors.textPrimary} />
+          <NotificationIcon size={20} color={colors.textPrimary} />
           {data.notificationCount > 0 && (
             <View style={s.notifBadge}>
               <Text style={s.notifBadgeText}>{data.notificationCount}</Text>

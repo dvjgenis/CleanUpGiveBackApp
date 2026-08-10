@@ -50,6 +50,16 @@ const homeScreenOptions = ({ route }: { route: { params?: { enter?: string } } }
   animation: route.params?.enter === 'fade' ? ('fade' as const) : ('none' as const),
 });
 
+/**
+ * Account stays instant for BottomNav (`replace('/account')` with no params).
+ * Flows that land back on Account via `replace` (export record, request
+ * data, event registration confirmation) pass `enter=fade` for a cross-fade
+ * instead of an instant cut — same pattern as `homeScreenOptions`.
+ */
+const accountScreenOptions = ({ route }: { route: { params?: { enter?: string } } }) => ({
+  animation: route.params?.enter === 'fade' ? ('fade' as const) : ('none' as const),
+});
+
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -96,7 +106,7 @@ export default function RootLayout() {
       <Stack.Screen name="purchase-confirmation" />
       <Stack.Screen name="sessions-list" options={tabRootScreenOptions} />
       <Stack.Screen name="session-detail" />
-      <Stack.Screen name="account" options={tabRootScreenOptions} />
+      <Stack.Screen name="account" options={accountScreenOptions} />
       <Stack.Screen name="map-theme" />
       <Stack.Screen name="delete-account-confirm" />
       <Stack.Screen name="account-privacy" />

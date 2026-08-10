@@ -9,6 +9,7 @@ import {
   finalizeSession,
 } from '@/lib/sessionsApi';
 import { uploadCheckpointPhotos } from '@/lib/uploadCheckpointPhotos';
+import { isExpoGoClient } from '@/utils/isExpoGoClient';
 
 import { BACKGROUND_LOCATION_TASK } from './backgroundLocationConstants';
 import {
@@ -540,6 +541,15 @@ function stopHeadingWatching() {
 }
 
 async function startBackgroundLocationUpdates(): Promise<boolean> {
+  // Expo Go on a real device lacks the background-modes entitlement that
+  // startLocationUpdatesAsync needs; calling it there can hard-crash the
+  // native process (no catchable JS error). Only the Simulator tolerates it,
+  // and this path can't tell simulator from device, so skip it entirely in
+  // Expo Go — foreground watchPositionAsync still tracks the route live.
+  if (isExpoGoClient()) {
+    return false;
+  }
+
   try {
     const hasStarted = await Location.hasStartedLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
     if (hasStarted) {

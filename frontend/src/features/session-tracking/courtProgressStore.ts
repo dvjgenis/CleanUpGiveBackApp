@@ -20,6 +20,23 @@ export type CourtProgressState = {
 
 const INITIAL_STATE: CourtProgressState = { progress: null, isCourtOrderedServiceType: false };
 
+/** Flip to `true` locally to preview the Court Progress card with fake numbers
+ * instead of the real `/me/court-progress` response — never commit as `true`. */
+const USE_MOCK_COURT_PROGRESS = false;
+
+const MOCK_COURT_PROGRESS: CourtProgressState = {
+  isCourtOrderedServiceType: true,
+  progress: {
+    hasCourtOrder: true,
+    requiredHours: 40,
+    completedHours: 22.5,
+    remainingHours: 17.5,
+    dueDate: 'Dec 15, 2026',
+    caseReference: 'MOCK-CASE-0001',
+    status: 'at_risk',
+  },
+};
+
 let courtProgress: CourtProgressState = INITIAL_STATE;
 const listeners = new Set<() => void>();
 
@@ -42,7 +59,7 @@ async function persistCourtProgress() {
 }
 
 export function getCourtProgress(): CourtProgressState {
-  return courtProgress;
+  return USE_MOCK_COURT_PROGRESS ? MOCK_COURT_PROGRESS : courtProgress;
 }
 
 export function subscribeCourtProgress(listener: () => void) {

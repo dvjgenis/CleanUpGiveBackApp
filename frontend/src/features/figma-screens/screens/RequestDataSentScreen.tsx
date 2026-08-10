@@ -14,7 +14,7 @@ export function RequestDataSentScreen() {
   const router = useRouter();
 
   function handleContinue() {
-    router.replace('/account' as Href);
+    router.replace({ pathname: '/account', params: { enter: 'fade' } } as Href);
   }
 
   return (

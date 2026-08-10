@@ -2,6 +2,35 @@
 
 ---
 
+## [2026-08-10 Session 1] — Figma asset import (Icons/Illustrations pages) + brand-mark vector fix
+
+**Session goal:** Import the app's real image/SVG assets into the `CleanUpGiveBack-Design-System` Figma file's Icons/Illustrations pages (via the Figma MCP `upload_assets` tool, not just text documentation), then fix an imperfect brand-mark vector the user found in Figma and propagate the correction back into the app's app icon, splash animation, and the welcome-screen logo mark.
+
+**Workflow used:** Chat-driven, iterative — figma-use/figma-generate-library skills for all Figma writes; local Python (Pillow/cairosvg, throwaway venv) for compositing the corrected vector onto the app icon's gradient.
+
+### Tasks Completed
+
+| Task | Location | Status |
+|---|---|---|
+| Import referenced illustration assets into Figma | Figma file `rye7OGQxun1HxkrFSfrzU6`, Illustrations page Cover frame | ✅ 47+ real images (onboarding, shop, sessions, account leaves, event/live-session) uploaded via `upload_assets` and organized under the pre-existing green-banner Cover template's section headers; confirmed the Icons page already had full ported-vector icon coverage so no changes were needed there |
+| Add account leaf icons + welcome-screen "Prove your impact" accents to Figma | same file | ✅ `leaf-large.svg`/`leaf-small.svg` (Account), `welcome-burst.svg`/`welcome-underline.svg` (Onboarding), 3 purchase-confirmation heart SVGs (Shop), filled (`icon.png`) + outlined (`welcome-logo.svg`) brand-mark pair (new Brand Mark section) |
+| Fix imperfect brand-mark vector app-wide | `frontend/assets/images/icon.png`, `frontend/src/components/AppSplashScreen.tsx`, `frontend/src/components/onboarding/OnboardingIcons.tsx` | ✅ user found a broken/unclosed subpath (the crumpled-paper shape near the hand) in the Figma vector; corrected path exported from Figma node `91:1894` and applied to all three. `AppSplashScreen.tsx`'s `LOGO_PATH` swapped 1:1 (viewBox already matched, no rescale needed); `WelcomeLogoMark` in `OnboardingIcons.tsx` patched with the same path scaled 1/3 (verified via exact string diff against a script-generated transform, not hand-typed, after an earlier hand-transcription attempt silently dropped digits). `icon.png` was first recomposited here at 678×678 (cairosvg + Pillow) — **superseded before/during commit `7f1bb72` by a separately-run, correctly-sized 1024×1024 version** (see `sips-svg-rasterization` / `ios-icon-composer-override` memory: this machine's cairosvg is normally broken via the default interpreter, and `app.json`'s `ios.icon` points at a still-unconfigured `expo.icon` bundle that may override `icon.png` on real iOS builds regardless) |
+
+### Key Decisions
+
+- Icons page was left untouched — it already contains full-fidelity ported `react-native-svg` renders of every live icon, so re-uploading raw SVGs there would have been redundant; only Illustrations (previously text-only documentation cards) needed real pixels.
+- Only the 94-ish assets confirmed still `require()`'d from `frontend/src` were imported; ~187 dead/ported/unreferenced files (old `figma/shared/`, unused `logos/`, superseded backdrop PNGs, etc.) were explicitly skipped.
+- Android adaptive-icon layers (`android-icon-foreground.png`/`android-icon-monochrome.png`) were left alone — inspection showed they render an unrelated blue "A" chevron mark, not the person+trash-bin mark, so updating them would have been a guess outside what was asked.
+
+### Learnings
+
+- **Figma's `upload_assets` MCP tool needs a `figma.setCurrentPageAsync(page)` call (via `use_figma`) immediately before each upload batch** — asset placement targets whatever page is "current" in the live document, which is separate state from the calling tool.
+- **`resize()` resets `counterAxisSizingMode` back to `FIXED`** even if set to `AUTO` beforehand — auto-layout wrap frames silently stopped hugging their wrapped content and clipped rows until this was caught via `get_metadata` height inspection, not visually.
+- **Hand-transcribing SVG path data into source files is unreliable at this length** — a manual retype of the scaled `WelcomeLogoMark` path silently dropped/altered digits; switched to a scripted regex-based numeric transform + programmatic Edit + exact-string verification for the second attempt.
+- Commit `7f1bb72` (this session's edits + unrelated pre-session dirty files + a superseding icon.png fix) landed on `main` without this session ever running `git commit` — a concurrent/later session evidently had its own explicit commit authorization and swept in whatever was dirty at the time, consistent with the existing `broad-commit-authorization-scope` memory. Not investigated further since it matches a known pattern, not an anomaly.
+
+---
+
 ## [2026-08-09 Session 2] — Schedule-send time picker, court-risk terminology/severity fixes, fixed volunteer-profile crash
 
 **Session goal:** Follow-up requests on the same-day Emails/court-risk work: (1) custom time picker for schedule-send, (2) mock demo data for `/court-risk` (empty in prod), (3) fix a 404 clicking a volunteer from `/court-risk`, (4) fix confusing court-risk UI wording/color, (5) fix a second 404 clicking a session on the volunteer profile.
