@@ -9,7 +9,6 @@ import React, { useEffect, useId, useLayoutEffect, useRef, useState } from "reac
 import { createPortal } from "react-dom";
 import { Sidebar, SidebarBody, SidebarLink, useSidebar } from "@/components/ui/sidebar";
 import {
-  AlertTriangleIcon,
   AuditLogIcon,
   BellIcon,
   EventsIcon,
@@ -58,11 +57,6 @@ export function SidebarDemo({ children }: { children: React.ReactNode }) {
       label: "Users",
       href: "/users",
       icon: <VolunteerIcon className="h-4 w-4 flex-shrink-0" />,
-    },
-    {
-      label: "Court Risk",
-      href: "/court-risk",
-      icon: <AlertTriangleIcon className="h-4 w-4 flex-shrink-0" />,
     },
     {
       label: "Insights",

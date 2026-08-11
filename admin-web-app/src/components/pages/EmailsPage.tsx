@@ -46,10 +46,17 @@ import type { EmailTemplateRecord } from "@/lib/email-templates";
 import type { ScheduledEmail } from "@/lib/scheduled-emails";
 import { isValidEmail } from "@/lib/email-address";
 
-type Volunteer = { id: string; name: string; email: string };
+type Volunteer = {
+  id: string;
+  name: string;
+  email: string;
+  isMockEmail?: boolean;
+  trackingNumber?: string | null;
+  carrier?: string | null;
+};
 type Tab = "compose" | "scheduled" | "templates";
 type Recipient =
-  | { kind: "volunteer"; id: string; name: string; email: string }
+  | { kind: "volunteer"; id: string; name: string; email: string; isMockEmail?: boolean }
   | { kind: "custom"; email: string };
 
 function formatBytes(n: number): string {
@@ -128,13 +135,18 @@ function RecipientPicker({
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
 
+  const sortedVolunteers = useMemo(
+    () => [...volunteers].sort((a, b) => a.name.localeCompare(b.name)),
+    [volunteers],
+  );
+
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    if (!needle) return volunteers.slice(0, 8);
-    return volunteers
-      .filter((v) => v.name.toLowerCase().includes(needle) || v.email.toLowerCase().includes(needle))
-      .slice(0, 8);
-  }, [query, volunteers]);
+    if (!needle) return sortedVolunteers;
+    return sortedVolunteers.filter(
+      (v) => v.name.toLowerCase().includes(needle) || v.email.toLowerCase().includes(needle),
+    );
+  }, [query, sortedVolunteers]);
 
   const trimmed = query.trim();
   const canUseCustom = isValidEmail(trimmed);
@@ -147,7 +159,10 @@ function RecipientPicker({
           <span className="font-body text-[14px] text-text-primary truncate">
             {value.kind === "volunteer" ? (
               <>
-                {value.name} <span className="text-text-tertiary">({value.email})</span>
+                {value.name}{" "}
+                <span className="text-text-tertiary">
+                  ({value.isMockEmail ? "no email on file" : value.email})
+                </span>
               </>
             ) : (
               value.email
@@ -191,14 +206,16 @@ function RecipientPicker({
                 <button
                   type="button"
                   onClick={() => {
-                    onChange({ kind: "volunteer", id: v.id, name: v.name, email: v.email });
+                    onChange({ kind: "volunteer", id: v.id, name: v.name, email: v.email, isMockEmail: v.isMockEmail });
                     setQuery("");
                     setOpen(false);
                   }}
                   className="w-full text-left px-md py-sm hover:bg-bg-app transition-colors"
                 >
                   <p className="font-body text-[13px] text-text-primary">{v.name}</p>
-                  <p className="font-data text-[11px] text-text-tertiary">{v.email}</p>
+                  <p className="font-data text-[11px] text-text-tertiary">
+                    {v.isMockEmail ? "No email on file yet" : v.email}
+                  </p>
                 </button>
               </li>
             ))}
@@ -454,12 +471,18 @@ function ComposeTab({
   templates,
   volunteers,
   fromAddress,
+  initialRecipientId,
 }: {
   templates: EmailTemplateRecord[];
   volunteers: Volunteer[];
   fromAddress: string;
+  initialRecipientId?: string;
 }) {
-  const [to, setTo] = useState<Recipient | null>(null);
+  const [to, setTo] = useState<Recipient | null>(() => {
+    if (!initialRecipientId) return null;
+    const match = volunteers.find((v) => v.id === initialRecipientId);
+    return match ? { kind: "volunteer", id: match.id, name: match.name, email: match.email } : null;
+  });
   const [cc, setCc] = useState<string[]>([]);
   const [bcc, setBcc] = useState<string[]>([]);
   const [showCc, setShowCc] = useState(false);
@@ -476,10 +499,56 @@ function ComposeTab({
   const attachmentInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
-  function applyTemplate(templateId: string) {
+  const [activeTemplateId, setActiveTemplateId] = useState<string | null>(null);
+  const [trackingNumber, setTrackingNumber] = useState("");
+  const [carrier, setCarrier] = useState("");
+  const activeTemplate = templates.find((t) => t.id === activeTemplateId) ?? null;
+  const activeTemplateVars =
+    activeTemplate?.templateType != null ? EMAIL_TEMPLATE_VARIABLES[activeTemplate.templateType] : [];
+  const needsTrackingFields = activeTemplateVars.includes("tracking_number");
+
+  function applyTemplate(templateId: string, overrides?: { trackingNumber?: string; carrier?: string }) {
     const template = templates.find((t) => t.id === templateId);
     if (!template) return;
-    const vars = { volunteer_name: to?.kind === "volunteer" ? to.name : "" };
+    setActiveTemplateId(templateId);
+
+    const volunteerRecord = to?.kind === "volunteer" ? volunteers.find((v) => v.id === to.id) : null;
+    const autoTrackingNumber = volunteerRecord?.trackingNumber ?? "";
+    const autoCarrier = volunteerRecord?.carrier ?? "";
+    const nextTrackingNumber = overrides?.trackingNumber ?? autoTrackingNumber;
+    const nextCarrier = overrides?.carrier ?? autoCarrier;
+    setTrackingNumber(nextTrackingNumber);
+    setCarrier(nextCarrier);
+
+    const vars = {
+      volunteer_name: to?.kind === "volunteer" ? to.name : "",
+      tracking_number: nextTrackingNumber.trim() || "[blank]",
+      carrier: nextCarrier.trim() || "[blank]",
+    };
+    setSubject(renderTemplate(template.subject, vars));
+    setBodyHtml(renderTemplate(template.bodyHtml, vars, { escapeHtml: true }));
+  }
+
+  /** Re-applies the active template (if any) whenever the recipient changes, so
+   * switching volunteers keeps tracking number/carrier — and volunteer_name —
+   * in sync instead of leaving stale values from the previous recipient. */
+  function handleRecipientChange(next: Recipient | null) {
+    setTo(next);
+    if (!activeTemplateId) return;
+    const template = templates.find((t) => t.id === activeTemplateId);
+    if (!template) return;
+
+    const volunteerRecord = next?.kind === "volunteer" ? volunteers.find((v) => v.id === next.id) : null;
+    const autoTrackingNumber = volunteerRecord?.trackingNumber ?? "";
+    const autoCarrier = volunteerRecord?.carrier ?? "";
+    setTrackingNumber(autoTrackingNumber);
+    setCarrier(autoCarrier);
+
+    const vars = {
+      volunteer_name: next?.kind === "volunteer" ? next.name : "",
+      tracking_number: autoTrackingNumber.trim() || "[blank]",
+      carrier: autoCarrier.trim() || "[blank]",
+    };
     setSubject(renderTemplate(template.subject, vars));
     setBodyHtml(renderTemplate(template.bodyHtml, vars, { escapeHtml: true }));
   }
@@ -579,11 +648,14 @@ function ComposeTab({
     });
   }
 
+  const toIsMock = to?.kind === "volunteer" && to.isMockEmail === true;
+
   const canSend =
-    subject.trim().length > 0 && bodyHtml.trim().length > 0 && to != null;
+    subject.trim().length > 0 && bodyHtml.trim().length > 0 && to != null && !toIsMock;
 
   const missingFields = [
     !to && "a recipient",
+    toIsMock && "a volunteer with a real email on file",
     !subject.trim() && "a subject",
     !bodyHtml.trim() && "a message",
   ].filter((v): v is string => Boolean(v));
@@ -600,7 +672,7 @@ function ComposeTab({
     <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_280px] gap-lg items-start">
       <div className="bg-bg-surface border border-border-outline rounded-md p-lg flex flex-col gap-md">
         <FromLine fromAddress={fromAddress} />
-        <RecipientPicker label="To" volunteers={volunteers} value={to} onChange={setTo} />
+        <RecipientPicker label="To" volunteers={volunteers} value={to} onChange={handleRecipientChange} />
         {showCc ? (
           <EmailChipList label="Cc (optional)" volunteers={volunteers} emails={cc} onChange={setCc} />
         ) : null}
@@ -653,6 +725,38 @@ function ComposeTab({
                 </option>
               ))}
             </select>
+          </div>
+        )}
+
+        {needsTrackingFields && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-sm rounded-sm border border-border-outline bg-bg-app p-md">
+            <div>
+              <label className="font-data text-[11px] tracking-[0.6px] uppercase text-text-tertiary mb-xs block">
+                Tracking number
+              </label>
+              <input
+                value={trackingNumber}
+                onChange={(e) => activeTemplateId && applyTemplate(activeTemplateId, { trackingNumber: e.target.value, carrier })}
+                placeholder="e.g. 1Z999AA10123456784"
+                className="w-full h-9 px-sm rounded-sm border border-border-outline bg-bg-surface font-body text-[13px] text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+              />
+            </div>
+            <div>
+              <label className="font-data text-[11px] tracking-[0.6px] uppercase text-text-tertiary mb-xs block">
+                Carrier
+              </label>
+              <input
+                value={carrier}
+                onChange={(e) => activeTemplateId && applyTemplate(activeTemplateId, { trackingNumber, carrier: e.target.value })}
+                placeholder="e.g. UPS"
+                className="w-full h-9 px-sm rounded-sm border border-border-outline bg-bg-surface font-body text-[13px] text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+              />
+            </div>
+            <p className="sm:col-span-2 font-body text-[11px] text-text-tertiary">
+              {trackingNumber
+                ? "Auto-filled from this volunteer's latest order — edit if needed, and the subject/body update automatically."
+                : "No tracking number on file for this volunteer's orders yet — enter one manually, or leave blank to send without a tracking line."}
+            </p>
           </div>
         )}
 
@@ -1302,12 +1406,14 @@ export function EmailsPage({
   scheduledEmails,
   fromAddress,
   initialTab,
+  initialRecipientId,
 }: {
   templates: EmailTemplateRecord[];
   volunteers: Volunteer[];
   scheduledEmails: ScheduledEmail[];
   fromAddress: string;
   initialTab: Tab;
+  initialRecipientId?: string;
 }) {
   const [tab, setTab] = useState<Tab>(initialTab);
 
@@ -1333,7 +1439,12 @@ export function EmailsPage({
       </div>
 
       {tab === "compose" ? (
-        <ComposeTab templates={templates} volunteers={volunteers} fromAddress={fromAddress} />
+        <ComposeTab
+          templates={templates}
+          volunteers={volunteers}
+          fromAddress={fromAddress}
+          initialRecipientId={initialRecipientId}
+        />
       ) : tab === "scheduled" ? (
         <ScheduledTab rows={scheduledEmails} volunteers={volunteers} fromAddress={fromAddress} />
       ) : (

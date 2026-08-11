@@ -29,16 +29,6 @@ export type UserRow = {
   completedHours: number | null;
 };
 
-function ProgressBar({ pct }: { pct: number }) {
-  const clipped = Math.min(100, pct);
-  const color = pct >= 100 ? "#007536" : pct >= 60 ? "#5a8f3a" : pct >= 30 ? "#835400" : "#ba1a1a";
-  return (
-    <div className="w-full bg-bg-surface-elevated rounded-full h-2 overflow-hidden">
-      <div className="h-2 rounded-full" style={{ width: `${clipped}%`, backgroundColor: color }} />
-    </div>
-  );
-}
-
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-md border border-border-outline bg-bg-surface-elevated px-md py-sm">
@@ -84,10 +74,6 @@ export function UserPreviewDrawer({
 
   const display = user ?? heldUser;
   const show = open && display != null;
-  const courtPct =
-    display?.requiredHours != null && display.requiredHours > 0 && display.completedHours != null
-      ? (display.completedHours / display.requiredHours) * 100
-      : null;
 
   const panelTransition = prefersReduced ? { duration: 0 } : DRAWER_SPRING;
   const scrimTransition = prefersReduced ? { duration: 0 } : { duration: 0.4, ease: EASE_OUT };
@@ -175,39 +161,6 @@ export function UserPreviewDrawer({
                     value={display.lastActive ? formatDate(display.lastActive) : "Never"}
                   />
                 </div>
-
-                {display.courtOrdered && (
-                  <section>
-                    <h3 className="font-data text-[11px] tracking-[0.88px] uppercase text-text-tertiary mb-sm">
-                      Court progress
-                    </h3>
-                    <div className="rounded-md border border-border-outline bg-bg-surface-elevated p-md flex flex-col gap-sm">
-                      {display.requiredHours != null && display.completedHours != null ? (
-                        <>
-                          <div className="flex items-baseline justify-between gap-sm">
-                            <p className="font-data text-[18px] font-semibold text-text-primary">
-                              {display.completedHours.toFixed(1)}
-                              <span className="text-text-tertiary font-normal text-[13px]">
-                                {" "}
-                                / {display.requiredHours}h
-                              </span>
-                            </p>
-                            {courtPct != null && (
-                              <span className="font-data text-[12px] text-text-tertiary">
-                                {Math.round(courtPct)}%
-                              </span>
-                            )}
-                          </div>
-                          {courtPct != null && <ProgressBar pct={courtPct} />}
-                        </>
-                      ) : (
-                        <p className="font-body text-[13px] text-text-tertiary">
-                          Court-ordered — hours not fully recorded yet.
-                        </p>
-                      )}
-                    </div>
-                  </section>
-                )}
 
                 <section>
                   <h3 className="font-data text-[11px] tracking-[0.88px] uppercase text-text-tertiary mb-sm">

@@ -2,11 +2,10 @@
 
 /**
  * Port of the real admin Insights page (`admin/app/(admin)/insights/page.tsx`).
- * Layout: Hours & submissions trend → queue age / decisions / court progress →
- * three donuts → US heatmap. `sessions`/`courtProgress` come from
- * `insights`/`analytics` routes via `loadLiveSessions` + `loadLiveCourtProgress`,
- * with page-level empty→`resolveInsightsFixtures` (relative-dated sessions +
- * court fixtures + SampleDataBanner). Sessions/Users loaders stay empty-real.
+ * Layout: Hours & submissions trend → queue age / decisions →
+ * three donuts → US heatmap. `sessions` comes from the `insights`/`analytics`
+ * routes via `loadLiveSessions`, with page-level empty→`resolveInsightsFixtures`
+ * (relative-dated sessions + SampleDataBanner). Sessions/Users loaders stay empty-real.
  */
 
 import { Suspense } from "react";
@@ -14,18 +13,15 @@ import {
   buildQueueAgeBars,
   buildTrendSeries,
   buildDecisionBars,
-  buildCourtProgressBars,
   buildGeoActivity,
   formatDuration,
   type MockSession,
-  type MockCourtVolunteer,
 } from "@/lib/mock-data";
 import { PeriodToggle } from "@/components/ui/PeriodToggle";
 import { usePeriodLabel, usePeriodSelection } from "@/components/ui/PeriodToggleBar";
 import { filterByPeriod } from "@/lib/dashboard-period";
 import { TrendAreaChart } from "@/components/ui/TrendAreaChart";
 import { HorizontalBarChart } from "@/components/ui/HorizontalBarChart";
-import { CourtProgressChart } from "@/components/ui/CourtProgressChart";
 import { DonutChart } from "@/components/ui/DonutChart";
 import { UsHeatmap } from "@/components/dashboard/UsHeatmap";
 import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
@@ -37,7 +33,6 @@ const ACTIVITY_COLORS = ["#007536", "#5a8f3a", "#835400", "#3d8f5c", "#6e7a6c"];
 export function AnalyticsPage({
   sessions = [],
   realSessions,
-  courtProgress = [],
   isMock = false,
 }: {
   sessions?: MockSession[];
@@ -45,7 +40,6 @@ export function AnalyticsPage({
    *  even when `sessions` falls back to demo fixtures for the rest of the page. Defaults to
    *  `sessions` for callers that haven't wired a real-only source yet. */
   realSessions?: MockSession[];
-  courtProgress?: MockCourtVolunteer[];
   isMock?: boolean;
 }) {
   return (
@@ -56,12 +50,7 @@ export function AnalyticsPage({
         </div>
       }
     >
-      <AnalyticsPageInner
-        sessions={sessions}
-        realSessions={realSessions ?? sessions}
-        courtProgress={courtProgress}
-        isMock={isMock}
-      />
+      <AnalyticsPageInner sessions={sessions} realSessions={realSessions ?? sessions} isMock={isMock} />
     </Suspense>
   );
 }
@@ -69,12 +58,10 @@ export function AnalyticsPage({
 function AnalyticsPageInner({
   sessions,
   realSessions,
-  courtProgress,
   isMock,
 }: {
   sessions: MockSession[];
   realSessions: MockSession[];
-  courtProgress: MockCourtVolunteer[];
   isMock: boolean;
 }) {
   const now = new Date();
@@ -169,7 +156,7 @@ function AnalyticsPageInner({
           data={buildTrendSeries(filteredSessions)}
           index={0}
         />
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-md">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-md">
           <HorizontalBarChart
             title="How long sessions wait"
             subtitle="Under review, by age"
@@ -182,11 +169,6 @@ function AnalyticsPageInner({
             data={buildDecisionBars(filteredSessions)}
             index={2}
           />
-          <CourtProgressChart
-            title="Court progress"
-            data={buildCourtProgressBars(courtProgress)}
-            index={3}
-          />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-md">
           <DonutChart title="Session Status" data={statusSlices} total={totalSessions} index={4} />
@@ -198,7 +180,7 @@ function AnalyticsPageInner({
             index={6}
           />
         </div>
-        <UsHeatmap activity={buildGeoActivity(mapSessions)} sessions={mapSessions} periodLabel={periodLabelText} />
+        <UsHeatmap activity={buildGeoActivity(mapSessions)} periodLabel={periodLabelText} />
       </div>
     </div>
   );

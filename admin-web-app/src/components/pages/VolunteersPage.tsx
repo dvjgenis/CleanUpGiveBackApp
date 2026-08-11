@@ -25,16 +25,6 @@ const FILTERS: { value: "all" | "court" | "voluntary"; label: string }[] = [
   { value: "voluntary", label: "Voluntary" },
 ];
 
-function ProgressBar({ pct }: { pct: number }) {
-  const clipped = Math.min(100, pct);
-  const color = pct >= 100 ? "#007536" : pct >= 60 ? "#5a8f3a" : pct >= 30 ? "#835400" : "#ba1a1a";
-  return (
-    <div className="w-24 bg-bg-surface-elevated rounded-full h-1.5 overflow-hidden shrink-0">
-      <div className="h-1.5 rounded-full transition-all" style={{ width: `${clipped}%`, backgroundColor: color }} />
-    </div>
-  );
-}
-
 export function VolunteersPage({ users = [], isMock = false }: { users?: UserRow[]; isMock?: boolean }) {
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<"all" | "court" | "voluntary">("all");
@@ -42,9 +32,6 @@ export function VolunteersPage({ users = [], isMock = false }: { users?: UserRow
 
   const total = users.length;
   const courtOrderedCount = users.filter((u) => u.courtOrdered).length;
-  const atRiskCount = users.filter(
-    (u) => u.courtOrdered && u.requiredHours != null && u.completedHours != null && u.completedHours < u.requiredHours,
-  ).length;
   const totalHours = users.reduce((sum, u) => sum + u.totalHours, 0);
 
   const needle = q.trim().toLowerCase();
@@ -88,20 +75,17 @@ export function VolunteersPage({ users = [], isMock = false }: { users?: UserRow
 
       {isMock && <SampleDataBanner />}
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-md mb-xl">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-md mb-xl">
         {[
           { label: "Total Users", value: total },
           { label: "Court-Ordered", value: courtOrderedCount },
-          { label: "At Risk", value: atRiskCount, color: atRiskCount > 0 ? "text-[#ba1a1a]" : undefined },
           { label: "Combined Hours", value: `${totalHours.toFixed(0)}h` },
         ].map((stat) => (
           <div key={stat.label} className="bg-bg-surface border border-border-outline rounded-md p-lg">
             <p className="font-data text-[11px] tracking-[0.88px] uppercase text-text-tertiary mb-sm">
               {stat.label}
             </p>
-            <p className={`font-data text-[28px] font-semibold ${stat.color ?? "text-text-primary"}`}>
-              {stat.value}
-            </p>
+            <p className="font-data text-[28px] font-semibold text-text-primary">{stat.value}</p>
           </div>
         ))}
       </div>
@@ -137,7 +121,7 @@ export function VolunteersPage({ users = [], isMock = false }: { users?: UserRow
 
       <div className="bg-bg-surface border border-border-outline rounded-md overflow-hidden">
         <div className="hidden lg:grid lg:grid-cols-[1.5fr_7.5rem_6.5rem_4.5rem_11rem_7.5rem] gap-md px-lg py-sm bg-bg-surface-elevated border-b border-border-outline">
-          {["Name", "Joined", "Sessions", "Hours", "Type / Progress", "Last Active"].map((col) => (
+          {["Name", "Joined", "Sessions", "Hours", "Type", "Last Active"].map((col) => (
             <span
               key={col}
               className={`font-data text-[11px] tracking-[0.88px] uppercase text-text-tertiary ${
@@ -178,14 +162,6 @@ export function VolunteersPage({ users = [], isMock = false }: { users?: UserRow
                   {u.courtOrdered ? (
                     <div className="flex items-center gap-sm lg:justify-center min-w-0">
                       <CourtBadge />
-                      {u.requiredHours != null && u.completedHours != null && (
-                        <>
-                          <ProgressBar pct={(u.completedHours / u.requiredHours) * 100} />
-                          <span className="font-data text-[11px] text-text-tertiary whitespace-nowrap">
-                            {u.completedHours.toFixed(1)}/{u.requiredHours}h
-                          </span>
-                        </>
-                      )}
                     </div>
                   ) : (
                     <div className="lg:flex lg:justify-center">

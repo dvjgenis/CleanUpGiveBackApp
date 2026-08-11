@@ -186,22 +186,26 @@ async function buildCourtCoverSheet(
   }
 
   const requiredHours = Number(courtOrder.requiredHours);
-  // Completed hours only count *approved* court-ordered sessions — this mirrors
-  // admin-web-app's `lib/court-risk.ts`, kept deliberately duplicated here since
-  // backend/sessions is a separate deployable (see `routes/courtProgress.ts`).
+  // Completed hours only count *approved* court-ordered sessions dated after the
+  // last reset — hours reset to zero every time a service letter is generated
+  // (see the auto-reset in buildServiceLetterPdf below), so this always reflects
+  // the current period only, never a lifetime total.
   const completedSessions = await prisma.session.findMany({
-    where: { userId: volunteerId, status: SessionStatus.approved, courtOrdered: true },
+    where: {
+      userId: volunteerId,
+      status: SessionStatus.approved,
+      courtOrdered: true,
+      ...(courtOrder.hoursResetAt ? { startedAt: { gt: courtOrder.hoursResetAt } } : {}),
+    },
     select: { durationSeconds: true, adjustedHours: true },
   });
   const completedHours = completedSessions.reduce((sum, session) => sum + sessionHours(session), 0);
-  const completionPercent = requiredHours > 0 ? Math.min(100, (completedHours / requiredHours) * 100) : 0;
 
   return {
     caseReference: courtOrder.caseReference,
     dueDateLabel: courtOrder.dueDate ? formatSessionDate(courtOrder.dueDate) : null,
     requiredHoursLabel: `${formatHoursValue(requiredHours)}h`,
     completedHoursLabel: `${formatHoursValue(completedHours)}h`,
-    completionPercentLabel: `${Math.round(completionPercent)}%`,
   };
 }
 
@@ -244,6 +248,15 @@ export async function buildServiceLetterPdf(
     where: { id: { in: sessions.map((session) => session.id) } },
     data: { letterheadGeneratedAt: new Date() },
   });
+
+  // Generating a court packet resets the volunteer's completed-hours count to
+  // zero — the letter is the record of this period; the next period starts fresh.
+  if (options.includeCourtCoverSheet) {
+    await prisma.courtOrder.updateMany({
+      where: { userId: volunteerId },
+      data: { hoursResetAt: new Date() },
+    });
+  }
 
   const today = new Date().toISOString().slice(0, 10);
   const prefix = options.includeCourtCoverSheet ? 'CGB-Court-Packet' : 'CGB-Service-Letter';

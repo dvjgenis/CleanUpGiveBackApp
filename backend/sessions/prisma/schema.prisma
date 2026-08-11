@@ -44,6 +44,7 @@ model CourtOrder {
   requiredHours  Decimal   @map("required_hours") @db.Decimal
   dueDate        DateTime? @map("due_date") @db.Date
   caseReference  String?   @map("case_reference")
+  hoursResetAt   DateTime? @map("hours_reset_at") @db.Timestamptz(6)
   createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
 
   @@map("court_orders")

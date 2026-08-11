@@ -7,10 +7,6 @@ import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { BottomNavBar } from '@/components/navigation/BottomNavBar';
 import { SessionSetupToggle } from '@/components/session-setup/SessionSetupToggle';
 import { TrackerMapDarkIcon } from '@/features/session-tracking/components/icons/TrackerMapThemeIcons';
-import {
-  shouldShowCourtProgress,
-  useCourtProgress,
-} from '@/features/session-tracking/courtProgressStore';
 import { useLiveSession } from '@/features/session-tracking/liveSessionStore';
 import {
   isValidCompanyCode,
@@ -18,6 +14,7 @@ import {
   useTrackerHasPaid,
 } from '@/features/session-tracking/trackerPaymentStore';
 import { usePreferredName } from '@/features/onboarding/onboardingStore';
+import { getServiceType } from '@/lib/supabase';
 import {
   isSessionNotificationPermissionGranted,
   requestSessionNotificationPermission,
@@ -56,7 +53,6 @@ import {
   CompanyCodeConfirmModal,
   CompanyCodeUpgradeSuccessModal,
 } from '../components/CompanyCodeModals';
-import { CourtProgressCard } from '../components/CourtProgressCard';
 import { PersonalDetailsIcon, PersonalDetailsRowIcon } from '../components/PersonalDetailsIcon';
 import { defaultAccountProfile, type AccountProfile } from '../mocks/account';
 import { firstTimeHomeDashboard } from '../mocks/home';
@@ -199,7 +195,7 @@ export function AccountScreen({ profile = defaultAccountProfile }: { profile?: A
   const insets = useSafeAreaInsets();
   const { isActive } = useLiveSession();
   const hasPaid = useTrackerHasPaid();
-  const courtProgress = useCourtProgress();
+  const [isCourtOrdered, setIsCourtOrdered] = useState(false);
   const [cameraAccess, setCameraAccess] = useState(false);
   const [locationAccess, setLocationAccess] = useState(false);
   const [notificationsAccess, setNotificationsAccess] = useState(false);
@@ -235,6 +231,9 @@ export function AccountScreen({ profile = defaultAccountProfile }: { profile?: A
       });
       void isSessionNotificationPermissionGranted().then((granted) => {
         if (isMounted) setNotificationsAccess(granted);
+      });
+      void getServiceType().then((serviceType) => {
+        if (isMounted) setIsCourtOrdered(serviceType === 'Court Ordered');
       });
 
       return () => {
@@ -317,8 +316,13 @@ export function AccountScreen({ profile = defaultAccountProfile }: { profile?: A
       >
         <ProfileHero profile={heroProfile} />
 
-        {shouldShowCourtProgress(courtProgress) && (
-          <CourtProgressCard state={courtProgress} />
+        {isCourtOrdered && (
+          <View style={s.courtDisclaimer}>
+            <Text style={s.courtDisclaimerText}>
+              Court-ordered hours: each time a service letter is generated for you, your
+              completed hours reset to zero and a new count begins.
+            </Text>
+          </View>
         )}
 
         <View style={s.sections}>
@@ -546,6 +550,20 @@ const s = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: colors.bgApp,
+  },
+  courtDisclaimer: {
+    backgroundColor: colors.statusPendingBg,
+    borderWidth: 1,
+    borderColor: colors.statusPendingBorder,
+    borderRadius: radius.md,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  courtDisclaimerText: {
+    fontFamily: fontFamilies.notoSansRegular,
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.statusPendingText,
   },
   topBar: {
     backgroundColor: colors.white,

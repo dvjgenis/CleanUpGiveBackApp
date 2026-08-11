@@ -1,6 +1,6 @@
 import { SidebarDemo } from "@/components/ui/sidebar-demo";
 import { AnalyticsPage } from "@/components/pages/AnalyticsPage";
-import { loadLiveSessions, loadLiveCourtProgress } from "@/lib/live-data";
+import { loadLiveSessions } from "@/lib/live-data";
 import { resolveInsightsFixtures } from "@/lib/mock-data";
 import { parsePeriodSelection, periodInterval } from "@/lib/dashboard-period";
 
@@ -14,26 +14,13 @@ export default async function Analytics({
   const selection = parsePeriodSelection(params);
   const interval = periodInterval(selection, now);
 
-  const [{ data: liveSessions }, { data: liveCourt }] = await Promise.all([
-    loadLiveSessions(),
-    loadLiveCourtProgress(),
-  ]);
-  const { sessions, courtProgress, isMock } = resolveInsightsFixtures(
-    liveSessions,
-    liveCourt,
-    now,
-    interval,
-  );
+  const { data: liveSessions } = await loadLiveSessions();
+  const { sessions, isMock } = resolveInsightsFixtures(liveSessions, now, interval);
 
   return (
     <div className="w-full h-dvh">
       <SidebarDemo>
-        <AnalyticsPage
-          sessions={sessions}
-          realSessions={liveSessions}
-          courtProgress={courtProgress}
-          isMock={isMock}
-        />
+        <AnalyticsPage sessions={sessions} realSessions={liveSessions} isMock={isMock} />
       </SidebarDemo>
     </div>
   );

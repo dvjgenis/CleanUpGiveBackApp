@@ -237,55 +237,13 @@ export function computedHours(seconds: number | null, adjustedHours: number | nu
   return seconds / 3600;
 }
 
-export type MockCourtVolunteer = {
-  id: string;
-  name: string;
-  email: string;
-  requiredHours: number;
-  completedHours: number;
-  sessions: number;
-  status: "in_progress" | "at_risk" | "completed";
-  dueDate: string;
-};
-
-export const MOCK_COURT_AT_RISK: MockCourtVolunteer[] = [
-  { id: "c5", name: "Isaiah Grant", email: "isaiah.g@email.com", requiredHours: 25, completedHours: 7.0, sessions: 3, status: "at_risk", dueDate: "2026-07-31" },
-  { id: "c8", name: "Nadia Flores", email: "nadia.f@email.com", requiredHours: 45, completedHours: 12.5, sessions: 5, status: "at_risk", dueDate: "2026-07-28" },
-  { id: "c2", name: "Jordan Lee", email: "jordan.lee@email.com", requiredHours: 40, completedHours: 18.0, sessions: 6, status: "at_risk", dueDate: "2026-07-20" },
-  { id: "c3", name: "Aaliyah Brooks", email: "aaliyah.b@email.com", requiredHours: 20, completedHours: 9.5, sessions: 4, status: "in_progress", dueDate: "2026-09-15" },
-  { id: "c6", name: "Marcus Webb", email: "marcus.w@email.com", requiredHours: 30, completedHours: 14.0, sessions: 5, status: "in_progress", dueDate: "2026-10-01" },
-  { id: "c1", name: "Maya Chen", email: "maya.chen@email.com", requiredHours: 15, completedHours: 15.0, sessions: 4, status: "completed", dueDate: "2026-08-15" },
-  { id: "c9", name: "Devon Park", email: "devon.p@email.com", requiredHours: 50, completedHours: 52.0, sessions: 12, status: "completed", dueDate: "2026-07-15" },
-  { id: "c4", name: "Sofia Alvarez", email: "sofia.a@email.com", requiredHours: 35, completedHours: 6.0, sessions: 2, status: "at_risk", dueDate: "2026-07-25" },
-];
-
-/** Insights Court progress list — core 8 + extras so View more (>5) is exercisable. */
-export const MOCK_COURT_PROGRESS: MockCourtVolunteer[] = [
-  ...MOCK_COURT_AT_RISK,
-  { id: "c10", name: "Elena Ruiz", email: "elena.r@email.com", requiredHours: 30, completedHours: 8.0, sessions: 3, status: "at_risk", dueDate: "2026-08-01" },
-  { id: "c11", name: "Omar Hassan", email: "omar.h@email.com", requiredHours: 40, completedHours: 22.0, sessions: 7, status: "in_progress", dueDate: "2026-09-01" },
-  { id: "c12", name: "Grace Kim", email: "grace.k@email.com", requiredHours: 20, completedHours: 20.0, sessions: 5, status: "completed", dueDate: "2026-07-10" },
-  { id: "c13", name: "Noah Bennett", email: "noah.b@email.com", requiredHours: 25, completedHours: 4.5, sessions: 2, status: "at_risk", dueDate: "2026-07-22" },
-  { id: "c14", name: "Fatima Diallo", email: "fatima.d@email.com", requiredHours: 35, completedHours: 19.0, sessions: 6, status: "in_progress", dueDate: "2026-10-15" },
-  { id: "c15", name: "Liam O'Brien", email: "liam.o@email.com", requiredHours: 45, completedHours: 30.0, sessions: 9, status: "in_progress", dueDate: "2026-11-01" },
-  { id: "c16", name: "Zoe Patel", email: "zoe.p@email.com", requiredHours: 15, completedHours: 3.0, sessions: 1, status: "at_risk", dueDate: "2026-07-18" },
-  { id: "c17", name: "Caleb Nguyen", email: "caleb.n@email.com", requiredHours: 50, completedHours: 41.0, sessions: 11, status: "in_progress", dueDate: "2026-12-01" },
-  { id: "c18", name: "Harper Singh", email: "harper.s@email.com", requiredHours: 20, completedHours: 11.0, sessions: 4, status: "in_progress", dueDate: "2026-09-20" },
-  { id: "c19", name: "Mateo Cruz", email: "mateo.c@email.com", requiredHours: 30, completedHours: 30.0, sessions: 8, status: "completed", dueDate: "2026-08-05" },
-  { id: "c20", name: "Ivy Thompson", email: "ivy.t@email.com", requiredHours: 40, completedHours: 9.0, sessions: 3, status: "at_risk", dueDate: "2026-07-29" },
-  { id: "c21", name: "Ethan Brooks", email: "ethan.b@email.com", requiredHours: 25, completedHours: 16.5, sessions: 5, status: "in_progress", dueDate: "2026-10-20" },
-  { id: "c22", name: "Amara Okonkwo", email: "amara.o@email.com", requiredHours: 35, completedHours: 28.0, sessions: 7, status: "in_progress", dueDate: "2026-11-15" },
-  { id: "c23", name: "Riley Sato", email: "riley.s@email.com", requiredHours: 15, completedHours: 5.5, sessions: 2, status: "at_risk", dueDate: "2026-08-12" },
-];
-
 /** Page-level empty→fixture for Insights/Analytics only (not Sessions loaders). */
 export function resolveInsightsFixtures(
   liveSessions: MockSession[],
-  liveCourt: MockCourtVolunteer[],
   now = new Date(),
   /** When set, fixtures also apply if no live sessions fall in this window (e.g. Today). Pass null for All time. */
   periodInterval: DateInterval | null = null,
-): { sessions: MockSession[]; courtProgress: MockCourtVolunteer[]; isMock: boolean } {
+): { sessions: MockSession[]; isMock: boolean } {
   const sessionsEmpty = liveSessions.length === 0;
   const liveInPeriod =
     periodInterval == null
@@ -293,24 +251,10 @@ export function resolveInsightsFixtures(
       : liveSessions.filter((s) => inInterval(s.ended_at ?? s.started_at ?? s.created_at, periodInterval));
   const periodEmpty = liveInPeriod.length === 0;
   const useSessionFixtures = sessionsEmpty || (periodInterval != null && periodEmpty);
-  const courtEmpty = liveCourt.length === 0;
   return {
     sessions: useSessionFixtures ? buildInsightsMockSessions(now) : liveSessions,
-    courtProgress: courtEmpty ? MOCK_COURT_PROGRESS : liveCourt,
-    isMock: useSessionFixtures || courtEmpty,
+    isMock: useSessionFixtures,
   };
-}
-
-/** Court volunteer completion toward required hours — mirrors `admin/lib/dashboard-charts.ts`. */
-export function buildCourtProgressBars(
-  volunteers: Pick<MockCourtVolunteer, "id" | "name" | "requiredHours" | "completedHours" | "status">[],
-): { id: string; name: string; completed: number; remaining: number; pct: number; status: string }[] {
-  return volunteers.map((v) => {
-    const completed = Math.min(v.completedHours, v.requiredHours);
-    const remaining = Math.max(0, v.requiredHours - v.completedHours);
-    const pct = v.requiredHours > 0 ? Math.min(100, (v.completedHours / v.requiredHours) * 100) : 0;
-    return { id: v.id, name: v.name, completed, remaining, pct, status: v.status };
-  });
 }
 
 /** Period decision mix — mirrors `admin/lib/dashboard-charts.ts` `buildDecisionBars`. */

@@ -7,7 +7,7 @@
 import { differenceInCalendarDays } from 'date-fns';
 
 import { createDataClient } from '@/lib/supabase/server';
-import { loadLiveSessions, loadLiveFeedback, loadLiveOrders, loadLiveCourtProgress } from '@/lib/live-data';
+import { loadLiveSessions, loadLiveFeedback, loadLiveOrders } from '@/lib/live-data';
 import { loadSessionEvidence, loadSessionVolunteerPattern } from '@/actions/sessions';
 import { computeRedFlags } from '@/lib/session-red-flags';
 import { loadDataQualityAlerts } from '@/lib/data-quality';
@@ -17,7 +17,6 @@ export type AttentionItemKind =
   | 'flagged_feedback'
   | 'order_issue'
   | 'failed_email'
-  | 'at_risk_volunteer'
   | 'suspicious_session'
   | 'data_quality';
 
@@ -107,20 +106,6 @@ async function buildFailedEmailItems(): Promise<AttentionItem[]> {
   }));
 }
 
-async function buildAtRiskVolunteerItems(): Promise<AttentionItem[]> {
-  const { data: volunteers } = await loadLiveCourtProgress();
-  return volunteers
-    .filter((v) => v.status === 'at_risk')
-    .map((v) => ({
-      id: `at_risk_volunteer-${v.id}`,
-      kind: 'at_risk_volunteer' as const,
-      label: `${v.name} at risk — ${v.completedHours}/${v.requiredHours}h`,
-      detail: v.dueDate ? `Due ${v.dueDate}` : null,
-      href: `/volunteers/${v.id}`,
-      occurredAt: null,
-    }));
-}
-
 async function buildSuspiciousSessionItems(): Promise<AttentionItem[]> {
   const { data: sessions } = await loadLiveSessions();
   const underReview = sessions.filter((s) => s.status === 'under_review');
@@ -173,7 +158,6 @@ export async function buildAttentionItems(): Promise<AttentionItem[]> {
     buildFlaggedFeedbackItems(),
     buildOrderIssueItems(),
     buildFailedEmailItems(),
-    buildAtRiskVolunteerItems(),
     buildSuspiciousSessionItems(),
     buildDataQualityItems(),
   ]);

@@ -23,6 +23,8 @@ import {
   getVolunteerDirectory,
   getVolunteerName,
   getVolunteerServiceType,
+  resolveVolunteerEmail,
+  resolveVolunteerName,
   type VolunteerDirectory,
 } from '@/lib/volunteers';
 import {
@@ -34,7 +36,6 @@ import {
   type FeedbackEntry,
   type OrderLineItem,
   type OrderRow,
-  type MockCourtVolunteer,
   type MonthlyRevenuePoint,
   type ShippingAddress,
 } from '@/lib/mock-data';
@@ -46,7 +47,6 @@ import {
   type ShopItemId,
 } from '@/lib/shop-catalog';
 import { withEventTiming, type EventListItem, type EventRow } from '@/lib/events';
-import { buildCourtRisk, type CourtOrderRow as CourtRiskOrderRow } from '@/lib/court-risk';
 import { geoFipsForPoint } from '@/lib/us-geo';
 import { ILLINOIS_FIPS } from '@/lib/us-heatmap';
 
@@ -234,6 +234,28 @@ export async function loadLiveOrders(): Promise<LiveResult<OrderRow[]>> {
   return { data: orders, useMock: false };
 }
 
+export type VolunteerOrderTracking = { trackingNumber: string; carrier: string | null };
+
+/** Latest tracking number per volunteer, for auto-filling the Emails tab's Order
+ * tracking template — one row per volunteer, their most recent order that actually
+ * has a tracking number set (skips pending/unshipped orders with none yet). */
+export async function loadLatestOrderTrackingByVolunteer(): Promise<Map<string, VolunteerOrderTracking>> {
+  const supabase = await createDataClient();
+  const { data: rows } = await supabase
+    .from('shop_orders')
+    .select('user_id, tracking_number, carrier, created_at')
+    .not('tracking_number', 'is', null)
+    .not('user_id', 'is', null)
+    .order('created_at', { ascending: false });
+
+  const map = new Map<string, VolunteerOrderTracking>();
+  for (const row of (rows ?? []) as { user_id: string; tracking_number: string; carrier: string | null }[]) {
+    if (map.has(row.user_id)) continue;
+    map.set(row.user_id, { trackingNumber: row.tracking_number, carrier: row.carrier });
+  }
+  return map;
+}
+
 /**
  * Pure aggregation over a volunteer's own session/audit-log history — every input here
  * is already individually visible to Donna one row at a time. Answers checklist red
@@ -305,6 +327,7 @@ type VolunteerDetail = {
   requiredHours: number | null;
   courtDueDate: string | null;
   caseReference: string | null;
+  hoursResetAt: string | null;
   activityPattern: VolunteerActivityPattern;
   sessions: Array<{
     id: string;
@@ -368,7 +391,8 @@ export async function loadLiveVolunteerById(id: string): Promise<LiveResult<Volu
 
     const user = userResponse.user;
     const meta = user.user_metadata ?? {};
-    const name = meta.name || user.email?.split('@')[0] || 'Unknown';
+    const name = resolveVolunteerName(user);
+    const email = resolveVolunteerEmail(user);
     const phone = user.phone ?? (typeof meta.phone === 'string' ? meta.phone : null);
 
     // Get sessions, court orders, and delete-audit history (for the Activity Pattern rollup)
@@ -381,7 +405,7 @@ export async function loadLiveVolunteerById(id: string): Promise<LiveResult<Volu
         .order('started_at', { ascending: false }),
       supabase
         .from('court_orders')
-        .select('required_hours, due_date, case_reference, created_at')
+        .select('required_hours, due_date, case_reference, hours_reset_at, created_at')
         .eq('user_id', id)
         .order('created_at', { ascending: false }),
       supabase
@@ -406,7 +430,7 @@ export async function loadLiveVolunteerById(id: string): Promise<LiveResult<Volu
       data: {
         id: user.id,
         name,
-        email: user.email || '—',
+        email: email || '—',
         phone,
         joinedAt: user.created_at,
         lastActive: user.last_sign_in_at ?? null,
@@ -414,6 +438,7 @@ export async function loadLiveVolunteerById(id: string): Promise<LiveResult<Volu
         requiredHours: courtOrder?.required_hours ?? null,
         courtDueDate: courtOrder?.due_date ?? null,
         caseReference: courtOrder?.case_reference ?? null,
+        hoursResetAt: courtOrder?.hours_reset_at ?? null,
         activityPattern,
         sessions: sessionRows,
       },
@@ -625,159 +650,12 @@ function parseLineItems(itemsData: any): OrderLineItem[] {
     .filter(Boolean) as OrderLineItem[];
 }
 
-export type CourtRiskDashboardRow = {
-  id: string;
-  name: string;
-  requiredHours: number;
-  completedHours: number;
-  status: 'in_progress' | 'at_risk' | 'completed';
-  dueDate: string;
-  invalidSessionsLast30Days: number;
-  nearDeadlineVolumeSpike: boolean;
-};
-
-/**
- * Court-risk dashboard row per volunteer, extending `buildCourtRisk()`'s
- * in_progress/at_risk/completed classification with the other two signals
- * requested (invalid-session count, sudden session spike) — both already
- * computed per-volunteer by `buildActivityPattern` for the profile page's
- * Activity Pattern card, just batched here across every court-ordered
- * volunteer in 3 queries total instead of N.
- */
-export async function loadCourtRiskDashboard(): Promise<LiveResult<CourtRiskDashboardRow[]>> {
-  const supabase = await createDataClient();
-  const { data: courtOrders } = await supabase
-    .from('court_orders')
-    .select('user_id, required_hours, due_date');
-
-  if (!courtOrders || courtOrders.length === 0) {
-    return { data: [], useMock: false };
-  }
-
-  const orderRows = courtOrders as CourtRiskOrderRow[];
-  const userIds = orderRows.map((o) => o.user_id);
-
-  const [{ data: sessions }, { data: deleteRows }, directory] = await Promise.all([
-    supabase
-      .from('sessions')
-      .select('user_id, status, court_ordered, duration_seconds, adjusted_hours, started_at')
-      .neq('status', 'active')
-      .in('user_id', userIds),
-    supabase
-      .from('admin_audit_log')
-      .select('admin_user_id')
-      .eq('action', 'volunteer deleted session')
-      .in('admin_user_id', userIds),
-    getVolunteerDirectory(),
-  ]);
-
-  const sessionRows = (sessions ?? []) as {
-    user_id: string;
-    status: string;
-    court_ordered: boolean;
-    duration_seconds: number | null;
-    adjusted_hours: number | null;
-    started_at: string | null;
-  }[];
-
-  const deleteCountByUser = new Map<string, number>();
-  for (const row of deleteRows ?? []) {
-    deleteCountByUser.set(row.admin_user_id, (deleteCountByUser.get(row.admin_user_id) ?? 0) + 1);
-  }
-
-  const sessionsByUser = new Map<string, typeof sessionRows>();
-  for (const s of sessionRows) {
-    const list = sessionsByUser.get(s.user_id) ?? [];
-    list.push(s);
-    sessionsByUser.set(s.user_id, list);
-  }
-
-  const risk = buildCourtRisk(orderRows, sessionRows, directory, new Date());
-  const riskByUser = new Map(risk.map((r) => [r.id, r]));
-
-  const now = new Date();
-  const rows: CourtRiskDashboardRow[] = orderRows.map((order) => {
-    const r = riskByUser.get(order.user_id);
-    const pattern = buildActivityPattern(
-      sessionsByUser.get(order.user_id) ?? [],
-      deleteCountByUser.get(order.user_id) ?? 0,
-      order.due_date,
-      now,
-    );
-    return {
-      id: order.user_id,
-      name: r?.name ?? getVolunteerName(directory, order.user_id),
-      requiredHours: order.required_hours,
-      completedHours: r?.completedHours ?? 0,
-      status: r?.status ?? 'in_progress',
-      dueDate: order.due_date ?? '',
-      invalidSessionsLast30Days: pattern.invalidSessionsLast30Days,
-      nearDeadlineVolumeSpike: pattern.nearDeadlineVolumeSpike,
-    };
-  });
-
-  return { data: rows, useMock: false };
-}
-
 type CourtOrderRow = { user_id: string; required_hours: number; due_date: string | null };
 
 function computedHours(seconds: number | null, adjustedHours: number | null): number {
   if (adjustedHours != null) return adjustedHours;
   if (!seconds) return 0;
   return seconds / 3600;
-}
-
-/**
- * Court-ordered volunteer progress for the Insights/Analytics "Court progress"
- * chart — real `court_orders` + `sessions`, run through the same `buildCourtRisk`
- * used for the Events "notify at-risk volunteers" feature.
- */
-export async function loadLiveCourtProgress(): Promise<LiveResult<MockCourtVolunteer[]>> {
-  const supabase = await createDataClient();
-  const { data: courtOrders } = await supabase.from('court_orders').select('user_id, required_hours, due_date');
-
-  if (!courtOrders || courtOrders.length === 0) {
-    return { data: [], useMock: false };
-  }
-
-  const orderRows = courtOrders as CourtRiskOrderRow[];
-  const [{ data: sessions }, directory] = await Promise.all([
-    supabase
-      .from('sessions')
-      .select('user_id, status, court_ordered, duration_seconds, adjusted_hours')
-      .neq('status', 'active')
-      .in(
-        'user_id',
-        orderRows.map((c) => c.user_id),
-      ),
-    getVolunteerDirectory(),
-  ]);
-
-  const sessionRows = (sessions ?? []) as {
-    user_id: string;
-    status: string;
-    court_ordered: boolean;
-    duration_seconds: number | null;
-    adjusted_hours: number | null;
-  }[];
-  const sessionCountByUser = new Map<string, number>();
-  for (const s of sessionRows) {
-    sessionCountByUser.set(s.user_id, (sessionCountByUser.get(s.user_id) ?? 0) + 1);
-  }
-
-  const risk = buildCourtRisk(orderRows, sessionRows, directory, new Date());
-  const volunteers: MockCourtVolunteer[] = risk.map((r) => ({
-    id: r.id,
-    name: r.name,
-    email: directory.get(r.id)?.email ?? '—',
-    requiredHours: r.requiredHours,
-    completedHours: r.completedHours,
-    sessions: sessionCountByUser.get(r.id) ?? 0,
-    status: r.status,
-    dueDate: r.dueDate || new Date().toISOString().slice(0, 10),
-  }));
-
-  return { data: volunteers, useMock: false };
 }
 
 /**

@@ -4,8 +4,8 @@
  * `event` is fetched live from the shared Supabase `events` table by
  * `admin-web-app/src/app/events/[id]/page.tsx`, falling back to a mock fixture
  * lookup when that table is empty. When `liveActions` is set (real row, not a
- * mock fixture), renders `EventDetailActions` (edit/publish/delete) and
- * `NotifyAtRiskVolunteers` alongside the read-only detail view, same as admin.
+ * mock fixture), renders `EventDetailActions` (edit/publish/delete) alongside the
+ * read-only detail view, same as admin.
  *
  * Location map mirrors mobile `EventLocationMapWebView` (MapLibre + Carto Voyager).
  */
@@ -15,12 +15,10 @@ import { ChevronLeftIcon } from "@/components/ui/Icons";
 import { formatEventWhen, type DemoEvent } from "@/components/pages/EventsPage";
 import { EventDetailActions } from "@/components/events/EventDetailActions";
 import { EventLocationMap } from "@/components/events/EventLocationMap";
-import { NotifyAtRiskVolunteers, type NotifyCandidate } from "@/components/events/NotifyAtRiskVolunteers";
 
 export type EventDetailLiveActions = {
   eventId: string;
   isPublished: boolean;
-  atRiskCandidates: NotifyCandidate[];
 };
 
 export function EventDetailPage({
@@ -174,10 +172,6 @@ export function EventDetailPage({
               </p>
             )}
           </section>
-
-          {liveActions && (
-            <NotifyAtRiskVolunteers eventId={liveActions.eventId} candidates={liveActions.atRiskCandidates} />
-          )}
         </div>
       </div>
     </div>

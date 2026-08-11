@@ -28,7 +28,7 @@ export async function SettingsPage() {
         <div className="divide-y divide-border-outline">
           {[
             { label: "New session submissions", value: "Email + in-app" },
-            { label: "Court hours at risk", value: "Email" },
+            { label: "Court hours reminder", value: "Email" },
             { label: "Weekly summary", value: "Email" },
           ].map((row) => (
             <div key={row.label} className="px-lg py-md flex items-center justify-between gap-md">

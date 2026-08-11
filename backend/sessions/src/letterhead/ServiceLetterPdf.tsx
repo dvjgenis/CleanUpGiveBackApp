@@ -27,7 +27,6 @@ export type CourtCoverSheetProps = {
   dueDateLabel: string | null;
   requiredHoursLabel: string;
   completedHoursLabel: string;
-  completionPercentLabel: string;
 };
 
 export type ServiceLetterPdfProps = {
@@ -226,16 +225,13 @@ function CourtCoverSheet({
         <Text style={styles.coverValue}>{coverSheet.requiredHoursLabel}</Text>
       </View>
       <View style={styles.coverRow}>
-        <Text style={styles.coverLabel}>Completed hours (approved only)</Text>
+        <Text style={styles.coverLabel}>Completed hours since last letter (approved only)</Text>
         <Text style={styles.coverValue}>{coverSheet.completedHoursLabel}</Text>
       </View>
-      <View style={styles.coverRow}>
-        <Text style={styles.coverLabel}>Completion</Text>
-        <Text style={styles.coverValue}>{coverSheet.completionPercentLabel}</Text>
-      </View>
       <Text style={styles.evidenceMeta}>
-        {'\n'}Only approved sessions count toward the completed-hours total above. The pages that
-        follow document each approved session included in this packet.
+        {'\n'}Only approved sessions count toward the completed-hours total above. Completed
+        hours reset to zero each time a service letter is generated. The pages that follow
+        document each approved session included in this packet.
       </Text>
     </Page>
   );

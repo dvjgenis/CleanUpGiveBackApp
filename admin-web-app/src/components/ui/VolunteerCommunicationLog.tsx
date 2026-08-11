@@ -4,18 +4,21 @@
  * Volunteer profile's Communication section — every logged email send
  * (`email_log`) plus manual contact notes (`admin_audit_log`, action
  * 'logged contact note'), merged into one chronological list, with a form to
- * log a new manual note via `logManualContactNote`.
+ * log a new manual note via `logManualContactNote`. "Send email" hands off to
+ * the Emails tab's Compose flow with this volunteer prefilled as the recipient.
  */
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { logManualContactNote } from "@/actions/communication";
 import type { EmailLogEntry, ContactNoteEntry } from "@/lib/live-data";
 
 const TEMPLATE_LABELS: Record<string, string> = {
   approved: "Session approved",
   declined: "Session declined",
-  shipped: "Order shipped",
+  shipped: "Order tracking",
   event_registration: "Event registration",
-  at_risk_nudge: "At-risk nudge",
+  hours_reminder: "Hours reminder",
+  at_risk_nudge: "At-risk nudge (retired)",
   other: "Notification",
 };
 
@@ -69,6 +72,18 @@ export function VolunteerCommunicationLog({
 
   return (
     <div className="bg-bg-surface border border-border-outline rounded-md p-lg mb-lg">
+      <div className="flex items-center justify-between gap-md mb-md">
+        <p className="font-data text-[11px] tracking-[0.88px] uppercase text-text-tertiary">
+          Contact this volunteer
+        </p>
+        <Link
+          href={`/emails?to=${volunteerId}`}
+          className="h-9 px-md inline-flex items-center rounded-sm border border-border-outline bg-bg-app font-data text-[12px] font-semibold text-text-primary hover:bg-bg-surface-elevated transition-colors"
+        >
+          Send email
+        </Link>
+      </div>
+
       <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-sm mb-lg">
         <input
           type="text"

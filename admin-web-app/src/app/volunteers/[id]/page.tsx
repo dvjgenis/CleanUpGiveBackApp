@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ChevronLeftIcon } from '@/components/ui/Icons';
 import { InfoRow } from '@/components/ui/InfoRow';
+import { CourtBadge } from '@/components/ui/CourtBadge';
 import { CourtOrderForm } from '@/components/ui/CourtOrderForm';
 import { VolunteerTimeline } from '@/components/ui/VolunteerTimeline';
 import { VolunteerCommunicationLog } from '@/components/ui/VolunteerCommunicationLog';
@@ -100,8 +101,15 @@ export default async function VolunteerProfilePage({
     0,
   );
 
+  // Only counts sessions since the last reset — hours reset to zero every time a
+  // service letter is generated (auto) or Donna resets manually.
   const courtCompletedHours = volunteer.sessions
-    .filter((s) => s.status === 'approved' && s.court_ordered)
+    .filter(
+      (s) =>
+        s.status === 'approved' &&
+        s.court_ordered &&
+        (!volunteer.hoursResetAt || (s.started_at != null && s.started_at > volunteer.hoursResetAt)),
+    )
     .reduce((sum, s) => sum + computedHours(s.duration_seconds, s.adjusted_hours), 0);
 
   return (
@@ -130,9 +138,9 @@ export default async function VolunteerProfilePage({
                       {volunteer.name}
                     </h1>
                     {volunteer.courtOrdered && (
-                      <span className="inline-block font-data text-[11px] font-semibold text-[#835400] bg-[#ffddb5] rounded-sm px-sm py-xs mt-xs">
-                        Court-ordered
-                      </span>
+                      <div className="mt-xs">
+                        <CourtBadge />
+                      </div>
                     )}
                   </div>
                 </div>
@@ -149,14 +157,6 @@ export default async function VolunteerProfilePage({
                   { label: 'Sessions', value: volunteer.sessions.length },
                   { label: 'Approved Hours', value: `${approvedHours.toFixed(1)}h` },
                   { label: 'Miles Walked', value: formatMiles(totalMilesWalked) },
-                  ...(volunteer.courtOrdered && volunteer.requiredHours != null
-                    ? [
-                        {
-                          label: 'Court Progress',
-                          value: `${courtCompletedHours.toFixed(1)} / ${volunteer.requiredHours}h`,
-                        },
-                      ]
-                    : []),
                 ].map((stat) => (
                   <div
                     key={stat.label}

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { upsertCourtOrder } from '@/actions/courtOrders';
+import { upsertCourtOrder, resetCourtOrderHours } from '@/actions/courtOrders';
 import { InfoRow } from '@/components/ui/InfoRow';
 import { formatDate } from '@/lib/mock-data';
 
@@ -29,10 +29,23 @@ export function CourtOrderForm({
   const [editing, setEditing] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
+  const [resetPending, startResetTransition] = useTransition();
+  const [resetMessage, setResetMessage] = useState<string | null>(null);
 
   const [hoursInput, setHoursInput] = useState(requiredHours != null ? String(requiredHours) : '');
   const [dueDateInput, setDueDateInput] = useState(dueDate ?? '');
   const [caseRefInput, setCaseRefInput] = useState(caseReference ?? '');
+
+  function handleResetHours() {
+    startResetTransition(async () => {
+      try {
+        await resetCourtOrderHours(userId);
+        setResetMessage('Hours reset to zero');
+      } catch (err) {
+        setResetMessage(err instanceof Error ? err.message : 'Failed to reset hours');
+      }
+    });
+  }
 
   function handleSave() {
     const hours = parseFloat(hoursInput);
@@ -62,20 +75,33 @@ export function CourtOrderForm({
         <div className="flex items-start justify-between gap-md">
           <dl className="flex-1 min-w-0">
             <InfoRow label="Required hours" value={requiredHours != null ? `${requiredHours}h` : '—'} />
-            <InfoRow label="Completed hours" value={`${completedHours.toFixed(1)}h`} />
+            <InfoRow label="Completed hours (since last reset)" value={`${completedHours.toFixed(1)}h`} />
             <InfoRow label="Due date" value={dueDate ? formatDate(dueDate) : '—'} />
             <InfoRow label="Case reference" value={displayOrDash(caseReference)} />
           </dl>
-          <button
-            type="button"
-            onClick={() => {
-              setMessage(null);
-              setEditing(true);
-            }}
-            className="shrink-0 h-9 px-md rounded-sm border border-border-outline bg-bg-app font-data text-[12px] font-semibold text-text-primary hover:bg-bg-surface-elevated transition-colors"
-          >
-            Edit
-          </button>
+          <div className="flex shrink-0 flex-col items-end gap-sm">
+            <div className="flex gap-sm">
+              <button
+                type="button"
+                onClick={handleResetHours}
+                disabled={resetPending}
+                className="h-9 px-md rounded-sm border border-border-outline bg-bg-app font-data text-[12px] font-semibold text-text-primary hover:bg-bg-surface-elevated transition-colors disabled:opacity-50"
+              >
+                Reset hours
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setMessage(null);
+                  setEditing(true);
+                }}
+                className="h-9 px-md rounded-sm border border-border-outline bg-bg-app font-data text-[12px] font-semibold text-text-primary hover:bg-bg-surface-elevated transition-colors"
+              >
+                Edit
+              </button>
+            </div>
+            {resetMessage && <p className="font-body text-[12px] text-text-tertiary">{resetMessage}</p>}
+          </div>
         </div>
       </div>
     );

@@ -443,7 +443,7 @@ function DashboardPageInner({
       </div>
 
       <div className="grid grid-cols-1 gap-md mt-md">
-        <UsHeatmap activity={geoActivity} sessions={mapSessions} periodLabel={periodLabelText} />
+        <UsHeatmap activity={geoActivity} periodLabel={periodLabelText} />
       </div>
 
       {/* Commerce preview — payments + orders at a glance, deeper detail on their own tabs */}

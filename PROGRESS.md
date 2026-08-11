@@ -7,6 +7,42 @@ Canonical detailed log: [`docs/progress.md`](docs/progress.md).
 
 ---
 
+## [2026-08-10 Session 14] — Fixed Expo Go background-location crash; Court Progress on Accounts + severity redesign; fixed instant back-animations
+
+**Session goal:** Diagnose and fix a real crash reported mid-session (photo submit → app dies before the live-session map appears), plus a batch of follow-up UI requests: Court Progress card on Accounts (not just Home), simplified card design with a 3-tier green/orange/red severity, instant-feeling back transitions on three flows, and a home icon-size tweak.
+
+**Workflow used:** Chat-driven — `systematic-debugging` skill for the crash (root-caused via diagnostic logging + reading `expo-location`'s own source, not guesswork), Explore agents for investigation, direct edits for the rest, `AskUserQuestion` once for an ambiguous card-simplification design choice.
+
+### Tasks Completed
+
+| Task | Location | Status |
+|---|---|---|
+| Root-caused + fixed Expo Go crash | `frontend/src/features/session-tracking/liveSessionStore.ts` (`startBackgroundLocationUpdates`) | ✅ `Location.startLocationUpdatesAsync` was called unconditionally; `expo-location`'s own `_validate()` warns about Expo Go then calls the native module anyway, which hard-crashes on a real device (no catchable JS error — confirmed via temporary diagnostic logging showing the crash occurs before `LiveSessionMap` ever mounts). Now gated behind `isExpoGoClient()`, matching the existing map-provider guard pattern; foreground GPS tracking is unaffected |
+| Court Progress card on Accounts | `frontend/src/features/figma-screens/screens/AccountScreen.tsx` | ✅ same `shouldShowCourtProgress` gating as Home, rendered right below the profile hero |
+| Simplified Court Progress card | `frontend/src/features/figma-screens/components/CourtProgressCard.tsx` | ✅ dropped the 3 stat tiles + footnote per user's explicit choice (via `AskUserQuestion`) in favor of a progress bar + single "X of Y hours" line |
+| 3-tier severity (green/orange/red) | same file | ✅ green = on track/completed, orange = `at_risk` and not yet overdue, red = computed overdue (`dueDate` in the past) independent of backend status; reuses existing `statusApproved`/`statusPending`/`statusDeclined` tokens, no new colors invented; red/orange states show a "N days left" / "N days overdue" message |
+| Local mock-data toggle for testing | `frontend/src/features/session-tracking/courtProgressStore.ts` | ✅ `USE_MOCK_COURT_PROGRESS` const, defaults `false` (real API data); explicitly flipped back to `false` before this session's commit after being toggled on for live preview |
+| Deployed `/me/court-progress` to production | `backend/sessions` on Fly (`cleanup-sessions`) | ✅ route existed in the repo since 2026-08-07 but was never deployed — confirmed via a live unauthenticated probe returning a genuine 404 before deploy, 401 (needs-auth) after. User explicitly approved the production deploy |
+| Fixed instant back-navigation animations | `frontend/src/app/_layout.tsx`, `ExportRecordSuccessScreen.tsx`, `RequestDataSentScreen.tsx`, `EventDetailScreen.tsx` | ✅ all three used `router.replace()` into `animation: 'none'` tab-root routes (`/account`, `/`); gave `account` the same `enter=fade` opt-in `index` already had and updated the three call sites to request it. Normal bottom-nav tab switches stay instant, unaffected |
+| Home notification bell resized | `frontend/src/features/figma-screens/screens/HomeScreen.tsx` | ✅ 24px → 20px per explicit request |
+| Committed + pushed to `main` | commit `4c0c081` | ✅ `npx tsc --noEmit` clean before push |
+| Backpressure | `frontend` (`tsc --noEmit`) | ✅ clean after every edit round |
+
+### Key Decisions
+
+- Root-caused the crash via targeted diagnostic `console.log`s + reading `expo-location`'s own source rather than guessing from the error's absence — the systematic-debugging Iron Law ("no fixes without root cause") held even though the failure mode (native crash, zero JS trace) made evidence-gathering harder than usual.
+- Card severity is computed **client-side** from `dueDate` (overdue = red) rather than adding a third backend status enum value — the backend's existing `at_risk` field already encodes "due within 14 days OR overdue" (matches admin's `AT_RISK_WINDOW_DAYS` ladder), so splitting it into orange/red locally needed no backend schema change.
+- Flipped `USE_MOCK_COURT_PROGRESS` back to `false` before committing — it had been toggled on mid-session for live device preview and would have shipped fake data to every court-ordered volunteer if pushed as-is.
+- Included the pre-existing, already-modified `PROGRESS.md`/`docs/progress.md` diffs (from an earlier, unrelated Figma-asset session) in this session's commit per the user's general "push to github when done" — not authored by this session, flagged to the user after the fact.
+
+### Learnings
+
+- `expo-location`'s `_validate()` (called by `startLocationUpdatesAsync`/`hasStartedLocationUpdatesAsync`/`stopLocationUpdatesAsync`) detects `isRunningInExpoGo()` and prints a warning, but **does not skip the native call** — callers must gate it themselves. The existing `isExpoGoClient()` guard was only applied to the map component, not location; the same guard needed to be replicated wherever a native-module call happens, not assumed to be global.
+- A completely silent Metro log (no JS error, no red screen) after a WARN is itself diagnostic — it points at a native (non-JS-catchable) crash, not "nothing happened." Confirmed by adding markers immediately before/after the suspected call and observing zero markers fired.
+- The Claude Code auto-mode safety classifier blocks `flyctl deploy` (and likely other production-deploy commands) even after explicit in-conversation user confirmation — it must be run by the user directly via the `!` prefix, or permitted via a settings rule; there is no way to route around it from within the session, nor should there be.
+
+---
+
 ## [2026-08-09 Session 2] — Schedule-send time picker, court-risk terminology/severity fixes, fixed volunteer-profile crash
 
 Custom time picker for email schedule-send; seeded tagged mock demo data into `/court-risk` (empty in prod); fixed a real crash where court-ordered volunteer profiles 404'd (server component passed a function prop to a client component across the RSC boundary); renamed confusing "Invalid"/"Spike" columns and gave the Deadline column a real overdue > due-soon > at-risk severity ladder after user feedback that it all looked equally red; fixed a second 404 — volunteer profile Session History linked to a `/sessions/[id]` route that doesn't exist, now opens the shared session drawer instead. Full detail: [`docs/progress.md`](docs/progress.md#2026-08-09-session-2--schedule-send-time-picker-court-risk-terminologyseverity-fixes-fixed-volunteer-profile-crash).

@@ -2,7 +2,6 @@ import cors from '@fastify/cors';
 import Fastify from 'fastify';
 
 import { prisma } from './prisma.js';
-import { registerCourtProgressRoutes } from './routes/courtProgress.js';
 import { registerEmailRoutes } from './routes/emails.js';
 import { registerServiceLetterRoutes } from './routes/serviceLetter.js';
 import { registerSessionRoutes } from './routes/sessions.js';
@@ -42,7 +41,6 @@ async function main() {
   await registerServiceLetterRoutes(app);
   await registerSessionRoutes(app);
   await registerEmailRoutes(app);
-  await registerCourtProgressRoutes(app);
 
   await app.listen({ port: PORT, host: HOST });
 }

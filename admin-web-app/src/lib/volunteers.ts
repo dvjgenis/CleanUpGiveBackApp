@@ -7,6 +7,10 @@ export type VolunteerDirectoryEntry = {
   id: string;
   name: string;
   email: string | null;
+  /** True when `email` is a generated placeholder (`isMockEmail`), not a real
+   * address — this volunteer hasn't synced a real email yet (no OTP email step
+   * completed at onboarding). Never actually deliverable; see `MOCK_EMAIL_DOMAIN`. */
+  isMockEmail: boolean;
   /** Account-level classification set once during onboarding (Court Ordered / Volunteering / School / Other). */
   serviceType: string | null;
   createdAt: string;
@@ -16,13 +20,37 @@ export type VolunteerDirectory = Map<string, VolunteerDirectoryEntry>;
 
 const LIST_USERS_PAGE_SIZE = 1000;
 
+/** Non-routable placeholder domain for volunteers with no real email on file yet —
+ * lets them still show up in pickers/lists. `isMockAddress` below is the single
+ * source of truth other code should check before actually sending mail. */
+export const MOCK_EMAIL_DOMAIN = 'no-email.cleanupgiveback.internal';
+
+export function isMockAddress(email: string | null | undefined): boolean {
+  return Boolean(email && email.toLowerCase().endsWith(`@${MOCK_EMAIL_DOMAIN}`));
+}
+
+function mockEmailFor(userId: string): string {
+  return `volunteer-${userId.slice(0, 8)}@${MOCK_EMAIL_DOMAIN}`;
+}
+
+/** Mobile volunteers sign in anonymously — `auth.users.email` is only ever set for
+ * admins who log in with a real password (e.g. Donna). A volunteer's actual contact
+ * email is synced into `user_metadata.email` at onboarding (`syncVolunteerProfile`),
+ * so that's the fallback every directory consumer needs. */
+export function resolveVolunteerEmail(user: Pick<User, 'email' | 'user_metadata'>): string | null {
+  if (user.email) return user.email;
+  const metaEmail = user.user_metadata?.email;
+  return typeof metaEmail === 'string' && metaEmail.trim() ? metaEmail.trim() : null;
+}
+
 /** Fallback chain: onboarding-synced display name → email local-part → short id. */
 export function resolveVolunteerName(user: Pick<User, 'id' | 'email' | 'user_metadata'>): string {
   const fullName = user.user_metadata?.full_name;
   if (typeof fullName === 'string' && fullName.trim()) return fullName.trim();
 
-  if (user.email) {
-    const local = user.email.split('@')[0];
+  const email = resolveVolunteerEmail(user);
+  if (email) {
+    const local = email.split('@')[0];
     if (local) return local;
   }
 
@@ -48,10 +76,12 @@ async function fetchVolunteerDirectory(serviceClient: SupabaseClient): Promise<V
     if (error || !data) break;
 
     for (const user of data.users) {
+      const realEmail = resolveVolunteerEmail(user);
       directory.set(user.id, {
         id: user.id,
         name: resolveVolunteerName(user),
-        email: user.email ?? null,
+        email: realEmail ?? mockEmailFor(user.id),
+        isMockEmail: !realEmail,
         serviceType: resolveVolunteerServiceType(user),
         createdAt: user.created_at,
       });

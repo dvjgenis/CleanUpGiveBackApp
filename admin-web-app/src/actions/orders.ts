@@ -7,7 +7,7 @@ import { logEmailSend } from '@/lib/email-log';
 import { getTemplate } from '@/lib/email-templates';
 import { renderTemplate } from '@/lib/email-template-render';
 import { getResendClient, getFromAddress } from '@/lib/resend';
-import { getVolunteerDirectory } from '@/lib/volunteers';
+import { getVolunteerDirectory, isMockAddress } from '@/lib/volunteers';
 
 async function getAdminUser() {
   if (process.env.BYPASS_AUTH === 'true') {
@@ -109,11 +109,15 @@ async function notifyOrderShipped({
 }): Promise<void> {
   const directory = await getVolunteerDirectory();
   const entry = directory.get(userId);
-  if (!entry?.email) return;
+  if (!entry?.email || isMockAddress(entry.email)) return;
 
   const resend = getResendClient();
   const template = await getTemplate('shipped');
-  const templateVars = { volunteer_name: entry.name, tracking_number: trackingNumber, carrier };
+  const templateVars = {
+    volunteer_name: entry.name,
+    tracking_number: trackingNumber?.trim() || '[blank]',
+    carrier: carrier?.trim() || '[blank]',
+  };
   const subject = renderTemplate(template.subject, templateVars);
 
   if (!resend) return;

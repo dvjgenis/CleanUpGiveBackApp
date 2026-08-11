@@ -2,7 +2,7 @@
 
 /** Ad-hoc email send — Compose flow on `/emails`, straight from the admin dashboard. */
 import { createClient, createServiceClient } from '@/lib/supabase/server';
-import { getVolunteerDirectory } from '@/lib/volunteers';
+import { getVolunteerDirectory, isMockAddress } from '@/lib/volunteers';
 import {
   dispatchAdHocEmail,
   isValidEmail,
@@ -46,8 +46,8 @@ export async function sendAdHocEmail(input: SendAdHocEmailInput): Promise<SendAd
   if (input.recipientUserId) {
     const directory = await getVolunteerDirectory();
     const entry = directory.get(input.recipientUserId);
-    if (!entry?.email) {
-      throw new Error('Selected volunteer has no email on file');
+    if (!entry?.email || isMockAddress(entry.email)) {
+      throw new Error('This volunteer has no real email on file yet');
     }
     toEmail = entry.email;
     userId = input.recipientUserId;

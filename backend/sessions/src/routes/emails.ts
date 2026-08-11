@@ -110,7 +110,7 @@ async function getEventRegistrationTemplate(): Promise<{ subject: string; bodyHt
 /** Mirrors admin-web-app's `lib/email-log.ts` — this service has no Supabase client, only Prisma. */
 async function logEmailSend(params: {
   userId?: string | null;
-  templateType: 'approved' | 'declined' | 'shipped' | 'event_registration' | 'at_risk_nudge' | 'other';
+  templateType: 'approved' | 'declined' | 'shipped' | 'event_registration' | 'hours_reminder' | 'other';
   toEmail: string;
   subject: string;
   status: 'sent' | 'failed';

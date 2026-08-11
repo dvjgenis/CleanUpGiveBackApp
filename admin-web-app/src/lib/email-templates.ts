@@ -10,8 +10,8 @@
 import { createDataClient, createServiceClient } from '@/lib/supabase/server';
 import {
   DEFAULT_TEMPLATES,
+  EMAIL_TAB_TEMPLATE_TYPES,
   EMAIL_TEMPLATE_LABELS,
-  EMAIL_TEMPLATE_TYPES,
   type EmailTemplateType,
 } from '@/lib/email-template-render';
 import { sanitizeEmailHtml } from '@/lib/sanitize-html';
@@ -70,7 +70,7 @@ export async function listAllTemplates(): Promise<EmailTemplateRecord[]> {
       const bySystemType = new Map(
         data.filter((r) => r.is_system && r.template_type).map((r) => [r.template_type as string, r]),
       );
-      const missingSystemDefaults: EmailTemplateRecord[] = EMAIL_TEMPLATE_TYPES.filter(
+      const missingSystemDefaults: EmailTemplateRecord[] = EMAIL_TAB_TEMPLATE_TYPES.filter(
         (type) => !bySystemType.has(type),
       ).map((type) => ({
         id: `default-${type}`,
@@ -82,15 +82,19 @@ export async function listAllTemplates(): Promise<EmailTemplateRecord[]> {
         updatedAt: null,
       }));
 
-      const rows: EmailTemplateRecord[] = data.map((r) => ({
-        id: r.id,
-        templateType: (r.template_type as EmailTemplateType | null) ?? null,
-        name: r.name,
-        subject: r.subject,
-        bodyHtml: r.body_html,
-        isSystem: r.is_system,
-        updatedAt: r.updated_at,
-      }));
+      // Emails tab only lists/edits the 2 user-facing templates — approved/declined/
+      // event_registration still send automatically, just not editable here.
+      const rows: EmailTemplateRecord[] = data
+        .filter((r) => !r.is_system || EMAIL_TAB_TEMPLATE_TYPES.includes(r.template_type as EmailTemplateType))
+        .map((r) => ({
+          id: r.id,
+          templateType: (r.template_type as EmailTemplateType | null) ?? null,
+          name: r.name,
+          subject: r.subject,
+          bodyHtml: r.body_html,
+          isSystem: r.is_system,
+          updatedAt: r.updated_at,
+        }));
 
       return [...missingSystemDefaults, ...rows].sort((a, b) => {
         if (a.isSystem !== b.isSystem) return a.isSystem ? -1 : 1;
@@ -101,7 +105,7 @@ export async function listAllTemplates(): Promise<EmailTemplateRecord[]> {
     console.warn('[email-templates] failed to list templates, using defaults only:', err);
   }
 
-  return EMAIL_TEMPLATE_TYPES.map((type) => ({
+  return EMAIL_TAB_TEMPLATE_TYPES.map((type) => ({
     id: `default-${type}`,
     templateType: type,
     name: EMAIL_TEMPLATE_LABELS[type],

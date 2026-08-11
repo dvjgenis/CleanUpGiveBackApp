@@ -2,9 +2,9 @@
 
 /**
  * "Needs Donna's attention" — one queue combining every existing review surface
- * (session review, flagged feedback, order issues, failed emails, at-risk
- * volunteers, red-flagged sessions, data-quality alerts). Reactive/live like the
- * Dashboard bento, not a stateful queue — no "acknowledge" persistence yet.
+ * (session review, flagged feedback, order issues, failed emails, red-flagged
+ * sessions, data-quality alerts). Reactive/live like the Dashboard bento, not a
+ * stateful queue — no "acknowledge" persistence yet.
  */
 import { useMemo, useState } from "react";
 import Link from "next/link";
@@ -15,7 +15,6 @@ const KIND_LABELS: Record<AttentionItemKind, string> = {
   flagged_feedback: "Flagged feedback",
   order_issue: "Order issue",
   failed_email: "Failed email",
-  at_risk_volunteer: "At-risk volunteer",
   suspicious_session: "Suspicious session",
   data_quality: "Data quality",
 };
@@ -25,7 +24,6 @@ const KIND_TONE: Record<AttentionItemKind, string> = {
   flagged_feedback: "bg-[#ffd9de] text-[#ba1a1a]",
   order_issue: "bg-[#fff2c9] text-[#8a6300]",
   failed_email: "bg-[#ffd9de] text-[#ba1a1a]",
-  at_risk_volunteer: "bg-[#fff2c9] text-[#8a6300]",
   suspicious_session: "bg-[#ffd9de] text-[#ba1a1a]",
   data_quality: "bg-bg-app text-text-tertiary",
 };
@@ -33,7 +31,6 @@ const KIND_TONE: Record<AttentionItemKind, string> = {
 const KIND_ORDER: AttentionItemKind[] = [
   "session_review",
   "suspicious_session",
-  "at_risk_volunteer",
   "flagged_feedback",
   "failed_email",
   "order_issue",

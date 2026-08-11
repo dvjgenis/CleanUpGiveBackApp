@@ -4,19 +4,13 @@
  * Event server actions — ported from `admin/actions/events.ts`. Writes straight
  * to the shared `public.events` table and `event-photos` storage bucket, so a
  * published/edited/deleted event here shows up immediately in the mobile
- * app's Upcoming Events feed. `notifyAtRiskVolunteers` reuses the same
- * `resend.ts`/`audit.ts`/`volunteers.ts` ports as `@/actions/sessions`.
+ * app's Upcoming Events feed.
  */
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { writeAuditLog } from '@/lib/audit';
-import { logEmailSend } from '@/lib/email-log';
-import { getTemplate } from '@/lib/email-templates';
-import { renderTemplate } from '@/lib/email-template-render';
-import { getResendClient, getFromAddress } from '@/lib/resend';
-import { getVolunteerDirectory } from '@/lib/volunteers';
 import { fromDatetimeLocalValue, formatEventWhen, type EventRow } from '@/lib/events';
 import { geocodeAddress } from '@/lib/geocode';
 
@@ -262,108 +256,3 @@ export async function deleteEvent(eventId: string) {
   redirect('/events');
 }
 
-export type NotifyAtRiskResult = {
-  sent: number;
-  failed: number;
-  skippedNoEmail: number;
-};
-
-function eventMapsUrl(event: EventRow): string | null {
-  if (event.address?.trim()) {
-    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.address)}`;
-  }
-  if (event.lat != null && event.lng != null) {
-    return `https://www.google.com/maps/search/?api=1&query=${event.lat},${event.lng}`;
-  }
-  return null;
-}
-
-/**
- * Emails the picked court-ordered/at-risk volunteers about an event via
- * Resend, soft-failing (counting every recipient as failed, not throwing)
- * when `RESEND_API_KEY` is unset, same as `backend/sessions/src/routes/emails.ts`.
- */
-export async function notifyAtRiskVolunteers(
-  eventId: string,
-  recipientUserIds: string[],
-): Promise<NotifyAtRiskResult> {
-  const user = await getAdminUser();
-  const supabase = await createServiceClient();
-
-  const { data: eventRow, error: eventError } = await supabase
-    .from('events')
-    .select('*')
-    .eq('id', eventId)
-    .single();
-  if (eventError || !eventRow) throw new Error('Event not found');
-  const event = eventRow as EventRow;
-
-  const directory = await getVolunteerDirectory();
-  const resend = getResendClient();
-  const when = formatEventWhen(event.starts_at, event.ends_at);
-  const template = await getTemplate('at_risk_nudge');
-
-  let sent = 0;
-  let failed = 0;
-  let skippedNoEmail = 0;
-
-  for (const userId of recipientUserIds) {
-    const entry = directory.get(userId);
-    if (!entry?.email) {
-      skippedNoEmail += 1;
-      continue;
-    }
-    if (!resend) {
-      failed += 1;
-      continue;
-    }
-
-    const templateVars = {
-      volunteer_name: entry.name,
-      event_title: event.title,
-      event_when: when,
-      event_address: event.address?.trim() || event.location?.trim() || null,
-      event_maps_url: eventMapsUrl(event),
-    };
-    const subject = renderTemplate(template.subject, templateVars);
-    const { data, error } = await resend.emails.send({
-      from: getFromAddress(),
-      to: entry.email,
-      subject,
-      html: renderTemplate(template.bodyHtml, templateVars, { escapeHtml: true }),
-    });
-
-    await logEmailSend(supabase, {
-      userId,
-      templateType: 'at_risk_nudge',
-      toEmail: entry.email,
-      subject,
-      status: error ? 'failed' : 'sent',
-      resendMessageId: data?.id ?? null,
-      adminUserId: user.id,
-    });
-
-    if (error) failed += 1;
-    else {
-      sent += 1;
-      await supabase.from('event_volunteer_notices').upsert(
-        {
-          event_id: eventId,
-          user_id: userId,
-          notified_at: new Date().toISOString(),
-        } as never,
-        { onConflict: 'event_id,user_id' },
-      );
-    }
-  }
-
-  await writeAuditLog(supabase, {
-    adminUserId: user.id,
-    action: 'notified at-risk volunteers',
-    targetTable: 'events',
-    targetId: eventId,
-    afterValue: { recipientCount: recipientUserIds.length, sent, failed, skippedNoEmail },
-  });
-
-  return { sent, failed, skippedNoEmail };
-}

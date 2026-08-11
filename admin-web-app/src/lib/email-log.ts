@@ -12,7 +12,7 @@ export type EmailTemplateType =
   | 'declined'
   | 'shipped'
   | 'event_registration'
-  | 'at_risk_nudge'
+  | 'hours_reminder'
   | 'other';
 
 export type EmailLogStatus = 'sent' | 'failed';

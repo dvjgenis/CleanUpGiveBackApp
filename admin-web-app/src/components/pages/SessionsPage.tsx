@@ -29,6 +29,7 @@ import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
 import { ExportMenu } from "@/components/ui/ExportMenu";
 import { downloadCsv, openPrintablePdf } from "@/lib/export-download";
 import { approveSession, approveSessionsBulk, declineSession } from "@/actions/sessions";
+import { resetCourtOrderHoursBulk } from "@/actions/courtOrders";
 import { filterByListPeriod } from "@/lib/dashboard-period";
 import {
   getSessionStatusConfig,
@@ -82,6 +83,7 @@ function SessionsPageInner({ sessions, isMock }: { sessions: MockSession[]; isMo
   const [compareIds, setCompareIds] = useState<string[]>([]);
   const [isPending, startTransition] = useTransition();
   const [isBulkPending, startBulkTransition] = useTransition();
+  const [isBulkResetPending, startBulkResetTransition] = useTransition();
   const selection = usePeriodSelection();
   const rangeLabel = useListPeriodLabel();
 
@@ -187,6 +189,53 @@ function SessionsPageInner({ sessions, isMock }: { sessions: MockSession[]; isMo
         setFeedback({
           id: "bulk",
           message: err instanceof Error ? err.message : "Bulk approve failed",
+          kind: "error",
+        });
+      }
+    });
+  }
+
+  /** Resets hours for every distinct court-ordered volunteer represented in the current
+   * session selection — approved, court-ordered sessions only (voluntary hours don't
+   * belong to a court order to reset). */
+  function handleBulkResetHours() {
+    const selectedSessions = localSessions.filter((s) => selectedIds.has(s.id));
+    const userIds = [
+      ...new Set(
+        selectedSessions.filter((s) => s.court_ordered && s.status === "approved").map((s) => s.user_id),
+      ),
+    ];
+    if (userIds.length === 0) {
+      setFeedback({ id: "bulk-reset", message: "No approved court-ordered sessions selected", kind: "error" });
+      return;
+    }
+    startBulkResetTransition(async () => {
+      if (isMock) {
+        setFeedback({
+          id: "bulk-reset",
+          message: `Reset hours for ${userIds.length} volunteer${userIds.length !== 1 ? "s" : ""} (demo — not saved)`,
+          kind: "success",
+        });
+        setSelectedIds(new Set());
+        return;
+      }
+      try {
+        const results = await resetCourtOrderHoursBulk(userIds);
+        const succeeded = results.filter((r) => r.success).length;
+        const failed = results.length - succeeded;
+        setFeedback({
+          id: "bulk-reset",
+          message:
+            failed > 0
+              ? `Reset hours for ${succeeded}, ${failed} failed`
+              : `Reset hours for ${succeeded} volunteer${succeeded !== 1 ? "s" : ""}`,
+          kind: failed > 0 ? "error" : "success",
+        });
+        setSelectedIds(new Set());
+      } catch (err) {
+        setFeedback({
+          id: "bulk-reset",
+          message: err instanceof Error ? err.message : "Bulk hours reset failed",
           kind: "error",
         });
       }
@@ -367,12 +416,20 @@ function SessionsPageInner({ sessions, isMock }: { sessions: MockSession[]; isMo
           </button>
           <button
             type="button"
+            onClick={handleBulkResetHours}
+            disabled={isBulkResetPending}
+            className="h-9 px-md rounded-sm border border-border-outline bg-bg-app font-data text-[12px] font-semibold text-text-primary hover:bg-bg-surface-elevated transition-colors disabled:opacity-60"
+          >
+            {isBulkResetPending ? "Resetting…" : "Reset hours"}
+          </button>
+          <button
+            type="button"
             onClick={() => setSelectedIds(new Set())}
             className="font-data text-[12px] font-semibold text-text-tertiary hover:text-text-primary transition-colors"
           >
             Clear
           </button>
-          {feedback?.id === "bulk" && (
+          {(feedback?.id === "bulk" || feedback?.id === "bulk-reset") && (
             <span className={`font-body text-[12px] ${feedback.kind === "error" ? "text-[#ba1a1a]" : "text-primary"}`}>
               {feedback.message}
             </span>
