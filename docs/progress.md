@@ -34,6 +34,23 @@
 - When an explicit deletion request would break a live, unrelated feature (removing `event_registration` would have killed event-signup confirmation emails; removing the at-risk-notify widget's underlying template touched a real send path), the right move was surfacing it and asking rather than either silently complying (breaks something the user likely didn't intend) or silently preserving it (ignores the instruction) — both directions were confirmed via `AskUserQuestion` in this session.
 - Reset-to-zero for a derived (not stored) metric is a marker-and-filter problem, not a write problem — the same pattern would apply to any other "period resets" feature in this codebase.
 
+### Post-implementation fixes (same session, after initial ship)
+
+Follow-up issues found while the user clicked through the live app, fixed in place:
+
+| Fix | File(s) | Notes |
+|---|---|---|
+| Volunteer profile "Send email" → Emails tab handoff | `VolunteerCommunicationLog.tsx`, `EmailsPage.tsx`, `app/emails/page.tsx` | `/emails?to=<volunteerId>` prefills the Compose recipient; replaced an initial inline-compose-on-profile approach per user preference |
+| Emails tab "To" dropdown only showed Donna | `lib/volunteers.ts` (new `resolveVolunteerEmail`), `live-data.ts` | Root cause: mobile volunteers use anonymous Supabase auth, so `auth.users.email` is null for almost everyone — real email lives in `user_metadata.email`. Same bug also existed in the volunteer profile's own loader (wrong name field too — `user_metadata.name` instead of `full_name`). Volunteers with no email anywhere yet get a non-routable mock placeholder (`isMockAddress()`) so they're still visible in pickers; every real send path (Compose, hours-reminder cron, order-shipped notify) now blocks sending to that mock domain |
+| Order-tracking template: stray literal `{{/if}}` in sent emails | `email-template-render.ts` | `renderTemplate()`'s regex doesn't support nested `{{#if}}` — `{{#if carrier}}` was nested inside `{{#if tracking_number}}`. Fixed by making them sequential; see memory `template-renderer-no-nested-if` |
+| Order-tracking template: tracking number/carrier not shown | `email-template-render.ts`, `actions/orders.ts`, `EmailsPage.tsx`, `live-data.ts` (new `loadLatestOrderTrackingByVolunteer`) | Two rounds: first made the lines unconditional (always show `Tracking number: …` / `Carrier: …`, falling back to a literal `[blank]`), then auto-fill both fields in Compose from the volunteer's actual latest `shop_orders` row instead of requiring manual entry |
+| Both templates rewritten for warmer, human copy | `email-template-render.ts` | Per explicit user request; order-tracking sample data also switched from a realistic-looking fake tracking number to an obvious `########` placeholder |
+| US heatmap reverted to original nation→state→county drill | `UsHeatmap.tsx`, `us-heatmap.ts`, `us-geo.ts` (restored from git HEAD then hand-trimmed) | User wanted the neighborhood/tract level removed but everything else back to the pre-session design — the earlier "single national county choropleth + metric filter" redesign from this same session was fully reverted, not iterated on. `CountyTractMap.tsx`/`census-tracts.ts`/`nominatim.ts`/`place-reverse.ts` and the `/api/place-reverse` route were deleted again since the final design doesn't use them |
+
+Six new migrations from this session (`014`–`019` in `admin/db/`) were applied by the user via the Supabase SQL Editor — no CLI/psql access exists in this environment (no stored DB password, Supabase MCP is `read_only=true`), confirmed and recorded as a reference memory (`supabase-migrations-manual-apply`).
+
+All three projects (`frontend`, `admin-web-app`, `backend/sessions`) verified `tsc --noEmit` clean after every round of fixes.
+
 ---
 
 ## [2026-08-10 Session 1] — Figma asset import (Icons/Illustrations pages) + brand-mark vector fix

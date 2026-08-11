@@ -720,6 +720,17 @@ async function seedInitialLocation() {
 }
 
 async function enableBackgroundLocationIfPossible() {
+  // Same hard-crash hazard as startBackgroundLocationUpdates() below, but earlier
+  // in the chain: requesting "Always" authorization itself (not just starting
+  // updates) walks into CoreLocation/LocationSupport code that assumes the
+  // UIBackgroundModes:location entitlement is declared. Expo Go's shell app
+  // doesn't declare it, so the request can SIGKILL the whole process with an
+  // uncatchable native EXC_BAD_ACCESS — the surrounding try/catch never runs.
+  if (isExpoGoClient()) {
+    setState({ backgroundLocationEnabled: false });
+    return;
+  }
+
   let backgroundEnabled = false;
   try {
     const backgroundPermission = await Location.requestBackgroundPermissionsAsync();
