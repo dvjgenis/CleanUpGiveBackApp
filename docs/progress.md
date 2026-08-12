@@ -4,23 +4,39 @@
 
 ## [2026-08-11 Session 3] — Minimized live pill on every bottom-nav screen
 
-**End goal:** After minimizing a live session, the green tracker banner stays visible on Shop / Sessions / Account (and other bottom-nav screens), not only Home; Track resumes the session instead of restarting setup.
+**End goal:** After minimizing a live session, the green tracker banner stays visible on **every** bottom-nav screen (Home, Shop, Sessions, Account, and account subpages) — not only Home — and Track always resumes the active session instead of sending the volunteer through setup again.
 
 **Approach:**
-- Shared `LiveSessionNavChrome` (`useLiveSessionNavChrome` + `LiveSessionMinimizedBar`) wired into all 5-tab screens
-- Shop Track was forcing `/session-setup-guide` even when `isActive` — now uses the shared resume path
+- Debugged with runtime hypotheses: pill was Home-scoped UI only (`isActive` in `liveSessionStore` survived navigation); Shop Track always pushed `/session-setup-guide`, which could overwrite continuity by starting a new session
+- Extract shared `LiveSessionNavChrome` (`useLiveSessionNavChrome` + `LiveSessionMinimizedBar`) so one path owns pill visibility, expand wipe, scroll bottom pad extra, and Track resume vs setup
+- Wire that chrome into all screens that render the 5-tab `BottomNavBar`; leave `/live-session` without the pill
+- Keep store behavior unchanged (module singleton + AsyncStorage draft); this was a chrome/UX gap, not session teardown
 
 **Steps done so far:**
-1. Confirmed root cause: pill was Home-only; Shop Track ignored active session
-2. Added shared chrome + wired Home/Shop/Sessions/Account + account subpages
-3. Docs: `components.md`, `app.md`, `current.md`
+1. Reproduced: minimize → pill on Home only; other tabs looked empty; Shop Track felt like “start over”
+2. Confirmed root cause: Home-only `LiveSessionBar`; Shop ignored `isActive`
+3. Added `frontend/src/components/navigation/LiveSessionNavChrome.tsx`
+4. Wired Home / Shop / Sessions / Account + Notifications, Order/Donation/Approval history, privacy/request/delete account screens
+5. Fixed Shop Track to resume via shared `onTrackPress`
+6. Verified on device; removed debug instrumentation
+7. Living docs: `docs/progress.md`, `docs/current.md`, `docs/frontend/context/app.md`, `docs/frontend/context/components.md`
 
 **Current failure (resolved this session):**
 1. ~~Minimized banner only on Home; other tabs looked like the session vanished~~
-2. ~~Shop Track sent users back through setup / wiped the feel of continuity~~
+2. ~~Shop Track always opened session setup / felt like starting from the beginning~~
 
-**Next steps:**
-1. Verify on device: minimize → Shop/Sessions/Account show pill; Track expands live session
+### Tasks
+
+| Task | Status |
+|------|--------|
+| Shared `LiveSessionNavChrome` + minimized bar | ✅ |
+| Wire pill + Track resume on all bottom-nav screens | ✅ |
+| Fix Shop Track when `isActive` | ✅ |
+| Device verify + strip debug instrumentation | ✅ |
+| Living docs + this progress entry | ✅ |
+| Commit + push to `origin/main` | ✅ |
+
+**Verify:** `cd frontend && npx tsc --noEmit` passes. Manual: start session → minimize → Shop/Sessions/Account show green pill; Track expands `/live-session` (not setup).
 
 ---
 
