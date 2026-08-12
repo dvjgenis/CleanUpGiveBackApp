@@ -63,11 +63,13 @@ export const LiveSessionMinimizedPill = forwardRef<View, Props>(function LiveSes
     ? formatCountdown(checkpointOverdueSeconds)
     : formatCountdown(checkpointSecondsRemaining);
 
+  const liveChromeColor = ignored ? colors.textOnPrimary : colors.textPrimary;
+
   return (
     <View ref={ref} style={[styles.pill, style, ignored && styles.pillIgnored]} {...rest}>
-      {/* Yellow top bar — always visible */}
+      {/* Yellow top bar — always visible; flips to red with white type when checkpoint is ignored */}
       <View style={[styles.liveBar, ignored && styles.liveBarIgnored]}>
-        <Text style={styles.liveText}>Live</Text>
+        <Text style={[styles.liveText, { color: liveChromeColor }]}>Live</Text>
         {showExpandButton && onExpand && (
           <AnimatedPressable
             onPress={onExpand}
@@ -76,7 +78,7 @@ export const LiveSessionMinimizedPill = forwardRef<View, Props>(function LiveSes
             accessibilityLabel="Expand live session tracker"
             style={styles.expandBtn}
           >
-            <ExpandIcon color={colors.textPrimary} />
+            <ExpandIcon color={liveChromeColor} />
           </AnimatedPressable>
         )}
       </View>
@@ -134,7 +136,6 @@ const styles = StyleSheet.create({
   liveText: {
     fontFamily: fontFamilies.notoSansSemiBold,
     fontSize: 13,
-    color: colors.textPrimary,
     flex: 1,
     textAlign: 'center',
   },
