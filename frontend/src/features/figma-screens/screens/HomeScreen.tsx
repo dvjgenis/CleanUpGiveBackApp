@@ -1,18 +1,15 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Animated from 'react-native-reanimated';
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { BottomNavBar, type BottomNavTab } from '@/components/navigation/BottomNavBar';
-import { usePreferredName } from '@/features/onboarding/onboardingStore';
-import { LiveSessionMinimizedPill, LIVE_SESSION_PILL_MIN_HEIGHT } from '@/features/session-tracking/components/LiveSessionMinimizedPill';
-import { useLiveSessionBarExit } from '@/features/session-tracking/hooks/useLiveSessionBarExit';
 import {
-  getCheckpointProgress,
-  useLiveSession,
-} from '@/features/session-tracking/liveSessionStore';
+  LiveSessionMinimizedBar,
+  useLiveSessionNavChrome,
+} from '@/components/navigation/LiveSessionNavChrome';
+import { usePreferredName } from '@/features/onboarding/onboardingStore';
 import { useRecentSessions } from '@/features/session-tracking/recentSessionsStore';
 import {
   hydrateSessionStatsFromApi,
@@ -56,7 +53,6 @@ import {
 } from '@/lib/eventsApi';
 
 const CHART_H = 168;
-const LIVE_BAR_HEIGHT = LIVE_SESSION_PILL_MIN_HEIGHT + 16;
 
 /**
  * Round up to an integer ceiling with 4 equal integer Y-axis steps
@@ -344,31 +340,6 @@ function RecentEventsSection({
   );
 }
 
-type LiveSessionBarProps = {
-  barStyle: ReturnType<typeof useLiveSessionBarExit>['barStyle'];
-  onExpand: () => void;
-};
-
-function LiveSessionBar({ barStyle, onExpand }: LiveSessionBarProps) {
-  const { elapsedSeconds, checkpointSecondsRemaining, distanceMiles, submittedCheckpoints } =
-    useLiveSession();
-  const checkpointProgress = getCheckpointProgress(checkpointSecondsRemaining);
-
-  return (
-    <Animated.View style={[s.liveBar, barStyle]}>
-      <LiveSessionMinimizedPill
-        distanceMiles={distanceMiles}
-        elapsedSeconds={elapsedSeconds}
-        checkpointSecondsRemaining={checkpointSecondsRemaining}
-        checkpointProgress={checkpointProgress}
-        submittedCheckpoints={submittedCheckpoints}
-        onExpand={onExpand}
-        showExpandButton
-      />
-    </Animated.View>
-  );
-}
-
 /**
  * Home dashboard (Figma `home_dashboard___final_branding`, node `406:291`).
  * Pass `data` to render a specific mock variant; defaults to first-time user.
@@ -382,21 +353,12 @@ export function HomeScreenWithData({
 }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { isActive } = useLiveSession();
-  const navigateLiveSession = useCallback(() => router.push('/live-session'), [router]);
-  const { barStyle, expandLiveSession, resetBar } = useLiveSessionBarExit({
-    onNavigate: navigateLiveSession,
-  });
-
-  useFocusEffect(
-    useCallback(() => {
-      resetBar();
-    }, [resetBar]),
-  );
+  const { isActive, onTrackPress, expandLiveSession, barStyle, barExtraHeight } =
+    useLiveSessionNavChrome();
   const [activeTab, setActiveTab] = useState<BottomNavTab>('home');
   const greeting = useMemo(() => getTimeOfDayGreeting(), []);
   const bottomInset = Math.max(insets.bottom, 0);
-  const scrollBottomPad = bottomInset + layout.bottomNavHeight + (isActive ? LIVE_BAR_HEIGHT + 24 : 24);
+  const scrollBottomPad = bottomInset + layout.bottomNavHeight + barExtraHeight + 24;
 
   return (
     <View style={s.root}>
@@ -459,7 +421,7 @@ export function HomeScreenWithData({
 
       <View style={s.bottomStack}>
         {isActive && (
-          <LiveSessionBar barStyle={barStyle} onExpand={expandLiveSession} />
+          <LiveSessionMinimizedBar barStyle={barStyle} onExpand={expandLiveSession} />
         )}
         <View style={[s.navBarBg, { paddingBottom: bottomInset }]}>
         <BottomNavBar
@@ -469,13 +431,7 @@ export function HomeScreenWithData({
             setActiveTab('shop');
             router.push('/shop' as Href);
           }}
-          onTrackPress={() => {
-            if (isActive) {
-              expandLiveSession();
-            } else {
-              router.push('/session-setup-guide');
-            }
-          }}
+          onTrackPress={onTrackPress}
           onSessionsPress={() => {
             setActiveTab('sessions');
             router.push('/sessions-list' as Href);
@@ -875,10 +831,5 @@ const s = StyleSheet.create({
   navBarBg: {
     backgroundColor: colors.white,
     ...shadows.navBottom,
-  },
-  liveBar: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 8,
   },
 });

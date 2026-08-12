@@ -139,7 +139,8 @@ Shared UI components in `frontend/src/components/`.
 | backgroundLocationTask | `features/session-tracking/backgroundLocationTask.ts` | TaskManager task → `ingestBackgroundLocationSample` (active session only) |
 | sessionStatsStore | `features/session-tracking/sessionStatsStore.ts` | Home Service Hours / impact; local snapshots + AsyncStorage persistence + `GET /sessions` hydration |
 | LiveSessionMinimizedPill | `features/session-tracking/components/LiveSessionMinimizedPill.tsx` | Green minimized tracker pill (Figma `622:176`); checkpoint progress fill animates via `useAnimatedProgressFill` |
-| useLiveSessionBarExit | `features/session-tracking/hooks/useLiveSessionBarExit.ts` | Pill slides down on expand; resets slide-up on Home refocus (`useFocusEffect`) |
+| LiveSessionNavChrome | `components/navigation/LiveSessionNavChrome.tsx` | Shared `useLiveSessionNavChrome` + `LiveSessionMinimizedBar` — shows the minimized pill on **every** bottom-nav screen while `isActive` (not on `/live-session`); Track resumes via expand wipe or opens session setup when inactive |
+| useLiveSessionBarExit | `features/session-tracking/hooks/useLiveSessionBarExit.ts` | Pill slides down on expand; resets slide-up on screen refocus (`useFocusEffect`) |
 | useLiveSessionMapReveal | `features/session-tracking/hooks/useLiveSessionMapReveal.ts` | Bottom-up map wipe (`mapRevealWipe` 480ms) + chrome fade when expanding from Home |
 | useAnimatedProgressFill | `components/motion/hooks.ts` | Progress track fill animation (300ms enter, 220ms live updates) |
 

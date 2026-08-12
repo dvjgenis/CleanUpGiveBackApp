@@ -14,8 +14,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { BottomNavBar } from '@/components/navigation/BottomNavBar';
+import {
+  LiveSessionMinimizedBar,
+  useLiveSessionNavChrome,
+} from '@/components/navigation/LiveSessionNavChrome';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { useLiveSession } from '@/features/session-tracking/liveSessionStore';
 import { removeVolunteerSessions } from '@/features/session-tracking/removeVolunteerSession';
 import {
   isVolunteerSessionDeleted,
@@ -326,7 +329,8 @@ function SessionRow({
 export function SessionsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { isActive } = useLiveSession();
+  const { isActive, onTrackPress, expandLiveSession, barStyle, barExtraHeight } =
+    useLiveSessionNavChrome();
   const [filter, setFilter] = useState<SessionListFilter>('all');
   const [sort, setSort] = useState<SessionSortOption>('most-recent');
   const [sortOpen, setSortOpen] = useState(false);
@@ -445,7 +449,7 @@ export function SessionsScreen() {
 
   const bottomInset = Math.max(insets.bottom, 0);
   const bulkBarHeight = showBulkActionBar ? 56 : 0;
-  const scrollBottomPad = bottomInset + layout.bottomNavHeight + bulkBarHeight + 24;
+  const scrollBottomPad = bottomInset + layout.bottomNavHeight + bulkBarHeight + barExtraHeight + 24;
 
   const handleEnterSelection = useCallback(() => {
     setSelectedIds(new Set());
@@ -726,17 +730,14 @@ export function SessionsScreen() {
             ) : null}
           </View>
         )}
+        {isActive && (
+          <LiveSessionMinimizedBar barStyle={barStyle} onExpand={expandLiveSession} />
+        )}
         <BottomNavBar
           activeTab="sessions"
           onHomePress={() => router.replace('/')}
           onShopPress={() => router.push('/shop' as Href)}
-          onTrackPress={() => {
-            if (isActive) {
-              router.push('/live-session');
-            } else {
-              router.push('/session-setup-guide');
-            }
-          }}
+          onTrackPress={onTrackPress}
           onSessionsPress={() => {}}
           onProfilePress={() => router.push('/account' as Href)}
         />

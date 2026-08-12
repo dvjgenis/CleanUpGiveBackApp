@@ -12,6 +12,10 @@ import { useRouter, type Href } from 'expo-router';
 
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { BottomNavBar } from '@/components/navigation/BottomNavBar';
+import {
+  LiveSessionMinimizedBar,
+  useLiveSessionNavChrome,
+} from '@/components/navigation/LiveSessionNavChrome';
 import { addCartItem } from '../cartStore';
 import { CartBadge } from '../components/CartBadge';
 import { EmptyCartToast, useCartIconPress } from '../components/EmptyCartToast';
@@ -361,6 +365,8 @@ export function ShopScreen() {
   const { cartCount, onCartPress, toastVisible, toastKey } = useCartIconPress();
   const [activeCategory, setActiveCategory] = useState<CategoryTab>('All');
   const bottomInset = Math.max(insets.bottom, 0);
+  const { isActive, onTrackPress, expandLiveSession, barStyle, barExtraHeight } =
+    useLiveSessionNavChrome();
 
   const filteredProducts = useMemo(() => {
     if (activeCategory === 'All') return PRODUCTS;
@@ -387,7 +393,7 @@ export function ShopScreen() {
 
       <ScrollView
         style={s.scroll}
-        contentContainerStyle={[s.scrollContent, { paddingBottom: bottomInset + layout.bottomNavHeight + 24 }]}
+        contentContainerStyle={[s.scrollContent, { paddingBottom: bottomInset + layout.bottomNavHeight + barExtraHeight + 24 }]}
         showsVerticalScrollIndicator={false}
       >
         <View style={s.missionBlock}>
@@ -428,11 +434,14 @@ export function ShopScreen() {
       </ScrollView>
 
       <View style={[s.bottomStack, { paddingBottom: bottomInset }]}>
+        {isActive && (
+          <LiveSessionMinimizedBar barStyle={barStyle} onExpand={expandLiveSession} />
+        )}
         <BottomNavBar
           activeTab="shop"
           onHomePress={() => router.replace('/')}
           onShopPress={() => {}}
-          onTrackPress={() => router.push('/session-setup-guide')}
+          onTrackPress={onTrackPress}
           onSessionsPress={() => router.push('/sessions-list')}
           onProfilePress={() => router.push('/account')}
         />

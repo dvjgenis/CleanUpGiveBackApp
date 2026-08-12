@@ -2,6 +2,28 @@
 
 ---
 
+## [2026-08-11 Session 3] — Minimized live pill on every bottom-nav screen
+
+**End goal:** After minimizing a live session, the green tracker banner stays visible on Shop / Sessions / Account (and other bottom-nav screens), not only Home; Track resumes the session instead of restarting setup.
+
+**Approach:**
+- Shared `LiveSessionNavChrome` (`useLiveSessionNavChrome` + `LiveSessionMinimizedBar`) wired into all 5-tab screens
+- Shop Track was forcing `/session-setup-guide` even when `isActive` — now uses the shared resume path
+
+**Steps done so far:**
+1. Confirmed root cause: pill was Home-only; Shop Track ignored active session
+2. Added shared chrome + wired Home/Shop/Sessions/Account + account subpages
+3. Docs: `components.md`, `app.md`, `current.md`
+
+**Current failure (resolved this session):**
+1. ~~Minimized banner only on Home; other tabs looked like the session vanished~~
+2. ~~Shop Track sent users back through setup / wiped the feel of continuity~~
+
+**Next steps:**
+1. Verify on device: minimize → Shop/Sessions/Account show pill; Track expands live session
+
+---
+
 ## [2026-08-11 Session 2] — Checkpoint grace, forced-end submit, alert audio
 
 **End goal:** Volunteers never get stuck after canceling the camera at checkpoint time. Every **submitted** session has at least **4 photos** (start pair + end pair). Mid 30‑min checkpoints may be missed with **no admin flag / no DB column**. Tracking freezes when the **10‑min grace** expires until the user takes forced-end photos. Abandon without end photos → discard / restart (session is **not** submitted).

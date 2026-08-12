@@ -4,11 +4,12 @@ import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BottomNavBar, type BottomNavTab } from '@/components/navigation/BottomNavBar';
+import {
+  LiveSessionMinimizedBar,
+  useLiveSessionNavChrome,
+} from '@/components/navigation/LiveSessionNavChrome';
 import { SessionSetupToggle } from '@/components/session-setup/SessionSetupToggle';
 import { SessionSetupTopAppBar } from '@/components/session-setup/SessionSetupTopAppBar';
-import {
-  useLiveSession,
-} from '@/features/session-tracking/liveSessionStore';
 import {
   isSessionNotificationPermissionGranted,
   requestSessionNotificationPermission,
@@ -92,13 +93,14 @@ function buildInitialValues(categories: NotificationCategory[]): Record<Notifica
 export function NotificationsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { isActive } = useLiveSession();
+  const { isActive, onTrackPress, expandLiveSession, barStyle, barExtraHeight } =
+    useLiveSessionNavChrome();
   const [activeTab, setActiveTab] = useState<BottomNavTab>('home');
   const [preferences, setPreferences] = useState(() => buildInitialValues(defaultNotificationCategories));
   const [osNotificationsGranted, setOsNotificationsGranted] = useState(false);
 
   const bottomInset = Math.max(insets.bottom, 0);
-  const scrollBottomPad = bottomInset + layout.bottomNavHeight + 24;
+  const scrollBottomPad = bottomInset + layout.bottomNavHeight + barExtraHeight + 24;
 
   useFocusEffect(
     useCallback(() => {
@@ -158,6 +160,9 @@ export function NotificationsScreen() {
       </ScrollView>
 
       <View style={[s.bottomStack, { paddingBottom: bottomInset }]}>
+        {isActive && (
+          <LiveSessionMinimizedBar barStyle={barStyle} onExpand={expandLiveSession} />
+        )}
         <BottomNavBar
           activeTab={activeTab}
           onHomePress={() => {
@@ -165,13 +170,7 @@ export function NotificationsScreen() {
             router.replace('/');
           }}
           onShopPress={() => setActiveTab('shop')}
-          onTrackPress={() => {
-            if (isActive) {
-              router.push('/live-session');
-            } else {
-              router.push('/session-setup-guide');
-            }
-          }}
+          onTrackPress={onTrackPress}
           onSessionsPress={() => {
             setActiveTab('sessions');
             router.push('/sessions-list' as Href);

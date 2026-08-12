@@ -7,8 +7,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAttentionShake } from '@/components/motion/hooks';
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { BottomNavBar } from '@/components/navigation/BottomNavBar';
+import {
+  LiveSessionMinimizedBar,
+  useLiveSessionNavChrome,
+} from '@/components/navigation/LiveSessionNavChrome';
 import { SessionSetupTopAppBar } from '@/components/session-setup/SessionSetupTopAppBar';
-import { useLiveSession } from '@/features/session-tracking/liveSessionStore';
 
 import { WarningTriangleIcon } from '../components/AccountIcons';
 import { layout, colors, fontFamilies, radius } from '../tokens';
@@ -40,14 +43,15 @@ function ValidationToastAlert({ message }: { message: string }) {
 export function DeleteAccountScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { isActive } = useLiveSession();
+  const { isActive, onTrackPress, expandLiveSession, barStyle, barExtraHeight } =
+    useLiveSessionNavChrome();
   const [confirmText, setConfirmText] = useState('');
   const [showValidationToast, setShowValidationToast] = useState(false);
   const [toastKey, setToastKey] = useState(0);
   const [inputHasError, setInputHasError] = useState(false);
 
   const bottomInset = Math.max(insets.bottom, 0);
-  const scrollBottomPad = bottomInset + layout.bottomNavHeight + 32;
+  const scrollBottomPad = bottomInset + layout.bottomNavHeight + barExtraHeight + 32;
 
   function handleConfirmDelete() {
     const isConfirmed = confirmText.trim() === CONFIRM_WORD;
@@ -132,17 +136,14 @@ export function DeleteAccountScreen() {
       </ScrollView>
 
       <View style={[s.bottomStack, { paddingBottom: bottomInset }]}>
+        {isActive && (
+          <LiveSessionMinimizedBar barStyle={barStyle} onExpand={expandLiveSession} />
+        )}
         <BottomNavBar
           activeTab="profile"
           onHomePress={() => router.replace('/')}
           onShopPress={() => {}}
-          onTrackPress={() => {
-            if (isActive) {
-              router.push('/live-session');
-            } else {
-              router.push('/session-setup-guide');
-            }
-          }}
+          onTrackPress={onTrackPress}
           onSessionsPress={() => {}}
           onProfilePress={() => router.replace('/account' as Href)}
         />

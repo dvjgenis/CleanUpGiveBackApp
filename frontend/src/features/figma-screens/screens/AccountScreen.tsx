@@ -5,9 +5,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { BottomNavBar } from '@/components/navigation/BottomNavBar';
+import {
+  LiveSessionMinimizedBar,
+  useLiveSessionNavChrome,
+} from '@/components/navigation/LiveSessionNavChrome';
 import { SessionSetupToggle } from '@/components/session-setup/SessionSetupToggle';
 import { TrackerMapDarkIcon } from '@/features/session-tracking/components/icons/TrackerMapThemeIcons';
-import { useLiveSession } from '@/features/session-tracking/liveSessionStore';
 import {
   isValidCompanyCode,
   markTrackerPaid,
@@ -193,7 +196,8 @@ function ProfileHero({ profile }: { profile: AccountProfile }) {
 export function AccountScreen({ profile = defaultAccountProfile }: { profile?: AccountProfile }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { isActive } = useLiveSession();
+  const { isActive, onTrackPress, expandLiveSession, barStyle, barExtraHeight } =
+    useLiveSessionNavChrome();
   const hasPaid = useTrackerHasPaid();
   const [isCourtOrdered, setIsCourtOrdered] = useState(false);
   const [cameraAccess, setCameraAccess] = useState(false);
@@ -214,7 +218,7 @@ export function AccountScreen({ profile = defaultAccountProfile }: { profile?: A
   };
 
   const bottomInset = Math.max(insets.bottom, 0);
-  const scrollBottomPad = bottomInset + layout.bottomNavHeight + 48;
+  const scrollBottomPad = bottomInset + layout.bottomNavHeight + barExtraHeight + 48;
 
   // Mirror the real OS permission status every time this screen is focused —
   // e.g. after the user grants/revokes access in the iOS Settings app and
@@ -512,17 +516,14 @@ export function AccountScreen({ profile = defaultAccountProfile }: { profile?: A
       </ScrollView>
 
       <View style={[s.bottomStack, { paddingBottom: bottomInset }]}>
+        {isActive && (
+          <LiveSessionMinimizedBar barStyle={barStyle} onExpand={expandLiveSession} />
+        )}
         <BottomNavBar
           activeTab="profile"
           onHomePress={() => router.replace('/')}
           onShopPress={() => router.push('/shop' as Href)}
-          onTrackPress={() => {
-            if (isActive) {
-              router.push('/live-session');
-            } else {
-              router.push('/session-setup-guide');
-            }
-          }}
+          onTrackPress={onTrackPress}
           onSessionsPress={() => router.push('/sessions-list' as Href)}
           onProfilePress={() => {}}
         />

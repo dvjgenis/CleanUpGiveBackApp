@@ -5,8 +5,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { BottomNavBar } from '@/components/navigation/BottomNavBar';
+import {
+  LiveSessionMinimizedBar,
+  useLiveSessionNavChrome,
+} from '@/components/navigation/LiveSessionNavChrome';
 import { SessionSetupTopAppBar } from '@/components/session-setup/SessionSetupTopAppBar';
-import { useLiveSession } from '@/features/session-tracking/liveSessionStore';
 
 import { RadioCheckedIcon, RadioEmptyIcon } from '../components/AccountIcons';
 import { layout, colors, fontFamilies, radius } from '../tokens';
@@ -26,11 +29,12 @@ const OPTIONS: { id: DataRequestOption; label: string }[] = [
 export function RequestDataScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { isActive } = useLiveSession();
+  const { isActive, onTrackPress, expandLiveSession, barStyle, barExtraHeight } =
+    useLiveSessionNavChrome();
   const [selected, setSelected] = useState<DataRequestOption>('access');
 
   const bottomInset = Math.max(insets.bottom, 0);
-  const scrollBottomPad = bottomInset + layout.bottomNavHeight + 32;
+  const scrollBottomPad = bottomInset + layout.bottomNavHeight + barExtraHeight + 32;
 
   function handleSubmit() {
     router.push('/request-data-sent' as Href);
@@ -92,17 +96,14 @@ export function RequestDataScreen() {
       </ScrollView>
 
       <View style={[s.bottomStack, { paddingBottom: bottomInset }]}>
+        {isActive && (
+          <LiveSessionMinimizedBar barStyle={barStyle} onExpand={expandLiveSession} />
+        )}
         <BottomNavBar
           activeTab="profile"
           onHomePress={() => router.replace('/')}
           onShopPress={() => {}}
-          onTrackPress={() => {
-            if (isActive) {
-              router.push('/live-session');
-            } else {
-              router.push('/session-setup-guide');
-            }
-          }}
+          onTrackPress={onTrackPress}
           onSessionsPress={() => {}}
           onProfilePress={() => router.replace('/account' as Href)}
         />

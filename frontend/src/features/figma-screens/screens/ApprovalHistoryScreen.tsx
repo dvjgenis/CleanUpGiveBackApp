@@ -4,8 +4,11 @@ import { useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BottomNavBar } from '@/components/navigation/BottomNavBar';
+import {
+  LiveSessionMinimizedBar,
+  useLiveSessionNavChrome,
+} from '@/components/navigation/LiveSessionNavChrome';
 import { SessionSetupTopAppBar } from '@/components/session-setup/SessionSetupTopAppBar';
-import { useLiveSession } from '@/features/session-tracking/liveSessionStore';
 
 import {
   defaultApprovalHistory,
@@ -103,10 +106,11 @@ export function ApprovalHistoryScreen({
 }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { isActive } = useLiveSession();
+  const { isActive, onTrackPress, expandLiveSession, barStyle, barExtraHeight } =
+    useLiveSessionNavChrome();
 
   const bottomInset = Math.max(insets.bottom, 0);
-  const scrollBottomPad = bottomInset + layout.bottomNavHeight + 32;
+  const scrollBottomPad = bottomInset + layout.bottomNavHeight + barExtraHeight + 32;
 
   return (
     <View style={s.root}>
@@ -148,17 +152,14 @@ export function ApprovalHistoryScreen({
       </ScrollView>
 
       <View style={[s.bottomStack, { paddingBottom: bottomInset }]}>
+        {isActive && (
+          <LiveSessionMinimizedBar barStyle={barStyle} onExpand={expandLiveSession} />
+        )}
         <BottomNavBar
           activeTab="profile"
           onHomePress={() => router.replace('/')}
           onShopPress={() => {}}
-          onTrackPress={() => {
-            if (isActive) {
-              router.push('/live-session');
-            } else {
-              router.push('/session-setup-guide');
-            }
-          }}
+          onTrackPress={onTrackPress}
           onSessionsPress={() => router.push('/sessions-list' as Href)}
           onProfilePress={() => router.replace('/account' as Href)}
         />

@@ -272,7 +272,7 @@ export function LiveSessionScreen() {
     if (dismissing.current) return;
     dismissing.current = true;
     // Navigate immediately — a collapse wipe slides the map off and flashes a
-    // blank tint before Home mounts. Session stays active; Home shows the pill.
+    // blank tint before Home mounts. Session stays active; tab screens show the pill.
     try {
       router.dismissTo('/');
     } catch {
