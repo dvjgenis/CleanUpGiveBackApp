@@ -36,7 +36,7 @@ Shipping is not starting from zero.
 | Orders database | Supabase `shop_orders` already stores `shipping_address`, `tracking_number`, `carrier`, and statuses including `shipped` |
 | Admin | Orders list + order detail; fulfillment form lets you set status, carrier (USPS / UPS / FedEx), and tracking number |
 | Mobile | Checkout collects a shipping address and can create an order row; Order History is not yet fully wired to live tracking |
-| Email | Resend is live for sessions/events — **no** “your order shipped” email yet |
+| Email | Resend sends Figma order-placed (checkout) and order-shipped (admin fulfillment) emails — see [order-emails.md](../backend/specs/order-emails.md) |
 | Payments | Stripe not wired yet; ops shipping UX can land before or alongside payment |
 
 **Gaps:** buying postage, auto-email on ship, and volunteer-facing track link/status.

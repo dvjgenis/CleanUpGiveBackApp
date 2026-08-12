@@ -2,6 +2,366 @@
 
 ---
 
+## [2026-08-12] — Order emails documented as shipped
+
+**End goal:** Living docs match the Figma `1311:359` placed + shipped mail Donna signed off.
+
+**Shipped:** Spec rewritten (layout, type, placeholders, hosted assets, ACs). `current.md`, `admin-web-app.md`, `backend/context/sessions.md` updated.
+
+**Docs:** `docs/backend/specs/order-emails.md`, `docs/current.md`, `docs/admin-web-app.md`, `docs/backend/context/sessions.md`, this file.
+
+**Ops still:** apply `admin/db/020_order_emails_figma.sql`; Fly redeploy for production `POST /emails/order-placed`.
+
+**Status:** Done.
+
+---
+
+## [2026-08-12] — Forgot Password email assets on Vercel
+
+**End goal:** Hosted `/email/forgot-password-*.png` so Gmail can load type without CID after deploy.
+
+**Shipped:** `cd admin-web-app && vercel --prod` → https://cleanupgiveback-web-app.vercel.app. Confirmed `forgot-password-body.png` `200`. HTML still test-script only; Welcome send path unwired. Sanchez is headline + CTA; everything else is Noto Sans.
+
+**Docs:** `docs/backend/specs/password-reset-email.md`, `current.md`, `admin-web-app.md`, `accounts-and-access.md`, `README.md`, this file.
+
+**Verify:** `curl -sI https://cleanupgiveback-web-app.vercel.app/email/forgot-password-body.png`
+
+**Status:** Done.
+
+---
+
+## [2026-08-12] — Hours-reminder email on production Vercel
+
+**End goal:** Figma Nudge `1311:432` is the live court-ordered inactivity email.
+
+**Shipped:** Code-owned HTML + per-send type PNGs (Sanchez body/Open App, Noto Sans hours/footer; 16px laptop / 24px phone; amber hours on `#004d21`; 120px bell GIF). Cron `sendHoursReminders` fills first name + completed hours. Production deploy `cleanupgiveback-web-app` (2026-08-12); `/email/nudge-bell.gif` and `hours-reminder-*.png` return 200. Not in the Emails-tab editor.
+
+**Docs:** `docs/backend/specs/hours-reminder-email.md`, `current.md`, `admin-web-app.md`, this file.
+
+**Ops:** Apply `admin/db/021_hours_reminder_figma.sql` on Supabase if the `hours_reminder` body stub is not already there. Git still has uncommitted hours-reminder files after the CLI deploy.
+
+**Verify:** `npx tsx scripts/preview-hours-reminder-email.mts`; production GIF 200.
+
+**Status:** Done (ops: migration 021 if needed).
+
+---
+
+## [2026-08-12] — Order greeting wraps; placed body larger on phone
+
+**End goal:** Name sits in one wrapping sentence; placed “We’ve received your order…” is a bit larger on phone.
+
+**Shipped:** Greeting is one HTML line. `order-placed-body-mobile.png` at 18px, left-aligned wrap.
+
+**Docs:** `docs/backend/specs/order-emails.md`, this file.
+
+**Verify:** `npx tsx scripts/preview-order-emails.mts`
+
+**Status:** Done.
+
+---
+
+## [2026-08-12] — Order-email GIF smaller, headline larger
+
+**End goal:** Truck less dominant; “Your order is on its way!” a bit larger.
+
+**Shipped:** GIF display 250×121 → 220×106. Headline Sanchez 24px → 28px (340×36).
+
+**Docs:** `docs/backend/specs/order-emails.md`, this file.
+
+**Verify:** `npx tsx scripts/preview-order-emails.mts`
+
+**Status:** Done.
+
+---
+
+## [2026-08-12] — Hours-reminder phone type 24px
+
+**End goal:** Phone headline/hours a step smaller than 32px.
+
+**Shipped:** Mobile body/hours PNGs at 24px (desktop stays 16px).
+
+**Docs:** `docs/backend/specs/hours-reminder-email.md`, this file.
+
+**Verify:** `npx tsx scripts/preview-hours-reminder-email.mts`
+
+**Status:** Done.
+
+---
+
+## [2026-08-12] — Order-shipped body left-aligned
+
+**End goal:** “Your package is on its way…” reads as a left-aligned paragraph on phone and laptop.
+
+**Shipped:** Re-rasterized both body PNGs left-aligned; HTML `align="left"`.
+
+**Docs:** `docs/backend/specs/order-emails.md`, this file.
+
+**Verify:** `npx tsx scripts/preview-order-emails.mts`
+
+**Status:** Done.
+
+---
+
+## [2026-08-12] — Order-email remaining copy is Noto Sans
+
+**End goal:** Sanchez only on headline + Track Order; everything else Noto Sans.
+
+**Shipped:** Label/chrome PNGs + hosted `@font-face` for live fields; footer/support reuse Forgot Password Noto assets.
+
+**Docs:** `docs/backend/specs/order-emails.md`, this file.
+
+**Verify:** `npx tsx scripts/preview-order-emails.mts`
+
+**Status:** Done.
+
+---
+
+## [2026-08-12] — Hours-reminder desktop type 16px
+
+**End goal:** Headline and current-hours are not oversized on laptop.
+
+**Shipped:** Desktop body/hours PNGs at 16px; phone 24px via `@media` swap (`hours-reminder-*-mobile.png`).
+
+**Docs:** `docs/backend/specs/hours-reminder-email.md`, this file.
+
+**Verify:** `npx tsx scripts/preview-hours-reminder-email.mts`; `npx tsc --noEmit` in admin-web-app.
+
+**Status:** Done.
+
+---
+
+## [2026-08-12] — Order-shipped phone body type larger
+
+**End goal:** “Your package is on its way…” stays readable on phone instead of shrinking with the 519px laptop PNG.
+
+**Shipped:** `order-shipped-body-mobile.png` at 20px Noto, ~288px wrap; `@media` swap like Forgot Password.
+
+**Docs:** `docs/backend/specs/order-emails.md`, this file.
+
+**Verify:** `npx tsx scripts/preview-order-emails.mts`
+
+**Status:** Done.
+
+---
+
+## [2026-08-12] — Forgot Password content nudged up
+
+**End goal:** Main block sits slightly higher; only headline + CTA stay Sanchez.
+
+**Shipped:** Tightened logo/headline/body/CTA/support padding. Body, support, and footer remain 14–16px Noto Sans PNGs.
+
+**Docs:** `docs/backend/specs/password-reset-email.md`, this file.
+
+**Verify:** `npx tsx scripts/preview-password-reset-email.mts`; `send-test-password-reset-email.mts --to=…`
+
+**Status:** Done.
+
+---
+
+## [2026-08-12] — Hours-reminder support/footer Noto Sans
+
+**End goal:** Remaining Arial chrome in the hours-reminder email shows Noto Sans in Gmail.
+
+**Shipped:** Reused Forgot Password 14px Noto Sans PNGs for support + footer; mailto wraps the images. Body/Open App stay Sanchez.
+
+**Docs:** `docs/backend/specs/hours-reminder-email.md`, this file.
+
+**Verify:** `npx tsx scripts/preview-hours-reminder-email.mts`; `npx tsc --noEmit` in admin-web-app.
+
+**Status:** Done.
+
+---
+
+## [2026-08-12] — Order-email address stays placeholder
+
+**End goal:** Address row matches other summary fields: X-style copy until a real street + city exist.
+
+**Shipped:** Placeholder `XXXXX, XXXXX, XX XXXXX`. `formatShippingAddress` requires line1 and city; rejects admin sentinels.
+
+**Docs:** `docs/backend/specs/order-emails.md`, this file.
+
+**Verify:** `npx tsx scripts/preview-order-emails.mts`
+
+**Status:** Done.
+
+---
+
+## [2026-08-12] — Hours-reminder current-hours contrast
+
+**End goal:** Keep amber hours as an accent without failing WCAG on forest green.
+
+**Shipped:** Current-hours PNG is `#fcab29` on a `#004d21` band (~5.3:1) instead of `#009540`.
+
+**Docs:** `docs/backend/specs/hours-reminder-email.md`, this file.
+
+**Verify:** `npx tsx scripts/preview-hours-reminder-email.mts`; `npx tsc --noEmit` in admin-web-app.
+
+**Status:** Done.
+
+---
+
+## [2026-08-12] — Forgot Password support/footer Noto Sans
+
+**End goal:** Remaining Arial copy in the Forgot Password email shows Noto Sans in Gmail.
+
+**Shipped:** Rasterized support + footer (Contact Us / Privacy / Unsubscribe / nonprofit) as 14px Noto Sans PNGs; mailto wraps the images. Headline and CTA stay Sanchez.
+
+**Docs:** `docs/backend/specs/password-reset-email.md`, this file.
+
+**Verify:** `npx tsx scripts/preview-password-reset-email.mts`; `send-test-password-reset-email.mts --to=…`
+
+**Status:** Done.
+
+---
+
+## [2026-08-12] — Hours-reminder bell smaller, type larger
+
+**End goal:** Bell less dominant; body and current-hours type larger and matched.
+
+**Shipped:** Bell display 170→120. Body + hours rasterized at 32px (was 24).
+
+**Docs:** `docs/backend/specs/hours-reminder-email.md`, this file.
+
+**Verify:** `npx tsx scripts/preview-hours-reminder-email.mts`; `npx tsc --noEmit` in admin-web-app.
+
+**Status:** Done.
+
+---
+
+## [2026-08-12] — Sharper order-email shipping GIF from SVG
+
+**End goal:** Header truck is crisp in Gmail (Gmail strips animated SVG).
+
+**Shipped:** Recolored `frontend/assets/animations/shipping.svg`; rendered 749×362 GIF (256-color, no dither) displayed 250×121.
+
+**Docs:** `docs/backend/specs/order-emails.md`, `docs/frontend/context/assets.md`, this file.
+
+**Status:** Done.
+
+---
+
+## [2026-08-12] — Forgot Password body: phone vs laptop
+
+**End goal:** 16px body on laptop and phone.
+
+**Shipped:** Two 16px body PNGs + `@media (max-width: 600px)` table swap (`forgot-password-body.png` full-width wrap / `forgot-password-body-mobile.png` ~320px wrap).
+
+**Docs:** `docs/backend/specs/password-reset-email.md`, this file.
+
+**Verify:** `npx tsx scripts/preview-password-reset-email.mts`; `send-test-password-reset-email.mts --to=…`
+
+**Status:** Done.
+
+---
+
+## [2026-08-12] — Hours-reminder fonts as PNGs (Gmail)
+
+**End goal:** Hours-reminder branded type matches Forgot Password: rasterized Sanchez / Noto Sans, CID-inlined on send.
+
+**Shipped:** `hours-reminder-type-png.ts` (satori + resvg); body/hours/button `<img>`s in `hours-reminder-email-html.ts`; cron + test send CID-inline logo, bell GIF, and per-volunteer type PNGs. Placeholder PNGs under `public/email/`. Footer stays live Arial.
+
+**Docs:** `docs/backend/specs/hours-reminder-email.md`, `current.md`, `admin-web-app.md`, this file.
+
+**Verify:** `npx tsx scripts/preview-hours-reminder-email.mts`; `npx tsx scripts/send-test-hours-reminder-email.mts --to=<inbox>`; `npx tsc --noEmit` in admin-web-app.
+
+**Status:** Done.
+
+---
+
+## [2026-08-12] — Forgot Password body type larger
+
+**End goal:** Body copy (“That’s okay…”) readable in Gmail.
+
+**Shipped:** Re-rasterized `forgot-password-body.png` at Noto Sans 24px so Gmail phone scale-down stays readable (16px PNG was ~10px on a 375px screen).
+
+**Docs:** `docs/backend/specs/password-reset-email.md`, this file.
+
+**Verify:** `npx tsx scripts/preview-password-reset-email.mts`; `send-test-password-reset-email.mts --to=…`
+
+**Status:** Done.
+
+---
+
+## [2026-08-12] — Order email fonts + tighter GIF spacing
+
+**End goal:** Gmail shows Sanchez/Noto like Forgot Password; less gap under the shipping GIF.
+
+**Shipped:** Rasterized headline/CTA/body PNGs; Arial for live fields; cropped `shipping.gif` to 170×77; CID-inline on test send.
+
+**Docs:** `docs/backend/specs/order-emails.md`, this file.
+
+**Verify:** `npx tsx scripts/preview-order-emails.mts`; `send-test-order-email.mts --to=…`
+
+**Status:** Done.
+
+---
+
+## [2026-08-12] — Figma Forgot Password email HTML
+
+**End goal:** Implement Figma `1311:449` as Resend HTML. Welcome → Forgot Password stays unwired.
+
+**Shipped:**
+1. `buildPasswordResetEmailHtml` in `admin-web-app/src/lib/password-reset-email-html.ts` — table/inline CSS, lime Reset Password CTA, sage footer, forest-green `logo-mark-green.png` (white `logo-mark.png` is for the order-email header).
+2. Preview + Resend test scripts under `admin-web-app/scripts/`.
+
+**Docs:** `docs/backend/specs/password-reset-email.md`, `current.md`, `admin-web-app.md`, `README.md`, this file.
+
+**Verify:** `npx tsx scripts/preview-password-reset-email.mts`; live send `send-test-password-reset-email.mts` (CID-inlines type PNGs so Gmail shows Sanchez/Noto Sans before Vercel deploy); `npx tsc --noEmit` in admin-web-app.
+
+**Status:** Done (HTML + test). Send path not wired.
+
+---
+
+## [2026-08-12] — White shipping Lottie GIF in order emails
+
+**End goal:** Header truck on order-placed/shipped emails is a white looping Lottie (GIF in inboxes) on forest green.
+
+**Shipped:** Recolored `frontend/assets/animations/shipping.json` (truck + speed lines white; check `#009540`). Exported `admin-web-app/public/email/shipping.gif` (zoomed, 340px source, displayed 170×170) and wired both `order-email-html.ts` copies.
+
+**Docs:** `docs/backend/specs/order-emails.md`, `docs/frontend/context/assets.md`, this file.
+
+**Verify:** `npx tsx scripts/preview-order-emails.mts`; `npx tsc --noEmit` in admin-web-app + backend/sessions. Production GIF: https://cleanupgiveback-web-app.vercel.app/email/shipping.gif (`200`).
+
+**Status:** Done.
+
+---
+
+## [2026-08-12] — Figma hours-reminder (Nudge) email
+
+**End goal:** Implement Figma `1311:432` as the court-ordered 7–10 day inactivity email, with a CUPGB-recolored bell GIF.
+
+**Shipped:**
+1. `buildHoursReminderEmailHtml` (`admin-web-app/src/lib/hours-reminder-email-html.ts`) — table/inline CSS, placeholder-first name/hours, Open App href constant.
+2. Cron `sendHoursReminders` now sends that HTML and fills completed hours from approved court-ordered sessions after `hours_reset_at`.
+3. Recolored `Bell.json` → `/email/nudge-bell.json` + animated GIF `/email/nudge-bell.gif`.
+4. Hours reminder removed from Emails-tab editor (`EMAIL_TAB_TEMPLATE_TYPES = []`); migration `021`.
+
+**Docs:** `docs/backend/specs/hours-reminder-email.md`, `current.md`, `admin-web-app.md`, this file.
+
+**Verify:** `npx tsx scripts/preview-hours-reminder-email.mts`; `npx tsc --noEmit` in admin-web-app. Apply 021 on Supabase; Vercel deploy for the GIF.
+
+**Status:** Done (ops: apply migration + Vercel deploy).
+
+---
+
+## [2026-08-12] — Figma order placed + shipped emails
+
+**End goal:** Implement Figma `1311:359` as Resend HTML for order-placed (checkout) and order-shipped (admin fulfillment), placeholder-first until real `shop_orders` fields exist.
+
+**Shipped:**
+1. Shared `buildOrderEmailHtml` (`admin-web-app/src/lib/order-email-html.ts`, copied to `backend/sessions/src/lib/order-email-html.ts`) — table/inline CSS, Figma placeholders, per-field real-data swap.
+2. Admin `sendShopOrderEmail` on first `→ shipped` transition; mobile `POST /emails/order-placed` after `createShopOrder`.
+3. Migration `admin/db/020_order_emails_figma.sql` (`order_placed` template type).
+4. Preview + Resend test scripts under `admin-web-app/scripts/`.
+
+**Docs:** `docs/backend/specs/order-emails.md`, `current.md`, `admin-web-app.md`, `sessions-api.md`, `app.md`, this file.
+
+**Verify:** `npx tsx scripts/preview-order-emails.mts`; `npx tsc --noEmit` in admin-web-app + backend/sessions. Apply 020 on Supabase; Vercel deploy for `/email/*` assets; Fly redeploy for the new endpoint.
+
+**Status:** Done (ops: apply migration + deploys).
+
+---
+
 ## [2026-08-12] — Admin Sessions visibility: diagnose “not syncing” → default All + approve polish
 
 **End goal:** Donna can see mobile-logged sessions in `admin-web-app` and approve them without hunting for **All** or hitting stale Approve/Decline buttons. Co-developer report: “sessions aren’t syncing” after a GitHub push — needed root-cause + fix.

@@ -1,11 +1,12 @@
 /**
  * Server-side reads/writes for the `email_templates` table — both "system"
- * rows (the 5 fixed automated-send templates, looked up by `template_type`)
+ * rows (the 6 system automated-send templates, looked up by `template_type`)
  * and "custom" rows (freeform templates Donna creates for the Compose flow,
  * looked up by `id`). See `admin/db/011_email_templates.sql` for the schema
  * rationale. A missing system row (migration not yet applied) falls back to
  * `DEFAULT_TEMPLATES` in `email-template-render.ts` — a send never breaks on
- * a missing row.
+ * a missing row. Order placed/shipped HTML is always built by `order-email-html.ts`.
+ * Hours-reminder HTML is always built by `hours-reminder-email-html.ts`.
  */
 import { createDataClient, createServiceClient } from '@/lib/supabase/server';
 import {
@@ -56,7 +57,7 @@ export async function getTemplate(type: EmailTemplateType): Promise<EmailTemplat
   return { templateType: type, subject: fallback.subject, bodyHtml: fallback.bodyHtml, updatedAt: null };
 }
 
-/** Every template — the 5 system ones (defaulted if missing) plus any custom ones Donna created. */
+/** Templates shown on the Emails tab — custom rows plus any system types still in EMAIL_TAB_TEMPLATE_TYPES (currently none; branded mail is code-owned). */
 export async function listAllTemplates(): Promise<EmailTemplateRecord[]> {
   try {
     const supabase = await createDataClient();
@@ -82,8 +83,8 @@ export async function listAllTemplates(): Promise<EmailTemplateRecord[]> {
         updatedAt: null,
       }));
 
-      // Emails tab only lists/edits the 2 user-facing templates — approved/declined/
-      // event_registration still send automatically, just not editable here.
+      // Emails tab only lists custom (non-system) templates — branded system
+      // mail (hours reminder, order placed/shipped) is code-owned HTML.
       const rows: EmailTemplateRecord[] = data
         .filter((r) => !r.is_system || EMAIL_TAB_TEMPLATE_TYPES.includes(r.template_type as EmailTemplateType))
         .map((r) => ({

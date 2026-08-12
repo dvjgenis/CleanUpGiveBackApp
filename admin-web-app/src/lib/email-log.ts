@@ -13,6 +13,7 @@ export type EmailTemplateType =
   | 'shipped'
   | 'event_registration'
   | 'hours_reminder'
+  | 'order_placed'
   | 'other';
 
 export type EmailLogStatus = 'sent' | 'failed';

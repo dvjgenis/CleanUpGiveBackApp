@@ -5,12 +5,23 @@ import { Resend } from 'resend';
 
 import type { AuthenticatedRequest } from '../auth.js';
 import { verifyAuth } from '../auth.js';
+import { getServiceSupabase } from '../letterhead/supabaseAdmin.js';
+import {
+  buildOrderEmailHtml,
+  ORDER_EMAIL_SUBJECTS,
+  parseShopOrderAddress,
+  parseShopOrderItems,
+} from '../lib/order-email-html.js';
 import { prisma } from '../prisma.js';
 
 type EventRegistrationBody = {
   to?: string;
   eventTitle?: string;
   eventDateTime?: string;
+};
+
+type OrderPlacedBody = {
+  orderId?: string;
 };
 
 type EmailChangeRequestBody = {
@@ -107,10 +118,47 @@ async function getEventRegistrationTemplate(): Promise<{ subject: string; bodyHt
   return DEFAULT_EVENT_REGISTRATION_TEMPLATE;
 }
 
+const ORDER_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function getOrderPlacedSubject(): Promise<string> {
+  try {
+    const rows = await prisma.$queryRaw<[{ subject: string }]>`
+      SELECT subject FROM public.email_templates WHERE template_type = 'order_placed' LIMIT 1
+    `;
+    if (rows[0]?.subject?.trim()) return rows[0].subject.trim();
+  } catch (err) {
+    console.warn('[email-templates] failed to load order_placed subject, using default:', err);
+  }
+  return ORDER_EMAIL_SUBJECTS.placed;
+}
+
+async function resolveVolunteerContact(
+  userId: string,
+  jwtEmail?: string,
+): Promise<{ email: string | null; name: string | null }> {
+  const jwt = jwtEmail?.trim() || null;
+  try {
+    const supabase = getServiceSupabase();
+    const { data, error } = await supabase.auth.admin.getUserById(userId);
+    if (error || !data.user) {
+      return { email: jwt, name: null };
+    }
+    const meta = data.user.user_metadata ?? {};
+    const metaEmail = typeof meta.email === 'string' && meta.email.trim() ? meta.email.trim() : null;
+    const fullName = typeof meta.full_name === 'string' && meta.full_name.trim() ? meta.full_name.trim() : null;
+    return {
+      email: jwt || data.user.email || metaEmail,
+      name: fullName,
+    };
+  } catch {
+    return { email: jwt, name: null };
+  }
+}
+
 /** Mirrors admin-web-app's `lib/email-log.ts` — this service has no Supabase client, only Prisma. */
 async function logEmailSend(params: {
   userId?: string | null;
-  templateType: 'approved' | 'declined' | 'shipped' | 'event_registration' | 'hours_reminder' | 'other';
+  templateType: 'approved' | 'declined' | 'shipped' | 'event_registration' | 'hours_reminder' | 'order_placed' | 'other';
   toEmail: string;
   subject: string;
   status: 'sent' | 'failed';
@@ -193,6 +241,91 @@ export async function registerEmailRoutes(app: FastifyInstance): Promise<void> {
 
       if (error) {
         request.log.error({ err: error }, 'Failed to send event registration email');
+        return reply.code(502).send({ error: 'Failed to send email' });
+      }
+
+      return reply.send({ ok: true });
+    },
+  );
+
+  app.post(
+    '/emails/order-placed',
+    { preHandler: verifyAuth },
+    async (request, reply) => {
+      const body = (request.body ?? {}) as OrderPlacedBody;
+      const orderId = typeof body.orderId === 'string' ? body.orderId.trim() : '';
+      const auth = request as AuthenticatedRequest;
+
+      if (!ORDER_ID_RE.test(orderId)) {
+        return reply.code(400).send({ error: 'Valid orderId is required' });
+      }
+
+      const rows = await prisma.$queryRaw<
+        {
+          id: string;
+          user_id: string | null;
+          items: unknown;
+          total_cents: number;
+          shipping_address: unknown;
+          tracking_number: string | null;
+          carrier: string | null;
+          created_at: Date;
+        }[]
+      >`
+        SELECT id, user_id, items, total_cents, shipping_address, tracking_number, carrier, created_at
+        FROM public.shop_orders
+        WHERE id = ${orderId}::uuid
+        LIMIT 1
+      `;
+      const order = rows[0];
+      if (!order || order.user_id !== auth.userId) {
+        return reply.code(404).send({ error: 'Order not found' });
+      }
+
+      const contact = await resolveVolunteerContact(auth.userId, auth.email);
+      const to = contact.email ? normalizeEmail(contact.email) : '';
+      if (!isValidEmail(to)) {
+        request.log.warn('No email on file for order-placed send; skipping');
+        return reply.send({ ok: true, skipped: true });
+      }
+
+      const resend = getResendClient();
+      if (!resend) {
+        request.log.warn('RESEND_API_KEY not set; skipping order-placed email');
+        return reply.send({ ok: true, skipped: true });
+      }
+
+      const subject = await getOrderPlacedSubject();
+      const html = buildOrderEmailHtml({
+        variant: 'placed',
+        volunteerName: contact.name,
+        orderId: order.id,
+        createdAt: order.created_at,
+        totalCents: order.total_cents,
+        shippingAddress: parseShopOrderAddress(order.shipping_address),
+        items: parseShopOrderItems(order.items),
+        trackingNumber: order.tracking_number,
+        carrier: order.carrier,
+      });
+
+      const { data, error } = await resend.emails.send({
+        from: getFromAddress(),
+        to,
+        subject,
+        html,
+      });
+
+      await logEmailSend({
+        userId: auth.userId,
+        templateType: 'order_placed',
+        toEmail: to,
+        subject,
+        status: error ? 'failed' : 'sent',
+        resendMessageId: data?.id ?? null,
+      });
+
+      if (error) {
+        request.log.error({ err: error }, 'Failed to send order-placed email');
         return reply.code(502).send({ error: 'Failed to send email' });
       }
 

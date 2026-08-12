@@ -16,6 +16,7 @@ const TEMPLATE_LABELS: Record<string, string> = {
   approved: "Session approved",
   declined: "Session declined",
   shipped: "Order tracking",
+  order_placed: "Order placed",
   event_registration: "Event registration",
   hours_reminder: "Hours reminder",
   at_risk_nudge: "At-risk nudge (retired)",

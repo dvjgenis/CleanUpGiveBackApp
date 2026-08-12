@@ -29,6 +29,7 @@ Fastify service in `backend/sessions/` on Fly.io (`https://cleanup-sessions.fly.
 | POST | `/sessions/service-letter.pdf` | Multi-session service letter PDF; body `courtPacket: true` for the court-packet variant |
 | GET | `/me/court-progress` | Caller's court-order progress (required/completed/remaining hours, due date, risk status) — mirrors admin-web-app's `lib/court-risk.ts` math server-side so mobile never reads `court_orders` directly (that table's RLS stays admin-only) |
 | POST | `/emails/event-registration` | Event Register confirmation (Resend) |
+| POST | `/emails/order-placed` | Shop order-placed confirmation (Resend; Figma `1311:359`) |
 | POST | `/emails/email-change/request` | Send email-change OTP |
 | POST | `/emails/email-change/confirm` | Validate email-change OTP |
 

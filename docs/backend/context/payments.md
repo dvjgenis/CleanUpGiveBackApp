@@ -23,7 +23,7 @@ Handles cart checkout, order history, tracker unlock ($49.99), and donation flow
 ## Integrations
 
 - **Stripe** — see [accounts-and-access.md](../../accounts-and-access.md)
-- Resend — optional payment/receipt emails once Stripe is live
+- Resend — order-placed (checkout) and order-shipped (admin fulfillment) emails live; payment receipts still wait on Stripe. Spec: [order-emails.md](../specs/order-emails.md)
 
 ## Code
 
