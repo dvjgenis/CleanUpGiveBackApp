@@ -233,6 +233,7 @@ export async function approveSessionsBulk(sessionIds: string[]): Promise<BulkApp
         sessionId,
         decision: 'approved',
         activity: before.activity,
+        adminUserId: user.id,
       });
 
       results.push({ sessionId, success: true });

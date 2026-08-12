@@ -7,6 +7,16 @@ Canonical detailed log: [`docs/progress.md`](docs/progress.md).
 
 ---
 
+## [2026-08-12] — Admin Sessions “not syncing” diagnosis + default All polish
+
+**Session goal:** Co-dev reported sessions not showing in admin after GitHub push; diagnose and fix Donna’s approve queue visibility.
+
+**Outcome:** Mobile sync was fine — admin `/sessions` defaulted to **Today**, hiding rows until **All**. Shipped default `?period=all`, Dashboard links, empty-state CTA, optimistic approve UI. Fly API healthy. Full write-up: [`docs/progress.md`](docs/progress.md) (first entry).
+
+**Follow-up:** Vercel production deploy + confirm `SUPABASE_SERVICE_ROLE_KEY` on Production.
+
+---
+
 ## [2026-08-12] — Session-guide Skip/Continue + photo Retake motion (documented)
 
 **Session goal:** Document shipped guide Skip/Continue one-hop navigation and BeReal Retake cross-fade after user confirmed done.

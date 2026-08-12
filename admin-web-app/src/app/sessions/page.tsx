@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+
 import { SidebarDemo } from "@/components/ui/sidebar-demo";
 import { SessionsPage } from "@/components/pages/SessionsPage";
 import { loadLiveSessions } from "@/lib/live-data";
@@ -27,7 +29,27 @@ function ErrorFallback({ error }: { error: string }) {
   );
 }
 
-export default async function Sessions() {
+type SessionsSearchParams = {
+  period?: string;
+  from?: string;
+  to?: string;
+  open?: string;
+};
+
+export default async function Sessions({
+  searchParams,
+}: {
+  searchParams: Promise<SessionsSearchParams>;
+}) {
+  const params = await searchParams;
+  if (!params.period && !params.from && !params.to) {
+    const qs = new URLSearchParams({ period: "all" });
+    if (params.open) {
+      qs.set("open", params.open);
+    }
+    redirect(`/sessions?${qs.toString()}`);
+  }
+
   try {
     const { data: sessions, useMock } = await loadLiveSessions();
 

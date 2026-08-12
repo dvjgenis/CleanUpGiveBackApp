@@ -77,7 +77,7 @@ export function PeriodToggle({
     setTo("");
     setOpen(false);
     pushParams({
-      period: next === "day" ? null : next,
+      period: next,
       from: null,
       to: null,
     });

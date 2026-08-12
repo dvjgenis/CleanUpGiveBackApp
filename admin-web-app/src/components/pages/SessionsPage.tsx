@@ -115,6 +115,21 @@ function SessionsPageInner({ sessions, isMock }: { sessions: MockSession[]; isMo
     setLocalSessions(sessions);
   }, [sessions]);
 
+  // Bare /sessions (no period/from/to) redirects on the server; this catches
+  // client-side PeriodToggle clears that strip query params without a reload.
+  useEffect(() => {
+    const hasPeriod = searchParams.has("period") || searchParams.has("from") || searchParams.has("to");
+    if (hasPeriod) {
+      return;
+    }
+    const qs = new URLSearchParams({ period: "all" });
+    const open = searchParams.get("open");
+    if (open) {
+      qs.set("open", open);
+    }
+    router.replace(`/sessions?${qs.toString()}`);
+  }, [router, searchParams]);
+
   // Deep link from Attention/Audit Log (`/sessions?open=<id>`) — there's no
   // `/sessions/[id]` route, so those pages link here and this opens the
   // preview drawer once the matching session is in `localSessions`. Adjusted
@@ -142,6 +157,7 @@ function SessionsPageInner({ sessions, isMock }: { sessions: MockSession[]; isMo
       }
       try {
         await approveSession(session.id);
+        updateLocalStatus(session.id, "approved");
         setFeedback({ id: session.id, message: "Approved", kind: "success" });
       } catch (err) {
         setFeedback({ id: session.id, message: err instanceof Error ? err.message : "Approve failed", kind: "error" });
@@ -176,6 +192,11 @@ function SessionsPageInner({ sessions, isMock }: { sessions: MockSession[]; isMo
         const results = await approveSessionsBulk(ids);
         const succeeded = results.filter((r) => r.success).length;
         const failed = results.length - succeeded;
+        results.forEach((result) => {
+          if (result.success) {
+            updateLocalStatus(result.sessionId, "approved");
+          }
+        });
         setFeedback({
           id: "bulk",
           message:
@@ -259,6 +280,7 @@ function SessionsPageInner({ sessions, isMock }: { sessions: MockSession[]; isMo
       }
       try {
         await declineSession(id, declineReason || undefined);
+        updateLocalStatus(id, "not_approved");
         setFeedback({ id, message: "Declined", kind: "success" });
         closeDecline();
       } catch (err) {
@@ -280,10 +302,43 @@ function SessionsPageInner({ sessions, isMock }: { sessions: MockSession[]; isMo
     );
   });
 
-  const emptyMessage =
-    periodScoped.length === 0
+  const periodEmpty = localSessions.length > 0 && periodScoped.length === 0;
+  const filterEmpty = periodScoped.length > 0 && filtered.length === 0;
+
+  const emptyMessage = filterEmpty
+    ? "No sessions match these filters."
+    : periodEmpty
       ? `No sessions in ${rangeLabel}.`
-      : "No sessions match these filters.";
+      : `No sessions in ${rangeLabel}.`;
+
+  function showAllSessions() {
+    const qs = new URLSearchParams(searchParams.toString());
+    qs.set("period", "all");
+    qs.delete("from");
+    qs.delete("to");
+    router.push(`/sessions?${qs.toString()}`);
+  }
+
+  const emptyStateContent =
+    filtered.length === 0 ? (
+      <div className="flex flex-col items-center gap-md">
+        <p className="font-body text-base text-text-tertiary">{emptyMessage}</p>
+        {periodEmpty ? (
+          <>
+            <p className="font-body text-[14px] text-text-tertiary">
+              {localSessions.length} session{localSessions.length !== 1 ? "s" : ""} outside this period.
+            </p>
+            <button
+              type="button"
+              onClick={showAllSessions}
+              className="h-10 px-lg rounded-sm bg-primary text-white font-data text-[13px] font-semibold hover:bg-[#007d35] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+            >
+              Show all sessions
+            </button>
+          </>
+        ) : null}
+      </div>
+    ) : null;
 
   const previewSession: MockSession | null =
     (previewId ? localSessions.find((s) => s.id === previewId) : null) ?? null;
@@ -460,7 +515,7 @@ function SessionsPageInner({ sessions, isMock }: { sessions: MockSession[]; isMo
               {filtered.length === 0 && (
                 <tr>
                   <td colSpan={8} className="px-lg py-xl text-center">
-                    <p className="font-body text-base text-text-tertiary">{emptyMessage}</p>
+                    {emptyStateContent}
                   </td>
                 </tr>
               )}
@@ -574,9 +629,7 @@ function SessionsPageInner({ sessions, isMock }: { sessions: MockSession[]; isMo
         {/* Mobile cards */}
         <div className="lg:hidden divide-y divide-border-outline">
           {filtered.length === 0 && (
-            <div className="px-lg py-xl text-center">
-              <p className="font-body text-base text-text-tertiary">{emptyMessage}</p>
-            </div>
+            <div className="px-lg py-xl text-center">{emptyStateContent}</div>
           )}
           {filtered.map((session) => {
             const cfg = getSessionStatusConfig(session.status);

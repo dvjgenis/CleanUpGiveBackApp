@@ -2,6 +2,45 @@
 
 ---
 
+## [2026-08-12] — Admin Sessions visibility: diagnose “not syncing” → default All + approve polish
+
+**End goal:** Donna can see mobile-logged sessions in `admin-web-app` and approve them without hunting for **All** or hitting stale Approve/Decline buttons. Co-developer report: “sessions aren’t syncing” after a GitHub push — needed root-cause + fix.
+
+**Approach:**
+1. **Diagnose before coding** — trace mobile → Fly finalize → Supabase → admin read path. Clarify that git push does **not** sync session **data** (only deploys `admin-web-app` code); Fly sessions API is manual `fly deploy`.
+2. **Reproduce with co-dev clarification** — sessions **do** appear on the mobile app; admin was empty until period **All**. Confirmed UX/period-filter trap, not a broken backend sync.
+3. **Rank remaining risks** — Fly `/health/deep` OK; service-role on Vercel Production still a separate ops check; mobile finalize/checkpoint races out of scope for this pass.
+4. **Ship admin-only polish** — default `/sessions` to All, fix Dashboard deep links, empty-state CTA, optimistic approve UI, drawer moderation gates.
+
+**Investigation (diagnosis only):**
+| Finding | Implication |
+|---------|-------------|
+| Mobile Sessions tab lists `under_review` via Fly `GET /sessions` | Finalize path works; rows exist in Supabase |
+| Admin `/sessions` defaulted to **Today** (`parsePeriod` → `"day"`) | Older/cross-midnight submissions hidden until **All** |
+| Dashboard Waiting tile linked to bare `/sessions` | Full queue on Home → empty list after click |
+| GitHub push ≠ Fly deploy | Pushing code never moves session data |
+| Fly `cleanup-sessions` healthy (`/health`, `/health/deep` DB true) | Not the Aug historical `DATABASE_URL` outage |
+
+**Steps done:**
+1. **Diagnosis** — documented ranked causes (period default, Vercel `SUPABASE_SERVICE_ROLE_KEY`, approve UI bugs); ruled out “sessions not reaching backend” given mobile visibility.
+2. **`admin-web-app/src/app/sessions/page.tsx`** — server redirect bare `/sessions` → `?period=all` (preserves `open=`).
+3. **`SessionsPage.tsx`** — client guard when PeriodToggle strips query params; period-empty state with outside-window count + **Show all sessions**; optimistic `updateLocalStatus` after live approve/decline/bulk.
+4. **`PeriodToggle.tsx`** — Today writes `period=day` explicitly.
+5. **`DashboardPage.tsx`** — Waiting / Approved / Hours tiles → `/sessions?period=all`.
+6. **`SessionPreviewDrawer.tsx`** — Approve/Decline only when `under_review`; error feedback red.
+7. **`actions/sessions.ts`** — bulk notify passes `adminUserId`.
+8. **Verify** — `cd admin-web-app && npm run build` clean; local `/sessions` issues 307 → `?period=all`.
+9. **Docs** — `docs/admin-web-app.md`, `docs/current.md`, this entry.
+
+**Current failure / follow-up:**
+- **None blocking locally** — polish shipped; build green.
+- **Production:** Vercel deploy needed for live admin (`cleanupgiveback-web-app.vercel.app`). Confirm Production env has `SUPABASE_SERVICE_ROLE_KEY` (same Supabase project as mobile) or admin lists stay empty even on All.
+- **Out of scope (logged earlier):** mobile finalize-before-checkpoint-upload race, Pay Later silent sync failure, stuck `active` rows — separate pass if they recur.
+
+**Status:** Done (code + docs); awaiting Vercel production deploy for Donna.
+
+---
+
 ## [2026-08-12] — Free-hour paywall: Pay Later ends session → detail + Go Home (documented)
 
 **End goal:** Document the shipped free-hour paywall behavior after QA: 1-hour default restored; Pay Later finalizes and opens session detail; session detail can return Home via primary CTA and back chevron.

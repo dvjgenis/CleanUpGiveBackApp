@@ -304,6 +304,7 @@ function AdminActionsSection({
   isMock,
   isPending,
   feedback,
+  feedbackKind,
   showDeclinePicker,
   onApprove,
   onStartDecline,
@@ -316,6 +317,7 @@ function AdminActionsSection({
   isMock: boolean;
   isPending: boolean;
   feedback: string | null;
+  feedbackKind: "success" | "error" | null;
   showDeclinePicker: boolean;
   onApprove: () => void;
   onStartDecline: () => void;
@@ -361,7 +363,13 @@ function AdminActionsSection({
         />
       )}
       {feedback ? (
-        <p className="font-body text-[12px] text-primary">{feedback}</p>
+        <p
+          className={`font-body text-[12px] ${
+            feedbackKind === "error" ? "text-[#ba1a1a]" : "text-primary"
+          }`}
+        >
+          {feedback}
+        </p>
       ) : (
         <p className="font-body text-[12px] text-text-tertiary">
           {isMock
@@ -583,6 +591,7 @@ function SessionDrawerPanel({
   const [volunteerPattern, setVolunteerPattern] = useState<VolunteerActivityPattern | null>(null);
   const [actionPending, startActionTransition] = useTransition();
   const [actionFeedback, setActionFeedback] = useState<string | null>(null);
+  const [actionFeedbackKind, setActionFeedbackKind] = useState<"success" | "error" | null>(null);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -659,8 +668,9 @@ function SessionDrawerPanel({
     volunteerPattern,
   });
 
-  const canApprove = status !== "approved";
-  const canDecline = status !== "not_approved";
+  const canModerate = status === "under_review";
+  const canApprove = canModerate;
+  const canDecline = canModerate;
   const [showDeclinePicker, setShowDeclinePicker] = useState(false);
 
   function handleApprove() {
@@ -668,14 +678,17 @@ function SessionDrawerPanel({
       if (isMock) {
         setStatus("approved");
         setActionFeedback("Approved (demo — not saved)");
+        setActionFeedbackKind("success");
         return;
       }
       try {
         await approveSession(session.id);
         setStatus("approved");
         setActionFeedback("Approved");
+        setActionFeedbackKind("success");
       } catch (err) {
         setActionFeedback(err instanceof Error ? err.message : "Approve failed");
+        setActionFeedbackKind("error");
       }
     });
   }
@@ -685,6 +698,7 @@ function SessionDrawerPanel({
       if (isMock) {
         setStatus("not_approved");
         setActionFeedback("Declined (demo — not saved)");
+        setActionFeedbackKind("success");
         setShowDeclinePicker(false);
         return;
       }
@@ -692,9 +706,11 @@ function SessionDrawerPanel({
         await declineSession(session.id, reason);
         setStatus("not_approved");
         setActionFeedback("Declined");
+        setActionFeedbackKind("success");
         setShowDeclinePicker(false);
       } catch (err) {
         setActionFeedback(err instanceof Error ? err.message : "Decline failed");
+        setActionFeedbackKind("error");
       }
     });
   }
@@ -832,6 +848,7 @@ function SessionDrawerPanel({
                   isMock={isMock}
                   isPending={actionPending}
                   feedback={actionFeedback}
+                  feedbackKind={actionFeedbackKind}
                   showDeclinePicker={showDeclinePicker}
                   onApprove={() => handleApprove()}
                   onStartDecline={() => setShowDeclinePicker(true)}
