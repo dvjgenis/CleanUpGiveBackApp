@@ -92,7 +92,12 @@ export function formatCountdown(totalSeconds: number): string {
   return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 }
 
-/** Figma live-session checkpoint label — e.g. `30:00 minutes`. */
+/** Formats checkpoint countdown — e.g. `30:00`. */
 export function formatCheckpointDue(totalSeconds: number): string {
-  return `${formatCountdown(totalSeconds)} minutes`;
+  return formatCountdown(totalSeconds);
+}
+
+/** Grace-period label — e.g. `08:42`. */
+export function formatGraceRemaining(totalSeconds: number): string {
+  return formatCountdown(totalSeconds);
 }

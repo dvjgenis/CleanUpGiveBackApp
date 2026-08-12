@@ -10,8 +10,9 @@ Shared UI components in `frontend/src/components/`.
 | ThemedView | `themed-view.tsx` | Theme-aware container |
 | EmptyState | `ui/EmptyState.tsx` | Shared blank-state card (title/body/CTA) — used by Sessions, Cart, Orders, Donations, Events; previously each screen hand-rolled its own |
 | LiveSessionResumeGate | `LiveSessionResumeGate.tsx` | Cold-start modal after process death — **Resume** / **Discard** when an AsyncStorage live-session draft exists and the remote session is still `active` (or local-only); on resume, auto-finalizes if checkpoint grace expired; mounted from root `_layout.tsx` |
-| CheckpointMissNavigationGate | `CheckpointMissNavigationGate.tsx` | Routes to `/missed-checkpoint` when finalize ran without `LiveSessionScreen` mounted |
-| CheckpointNotificationBootstrap | `CheckpointNotificationBootstrap.tsx` | Local notification presentation + tap-through to checkpoint / missed screens |
+| CheckpointSessionGate | `CheckpointSessionGate.tsx` | Global due/grace/forced-end routing from any tab while session active |
+| CheckpointAlertLoop | `CheckpointAlertLoop.tsx` | Plays `photo-checkpoint-alert.wav` + haptics when due/in grace (~45s repeats) |
+| CheckpointNotificationBootstrap | `CheckpointNotificationBootstrap.tsx` | Local notification presentation, foreground sound fallback, tap-through routing |
 | isExpoGoClient | `frontend/src/utils/isExpoGoClient.ts` | Expo Go detection (`StoreClient` **or** `appOwnership === 'expo'`) so MapLibre native is never required in Expo Go |
 | volunteerDeletedSessions | `frontend/src/features/session-tracking/volunteerDeletedSessions.ts` | AsyncStorage-backed tombstones so deleted session ids stay off Sessions list / Home hydrate across app restarts |
 | ExternalLink | `external-link.tsx` | Opens URLs in in-app browser |

@@ -55,7 +55,7 @@ Ask:
 - [ ] Hours claimed vs **cleanup signal** (photos + path shape) proportional?
 - [ ] Pattern of **many short** easy-looking sessions, or **one long idle** session, aimed at court totals?
 - [ ] History of **delete + resubmit** under-review sessions (approved cannot be volunteer-deleted)?
-- [ ] Frequent `invalid` / missed-checkpoint then requests for **manual credit**?
+- [ ] Frequent discard/abandon (missing end photos) then requests for **manual credit**?
 - [ ] Checkpoints barely met (photo every ~30m) with **minimal movement** between them?
 
 **Common games:** wall-clock padding; checkpoint theater; delete-and-retry until the drawer looks clean.
@@ -98,7 +98,7 @@ Flag for closer human review when several apply:
 3. Checkpoint photos look reused or off-route  
 4. Selfie identity mismatch or low-effort selfies  
 5. Court-ordered + near deadline + sudden session volume  
-6. Repeated delete/resubmit or frequent invalid → dispute  
+6. Repeated delete/resubmit or frequent discard/abandon → dispute  
 
 One red flag ≠ decline. **Pattern + weak evidence** ≠ approve on faith.
 
@@ -106,7 +106,7 @@ One red flag ≠ decline. **Pattern + weak evidence** ≠ approve on faith.
 
 ## What already helps (do not regress)
 
-- Timed dual checkpoints; miss → `invalid`
+- Timed dual checkpoints; grace miss → forced-end submit with start + end photos (mid optional; no auto-invalid / no flag)
 - Route + checkpoint lat/lng on admin walking path
 - Human approve before hours / letters count
 - Approved sessions not volunteer-deletable

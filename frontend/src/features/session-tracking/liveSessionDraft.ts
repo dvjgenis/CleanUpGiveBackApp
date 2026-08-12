@@ -37,6 +37,10 @@ export type LiveSessionDraft = {
   mapLayer: MapLayerType;
   mapFollowEnabled: boolean;
   savedAt: number;
+  forcedEndPending?: boolean;
+  trackingFrozenAt?: number | null;
+  frozenElapsedSeconds?: number;
+  frozenDistanceMiles?: number;
 };
 
 export type LiveSessionResumeOffer = {
@@ -62,6 +66,10 @@ type LiveSessionStateSnapshot = {
   submittedCheckpoints: DraftPhotoCheckpoint[];
   mapLayer: MapLayerType;
   mapFollowEnabled: boolean;
+  forcedEndPending?: boolean;
+  trackingFrozenAt?: number | null;
+  frozenElapsedSeconds?: number;
+  frozenDistanceMiles?: number;
 };
 
 let persistTimer: ReturnType<typeof setTimeout> | null = null;
@@ -93,6 +101,10 @@ function draftFromState(state: LiveSessionStateSnapshot): LiveSessionDraft | nul
     mapLayer: state.mapLayer,
     mapFollowEnabled: state.mapFollowEnabled,
     savedAt: Date.now(),
+    forcedEndPending: state.forcedEndPending,
+    trackingFrozenAt: state.trackingFrozenAt,
+    frozenElapsedSeconds: state.frozenElapsedSeconds,
+    frozenDistanceMiles: state.frozenDistanceMiles,
   };
 }
 

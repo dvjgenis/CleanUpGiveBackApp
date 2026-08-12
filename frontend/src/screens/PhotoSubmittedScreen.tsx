@@ -31,6 +31,8 @@ import {
   formatSubmittedCheckpointCount,
 } from '@/features/session-tracking/utils/sessionFormat';
 
+import { shouldTriggerPaywallAfterCheckpoint } from '@/features/session-tracking/trackerPaymentStore';
+
 import { colors as tokens } from '@/constants/tokens';
 
 const C = {
@@ -136,7 +138,12 @@ export function PhotoSubmittedScreen() {
                 <Animated.View style={ctaStyle}>
                   <AnimatedPressable
                     style={s.continueBtn}
-                    onPress={() => router.dismissTo('/live-session')}
+                    onPress={() => {
+                      router.dismissTo('/live-session');
+                      if (shouldTriggerPaywallAfterCheckpoint(submittedCheckpointCount)) {
+                        router.push('/free-trial-done');
+                      }
+                    }}
                     accessibilityRole="button"
                     accessibilityLabel="Continue tracking"
                   >

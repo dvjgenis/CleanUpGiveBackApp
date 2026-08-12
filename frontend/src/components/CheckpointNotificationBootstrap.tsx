@@ -7,8 +7,16 @@ import {
 } from '@/features/session-tracking/checkpointNotifications';
 import {
   getLiveSessionState,
-  isCheckpointMissed,
+  isCheckpointDueOrGrace,
+  isForcedEndPending,
 } from '@/features/session-tracking/liveSessionStore';
+import { alertPhotoCheckpointDue } from '@/utils/photoCheckpointAlert';
+
+function isPhotoCheckpointNotification(
+  notification: Notifications.Notification,
+): boolean {
+  return notification.request.content.data?.type === 'photo-checkpoint';
+}
 
 /** Wires local notification presentation and tap-through routing for checkpoints. */
 export function CheckpointNotificationBootstrap() {
@@ -17,16 +25,47 @@ export function CheckpointNotificationBootstrap() {
   useEffect(() => {
     configureCheckpointNotificationPresentation();
 
-    const subscription = Notifications.addNotificationResponseReceivedListener(() => {
-      const { isActive } = getLiveSessionState();
-      if (!isActive || isCheckpointMissed()) {
-        router.push('/missed-checkpoint');
-        return;
-      }
-      router.push('/photo-checkpoint');
-    });
+    const receivedSubscription = Notifications.addNotificationReceivedListener(
+      (notification) => {
+        if (!isPhotoCheckpointNotification(notification)) {
+          return;
+        }
 
-    return () => subscription.remove();
+        const { isActive } = getLiveSessionState();
+        if (!isActive) {
+          return;
+        }
+
+        // Foreground OS banners often skip sound; play the in-app alert clip.
+        void alertPhotoCheckpointDue();
+      },
+    );
+
+    const responseSubscription = Notifications.addNotificationResponseReceivedListener(
+      () => {
+        const { isActive } = getLiveSessionState();
+        if (!isActive) {
+          return;
+        }
+
+        if (isForcedEndPending()) {
+          router.push('/live-session');
+          return;
+        }
+
+        if (isCheckpointDueOrGrace()) {
+          router.push('/photo-checkpoint');
+          return;
+        }
+
+        router.push('/live-session');
+      },
+    );
+
+    return () => {
+      receivedSubscription.remove();
+      responseSubscription.remove();
+    };
   }, [router]);
 
   return null;

@@ -2,6 +2,50 @@
 
 ---
 
+## [2026-08-11 Session 2] — Checkpoint grace, forced-end submit, alert audio
+
+**End goal:** Volunteers never get stuck after canceling the camera at checkpoint time. Every **submitted** session has at least **4 photos** (start pair + end pair). Mid 30‑min checkpoints may be missed with **no admin flag / no DB column**. Tracking freezes when the **10‑min grace** expires until the user takes forced-end photos. Abandon without end photos → discard / restart (session is **not** submitted).
+
+**Approach:**
+- Replace grace-miss → `invalid` + `/missed-checkpoint` dead-end with **forced-end** dual capture → `under_review`
+- Store owns `forcedEndPending` + frozen elapsed/distance/GPS; global `CheckpointSessionGate` prompts from any tab
+- Due/grace UI always shows **Take Photo**; modal stays open for full grace; cancel camera returns with CTA still available
+- Paywall **8b**: after unpaid user submits **3rd** checkpoint (~60 min), never during due/grace/forced-end
+- Scratch planned `missedCheckpoint` flag / Incomplete checkpoints admin badge (never applied migration; deleted `016`)
+- Fix in-app alert audio: preload `photo-checkpoint-alert.wav`, play with haptics via `CheckpointAlertLoop`
+
+**Steps done so far:**
+1. Locked policy (10‑min grace, forced-end, discard without end photos, global gate, paywall 8b)
+2. Store + draft: grace helpers, `forcedEndPending`, freeze tracking, finalize without flag
+3. Tracker / photo-checkpoint / capture UI: Take Photo CTA, grace copy, modal stay-open, forced-end Complete Session
+4. `CheckpointSessionGate` + notification routing; `/missed-checkpoint` narrowed to discard-only
+5. Paywall after 3rd checkpoint (`trackerPaymentStore` / PhotoSubmitted)
+6. Scratched admin flag path; no `missed_checkpoint` column (016 deleted — ADD never applied)
+7. Alert audio: preload + wait-for-load, `CheckpointAlertLoop`, foreground notification sound fallback
+8. Living docs: session-tracking spec, `app.md`, `components.md`, `current.md`, backend sessions docs, abuse checklist
+
+**Current failure (resolved this session):**
+1. ~~Cancel camera at due → tracker with no Take Photo / popup dead-end~~
+2. ~~Tracker showed `Next photo due in: 00:00 minutes` instead of grace countdown~~
+3. ~~Grace miss → `invalid` session that could not be submitted~~
+4. ~~Checkpoint alert buzzed + bannered but no audio clip~~
+
+### Tasks
+
+| Task | Status |
+|------|--------|
+| Store: 10-min grace, `forcedEndPending`, freeze tracking, finalize `under_review` only | ✅ |
+| Tracker + capture UI: Take Photo CTA, grace copy, modal stay-open, paywall 8b | ✅ |
+| Global `CheckpointSessionGate` + notification routing; discard-only `/missed-checkpoint` | ✅ |
+| No `missed_checkpoint` DB/admin flag (016 deleted; never applied) | ✅ |
+| Checkpoint alert audio (`photo-checkpoint-alert.wav` + `CheckpointAlertLoop`) | ✅ |
+| Living docs + this progress entry | ✅ |
+| Commit + push to `origin/main` | ✅ |
+
+**Verify:** `cd frontend && npx tsc --noEmit` passes. Manual smoke: cancel at due → Take Photo; grace countdown; miss → forced-end → submit; abandon without end photos → Home; alert plays sound.
+
+---
+
 ## [2026-08-11 Session 1] — Court-ordered hours rework (reset-on-letterhead, not tracked-to-completion), email template consolidation, county-only heatmap
 
 **Session goal:** Stop tracking/showing "hours remaining to complete" for court-ordered volunteers anywhere (mobile + admin) — completed hours now reset to zero each time a service letter is generated, with a manual + bulk reset option for Donna. Consolidate the Emails tab down to 2 editable templates (hours reminder, order tracking) while keeping transactional sends (approve/decline/event registration) working. Simplify the admin US activity map to a single county-level choropleth with a metric filter, dropping the state/neighborhood drill-down.

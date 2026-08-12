@@ -72,6 +72,11 @@ function subscribe(listener: () => void): () => void {
   };
 }
 
+/** True when unpaid user should see paywall after submitting the 60-min checkpoint (3rd set). */
+export function shouldTriggerPaywallAfterCheckpoint(checkpointCount: number): boolean {
+  return !getTrackerHasPaid() && checkpointCount >= 3;
+}
+
 export function useTrackerHasPaid(): boolean {
   return useSyncExternalStore(subscribe, getTrackerHasPaid, getTrackerHasPaid);
 }

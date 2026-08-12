@@ -62,7 +62,7 @@ Record checkpoint metadata after client uploads photos to Storage.
 
 #### `PATCH /sessions/:id/finalize`
 
-End session and submit for review (or mark invalid after a missed checkpoint).
+End session and submit for review.
 
 - **Body:**
   ```json
@@ -74,9 +74,9 @@ End session and submit for review (or mark invalid after a missed checkpoint).
     "status": "under_review"
   }
   ```
-- **`status` (optional):** `under_review` (default) or `invalid` (missed-checkpoint flow from the client)
+- **`status` (optional):** `under_review` (default) or `invalid` (legacy)
 - **Response:** `200 { "id": "<uuid>", "status": "under_review" | "invalid" }`
-- **Side effects:** sets `ended_at`, duration, distance, route jsonb; `status → under_review` or `invalid`
+- **Side effects:** sets `ended_at`, duration, distance, route jsonb; `status → under_review` (default)
 - **Duration:** server computes `duration_seconds` from `started_at` and request `endedAt` (client `durationSeconds` is ignored when `started_at` is set)
 
 #### `GET /sessions`

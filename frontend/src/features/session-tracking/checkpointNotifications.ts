@@ -6,7 +6,7 @@ import {
   PHOTO_CHECKPOINT_INTERVAL_SECONDS,
 } from './checkpointConstants';
 
-export const CHECKPOINT_NOTIFICATIONS_CHANNEL_ID = 'photo-checkpoints';
+export const CHECKPOINT_NOTIFICATIONS_CHANNEL_ID = 'photo-checkpoints-v2';
 
 const SCHEDULED_ID_PREFIX = 'checkpoint-reminder-';
 
@@ -54,7 +54,7 @@ export async function scheduleCheckpointNotifications(
   const now = Date.now();
 
   const contentBase = {
-    sound: true,
+    sound: 'default' as const,
     priority: Notifications.AndroidNotificationPriority.MAX,
     ...(Platform.OS === 'android'
       ? { channelId: CHECKPOINT_NOTIFICATIONS_CHANNEL_ID }

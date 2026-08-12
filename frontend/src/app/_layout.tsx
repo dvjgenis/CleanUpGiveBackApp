@@ -5,7 +5,8 @@ import { Stack } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { AuthProvider } from '@/components/AuthProvider';
-import { CheckpointMissNavigationGate } from '@/components/CheckpointMissNavigationGate';
+import { CheckpointAlertLoop } from '@/components/CheckpointAlertLoop';
+import { CheckpointSessionGate } from '@/components/CheckpointSessionGate';
 import { CheckpointNotificationBootstrap } from '@/components/CheckpointNotificationBootstrap';
 import { LiveSessionResumeGate } from '@/components/LiveSessionResumeGate';
 import { prefetchAllOnboardingGraphics } from '@/components/onboarding/onboardingGraphics';
@@ -14,12 +15,15 @@ import { prefetchAllShopGraphics } from '@/features/figma-screens/shopAssets';
 
 import '@/features/session-tracking/backgroundLocationTask';
 
+import { preloadPhotoCheckpointAlert } from '@/utils/photoCheckpointAlert';
+
 // Kick off tour + session-setup image prefetch immediately at module load —
 // before any navigation occurs — so images are in expo-image's memory-disk
 // cache by the time the onboarding screens are visited.
 prefetchAllTourGraphics();
 prefetchAllOnboardingGraphics();
 prefetchAllShopGraphics();
+void preloadPhotoCheckpointAlert();
 
 const guideBackwardScreenOptions = {
   animationTypeForReplace: 'pop' as const,
@@ -65,7 +69,8 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <AuthProvider>
         <CheckpointNotificationBootstrap />
-        <CheckpointMissNavigationGate />
+        <CheckpointAlertLoop />
+        <CheckpointSessionGate />
         <LiveSessionResumeGate />
         <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" options={homeScreenOptions} />

@@ -7,7 +7,7 @@ import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import {
   bootstrapLiveSessionResumeOffer,
   discardPendingLiveSessionResume,
-  evaluateCheckpointMissAndFinalize,
+  evaluateForcedEndTransition,
   getPendingLiveSessionResume,
   resumeLiveSessionFromDraft,
   subscribeLiveSession,
@@ -41,16 +41,17 @@ export function LiveSessionResumeGate() {
     }
 
     void resumeLiveSessionFromDraft(offer.draft).then(() => {
-      if (evaluateCheckpointMissAndFinalize()) {
-        router.replace('/missed-checkpoint');
-        return;
-      }
+      evaluateForcedEndTransition();
       router.push('/live-session');
     });
   };
 
   const handleDiscard = () => {
+    const hadForcedEnd = offer?.draft.forcedEndPending;
     void discardPendingLiveSessionResume();
+    if (hadForcedEnd) {
+      router.replace('/missed-checkpoint');
+    }
   };
 
   return (

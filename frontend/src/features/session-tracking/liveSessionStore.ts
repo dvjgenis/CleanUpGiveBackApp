@@ -127,6 +127,11 @@ type LiveSessionState = {
   submittedCheckpoints: PhotoCheckpointSubmission[];
   sessionSyncWarning: string | null;
   backgroundLocationEnabled: boolean;
+  /** Grace expired — tracking frozen until forced-end photos. */
+  forcedEndPending: boolean;
+  trackingFrozenAt: number | null;
+  frozenElapsedSeconds: number;
+  frozenDistanceMiles: number;
 };
 
 let state: LiveSessionState = {
@@ -150,6 +155,10 @@ let state: LiveSessionState = {
   submittedCheckpoints: [],
   sessionSyncWarning: null,
   backgroundLocationEnabled: false,
+  forcedEndPending: false,
+  trackingFrozenAt: null,
+  frozenElapsedSeconds: 0,
+  frozenDistanceMiles: 0,
 };
 
 let completedSessionSnapshot: CompletedSessionSnapshot | null = null;
@@ -165,7 +174,6 @@ let lastRouteAppendTimestamp: number | null = null;
 let lastProcessedSampleTimestamp: number | null = null;
 let lastProcessedCoordinate: RouteCoordinate | null = null;
 let pendingResumeOffer: LiveSessionResumeOffer | null = null;
-let pendingMissedCheckpointNavigation = false;
 let locationKalman: LocationKalmanFilter = createLocationKalmanFilter();
 let compassAvailable = false;
 let lastHeadingNotifyMs = 0;
@@ -215,11 +223,16 @@ function syncSessionClocks() {
     return;
   }
 
+  if (state.trackingFrozenAt != null) {
+    evaluateForcedEndTransition();
+    return;
+  }
+
   setState({
     elapsedSeconds: deriveElapsedSeconds(state.startedAt),
     checkpointSecondsRemaining: deriveCheckpointSecondsRemaining(state.checkpointWindowStartedAt),
   });
-  evaluateCheckpointMissAndFinalize();
+  evaluateForcedEndTransition();
 }
 
 function startTicking() {
@@ -285,7 +298,7 @@ function appendRouteSample(sample: RouteSample) {
 }
 
 function recordLocationSample(position: Location.LocationObject) {
-  if (!state.isActive || state.startedAt == null) {
+  if (!state.isActive || state.startedAt == null || state.trackingFrozenAt != null) {
     return;
   }
 
@@ -460,7 +473,7 @@ function recordLocationSample(position: Location.LocationObject) {
 
 export function ingestBackgroundLocationSample(position: Location.LocationObject) {
   recordLocationSample(position);
-  evaluateCheckpointMissAndFinalize();
+  evaluateForcedEndTransition();
 }
 
 function getForegroundWatchOptions(): Location.LocationOptions {
@@ -1082,7 +1095,7 @@ export function hasSubmittedCheckpointForCurrentWindow(): boolean {
 }
 
 export function isCheckpointMissed(): boolean {
-  if (!state.isActive || state.checkpointWindowStartedAt == null) {
+  if (!state.isActive || state.checkpointWindowStartedAt == null || state.forcedEndPending) {
     return false;
   }
 
@@ -1098,7 +1111,7 @@ export function isCheckpointMissed(): boolean {
 }
 
 export function isCheckpointInGracePeriod(): boolean {
-  if (!state.isActive || state.checkpointWindowStartedAt == null) {
+  if (!state.isActive || state.checkpointWindowStartedAt == null || state.forcedEndPending) {
     return false;
   }
 
@@ -1111,7 +1124,54 @@ export function isCheckpointInGracePeriod(): boolean {
   return overdueMs >= intervalMs && overdueMs <= intervalMs + CHECKPOINT_MISS_GRACE_MS;
 }
 
+/** Seconds left in the 10-minute grace window after a checkpoint is due. */
+export function getGraceSecondsRemaining(): number {
+  if (!state.isActive || state.checkpointWindowStartedAt == null || state.forcedEndPending) {
+    return 0;
+  }
+
+  if (hasSubmittedCheckpointForCurrentWindow()) {
+    return 0;
+  }
+
+  const graceEndsAt =
+    state.checkpointWindowStartedAt +
+    PHOTO_CHECKPOINT_INTERVAL_SECONDS * 1000 +
+    CHECKPOINT_MISS_GRACE_MS;
+  return Math.max(0, Math.ceil((graceEndsAt - Date.now()) / 1000));
+}
+
+/** True when the current checkpoint is due or within grace (mid photo still required). */
+export function isCheckpointDueOrGrace(): boolean {
+  if (!state.isActive || state.checkpointWindowStartedAt == null || state.forcedEndPending) {
+    return false;
+  }
+
+  if (hasSubmittedCheckpointForCurrentWindow()) {
+    return false;
+  }
+
+  const overdueMs = Date.now() - state.checkpointWindowStartedAt;
+  return overdueMs >= PHOTO_CHECKPOINT_INTERVAL_SECONDS * 1000;
+}
+
+export function isForcedEndPending(): boolean {
+  return state.isActive && state.forcedEndPending;
+}
+
+export function canSubmitCheckpointForCurrentWindow(): boolean {
+  if (!state.isActive || state.forcedEndPending) {
+    return false;
+  }
+
+  return !hasSubmittedCheckpointForCurrentWindow();
+}
+
 export function isDraftCheckpointMissed(draft: LiveSessionDraft): boolean {
+  if (draft.forcedEndPending) {
+    return false;
+  }
+
   const windowStart = draft.checkpointWindowStartedAt;
   const submittedInWindow = draft.submittedCheckpoints.some(
     (checkpoint) => checkpoint.capturedAt >= windowStart,
@@ -1127,21 +1187,44 @@ export function isDraftCheckpointMissed(draft: LiveSessionDraft): boolean {
   );
 }
 
-export function consumePendingMissedCheckpointNavigation(): boolean {
-  const pending = pendingMissedCheckpointNavigation;
-  pendingMissedCheckpointNavigation = false;
-  return pending;
+function enterForcedEndPending() {
+  if (!state.isActive || state.forcedEndPending) {
+    return;
+  }
+
+  stopLocationWatching();
+  void cancelCheckpointNotifications();
+
+  const frozenElapsed = state.elapsedSeconds;
+  const frozenDistance = state.distanceMiles;
+
+  setState({
+    forcedEndPending: true,
+    trackingFrozenAt: Date.now(),
+    frozenElapsedSeconds: frozenElapsed,
+    frozenDistanceMiles: frozenDistance,
+    elapsedSeconds: frozenElapsed,
+    distanceMiles: frozenDistance,
+  });
 }
 
-/** Finalizes an invalid session when the grace window has expired. */
-export function evaluateCheckpointMissAndFinalize(): boolean {
+/** Enters forced-end when grace expires (tracking frozen, end photos required). */
+export function evaluateForcedEndTransition(): boolean {
+  if (state.forcedEndPending) {
+    return true;
+  }
+
   if (!isCheckpointMissed()) {
     return false;
   }
 
-  pendingMissedCheckpointNavigation = true;
-  void finalizeLiveSession({ status: 'invalid' });
+  enterForcedEndPending();
   return true;
+}
+
+/** @deprecated Use evaluateForcedEndTransition — kept for callers during migration. */
+export function evaluateCheckpointMissAndFinalize(): boolean {
+  return evaluateForcedEndTransition();
 }
 
 export function clearSessionSyncWarning() {
@@ -1180,6 +1263,10 @@ export async function startNewLiveSession(setup: LiveSessionSetup) {
     submittedCheckpoints: [],
     sessionSyncWarning: null,
     backgroundLocationEnabled: false,
+    forcedEndPending: false,
+    trackingFrozenAt: null,
+    frozenElapsedSeconds: 0,
+    frozenDistanceMiles: 0,
   };
   notify();
   startTicking();
@@ -1197,8 +1284,18 @@ export function addPhotoCheckpoint(submission: {
   capturedAt: number;
   latitude?: number | null;
   longitude?: number | null;
+  /** When true, allow adding during forced-end (session-end capture). */
+  allowForcedEnd?: boolean;
 }): boolean {
   if (!state.isActive) {
+    return false;
+  }
+
+  if (state.forcedEndPending && !submission.allowForcedEnd) {
+    return false;
+  }
+
+  if (!submission.allowForcedEnd && !canSubmitCheckpointForCurrentWindow()) {
     return false;
   }
 
@@ -1269,22 +1366,26 @@ export async function finalizeLiveSession(options?: {
   const endedAt = Date.now();
   const startedAt = state.startedAt ?? endedAt;
   const status = options?.status ?? 'under_review';
+  const elapsedSeconds =
+    state.trackingFrozenAt != null
+      ? state.frozenElapsedSeconds
+      : computeSessionDurationSeconds(startedAt, endedAt);
+  const distanceMiles =
+    state.trackingFrozenAt != null ? state.frozenDistanceMiles : state.distanceMiles;
+
   completedSessionSnapshot = {
     remoteSessionId: state.remoteSessionId,
     setup: state.setup,
     startedAt,
     endedAt,
-    elapsedSeconds: computeSessionDurationSeconds(startedAt, endedAt),
-    distanceMiles: state.distanceMiles,
+    elapsedSeconds,
+    distanceMiles,
     routeCoordinates: [...state.routeCoordinates],
     routeSamples: [...state.routeSamples],
     submittedCheckpoints: [...state.submittedCheckpoints],
     mapLayer: state.mapLayer,
   };
 
-  // Awaited (with retries inside persistFinalizeToRemote) so a real failure is
-  // known before we report success and tear down state — previously this was
-  // fire-and-forget, so a failed sync was silently invisible to the caller.
   const synced = await persistFinalizeToRemote(completedSessionSnapshot, status);
   recordCompletedSession(completedSessionSnapshot);
   recordSessionStatFromSnapshot(completedSessionSnapshot);
@@ -1337,6 +1438,10 @@ export function endLiveSession() {
     submittedCheckpoints: [],
     sessionSyncWarning: null,
     backgroundLocationEnabled: false,
+    forcedEndPending: false,
+    trackingFrozenAt: null,
+    frozenElapsedSeconds: 0,
+    frozenDistanceMiles: 0,
   };
   notify();
 }
@@ -1411,7 +1516,7 @@ export async function bootstrapLiveSessionResumeOffer() {
   pendingResumeOffer = await resolveLiveSessionResumeOffer();
   if (pendingResumeOffer && isDraftCheckpointMissed(pendingResumeOffer.draft)) {
     await resumeLiveSessionFromDraft(pendingResumeOffer.draft);
-    evaluateCheckpointMissAndFinalize();
+    evaluateForcedEndTransition();
     pendingResumeOffer = null;
     notify();
     return;
@@ -1447,9 +1552,15 @@ export async function resumeLiveSessionFromDraft(draft: LiveSessionDraft) {
     remoteSessionId: draft.remoteSessionId,
     startedAt: draft.startedAt,
     checkpointWindowStartedAt: draft.checkpointWindowStartedAt,
-    elapsedSeconds: deriveElapsedSeconds(draft.startedAt),
+    elapsedSeconds:
+      draft.trackingFrozenAt != null
+        ? (draft.frozenElapsedSeconds ?? deriveElapsedSeconds(draft.startedAt))
+        : deriveElapsedSeconds(draft.startedAt),
     checkpointSecondsRemaining: deriveCheckpointSecondsRemaining(draft.checkpointWindowStartedAt),
-    distanceMiles: draft.distanceMiles,
+    distanceMiles:
+      draft.trackingFrozenAt != null
+        ? (draft.frozenDistanceMiles ?? draft.distanceMiles)
+        : draft.distanceMiles,
     setup,
     routeCoordinates: [...sanitizedRoute],
     routeSamples: [...sanitizedSamples],
@@ -1473,14 +1584,22 @@ export async function resumeLiveSessionFromDraft(draft: LiveSessionDraft) {
     })),
     sessionSyncWarning: null,
     backgroundLocationEnabled: false,
+    forcedEndPending: draft.forcedEndPending ?? false,
+    trackingFrozenAt: draft.trackingFrozenAt ?? null,
+    frozenElapsedSeconds: draft.frozenElapsedSeconds ?? deriveElapsedSeconds(draft.startedAt),
+    frozenDistanceMiles: draft.frozenDistanceMiles ?? draft.distanceMiles,
   };
 
   pendingResumeOffer = null;
   notify();
   startTicking();
-  void startLocationWatching();
   persistLiveSessionDraftDebounced(state);
-  if (state.checkpointWindowStartedAt != null) {
+  if (state.forcedEndPending) {
+    stopLocationWatching();
+  } else {
+    void startLocationWatching();
+  }
+  if (state.checkpointWindowStartedAt != null && !state.forcedEndPending) {
     void scheduleCheckpointNotifications(state.checkpointWindowStartedAt);
   }
 }

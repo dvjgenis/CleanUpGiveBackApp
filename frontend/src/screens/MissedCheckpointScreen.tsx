@@ -12,12 +12,13 @@ import {
 } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Circle, Path } from 'react-native-svg';
 
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
-import { useAttentionShake, useFadeUpEnter } from '@/components/motion/hooks';
+import { useFadeUpEnter } from '@/components/motion/hooks';
 import { PlayOnceLottie } from '@/components/ui/PlayOnceLottie';
 import { staggerDelay } from '@/motion';
+
+import { endLiveSession } from '@/features/session-tracking/liveSessionStore';
 
 import { colors as tokens } from '@/constants/tokens';
 
@@ -30,26 +31,11 @@ const C = {
   statusDeclined: tokens.statusDeclinedText,
 } as const;
 
-function ExclamationCircleIcon({ size = 18 }: { size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 18 18" fill="none">
-      <Circle cx={9} cy={9} r={8} stroke={C.statusDeclined} strokeWidth={1.5} />
-      <Path
-        d="M9 5.25v4.5M9 12.75h.0075"
-        stroke={C.statusDeclined}
-        strokeWidth={1.5}
-        strokeLinecap="round"
-      />
-    </Svg>
-  );
-}
-
-/** PRD §6.13 · Figma `photo_missed` (269:1587). */
+/** Shown when a session draft is discarded without end photos — not a grace-miss dead-end. */
 export function MissedCheckpointScreen() {
   const router = useRouter();
-  const heroShakeStyle = useAttentionShake();
   const heroStyle = useFadeUpEnter(0);
-  const infoStyle = useFadeUpEnter(staggerDelay(1));
+  const copyStyle = useFadeUpEnter(staggerDelay(1));
   const actionsStyle = useFadeUpEnter(staggerDelay(2));
 
   const [fontsLoaded] = useFonts({
@@ -57,6 +43,11 @@ export function MissedCheckpointScreen() {
     NotoSans_400Regular,
     NotoSans_600SemiBold,
   });
+
+  const handleReturnHome = () => {
+    endLiveSession();
+    router.replace('/');
+  };
 
   if (!fontsLoaded) {
     return <View style={s.root} />;
@@ -69,42 +60,28 @@ export function MissedCheckpointScreen() {
       <SafeAreaView style={s.overlay} edges={['top', 'bottom']}>
         <Animated.View style={[s.card, heroStyle]}>
           <View style={s.cardContent}>
-            <Animated.View style={[s.heroBlock, heroShakeStyle]}>
+            <Animated.View style={s.heroBlock}>
               <PlayOnceLottie
                 source={require('../../assets/animations/missed-checkpoint.json')}
-                accessibilityLabel="Missed checkpoint"
+                accessibilityLabel="Session not submitted"
                 loop
               />
-              <Text style={s.title}>Missed Checkpoint</Text>
+              <Text style={s.title}>Session not submitted</Text>
             </Animated.View>
 
-            <Animated.View style={[s.infoBox, infoStyle]}>
+            <Animated.View style={[s.infoBox, copyStyle]}>
               <Text style={s.infoPrimary}>
-                Photo checkpoint missed. This session can&apos;t be submitted.
+                This session was not submitted because the required end photos were not taken.
               </Text>
-              <View style={s.infoDivider} />
-              <View style={s.infoRow}>
-                <ExclamationCircleIcon />
-                <Text style={s.infoSecondary}>
-                  To ensure accurate impact tracking, all required visual checkpoints must be
-                  completed. Start a new session to record progress.
-                </Text>
-              </View>
+              <Text style={s.infoSecondary}>
+                Start a new session when you are ready to track again.
+              </Text>
             </Animated.View>
 
             <Animated.View style={[s.actions, actionsStyle]}>
               <AnimatedPressable
-                style={s.restartBtn}
-                onPress={() => router.replace('/photo-capture?mode=session-start')}
-                accessibilityRole="button"
-                accessibilityLabel="Restart session"
-              >
-                <Text style={s.restartBtnText}>Restart Session</Text>
-              </AnimatedPressable>
-
-              <AnimatedPressable
                 style={s.homeBtn}
-                onPress={() => router.replace('/')}
+                onPress={handleReturnHome}
                 accessibilityRole="button"
                 accessibilityLabel="Return home"
               >
@@ -139,7 +116,7 @@ const s = StyleSheet.create({
   card: {
     backgroundColor: C.textOnPrimary,
     borderWidth: 1,
-    borderColor: C.statusDeclined,
+    borderColor: C.borderOutline,
     borderRadius: 16,
     paddingHorizontal: 27,
     paddingVertical: 17,
@@ -166,15 +143,7 @@ const s = StyleSheet.create({
 
   infoBox: {
     width: '100%',
-    backgroundColor: C.textOnPrimary,
-    borderWidth: 1,
-    borderColor: C.borderOutline,
-    borderRadius: 12,
-    minHeight: 169,
-    paddingHorizontal: 19,
-    paddingTop: 15,
-    paddingBottom: 16,
-    gap: 12,
+    gap: 8,
   },
 
   infoPrimary: {
@@ -182,34 +151,22 @@ const s = StyleSheet.create({
     fontSize: 16,
     lineHeight: 22,
     color: C.textPrimary,
-  },
-
-  infoDivider: {
-    height: 1,
-    backgroundColor: C.borderOutline,
-    width: '100%',
-  },
-
-  infoRow: {
-    flexDirection: 'row',
-    gap: 12,
-    alignItems: 'flex-start',
+    textAlign: 'center',
   },
 
   infoSecondary: {
-    flex: 1,
     fontFamily: 'NotoSans_400Regular',
     fontSize: 12,
     lineHeight: 18,
     color: C.textTertiary,
+    textAlign: 'center',
   },
 
   actions: {
     width: '100%',
-    gap: 5,
   },
 
-  restartBtn: {
+  homeBtn: {
     width: '100%',
     height: 59,
     backgroundColor: C.statusDeclined,
@@ -220,24 +177,9 @@ const s = StyleSheet.create({
     paddingVertical: 16,
   },
 
-  restartBtnText: {
-    fontFamily: 'NotoSans_600SemiBold',
-    fontSize: 16,
-    color: C.textOnPrimary,
-  },
-
-  homeBtn: {
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-  },
-
   homeBtnText: {
     fontFamily: 'NotoSans_600SemiBold',
     fontSize: 16,
-    color: C.textPrimary,
-    textAlign: 'center',
+    color: C.textOnPrimary,
   },
 });

@@ -9,8 +9,14 @@ import { colors, fontFamilies, radius as R } from '@/features/figma-screens/toke
 import {
   formatCountdown,
   formatElapsed,
+  formatGraceRemaining,
 } from '@/features/session-tracking/mocks/session';
 import type { PhotoCheckpointSubmission } from '@/features/session-tracking/liveSessionStore';
+import {
+  getGraceSecondsRemaining,
+  isCheckpointDueOrGrace,
+  isForcedEndPending,
+} from '@/features/session-tracking/liveSessionStore';
 
 const PILL_MIN_HEIGHT = 112;
 
@@ -50,6 +56,20 @@ export const LiveSessionMinimizedPill = forwardRef<View, Props>(function LiveSes
   ref,
 ) {
   const progressFillStyle = useAnimatedProgressFill(checkpointProgress);
+  const dueOrGrace = isCheckpointDueOrGrace();
+  const forcedEnd = isForcedEndPending();
+  const graceRemaining = getGraceSecondsRemaining();
+
+  const timeLeftLabel = forcedEnd
+    ? 'finish'
+    : dueOrGrace
+      ? 'due'
+      : 'time left';
+  const timeLeftValue = forcedEnd
+    ? 'Photo'
+    : dueOrGrace
+      ? formatGraceRemaining(graceRemaining)
+      : formatCountdown(checkpointSecondsRemaining);
 
   return (
     <View ref={ref} style={[styles.pill, style]} {...rest}>
@@ -79,8 +99,8 @@ export const LiveSessionMinimizedPill = forwardRef<View, Props>(function LiveSes
           <Text style={styles.statUnit}>time</Text>
         </View>
         <View style={styles.statBlock}>
-          <Text style={styles.timeLeftValue}>{formatCountdown(checkpointSecondsRemaining)}</Text>
-          <Text style={styles.statUnit}>time left</Text>
+          <Text style={styles.timeLeftValue}>{timeLeftValue}</Text>
+          <Text style={styles.statUnit}>{timeLeftLabel}</Text>
         </View>
       </View>
 

@@ -51,7 +51,7 @@ Full schema: [supabase.md](../../supabase.md) §2.
 
 - **Supabase** — Postgres (via Prisma), Auth (anonymous JWT), Storage (photo evidence)
 - **Fly.io** — API hosting
-- **Frontend** — `liveSessionStore` wires `startNewLiveSession` / `addPhotoCheckpoint` / `finalizeLiveSession` to API (local session activates immediately; remote create is best-effort); missed checkpoint → `finalizeLiveSession({ status: 'invalid' })`
+- **Frontend** — `liveSessionStore` wires `startNewLiveSession` / `addPhotoCheckpoint` / `finalizeLiveSession` to API (local session activates immediately; remote create is best-effort); grace miss → `forcedEndPending` + end photos → `finalizeLiveSession({ status: 'under_review' })` (not `invalid`; no missed-checkpoint flag)
 - **Live session draft** — debounced AsyncStorage snapshot while `isActive` (`liveSessionDraft.ts`); cold-start **Resume/Discard** via `LiveSessionResumeGate` (not a server mid-session route sync)
 - **Home stats** — `sessionStatsStore` + `homeDashboardStats.ts` hydrate from list `photoCount` / duration / miles
 - **Maps** — geolocation is client-owned (Kalman + optional background while active); route persisted on finalize. See [maps.md](maps.md).

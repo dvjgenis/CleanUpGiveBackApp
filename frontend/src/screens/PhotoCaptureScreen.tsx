@@ -44,7 +44,7 @@ import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { CoachmarkEnter } from '@/components/motion/CoachmarkEnter';
 import { useFadeUpEnter } from '@/components/motion/hooks';
 import { staggerDelay } from '@/motion';
-import { addPhotoCheckpoint, finalizeLiveSession, resetCheckpointCountdown, resolveCheckpointCaptureCoords, startNewLiveSession, useLiveSession } from '@/features/session-tracking/liveSessionStore';
+import { addPhotoCheckpoint, finalizeLiveSession, isForcedEndPending, resetCheckpointCountdown, resolveCheckpointCaptureCoords, startNewLiveSession, useLiveSession } from '@/features/session-tracking/liveSessionStore';
 import {
   clearPendingSessionSetup,
   consumePendingSessionSetupForm,
@@ -828,7 +828,7 @@ function SequentialCapture({
 export function PhotoCaptureScreen() {
   const router = useRouter();
   const { mode } = useLocalSearchParams<{ mode?: string }>();
-  const { isActive } = useLiveSession();
+  const { isActive, submittedCheckpoints } = useLiveSession();
   const isSessionStart = mode === 'session-start';
   const isSessionEnd = mode === 'session-end';
   /** Capture active state on mount — after End Session finalize, isActive becomes
@@ -936,16 +936,25 @@ export function PhotoCaptureScreen() {
           setSubmitError('No active session. Return to the tracker and try again.');
           return;
         }
-        addPhotoCheckpoint(withCoords);
-        // Session summary + route replay first; feedback is offered from confirmation.
-        // Awaited so a sync failure is captured (getLastFinalizeSyncFailed) before we
-        // navigate away — the confirmation screen surfaces it with a retry option.
+        const added = addPhotoCheckpoint({
+          ...withCoords,
+          allowForcedEnd: isForcedEndPending(),
+        });
+        if (!added) {
+          setSubmitError('Could not save end photos. Please try again.');
+          return;
+        }
         await finalizeLiveSession({ status: 'under_review' });
         router.replace('/submission-confirmation' as Href);
         return;
       }
 
-      addPhotoCheckpoint(withCoords);
+      const added = addPhotoCheckpoint(withCoords);
+      if (!added) {
+        setSubmitError('Checkpoint already submitted for this window.');
+        return;
+      }
+      resetCheckpointCountdown();
       router.replace('/photo-submitted');
     } catch {
       setSubmitError('Could not save photos. Please try again.');

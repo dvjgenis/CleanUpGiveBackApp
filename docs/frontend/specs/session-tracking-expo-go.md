@@ -35,12 +35,12 @@ Wire the existing native session tracking flow (`frontend/src/app/` routes + `li
 - [x] **AC-31:** Onboarding's `/notification-preference` **Enable notifications** button fires the real `expo-notifications` `requestPermissionsAsync()` (native iOS prompt) before continuing to `/setup-complete`; Account → Permissions gets a third **Notifications** toggle following the exact same mirror-OS-status / request-on-enable / Open-Settings-on-disable pattern as Camera/Location
 - [x] **AC-4:** `liveSessionStore` accumulates route polyline and distance via `watchPositionAsync` during active session
 - [x] **AC-5:** Location watching stops when session ends (`endLiveSession` / `finalizeLiveSession`) — foreground watch + background task both stop
-- [x] **AC-6:** 30-minute checkpoint countdown runs; **5-minute** grace (`CHECKPOINT_MISS_GRACE_MS`) after due; GPS + elapsed keep running during grace; missed grace calls `evaluateCheckpointMissAndFinalize()` → `finalizeLiveSession({ status: 'invalid' })` and navigates to `/missed-checkpoint` (store tick, background GPS ingest, or cold-start resume — not only `LiveSessionScreen`)
+- [x] **AC-6:** 30-minute checkpoint countdown runs; **10-minute** grace (`CHECKPOINT_MISS_GRACE_MS`) after due; GPS + elapsed keep running during grace; grace miss → `forcedEndPending` (tracking frozen) → forced-end dual capture → `finalizeLiveSession({ status: 'under_review' })` (store tick, background GPS ingest, or cold-start resume — not only `LiveSessionScreen`). Mid checkpoints may be skipped with no admin flag; abandon without end photos → discard (not submitted)
 - [x] **AC-39:** Session start: session setup **form** → **Start Session** stashes setup → `/photo-capture?mode=session-start` → `startNewLiveSession` + first `addPhotoCheckpoint` (GPS + elapsed begin only after dual photos)
-- [x] **AC-40:** Escalating checkpoint reminders: in-app `alertPhotoCheckpointDue` when due + every ~45s during grace; scheduled local notifications via `checkpointNotifications.ts` (high-importance Android channel); cancelled on submit/end; tap opens checkpoint or missed screen. Requires notification permission; EAS/dev client for reliable background delivery (Expo Go foreground-limited)
+- [x] **AC-40:** Escalating checkpoint reminders: in-app `alertPhotoCheckpointDue` (`photo-checkpoint-alert.wav`, preloaded at app start) via `CheckpointAlertLoop` when due + every ~45s during grace; scheduled local notifications via `checkpointNotifications.ts` (high-importance Android channel `photo-checkpoints-v2`, `sound: 'default'`); foreground notification tap/receive also routes through alert when session active; cancelled on submit/end; tap opens checkpoint modal or live tracker (forced-end). Requires notification permission; EAS/dev client for reliable background delivery (Expo Go foreground-limited)
 - [x] **AC-41:** Volunteer delete treats remote **404** as success and always clears local recent/cache/stats; tombstone registry (AsyncStorage `@cugb/volunteer-deleted-sessions`, hydrated in `AuthProvider` before recent-session hydrate) hides deleted ids from Sessions list + Home recent (no post-delete full API rehydrate that resurrects rows)
-- [x] **AC-42:** Live tracker has **End Session** only (no manual Submit Photo); checkpoint UI opens when the 30-min timer hits zero (modal/notifications)
-- [x] **AC-43:** **End Session** requires final dual photo (`/photo-capture?mode=session-end`) before `finalizeLiveSession` → `/submission-confirmation` (map preview + route replay)
+- [x] **AC-42:** Live tracker shows **Take Photo** / **Complete Session** when checkpoint is due/in grace or forced-end pending; **End Session** available except during forced-end; checkpoint modal opens globally via `CheckpointSessionGate` when the 30-min timer hits zero
+- [x] **AC-43:** **End Session** (or forced-end **Complete Session**) requires final dual photo (`/photo-capture?mode=session-end`) before `finalizeLiveSession` → `/submission-confirmation`; without end photos the session is discarded and must be restarted
 - [x] **AC-32:** Position samples pass through a **2D constant-velocity Kalman** filter (`locationKalman.ts`) before append gates; min-move is `max(2.5m, accuracy×0.45)` with gap recovery after 30s of rejected appends; slow-walk floor **0.14 m/s**
 - [x] **AC-33:** Active session foreground/background watch stays **BestForNavigation** at **1s / ~1 m**; motion state affects append gates only (no watch interval flip on slow walking)
 - [x] **AC-34:** **Background GPS while session active only** via `expo-task-manager` (`backgroundLocationTask.ts`) when Always permission granted; Expo Go is foreground-only (`backgroundLocationEnabled === false` — no tracker banner; session still starts); returning to foreground restarts GPS via `resumeLiveSessionTrackingAfterForeground`
@@ -75,7 +75,7 @@ Wire the existing native session tracking flow (`frontend/src/app/` routes + `li
 
 - [x] **AC-14:** `startNewLiveSession()` → `POST /sessions` via Fly API; stores returned `sessionId` in store state; failure → local-only sync warning
 - [x] **AC-15:** `addPhotoCheckpoint()` → upload selfie + progress to Supabase Storage `session-photos`, then `POST /sessions/:id/checkpoints`; upload/API failure → sync warning (local checkpoint kept)
-- [x] **AC-16:** `finalizeLiveSession()` → `PATCH /sessions/:id/finalize` with route, duration, distance; status `under_review` or `invalid` (missed checkpoint)
+- [x] **AC-16:** `finalizeLiveSession()` → `PATCH /sessions/:id/finalize` with route, duration, distance; status `under_review` (default) or `invalid` (legacy)
 - [x] **AC-17:** Sessions list fetches from `GET /sessions` (replacing or merging with mock data for test phase); list includes `checkpointCount` / `photoCount` for Home impact hydration
 - [x] **AC-21:** Submission confirmation **DURATION** matches **DATE & TIME** range — duration derived from `startedAt`/`endedAt` wall clock (not a stale tick counter); backend finalize recomputes `durationSeconds` server-side
 - [x] **AC-18:** Completed session survives app kill + reopen (API persistence verified via production smoke test; manual Expo Go force-quit test recommended)
@@ -128,10 +128,10 @@ Wire the existing native session tracking flow (`frontend/src/app/` routes + `li
 | `frontend/src/lib/api.ts` | New — Fly API fetch wrapper with JWT |
 | `frontend/src/features/session-tracking/liveSessionStore.ts` | Wire create/checkpoint/finalize to API; resume-from-draft |
 | `frontend/src/features/session-tracking/liveSessionDraft.ts` | Debounced AsyncStorage draft while session active |
-| `frontend/src/features/session-tracking/checkpointConstants.ts` | Checkpoint interval + 5-min grace constants |
+| `frontend/src/features/session-tracking/checkpointConstants.ts` | Checkpoint interval + 10-min grace constants |
 | `frontend/src/features/session-tracking/checkpointNotifications.ts` | Scheduled local checkpoint reminders |
 | `frontend/src/features/session-tracking/pendingSessionSetup.ts` | Stash first dual photos until session setup form submits |
-| `frontend/src/components/CheckpointMissNavigationGate.tsx` | Route to `/missed-checkpoint` after background finalize |
+| `frontend/src/components/CheckpointSessionGate.tsx` | Global due/grace/forced-end routing from any tab |
 | `frontend/src/components/CheckpointNotificationBootstrap.tsx` | Notification handler + tap routing |
 | `frontend/src/components/LiveSessionResumeGate.tsx` | Cold-start Resume / Discard modal |
 | `frontend/src/features/session-tracking/removeVolunteerSession.ts` | Volunteer delete + local cache cleanup |

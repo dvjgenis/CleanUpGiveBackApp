@@ -32,6 +32,7 @@ import { MapTypesSheet } from '@/features/session-tracking/components/MapTypesSh
 import { TrackerActionButton } from '@/features/session-tracking/components/TrackerActionButton';
 import { LocationPinIcon } from '@/features/session-tracking/components/icons/LocationPinIcon';
 import { TrackerEndSessionIcon } from '@/features/session-tracking/components/icons/TrackerEndSessionIcon';
+import { TrackerSubmitPhotoIcon } from '@/features/session-tracking/components/icons/TrackerSubmitPhotoIcon';
 import { TrackerLayersIcon } from '@/features/session-tracking/components/icons/TrackerLayersIcon';
 import { TrackerMapDarkIcon, TrackerMapLightIcon } from '@/features/session-tracking/components/icons/TrackerMapThemeIcons';
 import { TrackerMyLocationIcon } from '@/features/session-tracking/components/icons/TrackerMyLocationIcon';
@@ -39,22 +40,22 @@ import { WeatherConditionIcon } from '@/features/session-tracking/components/ico
 import {
   formatElapsed,
   formatCheckpointDue,
+  formatGraceRemaining,
 } from '@/features/session-tracking/mocks/session';
 import type { PhotoCheckpointSubmission } from '@/features/session-tracking/liveSessionStore';
 import {
-  evaluateCheckpointMissAndFinalize,
   ensureLocationWatching,
   ensureLiveSessionTicking,
   getCheckpointProgress,
-  isCheckpointInGracePeriod,
-  isCheckpointMissed,
+  getGraceSecondsRemaining,
+  isCheckpointDueOrGrace,
+  isForcedEndPending,
   requestLiveSessionMapRecenter,
   retryCheckpointSync,
   setLiveSessionMapFollow,
   setLiveSessionMapLayer,
   useLiveSession,
 } from '@/features/session-tracking/liveSessionStore';
-import { alertPhotoCheckpointDue } from '@/utils/photoCheckpointAlert';
 import {
   toggleManualMapTheme,
   useEffectiveMapTheme,
@@ -64,7 +65,6 @@ import { useLiveSessionMapReveal } from '@/features/session-tracking/hooks/useLi
 import {
   getFreeTrialSecondsRemaining,
   getTrackerHasPaid,
-  isFreeTrialExpired,
 } from '@/features/session-tracking/trackerPaymentStore';
 import { radius } from '@/features/session-tracking/tokens';
 import {
@@ -347,54 +347,15 @@ export function LiveSessionScreen() {
   });
 
   const checkpointProgress = getCheckpointProgress(checkpointSecondsRemaining);
-  const checkpointMissed = isCheckpointMissed();
-  const freeTrialExpired = !getTrackerHasPaid() && isFreeTrialExpired(elapsedSeconds);
-  const checkpointDueAlertedForWindow = useRef<number | null>(null);
+  const checkpointDueOrGrace = isCheckpointDueOrGrace();
+  const forcedEndPending = isForcedEndPending();
+  const graceSecondsRemaining = getGraceSecondsRemaining();
+  const showTakePhotoCta = checkpointDueOrGrace || forcedEndPending;
 
   useEffect(() => {
     void ensureLocationWatching();
     ensureLiveSessionTicking();
   }, []);
-
-  useEffect(() => {
-    if (checkpointSecondsRemaining !== 0 || checkpointWindowStartedAt == null) {
-      return;
-    }
-
-    if (checkpointDueAlertedForWindow.current === checkpointWindowStartedAt) {
-      return;
-    }
-
-    checkpointDueAlertedForWindow.current = checkpointWindowStartedAt;
-    void alertPhotoCheckpointDue();
-    router.push('/photo-checkpoint');
-  }, [checkpointSecondsRemaining, checkpointWindowStartedAt, router]);
-
-  useEffect(() => {
-    if (!isCheckpointInGracePeriod()) {
-      return;
-    }
-
-    void alertPhotoCheckpointDue();
-    const interval = setInterval(() => {
-      void alertPhotoCheckpointDue();
-    }, 45_000);
-
-    return () => clearInterval(interval);
-  }, [checkpointSecondsRemaining, checkpointWindowStartedAt]);
-
-  useEffect(() => {
-    if (checkpointMissed) {
-      evaluateCheckpointMissAndFinalize();
-      router.replace('/missed-checkpoint');
-    }
-  }, [checkpointMissed, router]);
-
-  useEffect(() => {
-    if (freeTrialExpired) {
-      router.push('/free-trial-done');
-    }
-  }, [freeTrialExpired, router]);
 
   if (!fontsLoaded) {
     return <View style={[s.root, { backgroundColor: chrome.mapTint }]} />;
@@ -609,11 +570,19 @@ export function LiveSessionScreen() {
                   <View style={s.nextPhotoBlock}>
                     <View style={s.nextPhotoRow}>
                       <Text style={[s.nextPhotoLabel, { color: chrome.textPrimary }]}>
-                        Next photo due in:
+                        {forcedEndPending
+                          ? 'Session paused — photo required to finish'
+                          : checkpointDueOrGrace
+                            ? 'Photo due —'
+                            : 'Next photo due in:'}
                       </Text>
-                      <Text style={[s.nextPhotoTime, { color: chrome.primary }]}>
-                        {formatCheckpointDue(checkpointSecondsRemaining)}
-                      </Text>
+                      {!forcedEndPending && (
+                        <Text style={[s.nextPhotoTime, { color: chrome.primary }]}>
+                          {checkpointDueOrGrace
+                            ? `${formatGraceRemaining(graceSecondsRemaining)} remaining`
+                            : formatCheckpointDue(checkpointSecondsRemaining)}
+                        </Text>
+                      )}
                     </View>
                     <View
                       style={[
@@ -626,7 +595,9 @@ export function LiveSessionScreen() {
                           s.progressFill,
                           {
                             width: `${checkpointProgress * 100}%`,
-                            backgroundColor: chrome.statusPending,
+                            backgroundColor: checkpointDueOrGrace
+                              ? chrome.statusPending
+                              : chrome.statusPending,
                           },
                         ]}
                       />
@@ -636,13 +607,35 @@ export function LiveSessionScreen() {
               </View>
 
               <View style={s.actions}>
-                <TrackerActionButton
-                  label="End Session"
-                  variant="secondary"
-                  chrome={chrome}
-                  onPress={() => router.push('/photo-capture?mode=session-end' as Href)}
-                  icon={<TrackerEndSessionIcon color={chrome.textTertiary} size={24} />}
-                />
+                {showTakePhotoCta ? (
+                  <TrackerActionButton
+                    label={forcedEndPending ? 'Complete Session' : 'Take Photo'}
+                    variant="primary"
+                    chrome={chrome}
+                    onPress={() =>
+                      router.push(
+                        (forcedEndPending
+                          ? '/photo-capture?mode=session-end'
+                          : '/photo-capture') as Href,
+                      )
+                    }
+                    icon={
+                      <TrackerSubmitPhotoIcon
+                        color={chrome.textOnPrimary}
+                        size={24}
+                      />
+                    }
+                  />
+                ) : null}
+                {!forcedEndPending ? (
+                  <TrackerActionButton
+                    label="End Session"
+                    variant="secondary"
+                    chrome={chrome}
+                    onPress={() => router.push('/photo-capture?mode=session-end' as Href)}
+                    icon={<TrackerEndSessionIcon color={chrome.textTertiary} size={24} />}
+                  />
+                ) : null}
               </View>
             </View>
           </View>

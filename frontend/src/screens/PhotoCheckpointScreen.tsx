@@ -5,7 +5,7 @@ import {
 import { Sanchez_400Regular } from '@expo-google-fonts/sanchez';
 import { useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -18,6 +18,15 @@ import Svg, { Path, Rect } from 'react-native-svg';
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { useFadeUpEnter, useModalCardEnter } from '@/components/motion/hooks';
 import { staggerDelay } from '@/motion';
+
+import { formatGraceRemaining } from '@/features/session-tracking/mocks/session';
+import {
+  ensureLiveSessionTicking,
+  getGraceSecondsRemaining,
+  isCheckpointDueOrGrace,
+  isForcedEndPending,
+  subscribeLiveSession,
+} from '@/features/session-tracking/liveSessionStore';
 
 import { colors as tokens } from '@/constants/tokens';
 
@@ -41,46 +50,36 @@ function PhotoCheckpointCameraIcon({ size = 79 }: { size?: number }) {
   );
 }
 
-const AUTO_DISMISS_SECONDS = 10 * 60;
-
-function formatDismissCountdown(secs: number): string {
-  const m = Math.floor(secs / 60);
-  const s = secs % 60;
-  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-}
-
 /** PRD §6.12 · Figma `photo_checkpoint` (364:115). */
 export function PhotoCheckpointScreen() {
   const router = useRouter();
   const { cardStyle, scrimStyle } = useModalCardEnter();
   const heroStyle = useFadeUpEnter(0);
   const footerStyle = useFadeUpEnter(staggerDelay(1));
-  const [secondsLeft, setSecondsLeft] = useState(AUTO_DISMISS_SECONDS);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [graceSeconds, setGraceSeconds] = useState(getGraceSecondsRemaining);
 
   useEffect(() => {
-    intervalRef.current = setInterval(() => {
-      setSecondsLeft((prev) => (prev <= 1 ? 0 : prev - 1));
-    }, 1000);
+    ensureLiveSessionTicking();
+    const tick = () => setGraceSeconds(getGraceSecondsRemaining());
+    tick();
+    const interval = setInterval(tick, 1000);
+    const unsubscribe = subscribeLiveSession(tick);
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      clearInterval(interval);
+      unsubscribe();
     };
   }, []);
 
-  // Navigate from an effect (not the ticker's state updater) so `router.back()`
-  // never fires while React is mid-render for this component, and so it fires
-  // exactly once on the 0 transition instead of every tick that follows.
   useEffect(() => {
-    if (secondsLeft > 0) {
+    if (isForcedEndPending()) {
+      router.replace('/live-session');
       return;
     }
 
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
+    if (!isCheckpointDueOrGrace()) {
+      router.back();
     }
-    router.back();
-  }, [secondsLeft, router]);
+  }, [graceSeconds, router]);
 
   const [fontsLoaded] = useFonts({
     Sanchez_400Regular,
@@ -111,6 +110,10 @@ export function PhotoCheckpointScreen() {
                 <Text style={s.bodyEmphasis}>30 minutes.</Text>
               </Text>
 
+              <Text style={s.graceText}>
+                Photo due — {formatGraceRemaining(graceSeconds)} remaining
+              </Text>
+
               <AnimatedPressable
                 style={s.takePhotoBtn}
                 onPress={() => router.push('/photo-capture')}
@@ -128,10 +131,6 @@ export function PhotoCheckpointScreen() {
               >
                 <Text style={s.backToTrackerText}>Back to tracker</Text>
               </AnimatedPressable>
-
-              <Text style={s.autoDismissText}>
-                Auto-dismissing in {formatDismissCountdown(secondsLeft)}
-              </Text>
             </Animated.View>
           </View>
         </Animated.View>
@@ -207,6 +206,13 @@ const s = StyleSheet.create({
     color: C.textTertiary,
   },
 
+  graceText: {
+    fontFamily: 'NotoSans_600SemiBold',
+    fontSize: 13,
+    color: C.primary,
+    textAlign: 'center',
+  },
+
   takePhotoBtn: {
     width: '100%',
     height: 59,
@@ -235,13 +241,5 @@ const s = StyleSheet.create({
     fontFamily: 'NotoSans_400Regular',
     fontSize: 14,
     color: C.textTertiary,
-  },
-
-  autoDismissText: {
-    fontFamily: 'NotoSans_400Regular',
-    fontSize: 11,
-    color: C.textTertiary,
-    textAlign: 'center',
-    opacity: 0.6,
   },
 });
