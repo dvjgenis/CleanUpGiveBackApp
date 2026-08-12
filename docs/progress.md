@@ -2,6 +2,20 @@
 
 ---
 
+## [2026-08-12] — Root README TL;DR polish
+
+**End goal:** Make the repo README instantly graspable — what the product is, why verification matters, and how the monorepo fits — without burying readers in tooling.
+
+**Approach:** Lead with a short TL;DR + “why this matters” (evidence-backed hours), then keep layout / quick start / docs as scannable tables.
+
+**Steps done so far:**
+1. Rewrote root `README.md` (TL;DR, significance, surfaces, quick start, docs pointers)
+2. Commit + push to `origin/main`
+
+**Current failure:** None — docs-only polish.
+
+---
+
 ## [2026-08-11 Session 3] — Minimized live pill on every bottom-nav screen
 
 **End goal:** After minimizing a live session, the green tracker banner stays visible on **every** bottom-nav screen (Home, Shop, Sessions, Account, and account subpages) — not only Home — and Track always resumes the active session instead of sending the volunteer through setup again.

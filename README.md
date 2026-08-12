@@ -4,11 +4,11 @@
 
 # Clean Up - Give Back
 
-[![Typing SVG](https://readme-typing-svg.demolab.com?font=Sanchez&weight=400&size=22&duration=3200&pause=1800&color=009540&center=true&vCenter=true&width=520&lines=Volunteer.+Track.+Give+back.;Community+cleanup+made+simple.)](https://github.com/dvjgenis/CleanUpGiveBackApp)
+[![Typing SVG](https://readme-typing-svg.demolab.com?font=Sanchez&weight=400&size=22&duration=3200&pause=1800&color=009540&center=true&vCenter=true&width=560&lines=Volunteer.+Track.+Give+back.;Proof+you+showed+up.;Community+cleanup%2C+made+simple.)](https://github.com/dvjgenis/CleanUpGiveBackApp)
 
-Monorepo for the Clean Up - Give Back mobile app and supporting services.
+**Turn neighborhood cleanups into trusted service hours — with GPS, photo checkpoints, and an admin who can actually verify the work.**
 
-**Website:** [cleanupgiveback.org](https://cleanupgiveback.org/) — 501(c)(3) nonprofit (volunteer programs, events, donate, store)
+[Website](https://cleanupgiveback.org/) · 501(c)(3) nonprofit · Volunteer programs · Events · Donate · Store
 
 <p>
   <img src="https://img.shields.io/badge/Expo-54-000020?logo=expo&logoColor=white" alt="Expo 54" />
@@ -29,18 +29,57 @@ Monorepo for the Clean Up - Give Back mobile app and supporting services.
 
 ---
 
-## Repository layout
+## TL;DR
+
+**Clean Up - Give Back** is a nonprofit cleanup program with a mobile app that makes volunteering *provable*.
+
+Volunteers walk a route, take timed selfie + progress photos, and submit a session. The organization gets a walking path, checkpoints, and hours they can approve — including for court-ordered and school service — instead of trusting a handwritten timesheet.
+
+This repo is the product monorepo: **Expo mobile app**, **Next.js admin console**, and **session backend**.
+
+| Who | What they get |
+|-----|----------------|
+| **Volunteers** | Start a cleanup, track miles/time on a live map, hit photo checkpoints, download a service letter when approved |
+| **Donna / admins** | Review sessions with route + photos, approve or decline, manage users/orders/events, email volunteers |
+| **The mission** | More cleanups done, more hours that stand up to scrutiny, less paperwork friction |
+
+---
+
+## Why this matters
+
+Most “log your volunteer hours” tools stop at a form. Cleanup hours — especially court-ordered ones — need **evidence**:
+
+1. **Were you there?** → GPS route while the session is live  
+2. **Were you working?** → Timed checkpoint photos (selfie + progress)  
+3. **Can staff trust it?** → Admin review with maps, photos, notes, and an audit trail  
+4. **Can the volunteer prove it?** → Approved sessions → downloadable service / court letter  
+
+That’s the interesting part of this project: it’s not only a lifestyle volunteer app. It’s **field operations + verification** for a real 501(c)(3) — built so community service is easier to *do* and harder to *fake*.
+
+---
+
+## What ships in this monorepo
 
 | | Path | Purpose |
 |:--:|------|---------|
-| 📱 | [`frontend/`](frontend/) | Expo React Native app, UI, design assets, and tooling |
-| 🖥️ | [`admin-web-app/`](admin-web-app/) | Next.js admin console (production on Vercel) |
-| 🗄️ | [`admin/`](admin/) | **Archived** legacy admin portal — keep `admin/db/*.sql` migrations only; see [admin/README.md](admin/README.md) |
-| ⚙️ | [`backend/`](backend/) | Backend services (sessions live; maps & payments planned) |
-| 📚 | [`docs/`](docs/) | Living documentation, specs, ADRs, and agent context |
-| 🧩 | [`.cursor/`](.cursor/) | Cursor IDE rules and hooks (stays at repo root) |
+| 📱 | [`frontend/`](frontend/) | Expo React Native app (volunteers): sessions, map, shop, events, account |
+| 🖥️ | [`admin-web-app/`](admin-web-app/) | Next.js admin console for Donna (Vercel) |
+| ⚙️ | [`backend/`](backend/) | Sessions API on Fly (create / checkpoints / finalize / PDFs) |
+| 🗄️ | [`admin/`](admin/) | **Archived** legacy admin — keep `admin/db/*.sql` for Supabase migrations |
+| 📚 | [`docs/`](docs/) | Living docs, specs, ADRs, agent context |
+| 🧩 | [`.cursor/`](.cursor/) | Cursor IDE rules and hooks |
 
-## Quick start
+**Product surfaces (high level)**
+
+- **Mobile** — onboarding, home dashboard, live tracker (minimize and keep going), sessions list/detail, events, shop/cart, privacy & feedback  
+- **Admin** — sessions moderation, volunteers/users, orders, payments, events, emails, US activity map, service letters / court packets  
+- **Data** — Supabase Auth + Postgres; Fly sessions service; Resend for transactional email  
+
+For “what runs today,” start at [docs/current.md](docs/current.md).
+
+---
+
+## Quick start (mobile)
 
 From the repo root:
 
@@ -49,7 +88,7 @@ npm install --prefix frontend
 npm start
 ```
 
-Or work directly inside `frontend/`:
+Or inside `frontend/`:
 
 ```bash
 cd frontend
@@ -57,28 +96,39 @@ npm install
 npm start
 ```
 
-Scan the QR code with **Expo Go**. **`npm start` uses tunnel by default** (works on Wi‑Fi, hotspot, or phone on cellular). Use **`npm run start:lan`** when the phone and Mac share the same Wi‑Fi and you want the fastest connection.
+Scan the QR code with **Expo Go**.
 
-```bash
-npm start              # default: tunnel (Wi‑Fi / hotspot / cellular)
-npm run start:lan      # same Wi‑Fi only (fast LAN)
-npm run start:device   # tunnel (alias)
-npm run start:tunnel   # tunnel (alias)
-```
+| Command | When to use it |
+|---------|----------------|
+| `npm start` | Default **tunnel** — works across Wi‑Fi, hotspot, or cellular |
+| `npm run start:lan` | Same Wi‑Fi as the Mac — fastest |
+| `npm run start:device` / `npm run start:tunnel` | Tunnel aliases |
 
-See [docs/frontend/specs/expo-go-dev-networking.md](docs/frontend/specs/expo-go-dev-networking.md) for Wi‑Fi / hotspot / cellular testing.
+Networking details: [docs/frontend/specs/expo-go-dev-networking.md](docs/frontend/specs/expo-go-dev-networking.md).
 
-## Frontend structure
+### Frontend layout (cheat sheet)
 
-- `frontend/src/app/` — Expo Router screens and navigation
-- `frontend/src/components/` — shared UI components
-- `frontend/assets/` — images, fonts, and bundled Stitch HTML screens
-- `frontend/design/` — design tokens, Stitch exports, and HTML prototypes
-- `frontend/prototype/` — TypeScript prototype screens (optional `EXPO_PROTOTYPE=1` mode)
+- `frontend/src/app/` — Expo Router screens  
+- `frontend/src/components/` — shared UI  
+- `frontend/src/features/` — session tracking, shop, onboarding, etc.  
+- `frontend/assets/` — images, fonts, branding  
+- `frontend/design/` — Figma-grounded design workspace  
+
+---
 
 ## Documentation
 
-Start at [docs/README.md](docs/README.md). Agent instructions live in [docs/agents/](docs/agents/).
+| Start here | |
+|------------|--|
+| [docs/README.md](docs/README.md) | Full docs index |
+| [docs/current.md](docs/current.md) | What runs in production / locally today |
+| [docs/architecture.md](docs/architecture.md) | System diagrams |
+| [docs/progress.md](docs/progress.md) | Session-by-session build log |
+| [docs/agents/](docs/agents/) | Agent / contributor instructions |
+
+Brand: forest green `#009540`, Sanchez + Noto Sans — see [docs/frontend/brand.md](docs/frontend/brand.md).
+
+---
 
 ## License
 
