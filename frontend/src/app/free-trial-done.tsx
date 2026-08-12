@@ -1,4 +1,8 @@
 import { FreeTrialModal } from '@/features/session-tracking/components/FreeTrialModal';
+import {
+  finalizeLiveSession,
+  getCompletedSessionSnapshot,
+} from '@/features/session-tracking/liveSessionStore';
 import { colors } from '@/constants/tokens';
 import {
   NotoSans_400Regular,
@@ -7,6 +11,7 @@ import {
 import { Sanchez_400Regular } from '@expo-google-fonts/sanchez';
 import { useFonts } from 'expo-font';
 import { useRouter, type Href } from 'expo-router';
+import { useRef } from 'react';
 import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -15,15 +20,48 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
  * Presented as a transparentModal over the live tracker. Continue must
  * `replace` (not `push`) so checkout is a normal stack screen — pushing from
  * a modal keeps the modal presentation and wraps checkout like a popup.
- * Pay Later dismisses back to the live session.
+ * Pay Later finalizes the session and opens its session-detail screen.
  */
 export default function FreeTrialDoneRoute() {
   const router = useRouter();
+  const endingRef = useRef(false);
   const [fontsLoaded] = useFonts({
     Sanchez_400Regular,
     NotoSans_400Regular,
     NotoSans_600SemiBold,
   });
+
+  const handlePayLater = async () => {
+    if (endingRef.current) {
+      return;
+    }
+    endingRef.current = true;
+
+    try {
+      await finalizeLiveSession({ status: 'under_review' });
+      const snapshot = getCompletedSessionSnapshot();
+      const sessionId =
+        snapshot?.remoteSessionId ??
+        (snapshot ? `session-${snapshot.endedAt}` : null);
+
+      // Clear live-session (+ this modal) off the stack first so Session Detail
+      // sits on Home — otherwise Back returns to the dead tracker.
+      try {
+        router.dismissTo('/');
+      } catch {
+        router.replace('/');
+      }
+
+      if (sessionId) {
+        router.push(`/session-detail?id=${encodeURIComponent(sessionId)}` as Href);
+      } else {
+        router.push('/sessions-list' as Href);
+      }
+    } catch (error) {
+      endingRef.current = false;
+      console.error('[free-trial-done] Pay Later finalize failed:', error);
+    }
+  };
 
   if (!fontsLoaded) {
     return <View style={{ flex: 1, backgroundColor: colors.bgApp }} />;
@@ -35,7 +73,9 @@ export default function FreeTrialDoneRoute() {
         onContinue={() =>
           router.replace('/checkout?mode=tracker&returnTo=live-session' as Href)
         }
-        onPayLater={() => router.back()}
+        onPayLater={() => {
+          void handlePayLater();
+        }}
       />
     </SafeAreaProvider>
   );

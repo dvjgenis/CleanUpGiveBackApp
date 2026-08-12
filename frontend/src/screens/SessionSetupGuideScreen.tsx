@@ -6,6 +6,7 @@ import {
   captureSessionSetupGuideReturnHref,
   exitSessionSetupGuideToTrackEntry,
   resetSessionSetupGuideReturnHref,
+  skipSessionSetupGuideForward,
   useSessionSetupGuidePillProgress,
 } from '@/utils/sessionSetupGuideNavigation';
 import { IBMPlexSans_600SemiBold } from '@expo-google-fonts/ibm-plex-sans';
@@ -86,8 +87,10 @@ export function SessionSetupGuideScreen() {
         <SessionSetupGuideFooterActions
           hidePrevious
           onContinuePress={() => router.push('/session-setup-step2')}
-          onSkipPress={() => router.replace('/session-setup-step6')}
-          skipAccessibilityLabel="Skip to location permission"
+          onSkipPress={() => {
+            void skipSessionSetupGuideForward(router);
+          }}
+          skipAccessibilityLabel="Skip remaining setup steps"
         />
       </View>
 

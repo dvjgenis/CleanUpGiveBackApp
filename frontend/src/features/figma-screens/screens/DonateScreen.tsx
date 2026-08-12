@@ -1,5 +1,7 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Keyboard,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -30,9 +32,11 @@ import {
   type DonateAmountSelection,
   type DonatePreset,
 } from '../mocks/donate';
-import { colors, fontFamilies, radius, shadows } from '../tokens';
+import { colors, fontFamilies, radius } from '../tokens';
 
 const FOOTER_PAD = 20;
+/** Button + stripe + top pad — used to pad scroll content above the sticky footer. */
+const FOOTER_CONTENT_HEIGHT = FOOTER_PAD + 52 + 8 + 24;
 
 /**
  * Donate / Contribute — Figma `shop_donate` (`412:4` / PRD §6.20).
@@ -42,27 +46,89 @@ export function DonateScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ amount?: string }>();
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollContentRef = useRef<View>(null);
+  const customFieldWrapRef = useRef<View>(null);
   const customInputRef = useRef<TextInput>(null);
+  const scrollViewportHeightRef = useRef(0);
+  const openedAsCustomRef = useRef(
+    parseDonateAmountParam(params.amount).kind === 'custom',
+  );
 
   const [selection, setSelection] = useState<DonateAmountSelection>(() =>
     parseDonateAmountParam(params.amount),
   );
+  /** iOS keyboard overlay height — footer floats above it; white filler below. */
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   useEffect(() => {
     setSelection(parseDonateAmountParam(params.amount));
   }, [params.amount]);
 
   useEffect(() => {
-    if (selection.kind === 'custom') {
-      const t = setTimeout(() => customInputRef.current?.focus(), 250);
-      return () => clearTimeout(t);
-    }
-    return undefined;
-  }, [selection.kind]);
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const onShow = Keyboard.addListener(showEvent, (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const onHide = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+    return () => {
+      onShow.remove();
+      onHide.remove();
+    };
+  }, []);
 
   const impact = useMemo(() => getDonateImpact(selection), [selection]);
   const canContinue = getDonateTotalCents(selection) != null;
   const footerBottom = Math.max(insets.bottom, 12);
+  const keyboardLift = Platform.OS === 'ios' ? keyboardHeight : 0;
+  /** Clear absolute footer + breathing room when scrolling the custom field into view. */
+  const keyboardScrollInset = FOOTER_CONTENT_HEIGHT + footerBottom + 16;
+  const scrollBottomPad = keyboardScrollInset + keyboardLift;
+
+  const scrollCustomIntoView = useCallback(() => {
+    const scroll = scrollRef.current;
+    const field = customFieldWrapRef.current;
+    const content = scrollContentRef.current;
+    if (!scroll || !field || !content) return;
+
+    const delay = Platform.OS === 'ios' ? 380 : 150;
+    setTimeout(() => {
+      field.measureLayout(
+        content,
+        (_left, top, _width, height) => {
+          const viewport = scrollViewportHeightRef.current;
+          if (viewport <= 0) return;
+          const overlayHeight = keyboardScrollInset + keyboardLift;
+          const targetY = top + height + 16 - (viewport - overlayHeight);
+          scroll.scrollTo({ y: Math.max(0, targetY), animated: true });
+        },
+        () => {
+          const input = customInputRef.current;
+          if (!input) return;
+          scroll.scrollResponderScrollNativeHandleToKeyboard(
+            input,
+            keyboardScrollInset + 72,
+            true,
+          );
+        },
+      );
+    }, delay);
+  }, [keyboardScrollInset, keyboardLift]);
+
+  useEffect(() => {
+    if (openedAsCustomRef.current) {
+      scrollCustomIntoView();
+    }
+  }, [scrollCustomIntoView]);
+
+  useEffect(() => {
+    if (keyboardLift > 0 && selection.kind === 'custom') {
+      scrollCustomIntoView();
+    }
+  }, [keyboardLift, selection.kind, scrollCustomIntoView]);
 
   function selectPreset(amount: DonatePreset) {
     setSelection({ kind: 'preset', amount });
@@ -89,6 +155,11 @@ export function DonateScreen() {
     router.replace(`/purchase-confirmation?mode=donation&amount=${amount}` as Href);
   }
 
+  function onCustomFocus() {
+    selectCustom();
+    scrollCustomIntoView();
+  }
+
   return (
     <View style={s.root}>
       <SessionSetupTopAppBar title="Contribute" onBack={() => router.back()} />
@@ -100,15 +171,22 @@ export function DonateScreen() {
         </View>
 
         <ScrollView
+          ref={scrollRef}
           style={s.scroll}
           contentContainerStyle={s.scrollContent}
+          onLayout={(e) => {
+            scrollViewportHeightRef.current = e.nativeEvent.layout.height;
+          }}
           showsVerticalScrollIndicator={false}
-          bounces={false}
-          alwaysBounceVertical={false}
           keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
+          keyboardDismissMode="interactive"
         >
-          <View style={s.topBlock}>
+          <View
+            ref={scrollContentRef}
+            collapsable={false}
+            style={[s.scrollInner, { paddingBottom: scrollBottomPad }]}
+          >
+            <View style={s.topBlock}>
             <View style={s.intro}>
               <View style={s.titleRow}>
                 <Text style={s.title}>Support the mission</Text>
@@ -183,6 +261,8 @@ export function DonateScreen() {
               </View>
 
               <View
+                ref={customFieldWrapRef}
+                collapsable={false}
                 style={[
                   s.customField,
                   selection.kind === 'custom' && s.customFieldSelected,
@@ -194,7 +274,8 @@ export function DonateScreen() {
                   style={s.customInput}
                   value={selection.kind === 'custom' ? selection.value : ''}
                   onChangeText={onCustomChange}
-                  onFocus={selectCustom}
+                  onFocus={onCustomFocus}
+                  autoFocus={openedAsCustomRef.current}
                   keyboardType="decimal-pad"
                   placeholder="Custom Amount"
                   placeholderTextColor={colors.textNavInactive}
@@ -203,9 +284,17 @@ export function DonateScreen() {
               </View>
             </View>
           </View>
+          </View>
         </ScrollView>
 
-        <View style={[s.footer, { paddingBottom: footerBottom }]}>
+        {keyboardLift > 0 ? (
+          <View
+            pointerEvents="none"
+            style={[s.keyboardFiller, { height: keyboardLift }]}
+          />
+        ) : null}
+
+        <View style={[s.footer, { bottom: keyboardLift, paddingBottom: footerBottom }]}>
           <AnimatedPressable
             scaleTo={0.98}
             style={[s.continueBtn, !canContinue && s.continueBtnDisabled]}
@@ -254,9 +343,11 @@ const s = StyleSheet.create({
     zIndex: 1,
   },
   scrollContent: {
+    flexGrow: 1,
+  },
+  scrollInner: {
     paddingHorizontal: 16,
     paddingTop: 20,
-    paddingBottom: 16,
     gap: 30,
   },
   /** Figma `415:318` — title + hero */
@@ -443,16 +534,28 @@ const s = StyleSheet.create({
     padding: 0,
   },
   footer: {
-    borderTopWidth: 1,
-    borderTopColor: colors.borderOutline,
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignSelf: 'stretch',
+    width: '100%',
     backgroundColor: colors.white,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderOutline,
     paddingHorizontal: 16,
     paddingTop: FOOTER_PAD,
     gap: 8,
     alignItems: 'stretch',
-    ...shadows.barTop,
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.06,
+    zIndex: 2,
+  },
+  keyboardFiller: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: colors.white,
+    zIndex: 1,
   },
   continueBtn: {
     alignSelf: 'stretch',

@@ -241,7 +241,10 @@ export function SessionSetupFormScreen() {
       courtOrdered,
       description: description.trim(),
     });
-    router.replace('/photo-capture?mode=session-start' as Href);
+    // Push (not replace) so Cancel / back after retake returns to this form
+    // with field state intact — replace left only the guide finale underneath
+    // and made the next guide Previous hops jump to Home on a shallow stack.
+    router.push('/photo-capture?mode=session-start' as Href);
   };
 
   if (!fontsLoaded) {

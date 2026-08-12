@@ -5,6 +5,7 @@ import { writeAuditLog } from './audit';
 import { logEmailSend } from './email-log';
 import { getTemplate } from './email-templates';
 import { renderTemplate } from './email-template-render';
+import { sendExpoPush } from './push';
 
 interface NotifyVolunteerSessionDecisionParams {
   userId: string;
@@ -92,9 +93,7 @@ export async function notifyVolunteerSessionDecision({
 
   if (pushToken) {
     try {
-      const pushMessage = {
-        to: pushToken,
-        sound: 'default',
+      await sendExpoPush(pushToken, {
         title: decision === 'approved' ? 'Session Approved!' : 'Session Update',
         body:
           decision === 'approved'
@@ -103,21 +102,8 @@ export async function notifyVolunteerSessionDecision({
               ? `Your session was not approved. ${declineReason}`
               : 'Your session was not approved.',
         data: { sessionId },
-      };
-
-      const response = await fetch('https://exp.host/--/api/v2/push/send', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(pushMessage),
       });
-
-      if (!response.ok) {
-        console.error(`[notify] Expo push failed for ${pushToken}:`, await response.text());
-      } else {
-        console.log(`[notify] Push notification sent to ${pushToken} for session ${sessionId}`);
-      }
+      console.log(`[notify] Push notification sent to ${pushToken} for session ${sessionId}`);
     } catch (err) {
       console.error(`[notify] Failed to send push notification to ${pushToken}:`, err);
     }

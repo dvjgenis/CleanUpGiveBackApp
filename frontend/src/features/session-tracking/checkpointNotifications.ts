@@ -28,10 +28,6 @@ async function ensureCheckpointChannel(): Promise<void> {
   });
 }
 
-function graceMinutesRemaining(graceEndsAtMs: number): number {
-  return Math.max(1, Math.ceil((graceEndsAtMs - Date.now()) / 60_000));
-}
-
 /** Schedules due + escalating grace reminders for the current checkpoint window. */
 export async function scheduleCheckpointNotifications(
   checkpointWindowStartedAt: number,
@@ -67,8 +63,8 @@ export async function scheduleCheckpointNotifications(
       identifier: `${SCHEDULED_ID_PREFIX}due`,
       content: {
         ...contentBase,
-        title: 'Photo checkpoint due',
-        body: 'Take your selfie and progress photos now to keep your session valid.',
+        title: 'Checkpoint time!',
+        body: 'Snap a quick photo to keep this session on track.',
       },
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.DATE,
@@ -77,19 +73,21 @@ export async function scheduleCheckpointNotifications(
     });
   }
 
+  // Grace reminders repeat on a fixed cadence while the window stays overdue —
+  // tracking is never paused or force-ended for a missed checkpoint, so these
+  // are just nudges, not a countdown to a consequence.
   let slot = 0;
   for (
     let fireAt = Math.max(dueAtMs, now + 2000);
     fireAt < graceEndsAtMs;
     fireAt += GRACE_REMINDER_INTERVAL_SEC * 1000
   ) {
-    const minutesLeft = graceMinutesRemaining(graceEndsAtMs);
     await Notifications.scheduleNotificationAsync({
       identifier: `${SCHEDULED_ID_PREFIX}grace-${slot}`,
       content: {
         ...contentBase,
-        title: 'Photo required',
-        body: `Take checkpoint photos now — session ends in about ${minutesLeft} min.`,
+        title: "Don't forget your checkpoint",
+        body: "Still missing a photo for this checkpoint — take one when you get a chance.",
       },
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.DATE,

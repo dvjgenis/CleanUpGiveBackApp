@@ -15,6 +15,8 @@ type Props = {
   disabled?: boolean;
   /** Hides the Skip button for screens with only Continue / Previous (e.g. the account-details form steps). */
   hideSkip?: boolean;
+  /** Tighter padding/button height — used by the account-details form steps to sit closer to Personal Details' footer scale. */
+  compact?: boolean;
 };
 
 /**
@@ -32,12 +34,13 @@ export function OnboardingInfoFooterActions({
   skipLabel = 'Skip',
   disabled = false,
   hideSkip = false,
+  compact = false,
 }: Props) {
   return (
-    <View style={s.footer}>
+    <View style={[s.footer, compact && s.footerCompact]}>
       <View style={s.buttonContainer}>
         <AnimatedPressable
-          style={[s.continueBtn, disabled && s.continueBtnDisabled]}
+          style={[s.continueBtn, compact && s.btnCompact, disabled && s.continueBtnDisabled]}
           onPress={onContinue}
           disabled={disabled}
           accessibilityRole="button"
@@ -46,7 +49,7 @@ export function OnboardingInfoFooterActions({
           <Text style={s.continueBtnText}>{continueLabel}</Text>
         </AnimatedPressable>
         <AnimatedPressable
-          style={s.previousBtn}
+          style={[s.previousBtn, compact && s.btnCompact]}
           onPress={onPrevious}
           accessibilityRole="button"
           accessibilityLabel="Previous"
@@ -84,6 +87,10 @@ const s = StyleSheet.create({
     gap: 12,
     alignItems: 'center',
   },
+  footerCompact: {
+    paddingTop: 32,
+    paddingBottom: 24,
+  },
   buttonContainer: {
     width: '100%',
     gap: 20,
@@ -94,6 +101,9 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 20,
+  },
+  btnCompact: {
+    paddingVertical: 18,
   },
   continueBtnDisabled: {
     opacity: 0.7,

@@ -7,9 +7,6 @@ import { EventLocationPinIcon } from './EventIcons';
 import { colors, fontFamilies } from '../tokens';
 import type { MapCoordinate } from '../utils/openLocationInMaps';
 
-const isExpoGo = isExpoGoClient();
-const isWeb = Platform.OS === 'web';
-
 type Props = {
   address: string;
   coordinate: MapCoordinate;
@@ -40,11 +37,11 @@ function EventLocationMapFallback({ address, onPress }: { address: string; onPre
  * (iOS) or Google Maps (Android/web).
  */
 export function EventLocationMap({ address, coordinate, onPress }: Props) {
-  if (isWeb) {
+  if (Platform.OS === 'web') {
     return <EventLocationMapFallback address={address} onPress={onPress} />;
   }
 
-  if (isExpoGo) {
+  if (isExpoGoClient()) {
     const { EventLocationMapWebView } =
       require('./EventLocationMapWebView') as typeof import('./EventLocationMapWebView');
     return (

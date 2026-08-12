@@ -123,6 +123,13 @@ export function ServiceHoursWeekPicker({
     applyWeekStart(addWeeks(weekStart, 1), addWeeks(selectedDay, 1));
   };
 
+  const goToCurrentWeek = () => {
+    const now = startOfDay(new Date());
+    applyWeekStart(startOfWeekMonday(now), now);
+  };
+
+  const isViewingCurrentWeek = isSameDay(weekStart, startOfWeekMonday(new Date()));
+
   const selectDay = (day: Date) => {
     setPickerFocusDay(startOfDay(day));
   };
@@ -202,10 +209,24 @@ export function ServiceHoursWeekPicker({
           </View>
         </View>
 
-        {/* Week Badge */}
-        <View style={s.weekBadge}>
-          <Text style={s.weekBadgeText}>{weekNumberLabel}</Text>
-        </View>
+        {isViewingCurrentWeek ? (
+          <View style={s.weekBadge} accessibilityLabel={weekNumberLabel}>
+            <Text style={s.weekBadgeText}>{weekNumberLabel}</Text>
+          </View>
+        ) : (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Go to this week"
+            hitSlop={8}
+            onPress={goToCurrentWeek}
+            style={({ pressed }) => pressed && s.thisWeekPressed}
+          >
+            {/* View chip (not Pressable styles) so the fill always paints on native + web */}
+            <View style={s.thisWeekChip}>
+              <Text style={s.thisWeekChipText}>This week</Text>
+            </View>
+          </Pressable>
+        )}
       </View>
 
       <Modal
@@ -401,20 +422,42 @@ const s = StyleSheet.create({
     height: 18,
   },
   weekBadge: {
-    width: 74,
+    minWidth: 74,
     height: 36,
+    paddingHorizontal: 12,
     backgroundColor: colors.chipBg,
-    borderRadius: R.full,
+    borderRadius: 6,
     overflow: 'hidden',
     flexShrink: 0,
     justifyContent: 'center',
-    alignItems: 'flex-start',
-    paddingLeft: 12,
+    alignItems: 'center',
   },
   weekBadgeText: {
     fontFamily: fontFamilies.notoSansSemiBold,
     fontSize: 12,
     color: colors.textNavInactive,
+  },
+  /** Quieter than tour mint — chip family + soft green edge so it stays findable. */
+  thisWeekChip: {
+    height: 36,
+    minWidth: 72,
+    paddingHorizontal: 8,
+    marginLeft: 8,
+    borderRadius: 6,
+    backgroundColor: colors.chipBg,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 149, 64, 0.28)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexShrink: 0,
+  },
+  thisWeekPressed: {
+    opacity: 0.72,
+  },
+  thisWeekChipText: {
+    fontFamily: fontFamilies.notoSansSemiBold,
+    fontSize: 12,
+    color: colors.primary,
   },
   backdropContainer: {
     flex: 1,

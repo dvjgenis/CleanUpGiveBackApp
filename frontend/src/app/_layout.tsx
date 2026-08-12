@@ -2,16 +2,17 @@ import '@/global.css';
 import 'react-native-gesture-handler';
 
 import { Stack } from 'expo-router';
+import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { AuthProvider } from '@/components/AuthProvider';
 import { CheckpointAlertLoop } from '@/components/CheckpointAlertLoop';
-import { CheckpointSessionGate } from '@/components/CheckpointSessionGate';
 import { CheckpointNotificationBootstrap } from '@/components/CheckpointNotificationBootstrap';
-import { LiveSessionResumeGate } from '@/components/LiveSessionResumeGate';
+import { HomeTransitionCover } from '@/components/navigation/HomeTransitionCover';
 import { prefetchAllOnboardingGraphics } from '@/components/onboarding/onboardingGraphics';
 import { prefetchAllTourGraphics } from '@/components/onboarding/tourAssets';
 import { prefetchAllShopGraphics } from '@/features/figma-screens/shopAssets';
+import { colors } from '@/features/figma-screens/tokens';
 
 import '@/features/session-tracking/backgroundLocationTask';
 
@@ -28,6 +29,20 @@ void preloadPhotoCheckpointAlert();
 const guideBackwardScreenOptions = {
   animationTypeForReplace: 'pop' as const,
 };
+
+/**
+ * Permission steps: Previous uses replace with `pop` (reverse slide). Skip /
+ * auto-skip forward passes `enter=forward` so the same replace slides forward
+ * like Continue.
+ */
+const guidePermissionScreenOptions = ({
+  route,
+}: {
+  route: { params?: { enter?: string } };
+}) => ({
+  animationTypeForReplace:
+    route.params?.enter === 'forward' ? ('push' as const) : ('pop' as const),
+});
 
 /**
  * `session-setup-complete` uses the same default slide as the other guide
@@ -66,13 +81,17 @@ const accountScreenOptions = ({ route }: { route: { params?: { enter?: string } 
 
 export default function RootLayout() {
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.bgApp }}>
       <AuthProvider>
         <CheckpointNotificationBootstrap />
         <CheckpointAlertLoop />
-        <CheckpointSessionGate />
-        <LiveSessionResumeGate />
-        <Stack screenOptions={{ headerShown: false }}>
+        <View style={{ flex: 1, backgroundColor: colors.bgApp }}>
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: colors.bgApp },
+            }}
+          >
       <Stack.Screen name="index" options={homeScreenOptions} />
       <Stack.Screen name="session-setup-guide" options={guideBackwardScreenOptions} />
       <Stack.Screen name="session-setup" />
@@ -80,23 +99,31 @@ export default function RootLayout() {
       <Stack.Screen name="session-setup-step3" options={guideBackwardScreenOptions} />
       <Stack.Screen name="session-setup-step4" options={guideBackwardScreenOptions} />
       <Stack.Screen name="session-setup-step5" options={guideBackwardScreenOptions} />
-      <Stack.Screen name="session-setup-step6" />
-      <Stack.Screen name="session-setup-step7" options={guideBackwardScreenOptions} />
+      <Stack.Screen name="session-setup-step6" options={guidePermissionScreenOptions} />
+      <Stack.Screen name="session-setup-step7" options={guidePermissionScreenOptions} />
       <Stack.Screen name="session-free-hour" options={guideBackwardScreenOptions} />
       <Stack.Screen name="session-free-kit" options={guideBackwardScreenOptions} />
       <Stack.Screen name="session-setup-complete" options={sessionSetupCompleteScreenOptions} />
-      <Stack.Screen name="live-session" options={{ animation: 'slide_from_bottom', animationTypeForReplace: 'pop' }} />
+      <Stack.Screen name="live-session" options={{ animation: 'slide_from_bottom', animationTypeForReplace: 'push' }} />
       <Stack.Screen name="session-feedback" />
       <Stack.Screen name="give-feedback" />
       <Stack.Screen name="feedback-thank-you" />
-      <Stack.Screen name="photo-checkpoint" options={{ presentation: 'transparentModal', headerShown: false, animation: 'fade' }} />
+      <Stack.Screen name="photo-checkpoint" options={{ presentation: 'transparentModal', headerShown: false, animation: 'fade', gestureEnabled: false }} />
       <Stack.Screen
         name="photo-capture"
         options={{
-          presentation: 'fullScreenModal',
+          // Card (not fullScreenModal). Session-start Cancel resets to `/hold-on`.
           contentStyle: { backgroundColor: '#000000' },
           gestureEnabled: false,
           animation: 'slide_from_bottom',
+        }}
+      />
+      <Stack.Screen
+        name="hold-on"
+        options={{
+          animation: 'fade',
+          contentStyle: { backgroundColor: colors.bgApp },
+          gestureEnabled: false,
         }}
       />
       <Stack.Screen name="photo-submitted" options={{ presentation: 'transparentModal', headerShown: false, animation: 'fade' }} />
@@ -148,7 +175,9 @@ export default function RootLayout() {
       <Stack.Screen name="set-tour" />
       <Stack.Screen name="prototype/[screen]" />
       <Stack.Screen name="free-trial-done" options={{ presentation: 'transparentModal', headerShown: false, animation: 'fade' }} />
-        </Stack>
+          </Stack>
+          <HomeTransitionCover />
+        </View>
       </AuthProvider>
     </GestureHandlerRootView>
   );

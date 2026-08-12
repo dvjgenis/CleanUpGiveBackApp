@@ -235,6 +235,7 @@ export function AccountDetailsScreen() {
             router.back();
           }}
           hideSkip
+          compact
         />
       </KeyboardAvoidingView>
 

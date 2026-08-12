@@ -5,7 +5,7 @@ import {
 import { Sanchez_400Regular } from '@expo-google-fonts/sanchez';
 import { CameraView, type FlashMode, useCameraPermissions } from 'expo-camera';
 import { useFonts } from 'expo-font';
-import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
+import { useLocalSearchParams, useNavigation, useRouter, type Href } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -23,7 +23,9 @@ import Animated, {
   interpolateColor,
   runOnJS,
   useAnimatedStyle,
+  useReducedMotion,
   useSharedValue,
+  withDelay,
   withTiming,
 } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -43,8 +45,9 @@ import Svg, {
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { CoachmarkEnter } from '@/components/motion/CoachmarkEnter';
 import { useFadeUpEnter } from '@/components/motion/hooks';
-import { staggerDelay } from '@/motion';
-import { addPhotoCheckpoint, finalizeLiveSession, isForcedEndPending, resetCheckpointCountdown, resolveCheckpointCaptureCoords, startNewLiveSession, useLiveSession } from '@/features/session-tracking/liveSessionStore';
+import { cancelSessionStartToHome } from '@/features/onboarding/homeEnterTransition';
+import { durations, easing, staggerDelay } from '@/motion';
+import { addPhotoCheckpoint, finalizeLiveSession, resetCheckpointCountdown, resolveCheckpointCaptureCoords, startNewLiveSession, useLiveSession } from '@/features/session-tracking/liveSessionStore';
 import {
   clearPendingSessionSetup,
   consumePendingSessionSetupForm,
@@ -827,6 +830,7 @@ function SequentialCapture({
 
 export function PhotoCaptureScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const { mode } = useLocalSearchParams<{ mode?: string }>();
   const { isActive, submittedCheckpoints } = useLiveSession();
   const isSessionStart = mode === 'session-start';
@@ -841,6 +845,13 @@ export function PhotoCaptureScreen() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   /** Bumps on Retake so SequentialCapture resets front→back without relying on unmount timing. */
   const [captureEpoch, setCaptureEpoch] = useState(0);
+  /** Keeps both layers mounted while preview cross-fades into the camera. */
+  const [isRetakeTransitioning, setIsRetakeTransitioning] = useState(false);
+  const reducedMotion = useReducedMotion();
+  const previewOpacity = useSharedValue(1);
+  const previewScale = useSharedValue(1);
+  const captureOpacity = useSharedValue(1);
+  const isCancelingToHome = useRef(false);
 
   useEffect(() => {
     if (isSessionEnd && !wasActiveOnMountRef.current) {
@@ -853,6 +864,25 @@ export function PhotoCaptureScreen() {
     NotoSans_400Regular,
     NotoSans_600SemiBold,
   });
+
+  const finishRetakeTransition = useCallback(() => {
+    setSelfieUri(null);
+    setProgressUri(null);
+    setSubmitError(null);
+    setIsRetakeTransitioning(false);
+    previewOpacity.value = 1;
+    previewScale.value = 1;
+    captureOpacity.value = 1;
+  }, [captureOpacity, previewOpacity, previewScale]);
+
+  const previewLayerStyle = useAnimatedStyle(() => ({
+    opacity: previewOpacity.value,
+    transform: [{ scale: previewScale.value }],
+  }));
+
+  const captureLayerStyle = useAnimatedStyle(() => ({
+    opacity: captureOpacity.value,
+  }));
 
   if (!fontsLoaded) {
     return (
@@ -924,7 +954,15 @@ export function PhotoCaptureScreen() {
           });
           addPhotoCheckpoint(withCoords);
           resetCheckpointCountdown();
-          router.replace('/live-session?from=onboarding' as Href);
+          // Flatten the deep onboarding stack (session-setup-guide -> step2..7 ->
+          // ... -> photo-capture) down to just Home before entering the tracker,
+          // so live-session always sits one level above Home — a plain `replace`
+          // here left that whole stack underneath, and dismissing (chevron) had
+          // to unwind it all at once, which doesn't animate like a normal
+          // single-level pop the way every later collapse (via the minimized
+          // pill, a single push) does.
+          router.dismissTo('/');
+          router.push('/live-session?from=onboarding' as Href);
         } catch {
           setSubmitError('Could not start session. Please try again.');
         }
@@ -936,10 +974,7 @@ export function PhotoCaptureScreen() {
           setSubmitError('No active session. Return to the tracker and try again.');
           return;
         }
-        const added = addPhotoCheckpoint({
-          ...withCoords,
-          allowForcedEnd: isForcedEndPending(),
-        });
+        const added = addPhotoCheckpoint(withCoords);
         if (!added) {
           setSubmitError('Could not save end photos. Please try again.');
           return;
@@ -955,7 +990,7 @@ export function PhotoCaptureScreen() {
         return;
       }
       resetCheckpointCountdown();
-      router.replace('/photo-submitted');
+      router.dismissTo('/photo-submitted');
     } catch {
       setSubmitError('Could not save photos. Please try again.');
     } finally {
@@ -964,16 +999,56 @@ export function PhotoCaptureScreen() {
   };
 
   const handleRetake = () => {
-    setSelfieUri(null);
-    setProgressUri(null);
-    setSubmitError(null);
+    if (isRetakeTransitioning) {
+      return;
+    }
+
+    if (reducedMotion) {
+      setSelfieUri(null);
+      setProgressUri(null);
+      setSubmitError(null);
+      setCaptureEpoch((n) => n + 1);
+      return;
+    }
+
+    // Mount camera under the preview first (opacity 0), give it a short head
+    // start, then cross-fade so the remount never flashes as a hard cut.
+    setIsRetakeTransitioning(true);
     setCaptureEpoch((n) => n + 1);
+    previewOpacity.value = 1;
+    previewScale.value = 1;
+    captureOpacity.value = 0;
+
+    const fadeOut = {
+      duration: durations.modalEnter,
+      easing: easing.easeInOut,
+    };
+    const fadeIn = {
+      duration: durations.modalEnter,
+      easing: easing.easeOut,
+    };
+
+    previewOpacity.value = withTiming(0, fadeOut);
+    previewScale.value = withTiming(0.98, fadeOut);
+    captureOpacity.value = withDelay(
+      durations.screenEnter,
+      withTiming(1, fadeIn, (finished) => {
+        if (finished) {
+          runOnJS(finishRetakeTransition)();
+        }
+      }),
+    );
   };
 
   const handleCancelCapture = () => {
     if (isSessionStart) {
+      if (isCancelingToHome.current) {
+        return;
+      }
+      isCancelingToHome.current = true;
       clearPendingSessionSetup();
-      router.back();
+      // Bridge through `/hold-on` (progress UI) so Home can mount without a flash.
+      cancelSessionStartToHome(navigation, router);
       return;
     }
     if (isSessionEnd) {
@@ -984,26 +1059,45 @@ export function PhotoCaptureScreen() {
   };
 
   const showingPreview = Boolean(selfieUri && progressUri);
+  const showCaptureLayer = !showingPreview || isRetakeTransitioning;
+  const showPreviewLayer = showingPreview;
 
   return (
-    <View style={s.root}>
-      {!showingPreview ? (
-        <SequentialCapture
-          key={captureEpoch}
-          onDone={handleDone}
-          onCancel={handleCancelCapture}
-          endSessionMode={isSessionEnd}
-        />
-      ) : (
-        <BeRealPreview
-          selfieUri={selfieUri!}
-          progressUri={progressUri!}
-          onSubmit={() => { void handleSubmit(); }}
-          onRetake={handleRetake}
-          isSubmitting={isSubmitting}
-          submitError={submitError}
-        />
-      )}
+    <View style={s.rootCaptureHost}>
+      {showCaptureLayer ? (
+        <Animated.View
+          style={[
+            showPreviewLayer ? StyleSheet.absoluteFillObject : s.layerFill,
+            captureLayerStyle,
+          ]}
+          pointerEvents={showPreviewLayer ? 'none' : 'auto'}
+        >
+          <SequentialCapture
+            key={captureEpoch}
+            onDone={handleDone}
+            onCancel={handleCancelCapture}
+            endSessionMode={isSessionEnd}
+          />
+        </Animated.View>
+      ) : null}
+      {showPreviewLayer ? (
+        <Animated.View
+          style={[
+            showCaptureLayer ? StyleSheet.absoluteFillObject : s.layerFill,
+            previewLayerStyle,
+          ]}
+          pointerEvents={isRetakeTransitioning ? 'none' : 'auto'}
+        >
+          <BeRealPreview
+            selfieUri={selfieUri!}
+            progressUri={progressUri!}
+            onSubmit={() => { void handleSubmit(); }}
+            onRetake={handleRetake}
+            isSubmitting={isSubmitting || isRetakeTransitioning}
+            submitError={submitError}
+          />
+        </Animated.View>
+      ) : null}
     </View>
   );
 }
@@ -1012,6 +1106,9 @@ export function PhotoCaptureScreen() {
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bgApp },
+  /** Black host so retake cross-fade never flashes the cream app bg under the camera. */
+  rootCaptureHost: { flex: 1, backgroundColor: C.footer },
+  layerFill: { flex: 1 },
   rootCapture: {
     backgroundColor: C.footer,
     overflow: 'hidden',

@@ -3,10 +3,11 @@ import {
   NotoSans_600SemiBold,
 } from '@expo-google-fonts/noto-sans';
 import { Sanchez_400Regular } from '@expo-google-fonts/sanchez';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  BackHandler,
   StyleSheet,
   Text,
   View,
@@ -24,11 +25,10 @@ import {
   ensureLiveSessionTicking,
   getGraceSecondsRemaining,
   isCheckpointDueOrGrace,
-  isForcedEndPending,
   subscribeLiveSession,
 } from '@/features/session-tracking/liveSessionStore';
 
-import { colors as tokens } from '@/constants/tokens';
+import { colors as tokens, status as statusColors } from '@/constants/tokens';
 
 const C = {
   bgApp: tokens.bgApp,
@@ -36,6 +36,9 @@ const C = {
   textPrimary: tokens.textPrimary,
   textTertiary: tokens.textTertiary,
   textOnPrimary: tokens.textOnPrimary,
+  declinedBg: statusColors.declined.bg,
+  declinedText: statusColors.declined.text,
+  declinedBorder: statusColors.declined.border,
 } as const;
 
 function PhotoCheckpointCameraIcon({ size = 79 }: { size?: number }) {
@@ -57,6 +60,21 @@ export function PhotoCheckpointScreen() {
   const heroStyle = useFadeUpEnter(0);
   const footerStyle = useFadeUpEnter(staggerDelay(1));
   const [graceSeconds, setGraceSeconds] = useState(getGraceSecondsRemaining);
+  const isFocusedRef = useRef(false);
+
+  // This screen is pushed (not replaced) under /photo-capture, so it stays
+  // mounted while the user takes the photo. Its auto-dismiss effect below
+  // must only act while it's actually the focused/top screen — otherwise a
+  // stale tick calls router.back() on whatever got pushed on top of it
+  // instead (e.g. the photo-submitted popup), dismissing that instead of us.
+  useFocusEffect(
+    useCallback(() => {
+      isFocusedRef.current = true;
+      return () => {
+        isFocusedRef.current = false;
+      };
+    }, []),
+  );
 
   useEffect(() => {
     ensureLiveSessionTicking();
@@ -71,8 +89,7 @@ export function PhotoCheckpointScreen() {
   }, []);
 
   useEffect(() => {
-    if (isForcedEndPending()) {
-      router.replace('/live-session');
+    if (!isFocusedRef.current) {
       return;
     }
 
@@ -80,6 +97,13 @@ export function PhotoCheckpointScreen() {
       router.back();
     }
   }, [graceSeconds, router]);
+
+  // Swallow the hardware back button — this prompt only closes via an explicit
+  // "Take Photo" or "Back to tracker" tap, never a passive back gesture.
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => true);
+    return () => sub.remove();
+  }, []);
 
   const [fontsLoaded] = useFonts({
     Sanchez_400Regular,
@@ -112,6 +136,10 @@ export function PhotoCheckpointScreen() {
 
               <Text style={s.graceText}>
                 Photo due — {formatGraceRemaining(graceSeconds)} remaining
+              </Text>
+
+              <Text style={s.disclaimerText}>
+                Your session may be denied if a photo isn't taken.
               </Text>
 
               <AnimatedPressable
@@ -210,6 +238,20 @@ const s = StyleSheet.create({
     fontFamily: 'NotoSans_600SemiBold',
     fontSize: 13,
     color: C.primary,
+    textAlign: 'center',
+  },
+
+  disclaimerText: {
+    fontFamily: 'NotoSans_400Regular',
+    fontSize: 12,
+    lineHeight: 16,
+    color: C.declinedText,
+    backgroundColor: C.declinedBg,
+    borderWidth: 1,
+    borderColor: C.declinedBorder,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     textAlign: 'center',
   },
 

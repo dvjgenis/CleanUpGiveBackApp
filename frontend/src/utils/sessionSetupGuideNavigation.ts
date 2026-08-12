@@ -91,9 +91,92 @@ export function goBackInSessionSetupGuide(router: Router) {
   router.replace('/');
 }
 
+/**
+ * Linear Previous targets — always `replace` with the shared guide `pop` animation.
+ * Skip / permission auto-skip can collapse the back stack so `router.back()` would
+ * jump to Home; each step names its predecessor explicitly (same pattern as
+ * `goToPreviousFromSessionSetupComplete`).
+ */
+export function goToSessionSetupGuide(router: Router) {
+  router.replace('/session-setup-guide');
+}
+
+export function goToSessionSetupStep2(router: Router) {
+  router.replace('/session-setup-step2');
+}
+
+export function goToSessionSetupStep3(router: Router) {
+  router.replace('/session-setup-step3');
+}
+
+export function goToSessionSetupStep4(router: Router) {
+  router.replace('/session-setup-step4');
+}
+
 /** Step 6 may be reached via Skip (replace), so Previous always targets step 5 with a pop-style replace. */
 export function goToSessionSetupStep5(router: Router) {
   router.replace('/session-setup-step5');
+}
+
+export function goToSessionFreeHour(router: Router) {
+  router.replace('/session-free-hour');
+}
+
+export function goToSessionFreeKit(router: Router) {
+  router.replace('/session-free-kit');
+}
+
+/**
+ * Destination for guide Skip — first permission screen still needed, or the
+ * finale when location + camera are already granted. Resolving up front avoids
+ * the blank auto-skip hop chain (step6 → step7 → complete).
+ */
+export type SessionSetupGuideSkipHref =
+  | '/session-setup-step6'
+  | '/session-setup-step7'
+  | '/session-setup-complete';
+
+export async function resolveSessionSetupGuideSkipHref(): Promise<SessionSetupGuideSkipHref> {
+  const [locationGranted, cameraGranted] = await Promise.all([
+    isSessionLocationPermissionGranted(),
+    isSessionCameraPermissionGranted(),
+  ]);
+
+  if (!locationGranted) {
+    return '/session-setup-step6';
+  }
+
+  if (!cameraGranted) {
+    return '/session-setup-step7';
+  }
+
+  return '/session-setup-complete';
+}
+
+/**
+ * Skip remaining guide steps in one forward replace (same slide direction as
+ * Continue). Passes `enter=forward` so step6/step7 use push-style replace
+ * animation instead of the shared guide `pop` used by Previous.
+ */
+export async function skipSessionSetupGuideForward(router: Router) {
+  const href = await resolveSessionSetupGuideSkipHref();
+
+  if (href === '/session-setup-complete') {
+    router.replace('/session-setup-complete');
+    return;
+  }
+
+  router.replace({ pathname: href, params: { enter: 'forward' } } as Href);
+}
+
+/**
+ * Continue from free-kit (second-to-last content step when perms are already
+ * granted). Pushes the first needed permission screen, or the finale in one
+ * hop — avoids `push` → blank step6 → `replace` complete.
+ */
+export async function continueFromSessionFreeKit(router: Router) {
+  const href = await resolveSessionSetupGuideSkipHref();
+  router.push(href);
 }
 
 /**
@@ -129,16 +212,16 @@ export async function goToPreviousFromSessionSetupComplete(router: Router) {
   ]);
 
   if (!cameraGranted) {
-    router.replace('/session-setup-step7');
+    goToSessionSetupStep7(router);
     return;
   }
 
   if (!locationGranted) {
-    router.replace('/session-setup-step6');
+    goToSessionSetupStep6(router);
     return;
   }
 
-  router.replace('/session-free-kit');
+  goToSessionFreeKit(router);
 }
 
 /**

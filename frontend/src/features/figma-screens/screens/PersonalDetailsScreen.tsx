@@ -44,8 +44,12 @@ import {
 import { syncVolunteerProfile } from '@/lib/supabase';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const FOOTER_PAD_TOP = 18;
-const PRIMARY_FOOTER_BTN_HEIGHT = 52;
+// Matches OnboardingInfoFooterActions' `compact` padding/button sizing
+// (Account Details' footer) so the two Details screens' footers read at the
+// same, slightly tighter scale.
+const FOOTER_PAD_TOP = 32;
+const PRIMARY_FOOTER_BTN_HEIGHT = 56;
+const FOOTER_PAD_BOTTOM_MIN = 24;
 
 function validateEmail(value: string): string | undefined {
   const trimmed = value.trim();
@@ -89,7 +93,7 @@ export function PersonalDetailsScreen() {
 
   const phoneDisplay = formatPhoneDisplay(digits, country);
 
-  const footerBottom = Math.max(insets.bottom, 12);
+  const footerBottom = Math.max(insets.bottom, FOOTER_PAD_BOTTOM_MIN);
   const scrollBottomPad = FOOTER_PAD_TOP + PRIMARY_FOOTER_BTN_HEIGHT + footerBottom + 16;
 
   const dismissKeyboard = () => Keyboard.dismiss();

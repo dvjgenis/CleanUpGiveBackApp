@@ -11,11 +11,30 @@ import { getTemplate } from '@/lib/email-templates';
 import { renderTemplate } from '@/lib/email-template-render';
 import { getResendClient, getFromAddress } from '@/lib/resend';
 import { logEmailSend } from '@/lib/email-log';
+import { sendExpoPush } from '@/lib/push';
 
 const MIN_IDLE_DAYS = 7;
 const MAX_IDLE_DAYS = 10;
 const DEDUP_WINDOW_DAYS = 7;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/** Rotated by userId so the same volunteer sees a consistent voice, and not
+ * everyone gets the identical push copy on the same idle cadence. */
+const HOURS_REMINDER_PUSH_VARIANTS: { title: string; body: string }[] = [
+  { title: 'Ready for a session?', body: 'Takes just a minute to start. Pick up right where you left off.' },
+  { title: 'Keep it going', body: "It's been a bit since your last cleanup. Log a quick session today." },
+  { title: 'Your block could use you', body: 'Other volunteers logged sessions nearby this week. Want to join in?' },
+  { title: 'Time to log a session', body: "Open the app and start tracking whenever you're free." },
+  { title: 'Just a nudge, no rush', body: "Whenever you're ready, your next session is one tap away." },
+];
+
+function pickPushVariant(userId: string): { title: string; body: string } {
+  let hash = 0;
+  for (let i = 0; i < userId.length; i += 1) {
+    hash = (hash * 31 + userId.charCodeAt(i)) >>> 0;
+  }
+  return HOURS_REMINDER_PUSH_VARIANTS[hash % HOURS_REMINDER_PUSH_VARIANTS.length];
+}
 
 export type HoursReminderResult = {
   sent: number;
@@ -86,6 +105,16 @@ export async function sendHoursReminders(now = new Date()): Promise<HoursReminde
     }
 
     const entry = directory.get(userId);
+
+    if (entry?.pushToken) {
+      const variant = pickPushVariant(userId);
+      await sendExpoPush(entry.pushToken, {
+        title: variant.title,
+        body: variant.body,
+        data: { type: 'hours-reminder' },
+      });
+    }
+
     if (!entry?.email || isMockAddress(entry.email)) {
       result.skippedNoEmail += 1;
       continue;

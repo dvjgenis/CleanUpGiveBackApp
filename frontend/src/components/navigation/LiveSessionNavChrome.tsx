@@ -64,6 +64,8 @@ export function LiveSessionMinimizedBar({ barStyle, onExpand, style }: Minimized
   const {
     elapsedSeconds,
     checkpointSecondsRemaining,
+    checkpointDueOrGrace,
+    checkpointOverdueSeconds,
     distanceMiles,
     submittedCheckpoints,
   } = useLiveSession();
@@ -75,6 +77,8 @@ export function LiveSessionMinimizedBar({ barStyle, onExpand, style }: Minimized
         distanceMiles={distanceMiles}
         elapsedSeconds={elapsedSeconds}
         checkpointSecondsRemaining={checkpointSecondsRemaining}
+        checkpointDueOrGrace={checkpointDueOrGrace}
+        checkpointOverdueSeconds={checkpointOverdueSeconds}
         checkpointProgress={checkpointProgress}
         submittedCheckpoints={submittedCheckpoints}
         onExpand={onExpand}

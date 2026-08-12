@@ -13,6 +13,7 @@ import { Image, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
+  isSessionCameraPermissionGranted,
   isSessionLocationPermissionGranted,
   requestSessionLocationPermission,
 } from '@/utils/sessionPermissions';
@@ -35,21 +36,32 @@ export function SessionSetupStep6Screen() {
     router.push('/session-setup-step7');
   }, [router]);
 
-  // Location was already granted (e.g. during onboarding) — nothing to ask,
-  // skip straight to the camera permission step.
+  // Location was already granted (e.g. during onboarding) — nothing to ask.
+  // Jump once to camera (or finale if camera is also granted) so Continue /
+  // Skip never flash blank permission hops.
   useEffect(() => {
     let isMounted = true;
 
-    void isSessionLocationPermissionGranted()
-      .then((locationGranted) => {
+    void Promise.all([
+      isSessionLocationPermissionGranted(),
+      isSessionCameraPermissionGranted(),
+    ])
+      .then(([locationGranted, cameraGranted]) => {
         if (!isMounted) {
           return;
         }
-        if (locationGranted) {
-          router.replace('/session-setup-step7');
+        if (!locationGranted) {
+          setIsCheckingPermission(false);
           return;
         }
-        setIsCheckingPermission(false);
+        if (cameraGranted) {
+          router.replace('/session-setup-complete');
+          return;
+        }
+        router.replace({
+          pathname: '/session-setup-step7',
+          params: { enter: 'forward' },
+        });
       })
       .catch(() => {
         if (isMounted) {

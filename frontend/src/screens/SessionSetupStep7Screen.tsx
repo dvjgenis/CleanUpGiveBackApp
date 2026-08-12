@@ -36,7 +36,7 @@ export function SessionSetupStep7Screen() {
   }, [router]);
 
   // Camera was already granted (e.g. during onboarding) — nothing to ask,
-  // skip straight to the session-setup-complete step.
+  // one forward replace to the finale (push animation via screen options).
   useEffect(() => {
     let isMounted = true;
 

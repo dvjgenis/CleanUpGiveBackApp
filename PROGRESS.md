@@ -7,6 +7,116 @@ Canonical detailed log: [`docs/progress.md`](docs/progress.md).
 
 ---
 
+## [2026-08-12] — Session-guide Skip/Continue + photo Retake motion (documented)
+
+**Session goal:** Document shipped guide Skip/Continue one-hop navigation and BeReal Retake cross-fade after user confirmed done.
+
+**Shipped:** `skipSessionSetupGuideForward` / `continueFromSessionFreeKit`; `/photo-capture` retake opacity cross-fade (not slide). Docs: `docs/progress.md`, `docs/current.md`, `docs/frontend/context/app.md`, `docs/frontend/context/components.md`, `docs/frontend/specs/photo-checkpoint-dual-capture.md` AC-4.
+
+---
+
+## [2026-08-12] — Free-hour paywall Pay Later → session detail + Go Home (documented)
+
+**Session goal:** Ship and document free-hour expiry (1h default), one-shot alert, Pay Later finalize → session detail, and session-detail Go Home.
+
+**Shipped:** Spec `docs/frontend/specs/free-hour-tracker-paywall.md`; living docs in `docs/progress.md`, `docs/current.md`, `docs/frontend/context/app.md`, `docs/frontend/context/components.md`, `docs/README.md`.
+
+---
+
+## [2026-08-12] — Session-start Cancel → Hold On → fade Home (documented)
+
+**Session goal:** Fix session-onboarding Previous/Cancel; ship Hold On bridge; sync living docs.
+
+**Shipped:** Guide Previous = named `replace`s; session-start Cancel → `/hold-on` (progress) → fade into Home; in-session Cancel → live tracker. Docs: `docs/progress.md`, `docs/current.md`, `docs/frontend/context/app.md`, `docs/frontend/context/components.md`, `docs/frontend/specs/photo-checkpoint-dual-capture.md`.
+
+---
+
+## [2026-08-12] — Service Hours “This week” jump (documented)
+
+**Session goal:** One-tap return to the current week on the Home Service Hours chart after arrow navigation; quiet but visible chip styling; living docs synced.
+
+**Shipped:** `ServiceHoursWeekPicker` trailing **This week** chip; docs in `docs/progress.md`, `docs/current.md`, `docs/frontend/context/components.md`, `docs/frontend/specs/home-dashboard-session-stats.md` (AC-8).
+
+---
+
+## [2026-08-12 Session 16] — Branded shipped-order email template; deployed admin; fixed a second Expo Go background-location crash; wrote iOS Live Activity spec
+
+**Session goal:** Design and ship branded HTML for the admin's order-tracking email, deploy the admin console, diagnose a live-reported "app breaks after submitting first photos, can't see the map" crash, and scope a Lock Screen widget feature.
+
+**Workflow used:** Chat-driven — `superpowers:systematic-debugging` for the crash (evidence-first: live Metro log tail + an actual iOS crash report the user pulled from Analytics Data, not guesswork), `AskUserQuestion` for scoping decisions (commit scope, template-editor protection, widget content direction), direct edits otherwise.
+
+### Tasks Completed
+
+| Task | Location | Status |
+|---|---|---|
+| Branded `shipped` email template | `admin-web-app/src/lib/email-template-render.ts` | ✅ new `emailShell()` — green header bar w/ hosted logo, white card, cream footer w/ tagline; inline-CSS table layout for Gmail/Outlook compatibility |
+| Protected the branded template from the WYSIWYG editor | same file | ✅ `shipped` removed from `EMAIL_TAB_TEMPLATE_TYPES` — the Emails tab's rich-text editor saves through a narrow sanitizer allowlist (`lib/sanitize-html.ts`) that has no `table`/`tr`/`td` and would silently flatten the branding on save |
+| Synced the live Supabase `email_templates` row | one-off script, user-run via `!` (classifier-blocked for direct execution) | ✅ code default alone doesn't take effect once a DB row exists for a template type — `getTemplate()` prefers the row |
+| Sent verification test emails via Resend | one-off scripts | ✅ confirmed both the plain and branded renders in a real inbox before/after |
+| Committed + pushed a large batch (my work + pre-existing uncommitted court-risk removal/hours-reminder work) | commit `3f004c3` | ✅ explicit `AskUserQuestion` on scope first — chose "everything" |
+| Deployed `admin-web-app` to Vercel production | `cleanupgiveback-web-app.vercel.app` | ✅ first attempt hit a transient `ECONNRESET` from Vercel's API, second attempt succeeded |
+| Started the Expo Go dev server (tunnel mode) | `frontend` (`npm run start`) | ✅ background task; ngrok tunnel URL retrieved via its local API since Expo's CLI TUI doesn't print the URL to a piped log |
+| Root-caused a **second, distinct** Expo Go background-location crash | `frontend/src/features/session-tracking/liveSessionStore.ts` (`enableBackgroundLocationIfPossible`) | ✅ `Location.requestBackgroundPermissionsAsync()` was called unconditionally, before the `isExpoGoClient()` gate that already protected the sibling `startBackgroundLocationUpdates()` call is ever reached. Root-caused via the user's actual iOS crash log (`EXC_BAD_ACCESS`/`SIGKILL`/`CODESIGNING`/`Invalid Page`, main thread, `Expo Go → CoreLocation → LocationSupport`), not inference alone. Now gated the same way; real builds unaffected (`app.json`'s `expo-location` plugin already declares `isIosBackgroundLocationEnabled`/`isAndroidBackgroundLocationEnabled`) |
+| Committed + pushed the crash fix | commit `0d8e1c0` | ✅ `tsc --noEmit` clean |
+| Wrote the iOS Lock Screen widget spec | `docs/frontend/specs/live-session-lock-screen-widget.md` (+ indexed in `docs/README.md`) | ✅ scoped to ActivityKit Live Activity (not a static WidgetKit widget) per the "live tracker" content direction the user picked; flags two open decisions (deployment-target bump scope, no-push-entitlement staleness tradeoff) rather than deciding them unilaterally; not yet implemented |
+| Backpressure | `admin-web-app`, `frontend` (`tsc --noEmit`) | ✅ clean after each round of edits |
+
+### Key Decisions
+
+- Branded templates stay code-only (excluded from the admin's WYSIWYG-editable set) rather than trying to widen the sanitizer allowlist — narrower blast radius, matches an existing pattern already used for other automated-send templates.
+- The Lock Screen widget is scoped as ActivityKit (Live Activity), not a static home-screen WidgetKit widget — the user picked "live session tracker" content, which a background-refresh-budgeted static widget can't serve well.
+
+### Learnings
+
+- Recorded in memory: the Expo Go background-location crash pattern needs its own `isExpoGoClient()` guard **per call site**, not once per file — a second, independent unconditional call in a sibling function reproduced the same crash class after the first occurrence was already fixed.
+- Recorded in memory: Claude Code's auto-mode classifier blocks more than deploy commands — `git push` to a shared remote and direct Supabase service-role writes hit the same block this session, even after explicit approval and on retry.
+- A large amount of unrelated, already-in-progress work (court-risk feature removal, hours-reminder cron, and — found only at `/wrap` time — a separate same-day session's photo-checkpoint modal-stack fix) was present in the working tree throughout; none of it was authored in this conversation, and none of its rationale is claimed here.
+
+**Current failure:** None outstanding from this session's own work. The Expo dev server background process was stopped (by the user or a tool) before the fix could be re-verified live in Expo Go — worth a fresh reproduction pass before considering it fully confirmed end-to-end, though the fix itself is evidence-backed (same guard pattern as the first, already-verified occurrence).
+
+**Verify:** `cd admin-web-app && npx tsc --noEmit` clean. `cd frontend && npx tsc --noEmit` clean. Manual: order-tracking email renders branded in a live inbox (confirmed). Manual outstanding: resubmit session-start photos in Expo Go and confirm the live-session map now loads instead of crashing.
+
+---
+
+## [2026-08-12 Session 15] — Diagnosed sync-error toast; fixed photo-checkpoint modal overlap; removed false pause-notification copy
+
+**Session goal:** Diagnose a "sync failed" toast reported after logging a session, fix the "Photo submitted" popup rendering on top of the still-mounted "Photo required" popup instead of replacing it, fix a post-submit grace countdown showing 10 minutes instead of 10 seconds, and remove a checkpoint-reminder notification that falsely claims a missed photo pauses the session.
+
+**Workflow used:** Chat, driven by `superpowers:systematic-debugging` for the sync-error investigation; direct root-cause tracing (no plan mode) for the follow-up bug reports.
+
+### Skills Invoked
+
+| Skill | Purpose | Outcome |
+|---|---|---|
+| `superpowers:systematic-debugging` | Phase 1 root-cause investigation for the sync-error toast | Traced banner to `persistFinalizeToRemote`; verified API URL config + backend health; added temporary `__DEV__` diagnostics to surface the real error inline since no Metro terminal was available. User confirmed it resolved before the exact cause was pinned down; diagnostics reverted. |
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| Sync-error diagnostics (temporary, later reverted) | `frontend/src/features/session-tracking/liveSessionStore.ts`, `frontend/src/screens/SubmissionConfirmationScreen.tsx` | ✅ added then cleanly reverted once user confirmed the toast stopped appearing |
+| Fix "Photo submitted" rendering on top of "Photo required" | `frontend/src/screens/PhotoCaptureScreen.tsx` | ✅ checkpoint submit now `router.dismissTo('/photo-submitted')` instead of `router.replace`, which pops the still-mounted `/photo-checkpoint` modal first |
+| Fix grace countdown showing 10 min instead of 10 sec | `frontend/src/features/session-tracking/checkpointConstants.ts` | ✅ `CHECKPOINT_MISS_GRACE_MS` scaled to match the (already-temporary) 10s `PHOTO_CHECKPOINT_INTERVAL_SECONDS` — both marked `// TEMP: testing only`; user's local copy has since reverted the interval to `30 * 60`, grace constant should be rechecked against that |
+| Remove false "session will pause" checkpoint notification | `frontend/src/features/session-tracking/checkpointNotifications.ts` | ✅ removed the "Last chance for this checkpoint" branch (claimed pause/forced-end, a mechanism already deleted from `liveSessionStore.ts`); all grace reminders now use one neutral nudge; deleted unused `graceMinutesRemaining` helper |
+| Living docs | `docs/progress.md`, `docs/frontend/context/components.md` | ✅ session entry + new Patterns notes (dismissTo-vs-replace modal-stack gotcha; removed forced-end/pause mechanism) |
+
+### Key Decisions
+
+- Used temporary `__DEV__`-only instrumentation rather than asking the user to dig through Xcode/Android Studio device logs — reverted once no longer needed, per the "no half-finished scaffolding" rule.
+- Only removed the notification text explicitly flagged as false ("session will pause"); flagged to the user (not silently changed) that the sibling "forced to end" reminder relies on the same removed mechanism and is likely equally stale.
+
+### Learnings
+
+- `PhotoCheckpointScreen`'s auto-dismiss effect is guarded to only act while it is the *focused* screen (to avoid a stale tick popping whatever got pushed on top of it instead). That guard has a side effect: once `/photo-capture` is pushed on top, the guard permanently blocks the screen from ever popping itself — the *caller* has to dismiss it via `router.dismissTo(...)` instead of `router.replace(...)`. Documented in `docs/frontend/context/components.md`.
+- The forced-end/pause-on-missed-checkpoint mechanism (`forcedEndPending`) was fully removed from `liveSessionStore.ts` in earlier work, but notification copy in `checkpointNotifications.ts` still referenced it — a reminder that removing a mechanism doesn't automatically catch every place its behavior was described in user-facing text.
+- `PHOTO_CHECKPOINT_INTERVAL_SECONDS` and `CHECKPOINT_MISS_GRACE_MS` are independent constants; scaling one for testing without the other produces confusing mixed-unit countdowns.
+
+### Progression
+
+Photo-checkpoint flow (required → capture → submitted) now correctly dismisses intermediate modals. Checkpoint-miss notification copy no longer makes false claims about session consequences. Sync-error toast is no longer reproducing per the user, but the root cause was not conclusively identified — if it recurs, the diagnostic-instrumentation approach described above is the fastest path back to an answer.
+
+---
+
 ## [2026-08-10 Session 14] — Fixed Expo Go background-location crash; Court Progress on Accounts + severity redesign; fixed instant back-animations
 
 **Session goal:** Diagnose and fix a real crash reported mid-session (photo submit → app dies before the live-session map appears), plus a batch of follow-up UI requests: Court Progress card on Accounts (not just Home), simplified card design with a 3-tier green/orange/red severity, instant-feeling back transitions on three flows, and a home icon-size tweak.

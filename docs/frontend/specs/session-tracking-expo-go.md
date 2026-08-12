@@ -164,6 +164,7 @@ Wire the existing native session tracking flow (`frontend/src/app/` routes + `li
 6. Submit a photo checkpoint; confirm `expo-camera` sequential capture (mirror + PiP) works
 7. Force-quit mid-session → reopen → **Resume** restores tracker (or **Discard** clears draft)
 8. **End Session** → submission confirmation shows photos + route preview; route preview auto-replays once (length-scaled; skipped when reduced motion) before settling into the static view
-9. **Go Home** → session appears in Recent Sessions; **View All** → `/sessions-list`; opening detail replays the walking path; non-approved sessions show **Delete session**
+9. **Go Home** → session appears in Recent Sessions; **View All** → `/sessions-list`; opening detail replays the walking path; non-approved sessions show **Delete session**; session detail has primary **Go Home** (back chevron also → Home)
+9b. Unpaid free-hour: countdown → at limit one-shot alert + `/free-trial-done` → **Pay Later** → session detail (session ended) — see [free-hour-tracker-paywall.md](free-hour-tracker-paywall.md)
 10. Force-quit after finalize → reopen → completed session still visible (fetched from API)
 11. Verify rows in Supabase `sessions` + `checkpoints` tables and objects in `session-photos` bucket

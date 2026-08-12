@@ -37,6 +37,7 @@ Living docs for the Clean Up - Give Back monorepo. Templates are copy-only.
 | [frontend/specs/figma-to-native-handoff.md](frontend/specs/figma-to-native-handoff.md) | Figma-to-RN migration spec and acceptance criteria |
 | [frontend/specs/](frontend/specs/) | All feature specs and PRDs |
 | [frontend/specs/session-tracking-expo-go.md](frontend/specs/session-tracking-expo-go.md) | Sessions + geolocation (Kalman, background-while-active, sync) |
+| [frontend/specs/free-hour-tracker-paywall.md](frontend/specs/free-hour-tracker-paywall.md) | Free-hour countdown, paywall, Pay Later → session detail, Go Home |
 | [frontend/specs/home-dashboard-session-stats.md](frontend/specs/home-dashboard-session-stats.md) | Home Service Hours + impact from `sessionStatsStore` |
 | [frontend/specs/session-route-replay.md](frontend/specs/session-route-replay.md) | Play / Pause / Replay on completed route maps |
 | [frontend/specs/service-letter-pdf.md](frontend/specs/service-letter-pdf.md) | Approved session service letter PDF (volunteer + admin) |
@@ -45,6 +46,7 @@ Living docs for the Clean Up - Give Back monorepo. Templates are copy-only.
 | [frontend/specs/expo-go-dev-networking.md](frontend/specs/expo-go-dev-networking.md) | Expo Go Metro LAN / tunnel / cellular testing |
 | [frontend/specs/expo-go-eas-tester-runbook.md](frontend/specs/expo-go-eas-tester-runbook.md) | Dual-runtime smoke checklist (Expo Go + EAS dev client) |
 | [frontend/specs/map-theme-and-weather-icons.md](frontend/specs/map-theme-and-weather-icons.md) | Standard light/dark map theme + weather glyphs |
+| [frontend/specs/live-session-lock-screen-widget.md](frontend/specs/live-session-lock-screen-widget.md) | **Proposed** — iOS Lock Screen/Dynamic Island Live Activity for active sessions |
 
 ## Figma design workspace
 

@@ -17,6 +17,7 @@ import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import Animated, {
   cancelAnimation,
+  runOnJS,
   type SharedValue,
   useSharedValue,
   useAnimatedStyle,
@@ -25,7 +26,11 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { AppSplashScreen } from '@/components/AppSplashScreen';
-import { consumeHomeFadeIn } from '@/features/onboarding/homeEnterTransition';
+import {
+  consumeHomeFadeIn,
+  consumeHomeInstant,
+  requestHomeTransitionCoverFadeOut,
+} from '@/features/onboarding/homeEnterTransition';
 import { isOnboardingComplete } from '@/features/onboarding/onboardingStore';
 import { HomeScreen } from '@/features/figma-screens/screens/HomeScreen';
 import { colors } from '@/features/figma-screens/tokens';
@@ -41,8 +46,13 @@ function enterParamIsFade(enter: string | string[] | undefined): boolean {
 }
 
 function runHomeFadeIn(homeOpacity: SharedValue<number>, reducedMotion: boolean | null) {
+  const finish = () => {
+    requestHomeTransitionCoverFadeOut();
+  };
+
   if (reducedMotion) {
     homeOpacity.value = 1;
+    finish();
     return;
   }
   cancelAnimation(homeOpacity);
@@ -50,10 +60,18 @@ function runHomeFadeIn(homeOpacity: SharedValue<number>, reducedMotion: boolean 
   // Commit opacity 0 on the UI thread before timing up — assigning 0 then
   // withTiming(1) in the same tick can no-op when the view was already at 1.
   requestAnimationFrame(() => {
-    homeOpacity.value = withTiming(1, {
-      duration: durations.modalEnter,
-      easing: easing.easeOut,
-    });
+    homeOpacity.value = withTiming(
+      1,
+      {
+        duration: durations.modalEnter,
+        easing: easing.easeOut,
+      },
+      (finished) => {
+        if (finished) {
+          runOnJS(finish)();
+        }
+      },
+    );
   });
 }
 
@@ -63,7 +81,11 @@ export default function App() {
   const [splashDone, setSplashDone] = useState(hasBooted);
   const reducedMotion = useReducedMotion();
   // Consume once on mount so remounts after Go Home always fade in.
-  const [mountFade] = useState(() => consumeHomeFadeIn() || enterParamIsFade(enter));
+  // Session-start Cancel uses instant (full opacity) — fade-from-0 looked like a white flash.
+  const [mountInstant] = useState(() => consumeHomeInstant());
+  const [mountFade] = useState(
+    () => !mountInstant && (consumeHomeFadeIn() || enterParamIsFade(enter)),
+  );
 
   const [fontsLoaded] = useFonts({
     Sanchez_400Regular,
@@ -76,8 +98,11 @@ export default function App() {
     IBMPlexSans_600SemiBold,
   });
 
-  // Cold start: visible (splash handles entrance). Return visits / Go Home: start hidden.
-  const homeOpacity = useSharedValue(hasBooted || mountFade ? 0 : 1);
+  // Cold start: visible (splash handles entrance). Return visits / Go Home: start hidden
+  // unless Cancel requested an instant land.
+  const homeOpacity = useSharedValue(
+    mountInstant ? 1 : hasBooted || mountFade ? 0 : 1,
+  );
 
   const handleSplashReady = useCallback(() => {
     hasBooted = true;
@@ -88,6 +113,10 @@ export default function App() {
     if (!splashDone) {
       return;
     }
+    if (mountInstant) {
+      homeOpacity.value = 1;
+      return;
+    }
     if (mountFade) {
       runHomeFadeIn(homeOpacity, reducedMotion);
       return;
@@ -96,7 +125,7 @@ export default function App() {
       duration: durations.screenEnter,
       easing: easing.easeOut,
     });
-  }, [splashDone, mountFade, reducedMotion, homeOpacity]);
+  }, [splashDone, mountInstant, mountFade, reducedMotion, homeOpacity]);
 
   // Refocus without remount (index left under the stack): run another fade.
   useFocusEffect(
@@ -140,9 +169,13 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <Animated.View style={homeStyle}>
-        <HomeScreen />
-      </Animated.View>
+      {/* Opaque cream under the opacity fade so Go Home never flashes the
+          navigator’s default white while homeOpacity is still 0. */}
+      <View style={{ flex: 1, backgroundColor: colors.bgApp }}>
+        <Animated.View style={homeStyle}>
+          <HomeScreen />
+        </Animated.View>
+      </View>
     </SafeAreaProvider>
   );
 }

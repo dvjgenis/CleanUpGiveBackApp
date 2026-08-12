@@ -31,8 +31,6 @@ import {
   formatSubmittedCheckpointCount,
 } from '@/features/session-tracking/utils/sessionFormat';
 
-import { shouldTriggerPaywallAfterCheckpoint } from '@/features/session-tracking/trackerPaymentStore';
-
 import { colors as tokens } from '@/constants/tokens';
 
 const C = {
@@ -140,9 +138,6 @@ export function PhotoSubmittedScreen() {
                     style={s.continueBtn}
                     onPress={() => {
                       router.dismissTo('/live-session');
-                      if (shouldTriggerPaywallAfterCheckpoint(submittedCheckpointCount)) {
-                        router.push('/free-trial-done');
-                      }
                     }}
                     accessibilityRole="button"
                     accessibilityLabel="Continue tracking"
@@ -200,6 +195,7 @@ const s = StyleSheet.create({
     width: '100%',
     paddingTop: CARD_VERTICAL_INSET,
     paddingHorizontal: 28,
+    marginBottom: -32,
     overflow: 'visible',
   },
 

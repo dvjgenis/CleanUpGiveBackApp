@@ -9,11 +9,13 @@ import { Platform, Vibration } from 'react-native';
 
 const ALERT_SOUND = require('../../assets/sounds/photo-checkpoint-alert.wav');
 
-/** Three short bursts — matches the prior RN `Vibration` pattern. */
-const ANDROID_VIBRATE_PATTERN = [0, 300, 150, 300, 150, 300] as const;
+/** Four long, hard bursts — deliberately insistent so it can't be missed. */
+const ANDROID_VIBRATE_PATTERN = [0, 450, 150, 450, 150, 450, 150, 450] as const;
 
 const LOAD_TIMEOUT_MS = 4000;
-const MIN_ALERT_INTERVAL_MS = 30_000;
+// Below the 5s "ignored" escalation cadence in CheckpointAlertLoop, so those
+// reminders never get silently swallowed by this throttle.
+const MIN_ALERT_INTERVAL_MS = 4_000;
 
 let audioModeReady = false;
 let alertPlayer: AudioPlayer | null = null;
@@ -85,17 +87,18 @@ export async function preloadPhotoCheckpointAlert(): Promise<void> {
 }
 
 async function playAlertHaptics() {
-  if (Platform.OS === 'ios') {
-    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-    await new Promise((resolve) => setTimeout(resolve, 280));
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    await new Promise((resolve) => setTimeout(resolve, 280));
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    return;
-  }
+  // Fire a baseline OS vibration immediately, on every platform, regardless of
+  // whether the Haptics engine below succeeds — guarantees something is felt
+  // even if Taptic Engine calls get throttled by the OS from repeated firing.
+  Vibration.vibrate(Platform.OS === 'android' ? [...ANDROID_VIBRATE_PATTERN] : undefined);
 
-  Vibration.vibrate([...ANDROID_VIBRATE_PATTERN]);
   await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+  await new Promise((resolve) => setTimeout(resolve, 220));
+  await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+  await new Promise((resolve) => setTimeout(resolve, 220));
+  await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+  await new Promise((resolve) => setTimeout(resolve, 220));
+  await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
 }
 
 async function playAlertSound() {
@@ -113,10 +116,13 @@ async function playAlertSound() {
 /**
  * Sound + haptic feedback when the 30-minute photo checkpoint is due and the
  * in-app photo-required popup is about to appear.
+ * Pass `{ force: true }` to bypass the repeat throttle (e.g. free-trial expiry).
  */
-export async function alertPhotoCheckpointDue(): Promise<void> {
+export async function alertPhotoCheckpointDue(options?: {
+  force?: boolean;
+}): Promise<void> {
   const now = Date.now();
-  if (now - lastAlertAt < MIN_ALERT_INTERVAL_MS) {
+  if (!options?.force && now - lastAlertAt < MIN_ALERT_INTERVAL_MS) {
     return;
   }
   lastAlertAt = now;

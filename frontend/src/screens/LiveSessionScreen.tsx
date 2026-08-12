@@ -40,22 +40,19 @@ import { WeatherConditionIcon } from '@/features/session-tracking/components/ico
 import {
   formatElapsed,
   formatCheckpointDue,
-  formatGraceRemaining,
+  formatCountdown,
 } from '@/features/session-tracking/mocks/session';
 import type { PhotoCheckpointSubmission } from '@/features/session-tracking/liveSessionStore';
 import {
   ensureLocationWatching,
   ensureLiveSessionTicking,
   getCheckpointProgress,
-  getGraceSecondsRemaining,
-  isCheckpointDueOrGrace,
-  isForcedEndPending,
   requestLiveSessionMapRecenter,
-  retryCheckpointSync,
   setLiveSessionMapFollow,
   setLiveSessionMapLayer,
   useLiveSession,
 } from '@/features/session-tracking/liveSessionStore';
+import { status as statusColors } from '@/constants/tokens';
 import {
   toggleManualMapTheme,
   useEffectiveMapTheme,
@@ -65,6 +62,7 @@ import { useLiveSessionMapReveal } from '@/features/session-tracking/hooks/useLi
 import {
   getFreeTrialSecondsRemaining,
   getTrackerHasPaid,
+  isFreeTrialExpired,
 } from '@/features/session-tracking/trackerPaymentStore';
 import { radius } from '@/features/session-tracking/tokens';
 import {
@@ -77,6 +75,7 @@ import {
   formatSubmittedCheckpointCount,
   shouldShowCheckpointSubmissionCount,
 } from '@/features/session-tracking/utils/sessionFormat';
+import { alertPhotoCheckpointDue } from '@/utils/photoCheckpointAlert';
 
 const TIMER_BORDER_PULSE_MS = 2400;
 const CHECKPOINT_THUMB_SIZE = 44;
@@ -253,6 +252,8 @@ export function LiveSessionScreen() {
   const {
     elapsedSeconds,
     checkpointSecondsRemaining,
+    checkpointDueOrGrace,
+    checkpointOverdueSeconds,
     distanceMiles,
     submittedCheckpoints,
     mapLayer,
@@ -298,22 +299,8 @@ export function LiveSessionScreen() {
   }, [mapFollowEnabled]);
   const submittedCheckpointCount = submittedCheckpoints.length;
   const showSubmissionCount = shouldShowCheckpointSubmissionCount(submittedCheckpoints);
+  const hasSubmittedCheckpoints = submittedCheckpointCount > 0;
   const submittedCheckpointLabel = formatSubmittedCheckpointCount(submittedCheckpointCount);
-  const failedCheckpoints = useMemo(
-    () => submittedCheckpoints.filter((cp) => cp.syncStatus === 'failed'),
-    [submittedCheckpoints],
-  );
-  const [retryingCheckpoints, setRetryingCheckpoints] = useState(false);
-
-  const handleRetryFailedCheckpoints = useCallback(async () => {
-    if (retryingCheckpoints || failedCheckpoints.length === 0) return;
-    setRetryingCheckpoints(true);
-    try {
-      await Promise.all(failedCheckpoints.map((cp) => retryCheckpointSync(cp.id)));
-    } finally {
-      setRetryingCheckpoints(false);
-    }
-  }, [failedCheckpoints, retryingCheckpoints]);
   const viewerPhotos = useMemo(
     () => buildCheckpointViewerPhotos(submittedCheckpoints),
     [submittedCheckpoints],
@@ -328,6 +315,23 @@ export function LiveSessionScreen() {
   } = useLiveWeather();
   const freeTrialRemaining = getFreeTrialSecondsRemaining(elapsedSeconds);
   const showFreeTrialCountdown = !getTrackerHasPaid();
+
+  // Paywall trigger is purely the real 1-hour session clock — independent of
+  // the photo-checkpoint timer/count, which can be tuned to a much shorter
+  // interval (e.g. QA) without ever early-triggering this.
+  // Fires sound + haptics once (same clip as photo checkpoints), then opens
+  // the paywall — does not loop like CheckpointAlertLoop.
+  const freeTrialAlertedRef = useRef(false);
+  useEffect(() => {
+    if (freeTrialAlertedRef.current || getTrackerHasPaid()) {
+      return;
+    }
+    if (isFreeTrialExpired(elapsedSeconds)) {
+      freeTrialAlertedRef.current = true;
+      void alertPhotoCheckpointDue({ force: true });
+      router.push('/free-trial-done');
+    }
+  }, [elapsedSeconds, router]);
 
   const openCheckpointPhotos = (checkpointId: string) => {
     const startIndex = viewerPhotos.findIndex(
@@ -347,10 +351,10 @@ export function LiveSessionScreen() {
   });
 
   const checkpointProgress = getCheckpointProgress(checkpointSecondsRemaining);
-  const checkpointDueOrGrace = isCheckpointDueOrGrace();
-  const forcedEndPending = isForcedEndPending();
-  const graceSecondsRemaining = getGraceSecondsRemaining();
-  const showTakePhotoCta = checkpointDueOrGrace || forcedEndPending;
+  // Card flips to an urgent/red state showing time elapsed (counting up) the
+  // instant a checkpoint is due — not gated behind dismissing the prompt.
+  const checkpointIgnored = checkpointDueOrGrace;
+  const showTakePhotoCta = checkpointDueOrGrace;
 
   useEffect(() => {
     void ensureLocationWatching();
@@ -416,7 +420,7 @@ export function LiveSessionScreen() {
                   <WeatherConditionIcon
                     condition={weatherIcon}
                     color={chrome.textTertiary}
-                    size={18}
+                    size={22}
                   />
                   <Text style={[s.locationText, { color: chrome.textTertiary }]}>
                     {isWeatherLoading ? '…' : temperatureLabel}
@@ -498,14 +502,24 @@ export function LiveSessionScreen() {
                 <View
                   style={[
                     s.checkpointCard,
-                    {
-                      backgroundColor: chrome.surface,
-                      borderColor: chrome.borderOutline,
-                    },
+                    checkpointIgnored
+                      ? {
+                          backgroundColor: statusColors.declined.bg,
+                          borderColor: statusColors.declined.border,
+                        }
+                      : {
+                          backgroundColor: chrome.surface,
+                          borderColor: chrome.borderOutline,
+                        },
                   ]}
                 >
                   <View style={s.checkpointHeader}>
-                    <Text style={[s.checkpointTitle, { color: chrome.textPrimary }]}>
+                    <Text
+                      style={[
+                        s.checkpointTitle,
+                        { color: checkpointIgnored ? statusColors.declined.text : chrome.textPrimary },
+                      ]}
+                    >
                       Checkpoint Photo
                     </Text>
                     {showSubmissionCount && (
@@ -514,7 +528,7 @@ export function LiveSessionScreen() {
                       </Text>
                     )}
                   </View>
-                  {showSubmissionCount && (
+                  {hasSubmittedCheckpoints && (
                     <View
                       style={s.checkpointThumbs}
                       accessibilityLabel={`${submittedCheckpointCount} checkpoint photos submitted`}
@@ -545,44 +559,26 @@ export function LiveSessionScreen() {
                       ))}
                     </View>
                   )}
-                  {showSubmissionCount && (
-                    <View style={s.checkpointSyncRow}>
-                      <Text style={[s.checkpointSyncText, { color: chrome.textTertiary }]}>
-                        {failedCheckpoints.length > 0
-                          ? `Saved on this device · ${failedCheckpoints.length} not yet synced`
-                          : 'Saved on this device'}
-                      </Text>
-                      {failedCheckpoints.length > 0 && (
-                        <AnimatedPressable
-                          scaleTo={0.98}
-                          onPress={handleRetryFailedCheckpoints}
-                          disabled={retryingCheckpoints}
-                          accessibilityRole="button"
-                          accessibilityLabel="Retry checkpoint upload"
-                        >
-                          <Text style={[s.checkpointSyncRetry, { color: chrome.primary }]}>
-                            {retryingCheckpoints ? 'Retrying…' : 'Retry upload'}
-                          </Text>
-                        </AnimatedPressable>
-                      )}
-                    </View>
-                  )}
                   <View style={s.nextPhotoBlock}>
                     <View style={s.nextPhotoRow}>
-                      <Text style={[s.nextPhotoLabel, { color: chrome.textPrimary }]}>
-                        {forcedEndPending
-                          ? 'Session paused — photo required to finish'
-                          : checkpointDueOrGrace
-                            ? 'Photo due —'
-                            : 'Next photo due in:'}
+                      <Text
+                        style={[
+                          s.nextPhotoLabel,
+                          { color: checkpointIgnored ? statusColors.declined.text : chrome.textPrimary },
+                        ]}
+                      >
+                        {checkpointDueOrGrace ? 'Time elapsed:' : 'Next photo due in:'}
                       </Text>
-                      {!forcedEndPending && (
-                        <Text style={[s.nextPhotoTime, { color: chrome.primary }]}>
-                          {checkpointDueOrGrace
-                            ? `${formatGraceRemaining(graceSecondsRemaining)} remaining`
-                            : formatCheckpointDue(checkpointSecondsRemaining)}
-                        </Text>
-                      )}
+                      <Text
+                        style={[
+                          s.nextPhotoTime,
+                          { color: checkpointIgnored ? statusColors.declined.text : chrome.primary },
+                        ]}
+                      >
+                        {checkpointDueOrGrace
+                          ? formatCountdown(checkpointOverdueSeconds)
+                          : formatCheckpointDue(checkpointSecondsRemaining)}
+                      </Text>
                     </View>
                     <View
                       style={[
@@ -595,8 +591,8 @@ export function LiveSessionScreen() {
                           s.progressFill,
                           {
                             width: `${checkpointProgress * 100}%`,
-                            backgroundColor: checkpointDueOrGrace
-                              ? chrome.statusPending
+                            backgroundColor: checkpointIgnored
+                              ? statusColors.declined.border
                               : chrome.statusPending,
                           },
                         ]}
@@ -609,16 +605,10 @@ export function LiveSessionScreen() {
               <View style={s.actions}>
                 {showTakePhotoCta ? (
                   <TrackerActionButton
-                    label={forcedEndPending ? 'Complete Session' : 'Take Photo'}
+                    label="Take Photo"
                     variant="primary"
                     chrome={chrome}
-                    onPress={() =>
-                      router.push(
-                        (forcedEndPending
-                          ? '/photo-capture?mode=session-end'
-                          : '/photo-capture') as Href,
-                      )
-                    }
+                    onPress={() => router.push('/photo-capture' as Href)}
                     icon={
                       <TrackerSubmitPhotoIcon
                         color={chrome.textOnPrimary}
@@ -627,15 +617,13 @@ export function LiveSessionScreen() {
                     }
                   />
                 ) : null}
-                {!forcedEndPending ? (
-                  <TrackerActionButton
-                    label="End Session"
-                    variant="secondary"
-                    chrome={chrome}
-                    onPress={() => router.push('/photo-capture?mode=session-end' as Href)}
-                    icon={<TrackerEndSessionIcon color={chrome.textTertiary} size={24} />}
-                  />
-                ) : null}
+                <TrackerActionButton
+                  label="End Session"
+                  variant="secondary"
+                  chrome={chrome}
+                  onPress={() => router.push('/photo-capture?mode=session-end' as Href)}
+                  icon={<TrackerEndSessionIcon color={chrome.textTertiary} size={24} />}
+                />
               </View>
             </View>
           </View>
@@ -877,20 +865,6 @@ function createStyles(_chrome: TrackerChromeColors) {
       width: CHECKPOINT_THUMB_SIZE,
       height: CHECKPOINT_THUMB_SIZE,
       borderRadius: radius.sm,
-    },
-    checkpointSyncRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingVertical: 2,
-    },
-    checkpointSyncText: {
-      fontFamily: 'NotoSans_400Regular',
-      fontSize: 11,
-    },
-    checkpointSyncRetry: {
-      fontFamily: 'NotoSans_500Medium',
-      fontSize: 11,
     },
     nextPhotoBlock: {
       gap: 10,

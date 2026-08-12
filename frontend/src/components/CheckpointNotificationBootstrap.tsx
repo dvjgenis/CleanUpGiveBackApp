@@ -5,11 +5,7 @@ import { useEffect } from 'react';
 import {
   configureCheckpointNotificationPresentation,
 } from '@/features/session-tracking/checkpointNotifications';
-import {
-  getLiveSessionState,
-  isCheckpointDueOrGrace,
-  isForcedEndPending,
-} from '@/features/session-tracking/liveSessionStore';
+import { getLiveSessionState } from '@/features/session-tracking/liveSessionStore';
 import { alertPhotoCheckpointDue } from '@/utils/photoCheckpointAlert';
 
 function isPhotoCheckpointNotification(
@@ -48,17 +44,11 @@ export function CheckpointNotificationBootstrap() {
           return;
         }
 
-        if (isForcedEndPending()) {
-          router.push('/live-session');
-          return;
-        }
-
-        if (isCheckpointDueOrGrace()) {
-          router.push('/photo-checkpoint');
-          return;
-        }
-
+        // Tapping a system notification means the app wasn't in the foreground
+        // on the tracker — stack it underneath the modal so "Back to tracker"
+        // lands there instead of wherever the app happened to resume.
         router.push('/live-session');
+        router.push('/photo-checkpoint');
       },
     );
 

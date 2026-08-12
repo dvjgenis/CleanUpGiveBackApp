@@ -13,6 +13,8 @@ export type VolunteerDirectoryEntry = {
   isMockEmail: boolean;
   /** Account-level classification set once during onboarding (Court Ordered / Volunteering / School / Other). */
   serviceType: string | null;
+  /** Expo push token saved from `NotificationPreferenceScreen`, or null if never granted. */
+  pushToken: string | null;
   createdAt: string;
 };
 
@@ -83,6 +85,7 @@ async function fetchVolunteerDirectory(serviceClient: SupabaseClient): Promise<V
         email: realEmail ?? mockEmailFor(user.id),
         isMockEmail: !realEmail,
         serviceType: resolveVolunteerServiceType(user),
+        pushToken: typeof user.user_metadata?.push_token === 'string' ? user.user_metadata.push_token : null,
         createdAt: user.created_at,
       });
     }

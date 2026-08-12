@@ -1,7 +1,8 @@
 import { FreeHourScreen } from '@/screens/FreeHourScreen';
 import {
   exitSessionSetupGuideToTrackEntry,
-  goBackInSessionSetupGuide,
+  goToSessionSetupStep5,
+  skipSessionSetupGuideForward,
   useSessionSetupGuidePillProgress,
 } from '@/utils/sessionSetupGuideNavigation';
 import { useRouter } from 'expo-router';
@@ -17,8 +18,10 @@ export default function SessionFreeHourRoute() {
         totalPills={total}
         activePills={active}
         onContinue={() => router.push('/session-free-kit')}
-        onPrevious={() => goBackInSessionSetupGuide(router)}
-        onSkip={() => router.push('/session-setup-step6')}
+        onPrevious={() => goToSessionSetupStep5(router)}
+        onSkip={() => {
+          void skipSessionSetupGuideForward(router);
+        }}
         onBack={() => exitSessionSetupGuideToTrackEntry(router)}
       />
     </SafeAreaProvider>

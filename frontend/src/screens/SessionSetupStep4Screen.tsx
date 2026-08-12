@@ -4,7 +4,8 @@ import { SessionSetupGuideFooterActions } from '@/components/session-setup/Sessi
 import { SessionSetupGuideNavRow } from '@/components/session-setup/SessionSetupGuideNavRow';
 import {
   exitSessionSetupGuideToTrackEntry,
-  goBackInSessionSetupGuide,
+  goToSessionSetupStep3,
+  skipSessionSetupGuideForward,
   useSessionSetupGuidePillProgress,
 } from '@/utils/sessionSetupGuideNavigation';
 import { IBMPlexSans_600SemiBold } from '@expo-google-fonts/ibm-plex-sans';
@@ -67,9 +68,11 @@ export function SessionSetupStep4Screen() {
       <View style={s.footer}>
         <SessionSetupGuideFooterActions
           onContinuePress={() => router.push('/session-setup-step5')}
-          onPreviousPress={() => goBackInSessionSetupGuide(router)}
-          onSkipPress={() => router.replace('/session-setup-step6')}
-          skipAccessibilityLabel="Skip to location permission"
+          onPreviousPress={() => goToSessionSetupStep3(router)}
+          onSkipPress={() => {
+            void skipSessionSetupGuideForward(router);
+          }}
+          skipAccessibilityLabel="Skip remaining setup steps"
         />
       </View>
 

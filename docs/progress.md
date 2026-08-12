@@ -2,6 +2,297 @@
 
 ---
 
+## [2026-08-12] — Free-hour paywall: Pay Later ends session → detail + Go Home (documented)
+
+**End goal:** Document the shipped free-hour paywall behavior after QA: 1-hour default restored; Pay Later finalizes and opens session detail; session detail can return Home via primary CTA and back chevron.
+
+**Shipped behavior:**
+1. **Duration** — `FREE_TRIAL_DURATION_SECONDS` = **3600**; `__DEV__` override via `EXPO_PUBLIC_FREE_TRIAL_SECONDS`.
+2. **Expiry** — `LiveSessionScreen` pushes `/free-trial-done` once and fires `alertPhotoCheckpointDue({ force: true })` once (sound + haptics; no loop).
+3. **Continue** — `replace` → `/checkout?mode=tracker&returnTo=live-session`.
+4. **Pay Later** — `finalizeLiveSession({ status: 'under_review' })` → `dismissTo('/')` → `push('/session-detail?id=…')` (fallback `/sessions-list`).
+5. **Session detail** — primary green **Go Home** above Delete; back chevron also → Home; **New Session** outlined secondary.
+
+**Docs:** `docs/frontend/specs/free-hour-tracker-paywall.md` (ACs), `docs/current.md`, `docs/frontend/context/app.md`, `docs/frontend/context/components.md`, `docs/README.md`, this file, root `PROGRESS.md`.
+
+**Verify:** Spec test plan in `free-hour-tracker-paywall.md`; manual Pay Later → detail → Go Home.
+
+**Status:** Done.
+
+---
+
+## [2026-08-12] — Document session-guide Skip/Continue + photo Retake motion
+
+**End goal:** Close out the guide/retake animation work in living docs (user confirmed done).
+
+**Shipped behavior:**
+1. **Guide Skip** — `skipSessionSetupGuideForward` resolves location / camera / finale and one forward `replace` (`enter=forward` on permission screens).
+2. **Free-kit Continue** — `continueFromSessionFreeKit` same resolve with one `push` (no blank step6 hop into the finale).
+3. **Photo Retake** — opacity cross-fade on a black host (preview fades + slight scale; camera mounts under at 0 opacity then fades in after a head start). Slide retake was abandoned as janky; reduced motion stays instant.
+
+**Docs:** `app.md`, `components.md`, `current.md`, `photo-checkpoint-dual-capture.md` AC-4, this file + the implementation entry below.
+
+**Status:** Done.
+
+---
+
+## [2026-08-12] — Service Hours “This week” jump
+
+**End goal:** After arrow-navigating away from the current week on the Home Service Hours chart, volunteers needed a one-tap way back without opening the calendar modal.
+
+**Approach:** Trailing control on `ServiceHoursWeekPicker` — when the selected Monday week ≠ current week, replace the Week N badge with a quiet **This week** chip (`chipBg` + soft primary border + primary label; View-backed fill so it paints on native/web). Tap calls `applyWeekStart(startOfWeekMonday(today), today)`. On the current week, show Week N as before. Avoid near-white fills (`statusApprovedBg` / very low primary alpha) — invisible on the white card; avoid full `bgTour` + solid primary border — too loud next to the date bar.
+
+**Steps done:**
+1. `ServiceHoursWeekPicker.tsx` — `goToCurrentWeek` + trailing chip (narrower width + left margin so it clears the date bar).
+2. Docs — `components.md` (inventory + Patterns), `current.md`, `home-dashboard-session-stats.md` AC-8, this file, root `PROGRESS.md`.
+
+**Verify:** `npx tsc --noEmit` clean. Manual — leave current week with arrows → **This week** → chart/total reset to this week.
+
+---
+
+## [2026-08-12] — Session onboarding Cancel → Hold On → Home (documented)
+
+**End goal:** Document the shipped session-start Cancel path and related guide Previous fix.
+
+**Shipped behavior:**
+1. **Guide Previous** — linear steps use named `replace` helpers (`goToSessionSetupGuide` / step2–5 / free-hour / free-kit / permission helpers / `goToPreviousFromSessionSetupComplete`); never `router.back()` after Skip/auto-skip (that jumped to Home).
+2. **Form → session-start photos** — `push` (not `replace`) so capture sits above the form.
+3. **Session-start Cancel** — clears pending setup → `CommonActions.reset` to `/hold-on` (`HoldOnScreen`: “Hold on for a moment” + progress bar ~1.6s, Creating Account pattern) → screen fades out → `replace('/?enter=fade')` + `requestHomeFadeIn` into Home.
+4. **In-session Cancel** (checkpoint / session-end) — still `dismissTo('/live-session')` (not Home).
+5. **`/photo-capture`** — stack card + `slide_from_bottom` (not iOS `fullScreenModal`).
+
+**Docs:** `app.md`, `components.md`, `photo-checkpoint-dual-capture.md` AC-5, `current.md`, this file.
+
+**Verify:** Manual Cancel on session-start capture → Hold On → fade → Home; mid-session Cancel → live tracker.
+
+---
+
+## [2026-08-12] — Contribute Custom keyboard / footer layout
+
+**End goal:** Shop → Custom on Contribute: natural scroll, no hollow gap above Continue, white footer flush to keyboard, custom amount field visible above footer+keyboard, no harsh gray footer line.
+
+**Approach (settled):**
+- Absolute sticky Continue footer (`bottom: keyboardHeight` on iOS) + white keyboard filler underneath — do **not** pad footer height inside flex (that shrinks ScrollView and opens a hollow middle).
+- Hairline top divider only (no stacked `shadows.barTop`).
+- Custom field: `measureLayout` relative to scroll content → `scrollTo` so the input clears footer+keyboard; fallback `scrollResponderScrollNativeHandleToKeyboard`. Shop → Custom uses `autoFocus`. Avoid remounting the focused input.
+
+**Docs:** `components.md` (inventory + Patterns), `app.md` `/donate`, `current.md`.
+
+**Verify:** `npx tsc --noEmit` clean; manual Shop → Custom — custom field + Continue visible above keyboard.
+
+---
+
+## [2026-08-12] — Session-start Cancel → Hold On progress bridge
+
+**End goal:** Cancel from session-start photos avoids white flash via an intentional loading screen.
+
+**Approach:** New `/hold-on` (`HoldOnScreen`) — “Hold on for a moment” + progress bar (same pattern as Creating Account). Cancel resets stack to hold-on; bar fills ~1.6s; then fade out + `replace('/?enter=fade')` + `requestHomeFadeIn` into Home.
+
+**Verify:** Manual — Cancel on session-start capture → Hold On → fade → Home.
+
+---
+
+## [2026-08-12] — Session-start Cancel soft cream cross-fade
+
+**End goal:** Cancel from session-start photos soft-fades camera → cream → Home with no white flash and no hard cut.
+
+**Approach:** RN `Modal` was flashing white on mount — replaced with always-mounted root `HomeTransitionCover` View. Cancel fades local cream + root veil in parallel (~280ms), resets stack under opaque cream, holds for Home paint, then fades veil out.
+
+**Verify:** Manual — Cancel on session-start capture: soft cream, then Home, no white/abrupt cut.
+
+---
+
+## [2026-08-12] — Session-start Cancel → Home (kill white flash)
+
+**End goal:** Cancel on pre-session photo capture lands on Home with no white flash.
+
+**Approach:** Root overlays cannot cover iOS `fullScreenModal` (separate UIViewController). Dropped `fullScreenModal` for `/photo-capture` (card + slide_from_bottom). Cancel paints opaque cream inside the capture screen, sets `animation: 'none'`, resets stack to Home at full opacity (`requestHomeInstant` — no homeOpacity 0→1).
+
+**Verify:** Manual — Start Session → Cancel → cream → Home, no white.
+
+---
+
+## [2026-08-12] — Session-start Cancel → Home fade (root cover)
+
+**End goal:** Cancel on pre-session photo capture goes Home without a white intermediate flash.
+
+**Approach:** Local screen cream fade was not enough — fullScreenModal dismiss slides away and reveals the onboarding stack (white navigator chrome). Added `HomeTransitionCover` in root `_layout` (sync via `useSyncExternalStore`), shown before dismiss; hidden when Home opacity fade completes. Root stack + `GestureHandlerRootView` use cream `bgApp` `contentStyle`.
+
+**Verify:** Manual — Start Session → Cancel → cream hold → Home fade, no white flash.
+
+---
+
+## [2026-08-12] — Session-start Cancel → Home fade (no white flash)
+
+**End goal:** Cancel on pre-session photo capture goes Home without a white intermediate flash.
+
+**Approach:** Fade a `bgApp` cream cover over the black camera, then `requestHomeFadeIn` + `dismissTo('/?enter=fade')`. Home also keeps an opaque cream backdrop under its opacity fade so `homeOpacity: 0` never shows the navigator’s default white.
+
+**Verify:** Manual — Start Session → Cancel → cream cross-fade into Home.
+
+---
+
+## [2026-08-12] — Session-start photo Cancel → Home
+
+**End goal:** Cancel during pre-session photo capture aborts to Home (not back into setup/guide).
+
+**Approach:** `handleCancelCapture` for `mode=session-start` clears pending setup and `dismissTo('/')`.
+
+**Verify:** Manual — Start Session → Cancel on camera → Home.
+
+---
+
+## [2026-08-12] — Session-guide Previous after photo retake → Home
+
+**End goal:** Fix session onboarding so Previous after canceling/retaking start photos walks the guide linearly instead of dumping to Home.
+
+**Approach:** Skip/auto-skip `replace`s collapse the stack; free-kit/free-hour/step Previous still called `router.back()`, so two Previous taps could land on Home. Mirrored the finale's named-`replace` pattern across the linear guide. Also changed form → session-start capture from `replace` to `push` so Cancel after Retake returns to the form.
+
+**Steps done:**
+1. `sessionSetupGuideNavigation.ts` — `goToSessionSetupGuide` / step2–5 / free-hour / free-kit helpers; wired Previous on steps 2–5, free-hour, free-kit.
+2. `SessionSetupFormScreen` push to photo-capture; cancel fallback to `/session-setup`.
+3. Tests + `app.md` / `components.md` / photo-capture spec.
+
+**Verify:** `npx tsc --noEmit`; `sessionSetupGuideNavigation` unit tests.
+
+---
+
+## [2026-08-12] — Session-guide Skip + photo Retake transitions
+
+**End goal:** Soften the abrupt Skip jump in pre-session onboarding and the hard cut when retaking checkpoint photos.
+
+**Approach:**
+- Skip was `replace` → step6, then blank permission auto-hops to step7/complete when perms were already granted. Added `skipSessionSetupGuideForward` that resolves the real destination first and one forward-slide `replace` (`enter=forward` → push-style replace on permission screens).
+- Free-kit Continue had the same blank hop into the finale; added `continueFromSessionFreeKit` (resolve + one `push`).
+- Retake: first tried preview-down / camera-up slide (felt janky + instant); shipped a longer opacity **cross-fade** on a black host (preview fades + scale 0.98; camera mounts at opacity 0 then fades in after `screenEnter` head start). Reduced motion stays instant.
+
+**Steps done:**
+1. `sessionSetupGuideNavigation.ts` + tests — `resolveSessionSetupGuideSkipHref` / `skipSessionSetupGuideForward` / `continueFromSessionFreeKit`.
+2. Wired Skip on guide steps 1–5, free-hour, free-kit; free-kit Continue; step6 auto-skip jumps once to camera or finale.
+3. `_layout.tsx` — permission screens use push replace when `enter=forward`.
+4. `PhotoCaptureScreen.tsx` — retake cross-fade transition.
+5. Docs synced (see documentation entry above).
+
+**Verify:** `npx tsc --noEmit` clean; `sessionSetupGuideNavigation` unit tests pass. Manual: Skip mid-guide; Continue free-kit → finale; Retake after dual capture.
+
+**Status:** Done (user confirmed).
+
+---
+
+## [2026-08-12] — Branded order-tracking email + admin deploy; second Expo Go background-location crash fix; iOS Live Activity spec
+
+**End goal:** Design branded HTML for the admin's `shipped` order-tracking email template, ship + deploy the admin console, diagnose a live-reported crash ("app breaks after submitting first photos, can't see the map"), and scope a Lock Screen widget feature for a future session.
+
+**Approach:**
+- Email: built a reusable `emailShell()` (inline-CSS table layout — Gmail/Outlook strip `<style>` blocks) wrapping the `shipped` template in a branded header/logo/footer, verified live via Resend test sends to a real inbox both before and after.
+- Caught before shipping that `shipped` was listed in `EMAIL_TAB_TEMPLATE_TYPES`, making it editable in the Emails tab's WYSIWYG editor — which saves through `sanitizeEmailHtml`'s narrow allowlist (no `table`/`tr`/`td`, no `img` style/width/height) and would silently flatten the branding to plain paragraphs on save. Removed it from that list; branded templates stay code-only.
+- Crash: used `superpowers:systematic-debugging`. Tailed the live Expo/Metro log while the user reproduced it — total silence right up to the crash, which itself is evidence (a JS exception would print a red-screen error; this didn't, pointing at a native crash). Asked the user to pull the actual iOS crash report from Settings → Analytics Data rather than guessing further. It showed `EXC_BAD_ACCESS`/`SIGKILL`, `CODESIGNING`/`Invalid Page` at `0x0`, main thread, stack `Expo Go → CoreLocation → LocationSupport` — a null function-pointer jump inside CoreLocation caused by Expo Go's shell app lacking the `UIBackgroundModes:location` entitlement.
+- Traced that stack to `enableBackgroundLocationIfPossible()` in `liveSessionStore.ts`, which calls `Location.requestBackgroundPermissionsAsync()` unconditionally — before the already-existing `isExpoGoClient()` gate that protects the sibling `startBackgroundLocationUpdates()` call (fixed in an earlier session, 2026-08-10) is ever reached. This is the same crash class recurring from a second, independent call site in the same file.
+- Widget: asked the user to pick a content direction (live tracker vs. quick-start vs. lifetime stats) before scoping; wrote a spec under `docs/frontend/specs/` per this repo's spec-first workflow rather than starting native code directly.
+
+**Steps done so far:**
+1. `admin-web-app/src/lib/email-template-render.ts` — added `emailShell()`; branded the `shipped` template; removed `shipped` from `EMAIL_TAB_TEMPLATE_TYPES`.
+2. Synced the live Supabase `email_templates` row for `shipped` to the new HTML (a code-only default change doesn't affect an already-seeded DB row — `getTemplate()` prefers the row).
+3. Committed + pushed a large batch to `main` (commit `3f004c3`) — explicitly confirmed scope with the user first (this session's email work plus pre-existing uncommitted court-risk-removal/hours-reminder work already in the tree, not authored in this conversation).
+4. Deployed `admin-web-app` to Vercel production (`cleanupgiveback-web-app.vercel.app`); first attempt hit a transient `ECONNRESET`, second succeeded.
+5. `frontend/src/features/session-tracking/liveSessionStore.ts` — gated `enableBackgroundLocationIfPossible()` behind `isExpoGoClient()`, mirroring the existing pattern; real builds unaffected (`app.json`'s `expo-location` plugin already declares `isIosBackgroundLocationEnabled`/`isAndroidBackgroundLocationEnabled`).
+6. Committed + pushed the crash fix (commit `0d8e1c0`).
+7. `docs/frontend/specs/live-session-lock-screen-widget.md` — new spec scoping an ActivityKit Live Activity (not a static WidgetKit widget) for the live-session Lock Screen/Dynamic Island, indexed in `docs/README.md`. Flags two open decisions (iOS 16.1 deployment-target bump scope; Live Activity staleness if the app is force-quit, since this repo deliberately has no push entitlement) rather than deciding them unilaterally. Not yet implemented.
+8. `cd admin-web-app && npx tsc --noEmit` and `cd frontend && npx tsc --noEmit` clean after each round.
+
+**Current failure:** None outstanding from this session's own work. The Expo dev server background process was stopped before the crash fix could be re-verified live end-to-end in Expo Go — the fix is evidence-backed (matches the exact guard pattern already confirmed for the first occurrence of this crash class) but worth one more live reproduction pass to close the loop.
+
+**Verify:** Both `tsc --noEmit` checks clean. Order-tracking email confirmed branded in a live inbox. Outstanding: restart the Expo dev server, resubmit session-start photos, confirm the live-session map now loads instead of the app crashing.
+
+---
+
+## [2026-08-12 Session 4] — Session-pause removal, resume-gate removal, React Compiler staleness bug, checkpoint alert cadence
+
+**End goal:** Volunteer explicitly asked to remove the automatic "tracking freezes on missed checkpoint" pause feature and the "Resume cleanup session?" cold-start prompt, then iterated live-testing the checkpoint due/overdue UI and alert cadence until they matched expectations, surfacing a serious React Compiler staleness bug along the way. (A concurrent session covers checkpoint-modal-stack-overlap / grace-countdown-scale / ignored-checkpoint-escalation bugs in parallel entries below — this entry is a separate thread on the same overall feature.)
+
+**Approach — session pause removal:**
+- Read `docs/agents/session-abuse-checklist.md` first (required by `AGENTS.md` before touching checkpoint/session-trust logic) — it explicitly lists the forced-end freeze as a control **not to regress** (prevents wall-clock padding). Surfaced this tradeoff to the user before proceeding via `AskUserQuestion`; user chose "keep tracking, just drop the modal/lock, record the miss for admin review."
+- Removed `forcedEndPending`/`trackingFrozenAt`/`frozenElapsedSeconds`/`frozenDistanceMiles` from `liveSessionStore.ts` and every screen that branched on them (`LiveSessionScreen`, `PhotoCheckpointScreen`, `PhotoCaptureScreen`, `LiveSessionMinimizedPill`, `CheckpointNotificationBootstrap`); deleted the now-fully-dead `CheckpointSessionGate.tsx` (its only job was routing to the forced-end screen).
+- Did **not** add a new backend field/migration for "flag missed checkpoint for admin" — that needs a real Supabase migration + admin-web-app UI change, out of scope for a removal request. Added a local `checkpointMisses: number[]` on session state instead (mirrors `submittedCheckpoints`), and told the user admin can currently only infer a miss from existing checkpoint timestamp gaps.
+
+**Approach — resume-gate removal:**
+- User initially asked to remove the modal only; clarified via `AskUserQuestion` whether the underlying auto-resume-after-kill should stay. User chose full removal (no resume at all).
+- Deleted `LiveSessionResumeGate.tsx` and the entire `liveSessionDraft.ts` AsyncStorage persistence layer (its only consumer was resume) — `bootstrapLiveSessionResumeOffer`, `resumeLiveSessionFromDraft`, `discardPendingLiveSessionResume`, `pendingResumeOffer`, and every debounced draft-write call in `liveSessionStore.ts`.
+
+**Approach — photo-checkpoint modal navigation:**
+- Iterated twice: first attempt deleted the `/photo-checkpoint` modal entirely and redirected checkpoint alerts straight to `/live-session` — user corrected this ("why did you delete the modals, don't do that"). Restored the modal from git history, but had to reconstruct it from the mid-session edited version (not raw `git show HEAD`) to avoid clobbering the user's own uncommitted `useFocusEffect`/`BackHandler`/`dismissCheckpointPrompt` additions that predated this session.
+- Final behavior: `CheckpointAlertLoop` and `CheckpointNotificationBootstrap` push `/live-session` first (only if not already there) then stack `/photo-checkpoint` on top, so "Back to tracker" always reveals the tracker instead of whatever tab the volunteer had minimized on.
+
+**Approach — React Compiler staleness bug (the big one):**
+- User reported: after backing out of an expired checkpoint popup, the card showed "Next photo due in: 00:00" instead of "Time elapsed" — sometimes, not always. Root-caused via `superpowers:systematic-debugging` after 3+ rounds of pure static-analysis hypotheses failed to explain it — had the user run `npm start` in the foreground (`!` prefix) and paste real Metro logs from a temp diagnostic.
+- The logs showed `Date.now()` frozen at the exact same millisecond across 30+ consecutive render logs, while `checkpointSecondsRemaining` (from the `useLiveSession()` hook) correctly ticked down in the same logs. Cause: `isCheckpointDueOrGrace()`/`getCheckpointOverdueSeconds()` were called directly in `LiveSessionScreen`'s and `LiveSessionMinimizedPill`'s render bodies — plain functions reading `Date.now()` + module-level mutable state, with zero React-Compiler-visible dependencies, so the compiler auto-memoized the first result forever.
+- Fix: promoted `checkpointDueOrGrace`/`checkpointOverdueSeconds` to real fields on `LiveSessionState`, recomputed once per tick in `syncSessionClocks()` and reset immediately on submit/session-start/session-end; both screens now read them off the `useLiveSession()` snapshot instead of calling the impure functions in render. Documented the full pattern in `docs/frontend/context/components.md` → Patterns for future sessions.
+
+**Approach — alert cadence + cleanup:**
+- `CheckpointAlertLoop`'s repeat interval only sped up to 5s after the modal had been dismissed once (45s before that) — with the (then still temp) 10s interval/10s grace, nothing visibly repeated during testing. Consolidated to one `CHECKPOINT_ALERT_REPEAT_INTERVAL_MS = 5_000` regardless of dismiss state.
+- Removed the now-fully-unused `dismissCheckpointPrompt()`/`isCheckpointPromptDismissed()`/`checkpointPromptDismissedForWindow` once nothing branched on cadence by dismiss state anymore.
+- Decoupled the checkpoint-card photo thumbnails from `shouldShowCheckpointSubmissionCount` (which only shows for *early* submissions) — with the red/overdue state now triggering immediately, almost all real submissions are late, so thumbnails were hidden almost every time. Thumbnails now show whenever any checkpoint exists.
+- Removed the "X not yet synced / Retry upload" row from the checkpoint card per explicit request (confirmed scope via `AskUserQuestion` — removed the whole row, not just the text). `retryCheckpointSync` in the store has no caller now but was left in place.
+- Reverted `PHOTO_CHECKPOINT_INTERVAL_SECONDS`/`CHECKPOINT_MISS_GRACE_MS` from TEMP testing values (10s/10s) back to production (`30 * 60`/`10 * 60 * 1000`).
+
+**Steps done so far:** all listed above; `cd frontend && npx tsc --noEmit` and `npm run lint` clean after every change (0 errors throughout, same pre-existing warning count).
+
+**Current failure:** None outstanding. `/missed-checkpoint` screen route is now unreferenced (only trigger was the deleted forced-end resume-discard path) — left in place as a generic "restart required" screen, not deleted.
+
+**Verify:** Start a session, let a checkpoint go overdue without submitting — card + minimized pill show "Time elapsed" counting up immediately (dismissed or not), sound/haptics repeat every 5s, popup only closes via explicit Take Photo / Back to tracker. Kill the app mid-session — no resume prompt, session is gone next launch. `checkpointConstants.ts` back to 30 min / 10 min.
+
+---
+
+## [2026-08-12 Session 2] — Ignored-checkpoint escalation state, paywall/checkpoint-timer decoupling, footer + icon polish
+
+**End goal:** Work a chain of user-reported bugs and polish requests on the live-session checkpoint flow through Expo Go, one at a time. (A concurrent session's entry above covers the checkpoint-modal-stack-overlap and grace-countdown-scale bugs; this entry covers the rest of the same overall bug sweep, done in parallel.)
+
+**Steps done:**
+1. Removed "Saved on this device" text from the checkpoint photo card; sync row now only renders when something's actually unsynced (`screens/LiveSessionScreen.tsx`).
+2. "Photo due —" → "Photo due:" copy; set testing checkpoint interval to 10s (later reverted by the user).
+3. First chevron-collapse after session start was abrupt, animated fine on every later collapse — root cause: session-start entered `/live-session` via a deep-stack `replace` (8+ onboarding screens still underneath), so the first dismiss had to unwind a whole deep stack at once, which native-stack doesn't animate like a normal single-level pop. Fixed by flattening the stack (`dismissTo('/')` + `push`) before entering the tracker on session start (`screens/PhotoCaptureScreen.tsx`), plus an `animationTypeForReplace` correction (`app/_layout.tsx`).
+4. "Take Photo" modal must reappear with every audio alert and never be passively dismissible (swipe/hardware-back); added a disclaimer ("session may be denied if a photo isn't taken"); made haptics always fire with audio and stronger (`components/CheckpointAlertLoop.tsx`, `screens/PhotoCheckpointScreen.tsx`, `utils/photoCheckpointAlert.ts`, `app/_layout.tsx`).
+5. "Ignored checkpoint" scenario: after the user backs out of the prompt without submitting, the checkpoint card flips to a red/urgent state showing elapsed time counting up (instead of grace remaining), and the audio/haptic cadence escalates to every 5s until a photo is submitted. New store state `checkpointPromptDismissedForWindow` + `dismissCheckpointPrompt`/`isCheckpointPromptDismissed`/`getCheckpointOverdueSeconds` in `features/session-tracking/liveSessionStore.ts`; wired into `screens/LiveSessionScreen.tsx`, `features/session-tracking/components/LiveSessionMinimizedPill.tsx`, `screens/PhotoCheckpointScreen.tsx`, `components/CheckpointAlertLoop.tsx`.
+6. One-hour paywall screen (`/free-trial-done`) was triggering off checkpoint-submission count instead of the real session clock — decoupled entirely; now fires purely off `isFreeTrialExpired(elapsedSeconds)` (`screens/LiveSessionScreen.tsx`, `screens/PhotoSubmittedScreen.tsx`); removed the now-dead `shouldTriggerPaywallAfterCheckpoint` (`features/session-tracking/trackerPaymentStore.ts`).
+7. Personal Details / Account Details footer height parity, then a slight size reduction on request — scoped via a new `compact` prop on the shared `OnboardingInfoFooterActions` (used by 5 other onboarding screens) rather than a global style change (`features/figma-screens/screens/PersonalDetailsScreen.tsx`, `components/onboarding/OnboardingInfoFooterActions.tsx`, `screens/AccountDetailsScreen.tsx`).
+8. Redundant sync-warning banner flash on session-end submit — `persistFinalizeToRemote` set `sessionSyncWarning` right before `endLiveSession()` unconditionally wiped it in the same tick, so it could only ever be seen as a one-frame flash; removed (the submission-confirmation screen already has its own permanent sync-failure banner + retry) (`features/session-tracking/liveSessionStore.ts`).
+9. Weather icon read visually smaller than the location icon despite an equal `size` prop — the Weather Icons glyph set bakes in more internal padding than the hand-drawn pin icon; bumped `size` 18 → 22 (`screens/LiveSessionScreen.tsx`).
+10. Investigated a reported `map.tsx` MLRNCameraModule crash — turned out to be a stale error overlay, not a live repro — but found and fixed a real, independent bug while looking: `EventLocationMap.tsx` called `isExpoGoClient()` once at module-load time instead of per-render, racing `expo-constants` hydration; fixed to match `LiveSessionMap.tsx`'s already-correct render-time check.
+11. `git pull` — fast-forwarded one commit (README polish), no conflicts.
+
+**Current failure:** None from this entry's own changes — `cd frontend && npx tsc --noEmit` clean. Note the file changes above overlap with a concurrent session's work in `PhotoCheckpointScreen.tsx`/`liveSessionStore.ts`/`app/_layout.tsx` — reconcile both entries' diffs together before committing, don't cherry-pick one.
+
+### Learnings
+
+- **`isExpoGoClient()` must be called at render time, not module-load time** — `expo-constants`'s native value can be read before it's hydrated that early in the module graph. `LiveSessionMap.tsx` already had this right; `EventLocationMap.tsx` didn't. Same bug pattern can recur even when a correct reference implementation exists elsewhere in the codebase.
+- **`animationTypeForReplace` only governs the entering screen's own animation** — it has no effect on that screen's later exit transition. "First collapse abrupt, later ones fine" was actually a stack-depth issue (multi-screen `dismissTo` doesn't animate like a single-level pop), not a replace-entry animation-type issue.
+- Two independent components (`CheckpointSessionGate`, `CheckpointAlertLoop`) had each grown their own "push the checkpoint modal" responsibility across separate fixes this session — worth checking for duplicate ownership whenever two `subscribeLiveSession` listeners react to the same state transition.
+
+---
+
+## [2026-08-12] — Session sync-error diagnosis; photo-checkpoint modal-stack fix; stale pause-notification cleanup
+
+**End goal:** Diagnose a "session sync failed" toast reported after logging a session; fix the "Photo submitted" popup rendering on top of (instead of replacing) the "Photo required" popup; fix the post-submit grace countdown showing 10 minutes instead of 10 seconds under the temporary testing interval; remove a checkpoint-reminder notification that falsely claims a missed photo pauses the session.
+
+**Approach:**
+- Sync-error: used `superpowers:systematic-debugging` — traced the banner to `persistFinalizeToRemote` in `liveSessionStore.ts`, verified `EXPO_PUBLIC_API_URL` and backend health independently, then added temporary `__DEV__`-only diagnostics to surface the real error inline (no Metro terminal available). User confirmed it resolved before the underlying cause was pinned down; diagnostics were reverted.
+- Modal-stack overlap: traced "Photo required" to `PhotoCheckpointScreen`, which pushes (not replaces) `/photo-capture`, and found its own auto-dismiss effect is guarded to only run while focused — so it can never pop itself once something is pushed on top. Root-caused to `PhotoCaptureScreen`'s submit handler using `router.replace('/photo-submitted')` instead of `dismissTo`.
+- Grace countdown: found `CHECKPOINT_MISS_GRACE_MS` (10 min, real value) was left unscaled while `PHOTO_CHECKPOINT_INTERVAL_SECONDS` was temporarily dropped to 10s for testing — the two are independent constants.
+- Pause notification: confirmed via `liveSessionStore.ts` (`recordCheckpointMissIfNeeded`'s comment: "see removed forced-end pause") that the forced-end/pause mechanism no longer exists, so the notification text was factually false, not just stale copy.
+
+**Steps done so far:**
+1. `frontend/src/screens/PhotoCaptureScreen.tsx` — checkpoint submit now `router.dismissTo('/photo-submitted')` instead of `router.replace`.
+2. `frontend/src/features/session-tracking/checkpointConstants.ts` — `CHECKPOINT_MISS_GRACE_MS` temporarily scaled to 10s to match the already-temporary 10s interval (both flagged `// TEMP: testing only` — **revert both before shipping**, since the user's local copy has since reverted `PHOTO_CHECKPOINT_INTERVAL_SECONDS` back to `30 * 60`; `CHECKPOINT_MISS_GRACE_MS` should be checked against that).
+3. `frontend/src/features/session-tracking/checkpointNotifications.ts` — removed the "Last chance for this checkpoint" / "...or the session will pause" notification and its `FINAL_WARNING_THRESHOLD_MIN` branch; all grace reminders now use one neutral "Don't forget your checkpoint" nudge with no consequence claim. Deleted the now-unused `graceMinutesRemaining` helper.
+4. Documented the `dismissTo`-vs-`replace` modal-stack pattern and the removed pause/forced-end mechanism in `docs/frontend/context/components.md` → Patterns, so the next transparentModal chain doesn't repeat the overlap bug.
+5. `cd frontend && npx tsc --noEmit` clean after each change.
+
+**Current failure:** None outstanding from this session. Sync-error root cause was never conclusively identified (resolved on its own, possibly transient backend/auth blip) — if it recurs, re-add the temporary diagnostic described above (pattern preserved in this entry) rather than re-deriving it.
+
+**Verify:** `cd frontend && npx tsc --noEmit` passes. Manual: submit a mid-session checkpoint photo → only "Photo submitted" shows, no "Photo required" underneath; let the (testing-only) grace window run out → countdown/notification no longer claims the session will pause.
+
+---
+
 ## [2026-08-12] — Root README TL;DR polish
 
 **End goal:** Make the repo README instantly graspable — what the product is, why verification matters, and how the monorepo fits — without burying readers in tooling.

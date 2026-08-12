@@ -142,9 +142,18 @@ export function SessionDetailScreen() {
   const canDeleteSession =
     Boolean(sessionId) && !loading && !error && detail.status !== 'approved';
 
+  const goHome = useCallback(() => {
+    try {
+      router.dismissTo('/');
+    } catch {
+      router.replace('/');
+    }
+  }, [router]);
+
   const footerBottom = Math.max(insets.bottom, 12);
+  // Go Home + optional Delete + optional Download PDF + New Session
   const stackedFooterActions =
-    (canDownloadPdf ? 1 : 0) + (canDeleteSession ? 1 : 0) + 1;
+    1 + (canDownloadPdf ? 1 : 0) + (canDeleteSession ? 1 : 0) + 1;
   const footerContentHeight =
     stackedFooterActions === 1
       ? PRIMARY_FOOTER_BTN_HEIGHT
@@ -238,7 +247,7 @@ export function SessionDetailScreen() {
   return (
     <View style={s.root}>
       <View style={s.topSection}>
-        <SessionDetailTopBar onBack={() => router.back()} onShare={handleShare} />
+        <SessionDetailTopBar onBack={goHome} onShare={handleShare} />
       </View>
 
       <ScrollView
@@ -302,6 +311,15 @@ export function SessionDetailScreen() {
 
       <View style={[s.footer, { paddingBottom: footerBottom }]}>
         <View style={s.footerActions}>
+          <AnimatedPressable
+            scaleTo={0.98}
+            onPress={goHome}
+            accessibilityRole="button"
+            accessibilityLabel="Go home"
+            style={s.newSessionBtn}
+          >
+            <Text style={s.newSessionLabel}>Go Home</Text>
+          </AnimatedPressable>
           {canDeleteSession ? (
             <AnimatedPressable
               scaleTo={0.98}
@@ -336,14 +354,12 @@ export function SessionDetailScreen() {
           ) : null}
           <AnimatedPressable
             scaleTo={0.98}
-            style={canDownloadPdf ? s.secondaryOutlineBtn : s.newSessionBtn}
+            style={s.secondaryOutlineBtn}
             onPress={() => router.push('/session-setup-guide' as Href)}
             accessibilityRole="button"
             accessibilityLabel="Start a new session"
           >
-            <Text style={canDownloadPdf ? s.secondaryOutlineLabel : s.newSessionLabel}>
-              New Session
-            </Text>
+            <Text style={s.secondaryOutlineLabel}>New Session</Text>
           </AnimatedPressable>
         </View>
       </View>

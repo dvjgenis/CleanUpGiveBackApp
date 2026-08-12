@@ -5,18 +5,12 @@ import Animated from 'react-native-reanimated';
 import { useAnimatedProgressFill } from '@/components/motion/hooks';
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { ExpandIcon } from '@/features/figma-screens/components/HomeIcons';
-import { colors, fontFamilies, radius as R } from '@/features/figma-screens/tokens';
+import { colors, fontFamilies, radius as R, status as statusColors } from '@/features/figma-screens/tokens';
 import {
   formatCountdown,
   formatElapsed,
-  formatGraceRemaining,
 } from '@/features/session-tracking/mocks/session';
 import type { PhotoCheckpointSubmission } from '@/features/session-tracking/liveSessionStore';
-import {
-  getGraceSecondsRemaining,
-  isCheckpointDueOrGrace,
-  isForcedEndPending,
-} from '@/features/session-tracking/liveSessionStore';
 
 const PILL_MIN_HEIGHT = 112;
 
@@ -34,6 +28,8 @@ type Props = ViewProps & {
   distanceMiles: number;
   elapsedSeconds: number;
   checkpointSecondsRemaining: number;
+  checkpointDueOrGrace: boolean;
+  checkpointOverdueSeconds: number;
   checkpointProgress: number;
   submittedCheckpoints: PhotoCheckpointSubmission[];
   onExpand?: () => void;
@@ -46,6 +42,8 @@ export const LiveSessionMinimizedPill = forwardRef<View, Props>(function LiveSes
     distanceMiles,
     elapsedSeconds,
     checkpointSecondsRemaining,
+    checkpointDueOrGrace,
+    checkpointOverdueSeconds,
     checkpointProgress,
     submittedCheckpoints,
     onExpand,
@@ -56,25 +54,19 @@ export const LiveSessionMinimizedPill = forwardRef<View, Props>(function LiveSes
   ref,
 ) {
   const progressFillStyle = useAnimatedProgressFill(checkpointProgress);
-  const dueOrGrace = isCheckpointDueOrGrace();
-  const forcedEnd = isForcedEndPending();
-  const graceRemaining = getGraceSecondsRemaining();
+  // Urgent/red state kicks in the instant the checkpoint is due — not gated
+  // behind dismissing the "Take Photo" prompt.
+  const ignored = checkpointDueOrGrace;
 
-  const timeLeftLabel = forcedEnd
-    ? 'finish'
-    : dueOrGrace
-      ? 'due'
-      : 'time left';
-  const timeLeftValue = forcedEnd
-    ? 'Photo'
-    : dueOrGrace
-      ? formatGraceRemaining(graceRemaining)
-      : formatCountdown(checkpointSecondsRemaining);
+  const timeLeftLabel = checkpointDueOrGrace ? 'elapsed' : 'time left';
+  const timeLeftValue = checkpointDueOrGrace
+    ? formatCountdown(checkpointOverdueSeconds)
+    : formatCountdown(checkpointSecondsRemaining);
 
   return (
-    <View ref={ref} style={[styles.pill, style]} {...rest}>
+    <View ref={ref} style={[styles.pill, style, ignored && styles.pillIgnored]} {...rest}>
       {/* Yellow top bar — always visible */}
-      <View style={styles.liveBar}>
+      <View style={[styles.liveBar, ignored && styles.liveBarIgnored]}>
         <Text style={styles.liveText}>Live</Text>
         {showExpandButton && onExpand && (
           <AnimatedPressable
@@ -122,6 +114,9 @@ const styles = StyleSheet.create({
     gap: 8,
     overflow: 'hidden',
   },
+  pillIgnored: {
+    backgroundColor: statusColors.declined.border,
+  },
   liveBar: {
     backgroundColor: colors.statusPendingBorder,
     borderTopLeftRadius: R.md,
@@ -132,6 +127,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 9,
     minHeight: 36,
+  },
+  liveBarIgnored: {
+    backgroundColor: statusColors.declined.text,
   },
   liveText: {
     fontFamily: fontFamilies.notoSansSemiBold,

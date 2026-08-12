@@ -1,7 +1,9 @@
 import { FreeKitScreen } from '@/screens/FreeKitScreen';
 import {
+  continueFromSessionFreeKit,
   exitSessionSetupGuideToTrackEntry,
-  goBackInSessionSetupGuide,
+  goToSessionFreeHour,
+  skipSessionSetupGuideForward,
   useSessionSetupGuidePillProgress,
 } from '@/utils/sessionSetupGuideNavigation';
 import { useRouter } from 'expo-router';
@@ -16,9 +18,13 @@ export default function SessionFreeKitRoute() {
       <FreeKitScreen
         totalPills={total}
         activePills={active}
-        onContinue={() => router.push('/session-setup-step6')}
-        onPrevious={() => goBackInSessionSetupGuide(router)}
-        onSkip={() => router.push('/session-setup-step6')}
+        onContinue={() => {
+          void continueFromSessionFreeKit(router);
+        }}
+        onPrevious={() => goToSessionFreeHour(router)}
+        onSkip={() => {
+          void skipSessionSetupGuideForward(router);
+        }}
         onBack={() => exitSessionSetupGuideToTrackEntry(router)}
       />
     </SafeAreaProvider>
