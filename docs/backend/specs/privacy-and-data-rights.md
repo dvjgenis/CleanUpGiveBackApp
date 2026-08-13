@@ -3,6 +3,7 @@
 **Date:** 2026-06-30  
 **Status:** Draft — engineering requirements  
 **Parent:** [privacy-and-data-protection.md](../../compliance/privacy-and-data-protection.md)  
+**Launch board:** [launch-checklist.md](../../compliance/launch-checklist.md)  
 **ADR:** [ADR-003](../../adr/ADR-003-minor-data-protection-baseline.md)
 
 ## Overview

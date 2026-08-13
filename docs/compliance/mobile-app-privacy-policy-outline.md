@@ -4,6 +4,7 @@
 **Effective:** 2026-07-20  
 **Status:** Draft product copy for counsel — **not final legal text**  
 **Parent:** [privacy-and-data-protection.md](privacy-and-data-protection.md)  
+**Launch board:** [launch-checklist.md](launch-checklist.md)  
 **In-app source:** [`frontend/src/features/figma-screens/content/privacyPolicyContent.ts`](../../frontend/src/features/figma-screens/content/privacyPolicyContent.ts)
 
 > Write in plain language a teenager can understand. Counsel must review and finalize before publication.

@@ -58,6 +58,8 @@ Docs complete — see [ADR-004](adr/ADR-004-sessions-backend-supabase-fly.md), [
 
 ## Privacy & compliance
 
+Living launch board: [compliance/launch-checklist.md](compliance/launch-checklist.md).
+
 - [ ] Counsel review of privacy policy + ToS before App Store submission
 - [x] Figma Page 6 — `account-privacy` hub + `privacy-permissions`
 - [x] Figma Page 7 — pre-auth compliance screens (age-gate, parental consent, policy viewers) — **design only**

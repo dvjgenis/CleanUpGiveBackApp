@@ -2,6 +2,18 @@
 
 ---
 
+## [2026-08-13] — Compliance launch checklist
+
+**End goal:** Capture a living, app-specific compliance/launch board (not a generic SaaS+ads+LLM list) so Privacy Policy gaps, unimplemented data rights, and store/legal blockers are tracked in `docs/`.
+
+**Shipped:**
+1. New [`docs/compliance/launch-checklist.md`](compliance/launch-checklist.md) — counsel/publication, policy accuracy, ToS, data rights, security, storage/GPS, Stripe-when-shipped, monitoring, Illinois/minors/courts, store labels; out-of-scope and suggested work order.
+2. Indexed from `docs/README.md`, `privacy-and-data-protection.md`, `mobile-app-privacy-policy-outline.md`, `privacy-and-data-rights.md`, `implementation-plan.md`, `current.md`.
+
+**Status:** Done (docs only). Counsel review and implementation of deletion/export/retention remain open on the checklist.
+
+---
+
 ## [2026-08-12] — Admin Sessions visibility: diagnose “not syncing” → default All + approve polish
 
 **End goal:** Donna can see mobile-logged sessions in `admin-web-app` and approve them without hunting for **All** or hitting stale Approve/Decline buttons. Co-developer report: “sessions aren’t syncing” after a GitHub push — needed root-cause + fix.

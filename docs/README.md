@@ -62,6 +62,7 @@ Living docs for the Clean Up - Give Back monorepo. Templates are copy-only.
 | Path | Purpose |
 |------|---------|
 | [compliance/privacy-and-data-protection.md](compliance/privacy-and-data-protection.md) | Nationwide privacy framework (minors, CCPA, ISMS) |
+| [compliance/launch-checklist.md](compliance/launch-checklist.md) | Launch board: privacy, security, rights, store — tailored to this app |
 | [compliance/mobile-app-privacy-policy-outline.md](compliance/mobile-app-privacy-policy-outline.md) | Privacy policy outline for counsel |
 | [compliance/figma-compliance-screen-gap-audit.md](compliance/figma-compliance-screen-gap-audit.md) | Figma audit + new screen specs |
 | [compliance/privacy-screen-split-decision.md](compliance/privacy-screen-split-decision.md) | account-privacy vs privacy-permissions vs policy viewers |
