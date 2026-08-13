@@ -33,6 +33,20 @@ export async function sendEventRegistrationEmail(
   });
 }
 
+export async function sendOrderPlacedEmail(
+  input: { orderId: string },
+): Promise<{ ok: boolean; skipped?: boolean }> {
+  if (!isApiConfigured) {
+    console.warn('[emails] API not configured; skipping order-placed email');
+    return { ok: true, skipped: true };
+  }
+
+  return apiFetch('/emails/order-placed', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
 export async function requestEmailChangeCode(
   input: RequestEmailChangeInput,
 ): Promise<{ ok: boolean; skipped?: boolean; debugCode?: string }> {

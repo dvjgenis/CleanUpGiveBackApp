@@ -130,6 +130,16 @@ Combined letter PDF for multiple approved sessions (same volunteer when using JW
 
 Spec: [service-letter-pdf.md](../../frontend/specs/service-letter-pdf.md).
 
+#### `POST /emails/order-placed`
+
+Order-placed confirmation (Figma `1311:359`). Spec: [order-emails.md](order-emails.md).
+
+- **Auth:** volunteer JWT
+- **Body:** `{ "orderId": "<uuid>" }`
+- **Guards:** `shop_orders.user_id` must match the JWT subject
+- **Response:** `200 { "ok": true }` or `{ "ok": true, "skipped": true }` when Resend/email is missing
+- **Side effects:** Resend HTML email + `email_log` (`order_placed`)
+
 ## Data model
 
 ### `sessions`

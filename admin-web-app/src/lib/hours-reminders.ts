@@ -12,6 +12,7 @@ import { renderTemplate } from '@/lib/email-template-render';
 import { getResendClient, getFromAddress } from '@/lib/resend';
 import { logEmailSend } from '@/lib/email-log';
 import { sendExpoPush } from '@/lib/push';
+import { buildHoursReminderEmailForSend } from '@/lib/hours-reminder-send';
 
 const MIN_IDLE_DAYS = 7;
 const MAX_IDLE_DAYS = 10;
@@ -27,6 +28,15 @@ const HOURS_REMINDER_PUSH_VARIANTS: { title: string; body: string }[] = [
   { title: 'Time to log a session', body: "Open the app and start tracking whenever you're free." },
   { title: 'Just a nudge, no rush', body: "Whenever you're ready, your next session is one tap away." },
 ];
+
+function sessionHours(session: {
+  duration_seconds?: number | null;
+  adjusted_hours?: number | null;
+}): number {
+  if (session.adjusted_hours != null) return session.adjusted_hours;
+  if (!session.duration_seconds) return 0;
+  return session.duration_seconds / 3600;
+}
 
 function pickPushVariant(userId: string): { title: string; body: string } {
   let hash = 0;
@@ -47,8 +57,11 @@ export type HoursReminderResult = {
 export async function sendHoursReminders(now = new Date()): Promise<HoursReminderResult> {
   const supabase = await createServiceClient();
 
-  const { data: courtOrders } = await supabase.from('court_orders').select('user_id');
+  const { data: courtOrders } = await supabase.from('court_orders').select('user_id, hours_reset_at');
   const courtOrderedUserIds = (courtOrders ?? []).map((o) => o.user_id);
+  const hoursResetAtByUser = new Map(
+    (courtOrders ?? []).map((o) => [o.user_id as string, (o.hours_reset_at as string | null) ?? null]),
+  );
 
   const result: HoursReminderResult = {
     sent: 0,
@@ -65,7 +78,7 @@ export async function sendHoursReminders(now = new Date()): Promise<HoursReminde
   const [{ data: sessions }, { data: recentReminders }, directory] = await Promise.all([
     supabase
       .from('sessions')
-      .select('user_id, started_at, created_at')
+      .select('user_id, started_at, created_at, status, court_ordered, duration_seconds, adjusted_hours')
       .neq('status', 'active')
       .in('user_id', courtOrderedUserIds),
     supabase
@@ -77,12 +90,19 @@ export async function sendHoursReminders(now = new Date()): Promise<HoursReminde
   ]);
 
   const lastSessionByUser = new Map<string, number>();
+  const completedHoursByUser = new Map<string, number>();
   for (const s of sessions ?? []) {
     const at = s.started_at ?? s.created_at;
-    if (!at) continue;
-    const ts = new Date(at).getTime();
-    const prev = lastSessionByUser.get(s.user_id);
-    if (prev == null || ts > prev) lastSessionByUser.set(s.user_id, ts);
+    if (at) {
+      const ts = new Date(at).getTime();
+      const prev = lastSessionByUser.get(s.user_id);
+      if (prev == null || ts > prev) lastSessionByUser.set(s.user_id, ts);
+    }
+
+    if (s.status !== 'approved' || !s.court_ordered) continue;
+    const resetAt = hoursResetAtByUser.get(s.user_id);
+    if (resetAt && (s.started_at == null || s.started_at <= resetAt)) continue;
+    completedHoursByUser.set(s.user_id, (completedHoursByUser.get(s.user_id) ?? 0) + sessionHours(s));
   }
 
   const recentlyRemindedUserIds = new Set((recentReminders ?? []).map((r) => r.user_id));
@@ -126,11 +146,16 @@ export async function sendHoursReminders(now = new Date()): Promise<HoursReminde
 
     const templateVars = { volunteer_name: entry.name };
     const subject = renderTemplate(template.subject, templateVars);
+    const { html, attachments } = buildHoursReminderEmailForSend({
+      volunteerName: entry.name,
+      currentHours: completedHoursByUser.get(userId) ?? 0,
+    });
     const { data, error } = await resend.emails.send({
       from: getFromAddress(),
       to: entry.email,
       subject,
-      html: renderTemplate(template.bodyHtml, templateVars, { escapeHtml: true }),
+      html,
+      attachments,
     });
 
     await logEmailSend(supabase, {

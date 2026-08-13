@@ -34,6 +34,7 @@ import { markTrackerPaid } from '@/features/session-tracking/trackerPaymentStore
 import { formatUsd, getCheckoutSummary, getTrackerCheckoutSummary } from '../mocks/checkout';
 import { layout, colors, fontFamilies, radius, shadows } from '../tokens';
 import { createShopOrder } from '@/lib/shopOrders';
+import { sendOrderPlacedEmail } from '@/lib/emailsApi';
 import { clearCart } from '../cartStore';
 
 const FOOTER_PAD = 20;
@@ -387,9 +388,10 @@ export function CheckoutScreen() {
 
       if (orderResult.success) {
         console.log('[checkout] Order created successfully:', orderResult.orderId);
-        // Clear the cart after successful order creation
+        void sendOrderPlacedEmail({ orderId: orderResult.orderId }).catch((err) => {
+          console.warn('[checkout] Order-placed email failed:', err);
+        });
         clearCart();
-        // Navigate to confirmation with the order ID
         router.replace(`/purchase-confirmation?orderId=${orderResult.orderId}` as Href);
       } else {
         console.error('[checkout] Order creation failed:', orderResult.error);

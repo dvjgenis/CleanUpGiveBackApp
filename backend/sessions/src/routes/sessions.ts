@@ -59,7 +59,7 @@ function getFromAddress(): string {
 async function logEmailSend(params: {
   userId?: string | null;
   sessionId?: string | null;
-  templateType: 'approved' | 'declined' | 'shipped' | 'event_registration' | 'hours_reminder' | 'other';
+  templateType: 'approved' | 'declined' | 'shipped' | 'event_registration' | 'hours_reminder' | 'order_placed' | 'other';
   toEmail: string;
   subject: string;
   status: 'sent' | 'failed';
