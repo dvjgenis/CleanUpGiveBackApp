@@ -1,11 +1,14 @@
 /**
  * Recolor is already applied in public/email/nudge-bell.json.
  * This script plays that Lottie in headless Chrome and writes an email-safe GIF
- * on forest-green so missing GIF transparency still matches the header.
+ * with a transparent background (1-bit GIF alpha) so the header shows through
+ * in light and dark mode.
  *
  *   WORKDIR=$(mktemp -d) && cd "$WORKDIR" && npm init -y && npm install puppeteer
  *   cp "$REPO/admin-web-app/scripts/render-nudge-bell-gif.mjs" "$WORKDIR/render.mjs"
  *   NUDGE_BELL_EMAIL_DIR="$REPO/admin-web-app/public/email" node "$WORKDIR/render.mjs"
+ *
+ * If you only have a green-baked GIF, use `make-email-gifs-transparent.mjs`.
  */
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -27,7 +30,6 @@ const framesDir = join(here, '..', 'tmp', 'nudge-bell-frames');
 const SIZE = 340;
 const FRAME_STEP = 4;
 const FPS = 15;
-const BG = '#009540';
 
 mkdirSync(framesDir, { recursive: true });
 
@@ -36,7 +38,7 @@ const html = `<!DOCTYPE html>
 <head>
   <meta charset="utf-8">
   <style>
-    html, body { margin: 0; background: ${BG}; }
+    html, body { margin: 0; background: transparent; }
     #lottie { width: ${SIZE}px; height: ${SIZE}px; }
   </style>
 </head>
@@ -82,6 +84,7 @@ for (let n = 0; n < frameIndexes.length; n += 1) {
   await page.screenshot({
     path: join(framesDir, `frame-${String(n).padStart(3, '0')}.png`),
     type: 'png',
+    omitBackground: true,
   });
 }
 
@@ -95,7 +98,7 @@ execFileSync('ffmpeg', [
   '-i',
   join(framesDir, 'frame-%03d.png'),
   '-vf',
-  'palettegen=stats_mode=diff',
+  'palettegen=reserve_transparent=1:stats_mode=diff',
   palette,
 ], { stdio: 'inherit' });
 
@@ -108,7 +111,7 @@ execFileSync('ffmpeg', [
   '-i',
   palette,
   '-lavfi',
-  'paletteuse=dither=bayer:bayer_scale=3',
+  'paletteuse=dither=none:alpha_threshold=128',
   '-loop',
   '0',
   outGif,

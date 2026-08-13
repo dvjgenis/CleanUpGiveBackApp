@@ -1,6 +1,6 @@
 # Backend spec: order emails
 
-**Date:** 2026-08-12  
+**Date:** 2026-08-13  
 **Status:** Implemented. `/email/*` assets are live on Vercel (`cleanupgiveback-web-app`, 2026-08-12). Apply [`admin/db/020_order_emails_figma.sql`](../../../admin/db/020_order_emails_figma.sql) on Supabase; Fly redeploy `backend/sessions` for production `POST /emails/order-placed`.  
 **Design:** [Figma Order Shipped `1311:359`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=1311-359)
 
@@ -17,29 +17,22 @@ Two transactional emails share one 600px table layout from Figma. HTML is **code
 
 Both variants use the green-banner headline **Your order is on its way!** Placed keeps the thank-you subject and greeting. Shipped **Track Order** appears only when carrier + tracking yield a URL.
 
-Not editable in `/emails` → Templates.
+Not editable in `/emails` → Templates. Sage footer is a full-width `#bdcaba` **row in the same outer table** as the cream card (`width/min-width: 100%`, `height: 100%` so leftover preview height is sage). Not a sibling table — Gmail hides a trailing signature table behind “…”. Hidden order-number token so threaded sends stay unique.
 
 ## Layout and type
 
-Gmail strips webfonts and does not play Lottie/SVG. Images are **hosted HTTPS** on `https://cleanupgiveback-web-app.vercel.app/email/` — do not CID-inline (Gmail mobile treats CID as attachments and clips past ~102KB). Outlook typically shows the first GIF frame.
+Gmail strips webfonts and does not play Lottie/SVG. **All copy is live HTML.** Images are **hosted HTTPS** on `https://cleanupgiveback-web-app.vercel.app/email/` — logo, shipping GIF, and product thumbs only. Do not CID-inline. Outlook typically shows the first GIF frame.
 
-| Face | Copy |
-|------|------|
-| Sanchez | Headline `Your order is on its way!` (28px, 340×36 PNG); lime **Track Order** CTA (18px PNG) |
-| Noto Sans | Body, labels, support, footer (rasterized PNGs). Greeting + live fields (name, address values, totals, line items) are HTML with hosted `@font-face` (`/email/fonts/NotoSans-*.ttf`) and Arial fallback |
+| Face | Copy | HTML stack |
+|------|------|------------|
+| Sanchez | Headline `Your order is on its way!` (28px, white on green); **Track Order** CTA (18px) — light `#c2d832` lime, dark `#fcab29` amber | `'Sanchez', Georgia, 'Times New Roman', serif` |
+| Noto Sans | Body (16px laptop / 18px phone), labels, greeting, live fields, support, footer | `'Noto Sans', 'Trebuchet MS', Tahoma, Arial, Helvetica, sans-serif` |
 
-**Header truck:** white-on-green GIF from `frontend/assets/animations/shipping.svg` (same motion as the Lottie) at 749×362, displayed **220×106**. Laptop nudges it slightly left (`padding-right: 24px`). Phone keeps `padding-right: 36px` (Gmail Android GIF clip).
+**Header truck:** white GIF from `frontend/assets/animations/shipping.svg` (same motion as the Lottie) at **220×106** with a transparent background. Laptop nudges it slightly left (`padding-right: 24px`). Phone keeps `padding-right: 36px` (Gmail Android GIF clip). The green header tiles `header-pixel.png` and uses `color-scheme: light only` so Apple Mail does not invert the white headline.
 
-**Greeting:** one wrapping HTML line (`Thank you for your order, {name}!`) so the name is not squeezed beside a prefix image on phone.
+**Greeting:** one wrapping HTML line (`Thank you for your order, {name}!`). Body sits on cream `#fcf9f8` (`cream/50` / `color/bg/app`, not white). All copy uses **`letter-spacing: 0.02em`** (head `<style>` plus inline on every text cell/link), same token as Forgot Password and hours-reminder.
 
-**Body copy** is left-aligned Noto, with a laptop PNG and a phone PNG swapped at `@media (max-width: 600px)` so type does not shrink with the 600px shell:
-
-| Variant | Laptop | Phone |
-|---------|--------|-------|
-| placed | 16px, `order-placed-body.png` (452×24) | **18px**, `order-placed-body-mobile.png` (~292×45) |
-| shipped | 16px, `order-shipped-body.png` (523×42) | **20px**, `order-shipped-body-mobile.png` (~288×92) |
-
-Support and sage footer reuse the Forgot Password 14px Noto PNGs (desktop/mobile support wrap; Contact Us / Privacy / Unsubscribe / nonprofit).
+**Body copy** is left-aligned HTML; phone bumps to 18px via `@media (max-width: 600px)`.
 
 ## Placeholder-first
 
@@ -47,27 +40,20 @@ Figma sample copy is the default. Real `shop_orders` / volunteer fields replace 
 
 | Field | Placeholder until |
 |-------|-------------------|
-| Volunteer name | `Alex Johnson` |
+| Volunteer name | `Volunteer Name` |
 | Address | `XXXXX, XXXXX, XX XXXXX` until street **and** city exist (partial rows, `Address not provided`, country-only objects do not count) |
 | Payment method | `—` until Stripe metadata exists |
 | Order total | `$XX.XXX` until `total_cents` > 0 |
 | Order # | `X-XXXX` / `######` until a real id |
 | Order date | `MM/DD/YYYY` |
-| Line items | `Product Item` / `X` / `$23.99` until named items exist |
+| Line items | `Product Item` / `X` / `$XX.XXX` until named items exist (same mask as order total) |
 
 ## Hosted assets (production)
 
-Confirmed after `cd admin-web-app && vercel --prod` (2026-08-12):
-
-- `shipping.gif` (cache-bust `?v=4` in HTML)
-- `order-on-its-way-headline.png` (`?v=2`)
-- `track-order-button.png`
-- `order-placed-body.png` / `order-placed-body-mobile.png`
-- `order-shipped-body.png` (`?v=2`) / `order-shipped-body-mobile.png` (`?v=2`)
+- `shipping.gif` (transparent 220×106; cache-bust `?v=6` in HTML)
+- `header-pixel.png` (8×8 `#009540` tile; Apple Mail inversion skip)
 - `logo-mark.png` (white mark on the green header)
 - Product thumbs: `cleanup-kit.png`, `trash-grabber.png`, `tote-bags.png`, `adult-safety-vest.png`, `child-safety-vest.png`, `product-placeholder.png`
-- Label/chrome PNGs: `order-summary.png`, `order-label-*.png`, `order-col-*.png`, `order-row-total.png`, `order-number-prefix.png`
-- Shared footer: `forgot-password-support.png` / `-mobile.png`, `forgot-password-contact-us.png`, `forgot-password-privacy.png`, `forgot-password-unsubscribe.png`, `forgot-password-nonprofit.png`
 - Fonts: `/email/fonts/NotoSans-Regular.ttf`, `NotoSans-Bold.ttf`, `Sanchez-Regular.ttf`
 
 ## API contract
@@ -92,15 +78,16 @@ Uses existing `shop_orders` (`items` jsonb, `shipping_address`, `total_cents`, `
 
 - [x] AC-1: Placed email sends on checkout when API + Resend are configured (non-blocking if send fails)
 - [x] AC-2: Shipped email sends only on first transition into `shipped`
-- [x] AC-3: Layout matches Figma structure (green header, summary, items, sage footer)
+- [x] AC-3: Layout matches Figma structure (green header, cream `#fcf9f8` body, summary, items, sage footer)
 - [x] AC-4: Every field shows Figma-style placeholder when real data is missing
 - [x] AC-5: Real `shop_orders` / volunteer fields replace placeholders when present (per-field only)
 - [x] AC-6: Payment method row always visible; value `—` until Stripe payment metadata exists
 - [x] AC-6b: Address row always visible; value `XXXXX, XXXXX, XX XXXXX` until street and city are both present
 - [x] AC-7: Shipped Track Order button appears only when carrier + tracking yield a real URL
 - [x] AC-8: Images are hosted HTTPS; test/production sends do not CID-inline
-- [x] AC-9: Greeting is one wrapping HTML line; body copy is left-aligned with laptop/phone PNG swap
-- [x] AC-10: Sanchez is headline + Track Order only; remaining copy is Noto Sans (PNG chrome + `@font-face` for live fields)
+- [x] AC-9: Greeting is one wrapping HTML line; body copy is left-aligned live HTML (16px / 18px phone)
+- [x] AC-10: All copy is live HTML; Sanchez/`@font-face` + Georgia for headline/CTA; Noto/`@font-face` + Trebuchet MS for body/labels/footer. Images are logo, shipping GIF, and product thumbs only.
+- [x] AC-11: Tracking is `letter-spacing: 0.02em` on all copy (inline + head CSS), matching Forgot Password and hours-reminder.
 
 ## Security & privacy
 

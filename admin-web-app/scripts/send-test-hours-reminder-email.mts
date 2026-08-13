@@ -4,8 +4,7 @@
  *   npx tsx scripts/send-test-hours-reminder-email.mts --to=you@example.com
  *
  * Loads `admin-web-app/.env.local` for RESEND_API_KEY / EMAIL_FROM / DONNA_EMAIL.
- * CID-inlines logo, bell GIF, and rasterized Sanchez / Noto Sans type PNGs
- * (same as Forgot Password) so Gmail shows brand fonts before Vercel deploy.
+ * HTML copy is live; logo + bell GIF are CID-inlined so Gmail shows the animation.
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -14,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { Resend } from 'resend';
 
 import { HOURS_REMINDER_SUBJECT } from '../src/lib/hours-reminder-email-html';
-import { buildHoursReminderEmailForSend } from '../src/lib/hours-reminder-type-png';
+import { buildHoursReminderEmailForSend } from '../src/lib/hours-reminder-send';
 
 function loadEnvFile(path: string): void {
   if (!existsSync(path)) return;
@@ -53,11 +52,9 @@ if (!to) {
 }
 
 const resend = new Resend(apiKey);
-const { html, attachments } = await buildHoursReminderEmailForSend({
-  volunteerName: 'Alex Johnson',
-  currentHours: 12.5,
-});
-const subject = `[TEST] ${HOURS_REMINDER_SUBJECT}`;
+const { html, attachments } = buildHoursReminderEmailForSend({});
+const stamp = new Date().toISOString().slice(0, 16).replace('T', ' ');
+const subject = `[TEST] ${HOURS_REMINDER_SUBJECT} · ${stamp}`;
 const { data, error } = await resend.emails.send({ from, to, subject, html, attachments });
 if (error) {
   console.error('hours-reminder send failed:', error.message);

@@ -1,16 +1,13 @@
 /**
  * Figma `1311:359` Order Shipped / order-placed email HTML.
  *
- * Table + inline CSS only — Gmail/Outlook strip `<style>` blocks, SVG, and
- * webfonts. Sanchez is headline + Track Order only. All other copy is Noto
- * Sans: static chrome/labels are rasterized PNGs (Gmail); dynamic fields use
- * hosted `@font-face` with Arial fallback. Shipped body has two Noto PNGs:
- * 16px laptop wrap and 20px ~288px phone wrap, both left-aligned (`@media` swap so type does
- * not shrink with the 600px shell).
- * Placeholder-first: each field uses Figma sample copy until a real
- * `shop_orders` / volunteer value is present. Do not invent missing data.
+ * Table + inline CSS only. All copy is live HTML with system font stacks
+ * (Georgia ≈ Sanchez, Trebuchet MS ≈ Noto Sans). Hosted `@font-face` for
+ * clients that load webfonts. Logo, shipping GIF, and product thumbs are the
+ * only raster assets. Placeholder-first: each field uses Figma sample copy
+ * until a real `shop_orders` / volunteer value is present.
  *
- * Keep in sync with `backend/sessions/src/lib/order-email-html.ts`.
+ * Keep in sync with `admin-web-app/src/lib/order-email-html.ts`.
  */
 
 export type OrderEmailVariant = 'placed' | 'shipped';
@@ -46,7 +43,7 @@ export type OrderEmailInput = {
 };
 
 export const ORDER_EMAIL_PLACEHOLDERS = {
-  volunteerName: 'Alex Johnson',
+  volunteerName: 'Volunteer Name',
   orderNumberHeader: 'X-XXXX',
   address: 'XXXXX, XXXXX, XX XXXXX',
   paymentMethod: '—',
@@ -55,8 +52,8 @@ export const ORDER_EMAIL_PLACEHOLDERS = {
   orderDate: 'MM/DD/YYYY',
   itemName: 'Product Item',
   itemQty: 'X',
-  itemPrice: '$23.99',
-  itemsTotal: '$50.00',
+  itemPrice: '$XX.XXX',
+  itemsTotal: '$XX.XXX',
 } as const;
 
 export const ORDER_EMAIL_SUBJECTS: Record<OrderEmailVariant, string> = {
@@ -79,23 +76,18 @@ const PRODUCT_IMAGE_BY_ID: Record<string, string> = {
 
 const PLACEHOLDER_IMAGE = `${ORDER_EMAIL_ASSET_BASE}/product-placeholder.png`;
 const LOGO_MARK_URL = `${ORDER_EMAIL_ASSET_BASE}/logo-mark.png`;
-const SHIPPING_ICON_URL = `${ORDER_EMAIL_ASSET_BASE}/shipping.gif?v=4`;
-const HEADLINE_URL = `${ORDER_EMAIL_ASSET_BASE}/order-on-its-way-headline.png?v=2`;
-const TRACK_ORDER_URL = `${ORDER_EMAIL_ASSET_BASE}/track-order-button.png`;
-const PLACED_BODY_URL = `${ORDER_EMAIL_ASSET_BASE}/order-placed-body.png`;
-const PLACED_BODY_MOBILE_URL = `${ORDER_EMAIL_ASSET_BASE}/order-placed-body-mobile.png`;
-const SHIPPED_BODY_URL = `${ORDER_EMAIL_ASSET_BASE}/order-shipped-body.png?v=2`;
-const SHIPPED_BODY_MOBILE_URL = `${ORDER_EMAIL_ASSET_BASE}/order-shipped-body-mobile.png?v=2`;
-const SUPPORT_URL = `${ORDER_EMAIL_ASSET_BASE}/forgot-password-support.png`;
-const SUPPORT_MOBILE_URL = `${ORDER_EMAIL_ASSET_BASE}/forgot-password-support-mobile.png`;
-const CONTACT_URL = `${ORDER_EMAIL_ASSET_BASE}/forgot-password-contact-us.png`;
-const PRIVACY_URL = `${ORDER_EMAIL_ASSET_BASE}/forgot-password-privacy.png`;
-const UNSUBSCRIBE_URL = `${ORDER_EMAIL_ASSET_BASE}/forgot-password-unsubscribe.png`;
-const NONPROFIT_URL = `${ORDER_EMAIL_ASSET_BASE}/forgot-password-nonprofit.png`;
+const HEADER_PIXEL_URL = `${ORDER_EMAIL_ASSET_BASE}/header-pixel.png`;
+const SHIPPING_ICON_URL = `${ORDER_EMAIL_ASSET_BASE}/shipping.gif?v=6`;
 const FONT_REGULAR_URL = `${ORDER_EMAIL_ASSET_BASE}/fonts/NotoSans-Regular.ttf`;
 const FONT_BOLD_URL = `${ORDER_EMAIL_ASSET_BASE}/fonts/NotoSans-Bold.ttf`;
-const EMAIL_SANS = "'Noto Sans',Arial,Helvetica,sans-serif";
-const SUPPORT_ALT = `Please do not reply to this email. For customer service, email ${SUPPORT_EMAIL}`;
+const FONT_SANCHEZ_URL = `${ORDER_EMAIL_ASSET_BASE}/fonts/Sanchez-Regular.ttf`;
+const FONT_HEADING = "Georgia, 'Times New Roman', serif";
+const FONT_BODY = "'Trebuchet MS', Tahoma, Arial, Helvetica, sans-serif";
+const EMAIL_SANS = `'Noto Sans', ${FONT_BODY}`;
+const EMAIL_SERIF = `'Sanchez', ${FONT_HEADING}`;
+const LETTER_SPACING = '0.02em';
+/** Figma `cream/50` / `color/bg/app` — not plain white. */
+const CARD_BG = '#fcf9f8';
 
 const PLACEHOLDER_LINE_ITEMS: OrderEmailLineItem[] = [
   { name: ORDER_EMAIL_PLACEHOLDERS.itemName, qty: null, unitCents: null },
@@ -205,34 +197,11 @@ function escapeHtml(value: string): string {
     .replace(/'/g, '&#39;');
 }
 
-function typePng(file: string, width: number, height: number, alt: string, extra = ''): string {
-  return `<img src="${ORDER_EMAIL_ASSET_BASE}/${file}" width="${width}" height="${height}" alt="${escapeHtml(alt)}" style="display:block;border:0;width:${width}px;height:${height}px;${extra}">`;
-}
-
-function bodyCopyHtml(
-  desktopUrl: string,
-  desktopWidth: number,
-  desktopHeight: number,
-  mobileUrl: string,
-  mobileWidth: number,
-  mobileHeight: number,
-  alt: string,
-): string {
-  const safeAlt = escapeHtml(alt);
-  return `<table role="presentation" class="oe-body-desktop" cellpadding="0" cellspacing="0" align="left" width="100%">
-              <tr>
-                <td align="left" style="text-align:left;">
-                  <img src="${desktopUrl}" width="${desktopWidth}" height="${desktopHeight}" alt="${safeAlt}" style="display:block;border:0;margin:0 0 32px;max-width:100%;height:auto;">
-                </td>
-              </tr>
-            </table>
-            <table role="presentation" class="oe-body-mobile" cellpadding="0" cellspacing="0" align="left" width="100%" style="display:none;max-height:0;overflow:hidden;mso-hide:all;width:0;">
-              <tr>
-                <td align="left" style="text-align:left;">
-                  <img src="${mobileUrl}" width="${mobileWidth}" height="${mobileHeight}" alt="${safeAlt}" style="display:block;border:0;margin:0 0 32px;width:${mobileWidth}px;height:auto;max-width:100%;">
-                </td>
-              </tr>
-            </table>`;
+function summaryRow(label: string, value: string): string {
+  return `<tr>
+      <td style="padding:0 0 20px;vertical-align:top;width:140px;font-family:${EMAIL_SANS};font-size:14px;color:#1c1b1b;letter-spacing:${LETTER_SPACING};">${escapeHtml(label)}</td>
+      <td style="padding:0 0 20px;font-family:${EMAIL_SANS};font-size:14px;font-weight:bold;color:#1c1b1b;vertical-align:top;letter-spacing:${LETTER_SPACING};">${escapeHtml(value)}</td>
+    </tr>`;
 }
 
 function productImageUrl(productId: string | null | undefined): string {
@@ -259,12 +228,12 @@ function lineItemRowsHtml(items: OrderEmailLineItem[]): string {
         <td width="86" style="width:86px;vertical-align:middle;">
           <img src="${img}" width="86" height="86" alt="" style="display:block;width:86px;height:86px;object-fit:cover;border:0;">
         </td>
-        <td style="padding-left:16px;vertical-align:middle;font-family:${EMAIL_SANS};font-size:16px;font-weight:bold;color:#000000;">${escapeHtml(name)}</td>
+        <td style="padding-left:16px;vertical-align:middle;font-family:${EMAIL_SANS};font-size:16px;font-weight:bold;color:#000000;letter-spacing:${LETTER_SPACING};">${escapeHtml(name)}</td>
       </tr>
     </table>
   </td>
-  <td align="center" width="48" style="padding:16px 0;border-bottom:1px solid #e5e2e1;vertical-align:middle;font-family:${EMAIL_SANS};font-size:14px;color:#000000;">${escapeHtml(qty)}</td>
-  <td align="right" width="72" style="padding:16px 0;border-bottom:1px solid #e5e2e1;vertical-align:middle;font-family:${EMAIL_SANS};font-size:16px;color:#ba1a1a;white-space:nowrap;">${escapeHtml(price)}</td>
+  <td align="center" width="48" style="padding:16px 0;border-bottom:1px solid #e5e2e1;vertical-align:middle;font-family:${EMAIL_SANS};font-size:14px;color:#000000;letter-spacing:${LETTER_SPACING};">${escapeHtml(qty)}</td>
+  <td align="right" width="72" style="padding:16px 0;border-bottom:1px solid #e5e2e1;vertical-align:middle;font-family:${EMAIL_SANS};font-size:16px;color:#ba1a1a;white-space:nowrap;letter-spacing:${LETTER_SPACING};">${escapeHtml(price)}</td>
 </tr>`;
     })
     .join('');
@@ -303,28 +272,49 @@ export function buildOrderEmailHtml(input: OrderEmailInput): string {
   const trackHref = isShipped ? trackingUrl(input.carrier, input.trackingNumber) : null;
   const ctaHtml = trackHref
     ? `<tr><td align="center" style="padding-top:12px;">
-        <a href="${escapeHtml(trackHref)}" style="display:inline-block;line-height:0;text-decoration:none;">
-          <img src="${TRACK_ORDER_URL}" width="180" height="45" alt="Track Order" style="display:block;border:0;width:180px;height:45px;">
-        </a>
+        <table role="presentation" cellpadding="0" cellspacing="0" align="center">
+          <tr>
+            <td class="oe-cta-cell" align="center" bgcolor="#c2d832" style="background-color:#c2d832;border-radius:4px;">
+              <a class="oe-cta-link" href="${escapeHtml(trackHref)}" style="display:inline-block;padding:16px 37px;font-family:${EMAIL_SERIF};font-size:18px;font-weight:400;color:#004d21;text-decoration:none;line-height:1.2;letter-spacing:${LETTER_SPACING};">Track Order</a>
+            </td>
+          </tr>
+        </table>
       </td></tr>`
     : '';
-  const bodyHtml = isShipped
-    ? bodyCopyHtml(SHIPPED_BODY_URL, 523, 42, SHIPPED_BODY_MOBILE_URL, 288, 92, bodyCopy)
-    : bodyCopyHtml(PLACED_BODY_URL, 452, 24, PLACED_BODY_MOBILE_URL, 292, 45, bodyCopy);
-
-  const summaryRow = (file: string, width: number, height: number, label: string, value: string) =>
-    `<tr>
-      <td style="padding:0 0 20px;vertical-align:top;width:140px;">${typePng(file, width, height, label)}</td>
-      <td style="padding:0 0 20px;font-family:${EMAIL_SANS};font-size:14px;font-weight:bold;color:#1c1b1b;vertical-align:top;">${escapeHtml(value)}</td>
-    </tr>`;
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light only">
+  <meta name="supported-color-schemes" content="light">
   <title>${escapeHtml(headline)}</title>
   <style type="text/css">
+    :root {
+      color-scheme: light only;
+      supported-color-schemes: light;
+    }
+    html, body {
+      margin: 0 !important;
+      padding: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      background-color: #bdcaba !important;
+    }
+    .email-footer {
+      width: 100% !important;
+      min-width: 100% !important;
+    }
+    body, td, p, h1, a {
+      letter-spacing: 0.02em;
+    }
+    @font-face {
+      font-family: 'Sanchez';
+      font-style: normal;
+      font-weight: 400;
+      src: url('${FONT_SANCHEZ_URL}') format('truetype');
+    }
     @font-face {
       font-family: 'Noto Sans';
       font-style: normal;
@@ -337,54 +327,62 @@ export function buildOrderEmailHtml(input: OrderEmailInput): string {
       font-weight: 700;
       src: url('${FONT_BOLD_URL}') format('truetype');
     }
+    .oe-body-text {
+      font-size: 16px;
+      line-height: 1.5;
+    }
     @media only screen and (max-width: 600px) {
       .shipping-gif-cell {
         padding-right: 36px !important;
       }
-      .oe-body-desktop,
-      .oe-support-desktop {
-        display: none !important;
-        max-height: 0 !important;
-        overflow: hidden !important;
-        mso-hide: all !important;
+      .oe-body-text {
+        font-size: 18px !important;
+        line-height: 1.45 !important;
       }
-      .oe-body-mobile,
-      .oe-support-mobile {
-        display: table !important;
-        width: auto !important;
-        max-height: none !important;
-        overflow: visible !important;
+    }
+    @media (prefers-color-scheme: dark) {
+      .oe-cta-cell {
+        background-color: #fcab29 !important;
       }
+      .oe-cta-link {
+        color: #004d21 !important;
+      }
+    }
+    [data-ogsc] .oe-cta-cell,
+    [data-ogsb] .oe-cta-cell {
+      background-color: #fcab29 !important;
+    }
+    [data-ogsc] .oe-cta-link,
+    [data-ogsb] .oe-cta-link {
+      color: #004d21 !important;
     }
   </style>
 </head>
-<body style="margin:0;padding:0;background-color:#fcf9f8;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#fcf9f8;">
+<body style="margin:0;padding:0;width:100%;height:100%;background-color:#bdcaba;">
+<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">
+  Order ${escapeHtml(orderNumberHeader)}
+</div>
+<table role="presentation" width="100%" height="100%" cellpadding="0" cellspacing="0" bgcolor="#bdcaba" style="width:100%;min-width:100%;height:100%;min-height:100%;background-color:#bdcaba;">
   <tr>
-    <td align="center" style="padding:0;">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background-color:#ffffff;font-family:${EMAIL_SANS};">
+    <td align="center" bgcolor="${CARD_BG}" style="background-color:${CARD_BG};padding:0;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="${CARD_BG}" style="max-width:600px;background-color:${CARD_BG};font-family:${FONT_BODY};">
         <tr>
-          <td style="background-color:#009540;padding:16px 20px 32px;">
+          <td bgcolor="#009540" background="${HEADER_PIXEL_URL}" style="background-color:#009540;background-image:url('${HEADER_PIXEL_URL}');padding:16px 20px 32px;">
             <img src="${LOGO_MARK_URL}" width="32" height="42" alt="Clean Up Give Back" style="display:block;border:0;">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
               <tr>
-                <td class="shipping-gif-cell" align="center" style="padding-top:0;padding-right:24px;font-size:0;line-height:0;">
+                <td class="shipping-gif-cell" align="center" bgcolor="#009540" background="${HEADER_PIXEL_URL}" style="padding-top:0;padding-right:24px;font-size:0;line-height:0;background-color:#009540;background-image:url('${HEADER_PIXEL_URL}');">
                   <img src="${SHIPPING_ICON_URL}" width="220" height="106" alt="" style="display:block;width:220px;height:106px;border:0;margin:0 auto;">
                 </td>
               </tr>
               <tr>
-                <td align="center" style="padding-top:4px;font-size:0;line-height:0;">
-                  <img src="${HEADLINE_URL}" width="340" height="36" alt="${escapeHtml(headline)}" style="display:block;border:0;margin:0 auto;width:340px;height:36px;max-width:100%;height:auto;">
+                <td align="center" bgcolor="#009540" background="${HEADER_PIXEL_URL}" style="padding-top:8px;background-color:#009540;background-image:url('${HEADER_PIXEL_URL}');">
+                  <h1 style="margin:0;font-family:${EMAIL_SERIF};font-size:28px;font-weight:400;color:#ffffff;text-align:center;line-height:1.3;letter-spacing:${LETTER_SPACING};">${escapeHtml(headline)}</h1>
                 </td>
               </tr>
               <tr>
-                <td align="center" style="padding-top:10px;">
-                  <table role="presentation" cellpadding="0" cellspacing="0" align="center">
-                    <tr>
-                      <td style="vertical-align:middle;">${typePng('order-number-prefix.png', 102, 14, 'Order number:')}</td>
-                      <td style="padding-left:6px;vertical-align:middle;font-family:${EMAIL_SANS};font-size:14px;color:#bdcaba;">${escapeHtml(orderNumberHeader)}</td>
-                    </tr>
-                  </table>
+                <td align="center" style="padding-top:10px;font-family:${EMAIL_SANS};font-size:14px;color:#bdcaba;letter-spacing:${LETTER_SPACING};">
+                  Order number: ${escapeHtml(orderNumberHeader)}
                 </td>
               </tr>
               ${ctaHtml}
@@ -393,80 +391,61 @@ export function buildOrderEmailHtml(input: OrderEmailInput): string {
         </tr>
         <tr>
           <td style="padding:32px 24px 8px;">
-            <p style="margin:0 0 12px;font-family:${EMAIL_SANS};font-size:18px;font-weight:bold;color:#000000;line-height:1.35;">${escapeHtml(greeting)}</p>
-            ${bodyHtml}
-            <div style="margin:0 0 10px;">${typePng('order-summary.png', 139, 22, 'Order Summary')}</div>
+            <p style="margin:0 0 12px;font-family:${EMAIL_SANS};font-size:18px;font-weight:bold;color:#000000;line-height:1.35;letter-spacing:${LETTER_SPACING};">${escapeHtml(greeting)}</p>
+            <p class="oe-body-text" style="margin:0 0 32px;font-family:${EMAIL_SANS};font-size:16px;line-height:1.5;color:#1c1b1b;text-align:left;letter-spacing:${LETTER_SPACING};">${escapeHtml(bodyCopy)}</p>
+            <p style="margin:0 0 10px;font-family:${EMAIL_SANS};font-size:18px;font-weight:bold;color:#1c1b1b;letter-spacing:${LETTER_SPACING};">Order Summary</p>
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#e5e2e1;">
               <tr>
                 <td style="padding:24px 24px 4px;">
                   <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                    ${summaryRow('order-label-address.png', 61, 14, 'Address:', address)}
-                    ${summaryRow('order-label-payment.png', 122, 18, 'Payment Method:', paymentMethod)}
-                    ${summaryRow('order-label-total.png', 84, 14, 'Order Total:', orderTotal)}
-                    ${summaryRow('order-label-number.png', 59, 14, 'Order #:', orderNumberSummary)}
-                    ${summaryRow('order-label-date.png', 81, 14, 'Order Date:', orderDate)}
+                    ${summaryRow('Address:', address)}
+                    ${summaryRow('Payment Method:', paymentMethod)}
+                    ${summaryRow('Order Total:', orderTotal)}
+                    ${summaryRow('Order #:', orderNumberSummary)}
+                    ${summaryRow('Order Date:', orderDate)}
                   </table>
                 </td>
               </tr>
             </table>
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:32px;">
               <tr>
-                <td style="padding:0 0 8px;border-bottom:1px solid #e5e2e1;vertical-align:bottom;">${typePng('order-col-item.png', 35, 14, 'Item')}</td>
-                <td align="center" width="48" style="padding:0 0 8px;border-bottom:1px solid #e5e2e1;vertical-align:bottom;">${typePng('order-col-qty.png', 27, 17, 'Qty')}</td>
-                <td align="right" width="72" style="padding:0 0 8px;border-bottom:1px solid #e5e2e1;vertical-align:bottom;">${typePng('order-col-price.png', 36, 14, 'Price')}</td>
+                <td style="padding:0 0 8px;border-bottom:1px solid #e5e2e1;vertical-align:bottom;font-family:${EMAIL_SANS};font-size:14px;color:#1c1b1b;letter-spacing:${LETTER_SPACING};">Item</td>
+                <td align="center" width="48" style="padding:0 0 8px;border-bottom:1px solid #e5e2e1;vertical-align:bottom;font-family:${EMAIL_SANS};font-size:14px;color:#1c1b1b;letter-spacing:${LETTER_SPACING};">Qty</td>
+                <td align="right" width="72" style="padding:0 0 8px;border-bottom:1px solid #e5e2e1;vertical-align:bottom;font-family:${EMAIL_SANS};font-size:14px;color:#1c1b1b;letter-spacing:${LETTER_SPACING};">Price</td>
               </tr>
               ${lineItemRowsHtml(items)}
             </table>
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:16px;">
               <tr>
-                <td style="vertical-align:middle;">${typePng('order-row-total.png', 38, 14, 'Total')}</td>
-                <td align="right" style="font-family:${EMAIL_SANS};font-size:18px;font-weight:bold;color:#ba1a1a;">${escapeHtml(itemsTotal)}</td>
+                <td style="vertical-align:middle;font-family:${EMAIL_SANS};font-size:14px;color:#1c1b1b;letter-spacing:${LETTER_SPACING};">Total</td>
+                <td align="right" style="font-family:${EMAIL_SANS};font-size:18px;font-weight:bold;color:#ba1a1a;letter-spacing:${LETTER_SPACING};">${escapeHtml(itemsTotal)}</td>
               </tr>
             </table>
-            <table role="presentation" class="oe-support-desktop" cellpadding="0" cellspacing="0" align="center" style="margin:40px auto 0;">
-              <tr>
-                <td align="center">
-                  <a href="mailto:${SUPPORT_EMAIL}" style="display:inline-block;line-height:0;text-decoration:none;">
-                    <img src="${SUPPORT_URL}" width="402" height="36" alt="${escapeHtml(SUPPORT_ALT)}" style="display:block;border:0;margin:0 auto;max-width:100%;height:auto;">
-                  </a>
-                </td>
-              </tr>
-            </table>
-            <table role="presentation" class="oe-support-mobile" cellpadding="0" cellspacing="0" align="center" style="display:none;max-height:0;overflow:hidden;mso-hide:all;width:0;margin:40px auto 0;">
-              <tr>
-                <td align="center">
-                  <a href="mailto:${SUPPORT_EMAIL}" style="display:inline-block;line-height:0;text-decoration:none;">
-                    <img src="${SUPPORT_MOBILE_URL}" width="310" height="52" alt="${escapeHtml(SUPPORT_ALT)}" style="display:block;border:0;margin:0 auto;width:310px;height:auto;max-width:100%;">
-                  </a>
-                </td>
-              </tr>
-            </table>
+            <p style="margin:40px 0 0;font-family:${EMAIL_SANS};font-size:14px;line-height:1.5;color:#5c5c5c;text-align:center;letter-spacing:${LETTER_SPACING};">
+              Please do not reply to this email. For assistance, email
+              <a href="mailto:${SUPPORT_EMAIL}" style="color:#009540;text-decoration:none;border-bottom:1px solid #009540;letter-spacing:${LETTER_SPACING};">${escapeHtml(SUPPORT_EMAIL)}</a>
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+  <tr>
+    <td class="email-footer oe-footer" align="center" valign="top" width="100%" height="100%" bgcolor="#bdcaba" style="background-color:#bdcaba;width:100%;min-width:100%;height:100%;vertical-align:top;padding:28px 24px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;">
+        <tr>
+          <td align="center" style="font-family:${EMAIL_SANS};font-size:14px;line-height:1.4;letter-spacing:${LETTER_SPACING};">
+            <a href="mailto:${SUPPORT_EMAIL}" style="color:#1c1b1b;text-decoration:none;border-bottom:1px solid #1c1b1b;letter-spacing:${LETTER_SPACING};">Contact Us</a>
+            &nbsp;&nbsp;&nbsp;
+            <a href="mailto:${SUPPORT_EMAIL}?subject=Privacy%20Policy" style="color:#1c1b1b;text-decoration:none;border-bottom:1px solid #1c1b1b;letter-spacing:${LETTER_SPACING};">Privacy Policy</a>
+            &nbsp;&nbsp;&nbsp;
+            <a href="mailto:${SUPPORT_EMAIL}?subject=Unsubscribe" style="color:#1c1b1b;text-decoration:none;border-bottom:1px solid #1c1b1b;letter-spacing:${LETTER_SPACING};">Unsubscribe</a>
           </td>
         </tr>
         <tr>
-          <td style="background-color:#bdcaba;padding:28px 24px;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-              <tr>
-                <td align="center">
-                  <a href="mailto:${SUPPORT_EMAIL}" style="display:inline-block;line-height:0;text-decoration:none;">
-                    <img src="${CONTACT_URL}" width="76" height="23" alt="Contact Us" style="display:inline-block;border:0;width:76px;height:23px;">
-                  </a>
-                  &nbsp;&nbsp;&nbsp;
-                  <a href="mailto:${SUPPORT_EMAIL}?subject=Privacy%20Policy" style="display:inline-block;line-height:0;text-decoration:none;">
-                    <img src="${PRIVACY_URL}" width="92" height="23" alt="Privacy Policy" style="display:inline-block;border:0;width:92px;height:23px;">
-                  </a>
-                  &nbsp;&nbsp;&nbsp;
-                  <a href="mailto:${SUPPORT_EMAIL}?subject=Unsubscribe" style="display:inline-block;line-height:0;text-decoration:none;">
-                    <img src="${UNSUBSCRIBE_URL}" width="85" height="23" alt="Unsubscribe" style="display:inline-block;border:0;width:85px;height:23px;">
-                  </a>
-                </td>
-              </tr>
-              <tr>
-                <td align="center" style="padding-top:25px;">
-                  <img src="${NONPROFIT_URL}" width="376" height="23" alt="Clean Up - Give Back is a 501(c)(3) nonprofit organization" style="display:block;border:0;margin:0 auto;max-width:100%;height:auto;">
-                </td>
-              </tr>
-            </table>
+          <td align="center" style="padding-top:25px;font-family:${EMAIL_SANS};font-size:14px;line-height:1.4;color:#1c1b1b;letter-spacing:${LETTER_SPACING};">
+            Clean Up - Give Back is a 501(c)(3) nonprofit organization
+            <span style="display:none;max-height:0;overflow:hidden;"> ${escapeHtml(orderNumberHeader)}</span>
           </td>
         </tr>
       </table>

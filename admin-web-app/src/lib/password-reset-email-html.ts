@@ -2,13 +2,10 @@
  * Figma `1311:449` Forgot Password email HTML.
  *
  * Same 600px table shell as the order-shipped email (no floating card,
- * no CSS/image drop shadow — Gmail mangles both). Headline and body are
- * rasterized Sanchez / Noto Sans so Gmail keeps those faces. Body has two
- * 16px PNGs: full-width wrap for laptop, ~320px wrap for phone (`@media` swap
- * so type does not shrink with the 600px shell). Support and footer copy are
- * 14px Noto Sans PNGs (links wrap those images). Headline and CTA stay Sanchez.
- * The CTA is a Sanchez PNG (same 18px / 16×37 padding box as Track Order)
- * because Gmail will not load Sanchez on an HTML button.
+ * no CSS/image drop shadow — Gmail mangles both). All copy is live HTML
+ * with system font stacks (Georgia ≈ Sanchez, Trebuchet MS ≈ Noto Sans). Hosted
+ * `@font-face` is included for clients that load webfonts (Apple Mail); Gmail
+ * falls back to the stack. Logo is the only raster asset.
  */
 
 export type PasswordResetEmailInput = {
@@ -30,17 +27,19 @@ export const PASSWORD_RESET_EMAIL_COPY = {
 export const PASSWORD_RESET_EMAIL_ASSET_BASE = 'https://cleanupgiveback-web-app.vercel.app/email';
 
 const LOGO_MARK_URL = `${PASSWORD_RESET_EMAIL_ASSET_BASE}/logo-mark-green.png`;
-const HEADLINE_URL = `${PASSWORD_RESET_EMAIL_ASSET_BASE}/forgot-password-headline.png`;
-const BODY_URL = `${PASSWORD_RESET_EMAIL_ASSET_BASE}/forgot-password-body.png`;
-const BODY_MOBILE_URL = `${PASSWORD_RESET_EMAIL_ASSET_BASE}/forgot-password-body-mobile.png`;
-const CTA_URL = `${PASSWORD_RESET_EMAIL_ASSET_BASE}/reset-password-button.png`;
-const SUPPORT_URL = `${PASSWORD_RESET_EMAIL_ASSET_BASE}/forgot-password-support.png`;
-const SUPPORT_MOBILE_URL = `${PASSWORD_RESET_EMAIL_ASSET_BASE}/forgot-password-support-mobile.png`;
-const CONTACT_URL = `${PASSWORD_RESET_EMAIL_ASSET_BASE}/forgot-password-contact-us.png`;
-const PRIVACY_URL = `${PASSWORD_RESET_EMAIL_ASSET_BASE}/forgot-password-privacy.png`;
-const UNSUBSCRIBE_URL = `${PASSWORD_RESET_EMAIL_ASSET_BASE}/forgot-password-unsubscribe.png`;
-const NONPROFIT_URL = `${PASSWORD_RESET_EMAIL_ASSET_BASE}/forgot-password-nonprofit.png`;
+const FONT_REGULAR_URL = `${PASSWORD_RESET_EMAIL_ASSET_BASE}/fonts/NotoSans-Regular.ttf`;
+const FONT_BOLD_URL = `${PASSWORD_RESET_EMAIL_ASSET_BASE}/fonts/NotoSans-Bold.ttf`;
+const FONT_SANCHEZ_URL = `${PASSWORD_RESET_EMAIL_ASSET_BASE}/fonts/Sanchez-Regular.ttf`;
+
 const SUPPORT_EMAIL = 'donnaadam@cleanupgiveback.org';
+
+/** Georgia/Times stand in for Sanchez where webfonts are stripped. */
+const FONT_HEADING = "Georgia, 'Times New Roman', serif";
+/** Trebuchet is the closest web-safe humanist to Noto Sans; Arial is the last resort. */
+const FONT_BODY = "'Trebuchet MS', Tahoma, Arial, Helvetica, sans-serif";
+const LETTER_SPACING = '0.02em';
+/** Figma `cream/50` / `color/bg/app` — not plain white. */
+const CARD_BG = '#fcf9f8';
 
 function escapeHtml(value: string): string {
   return value
@@ -60,37 +59,86 @@ export function buildPasswordResetEmailHtml(input: PasswordResetEmailInput): str
   const headline = escapeHtml(PASSWORD_RESET_EMAIL_COPY.headline);
   const body = escapeHtml(PASSWORD_RESET_EMAIL_COPY.body);
   const cta = escapeHtml(PASSWORD_RESET_EMAIL_COPY.cta);
+  const supportEmail = escapeHtml(SUPPORT_EMAIL);
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light only">
+  <meta name="supported-color-schemes" content="light">
   <title>${headline}</title>
   <style type="text/css">
+    :root {
+      color-scheme: light only;
+      supported-color-schemes: light;
+    }
+    html, body {
+      margin: 0 !important;
+      padding: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      background-color: #bdcaba !important;
+    }
+    .email-footer {
+      width: 100% !important;
+      min-width: 100% !important;
+    }
+    body, td, p, h1, a {
+      letter-spacing: 0.02em;
+    }
+    @font-face {
+      font-family: 'Sanchez';
+      font-style: normal;
+      font-weight: 400;
+      src: url('${FONT_SANCHEZ_URL}') format('truetype');
+    }
+    @font-face {
+      font-family: 'Noto Sans';
+      font-style: normal;
+      font-weight: 400;
+      src: url('${FONT_REGULAR_URL}') format('truetype');
+    }
+    @font-face {
+      font-family: 'Noto Sans';
+      font-style: normal;
+      font-weight: 700;
+      src: url('${FONT_BOLD_URL}') format('truetype');
+    }
+    .pr-body-text {
+      font-size: 16px;
+      line-height: 1.5;
+    }
     @media only screen and (max-width: 600px) {
-      .pr-body-desktop,
-      .pr-support-desktop {
-        display: none !important;
-        max-height: 0 !important;
-        overflow: hidden !important;
-        mso-hide: all !important;
+      .pr-body-text {
+        font-size: 18px !important;
+        line-height: 1.45 !important;
       }
-      .pr-body-mobile,
-      .pr-support-mobile {
-        display: table !important;
-        width: auto !important;
-        max-height: none !important;
-        overflow: visible !important;
+    }
+    @media (prefers-color-scheme: dark) {
+      .pr-cta-cell {
+        background-color: #c2d832 !important;
       }
+      .pr-cta-link {
+        color: #004d21 !important;
+      }
+    }
+    [data-ogsc] .pr-cta-cell,
+    [data-ogsb] .pr-cta-cell {
+      background-color: #c2d832 !important;
+    }
+    [data-ogsc] .pr-cta-link,
+    [data-ogsb] .pr-cta-link {
+      color: #004d21 !important;
     }
   </style>
 </head>
-<body style="margin:0;padding:0;background-color:#fcf9f8;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#fcf9f8;">
+<body style="margin:0;padding:0;width:100%;height:100%;background-color:#bdcaba;">
+<table role="presentation" width="100%" height="100%" cellpadding="0" cellspacing="0" bgcolor="#bdcaba" style="width:100%;min-width:100%;height:100%;min-height:100%;background-color:#bdcaba;">
   <tr>
-    <td align="center" style="padding:0;">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background-color:#ffffff;font-family:Arial,Helvetica,sans-serif;">
+    <td align="center" valign="top" bgcolor="${CARD_BG}" style="background-color:${CARD_BG};padding:0;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="${CARD_BG}" style="max-width:600px;background-color:${CARD_BG};font-family:${FONT_BODY};">
         <tr>
           <td style="padding:12px 20px 0;">
             <img src="${LOGO_MARK_URL}" width="32" height="42" alt="Clean Up Give Back" style="display:block;border:0;width:32px;height:42px;">
@@ -98,80 +146,52 @@ export function buildPasswordResetEmailHtml(input: PasswordResetEmailInput): str
         </tr>
         <tr>
           <td align="center" style="padding:16px 24px 0;">
-            <img src="${HEADLINE_URL}" width="218" height="31" alt="${headline}" style="display:block;border:0;margin:0 auto;width:218px;height:31px;">
+            <h1 style="margin:0;font-family:'Sanchez',${FONT_HEADING};font-size:24px;font-weight:700;color:#009540;text-align:center;line-height:1.3;letter-spacing:${LETTER_SPACING};">${headline}</h1>
           </td>
         </tr>
         <tr>
           <td align="center" style="padding:12px 24px 0;">
-            <table role="presentation" class="pr-body-desktop" cellpadding="0" cellspacing="0" align="center">
-              <tr>
-                <td align="center">
-                  <img src="${BODY_URL}" width="498" height="42" alt="${body}" style="display:block;border:0;margin:0 auto;max-width:100%;height:auto;">
-                </td>
-              </tr>
-            </table>
-            <table role="presentation" class="pr-body-mobile" cellpadding="0" cellspacing="0" align="center" style="display:none;max-height:0;overflow:hidden;mso-hide:all;width:0;">
-              <tr>
-                <td align="center">
-                  <img src="${BODY_MOBILE_URL}" width="307" height="85" alt="${body}" style="display:block;border:0;margin:0 auto;width:307px;height:auto;max-width:100%;">
-                </td>
-              </tr>
-            </table>
+            <p class="pr-body-text" style="margin:0;font-family:'Noto Sans',${FONT_BODY};font-size:16px;line-height:1.5;color:#1c1b1b;text-align:center;letter-spacing:${LETTER_SPACING};">${body}</p>
           </td>
         </tr>
         <tr>
-          <td align="center" style="padding:12px 24px 0;">
-            <a href="${safeUrl}" style="display:inline-block;line-height:0;text-decoration:none;">
-              <img src="${CTA_URL}" width="210" height="55" alt="${cta}" style="display:block;border:0;width:210px;height:55px;">
-            </a>
+          <td align="center" style="padding:20px 24px 0;">
+            <table role="presentation" cellpadding="0" cellspacing="0" align="center">
+              <tr>
+                <td class="pr-cta-cell" align="center" bgcolor="#fcab29" style="background-color:#fcab29;border-radius:4px;">
+                  <a class="pr-cta-link" href="${safeUrl}" style="display:inline-block;padding:16px 37px;font-family:'Sanchez',${FONT_HEADING};font-size:18px;font-weight:400;color:#004d21;text-decoration:none;line-height:1.2;letter-spacing:${LETTER_SPACING};">${cta}</a>
+                </td>
+              </tr>
+            </table>
           </td>
         </tr>
         <tr>
           <td align="center" style="padding:24px 24px 24px;">
-            <table role="presentation" class="pr-support-desktop" cellpadding="0" cellspacing="0" align="center">
-              <tr>
-                <td align="center">
-                  <a href="mailto:${SUPPORT_EMAIL}" style="display:inline-block;line-height:0;text-decoration:none;">
-                    <img src="${SUPPORT_URL}" width="402" height="36" alt="Please do not reply to this email. For customer service, email ${SUPPORT_EMAIL}" style="display:block;border:0;margin:0 auto;max-width:100%;height:auto;">
-                  </a>
-                </td>
-              </tr>
-            </table>
-            <table role="presentation" class="pr-support-mobile" cellpadding="0" cellspacing="0" align="center" style="display:none;max-height:0;overflow:hidden;mso-hide:all;width:0;">
-              <tr>
-                <td align="center">
-                  <a href="mailto:${SUPPORT_EMAIL}" style="display:inline-block;line-height:0;text-decoration:none;">
-                    <img src="${SUPPORT_MOBILE_URL}" width="310" height="52" alt="Please do not reply to this email. For customer service, email ${SUPPORT_EMAIL}" style="display:block;border:0;margin:0 auto;width:310px;height:auto;max-width:100%;">
-                  </a>
-                </td>
-              </tr>
-            </table>
+            <p style="margin:0;font-family:'Noto Sans',${FONT_BODY};font-size:14px;line-height:1.5;color:#5c5c5c;text-align:center;max-width:402px;letter-spacing:${LETTER_SPACING};">
+              Please do not reply to this email. For assistance, email
+              <a href="mailto:${supportEmail}" style="color:#009540;text-decoration:none;border-bottom:1px solid #009540;letter-spacing:${LETTER_SPACING};">${supportEmail}</a>
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+  <tr>
+    <td class="email-footer pr-footer" align="center" valign="top" width="100%" height="100%" bgcolor="#bdcaba" style="background-color:#bdcaba;width:100%;min-width:100%;height:100%;vertical-align:top;padding:28px 24px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;">
+        <tr>
+          <td align="center" style="font-family:'Noto Sans',${FONT_BODY};font-size:14px;line-height:1.4;letter-spacing:${LETTER_SPACING};">
+            <a href="mailto:${supportEmail}" style="color:#1c1b1b;text-decoration:none;border-bottom:1px solid #1c1b1b;letter-spacing:${LETTER_SPACING};">Contact Us</a>
+            &nbsp;&nbsp;&nbsp;
+            <a href="mailto:${supportEmail}?subject=Privacy%20Policy" style="color:#1c1b1b;text-decoration:none;border-bottom:1px solid #1c1b1b;letter-spacing:${LETTER_SPACING};">Privacy Policy</a>
+            &nbsp;&nbsp;&nbsp;
+            <a href="mailto:${supportEmail}?subject=Unsubscribe" style="color:#1c1b1b;text-decoration:none;border-bottom:1px solid #1c1b1b;letter-spacing:${LETTER_SPACING};">Unsubscribe</a>
           </td>
         </tr>
         <tr>
-          <td style="background-color:#bdcaba;padding:28px 24px;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-              <tr>
-                <td align="center">
-                  <a href="mailto:${SUPPORT_EMAIL}" style="display:inline-block;line-height:0;text-decoration:none;">
-                    <img src="${CONTACT_URL}" width="76" height="23" alt="Contact Us" style="display:inline-block;border:0;width:76px;height:23px;">
-                  </a>
-                  &nbsp;&nbsp;&nbsp;
-                  <a href="mailto:${SUPPORT_EMAIL}?subject=Privacy%20Policy" style="display:inline-block;line-height:0;text-decoration:none;">
-                    <img src="${PRIVACY_URL}" width="92" height="23" alt="Privacy Policy" style="display:inline-block;border:0;width:92px;height:23px;">
-                  </a>
-                  &nbsp;&nbsp;&nbsp;
-                  <a href="mailto:${SUPPORT_EMAIL}?subject=Unsubscribe" style="display:inline-block;line-height:0;text-decoration:none;">
-                    <img src="${UNSUBSCRIBE_URL}" width="85" height="23" alt="Unsubscribe" style="display:inline-block;border:0;width:85px;height:23px;">
-                  </a>
-                </td>
-              </tr>
-              <tr>
-                <td align="center" style="padding-top:25px;">
-                  <img src="${NONPROFIT_URL}" width="376" height="23" alt="Clean Up - Give Back is a 501(c)(3) nonprofit organization" style="display:block;border:0;margin:0 auto;max-width:100%;height:auto;">
-                </td>
-              </tr>
-            </table>
+          <td align="center" style="padding-top:25px;font-family:'Noto Sans',${FONT_BODY};font-size:14px;line-height:1.4;color:#1c1b1b;letter-spacing:${LETTER_SPACING};">
+            Clean Up - Give Back is a 501(c)(3) nonprofit organization
+            <span style="display:none;max-height:0;overflow:hidden;"> ${headline}</span>
           </td>
         </tr>
       </table>

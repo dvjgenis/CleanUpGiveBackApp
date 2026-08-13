@@ -1,13 +1,11 @@
 /**
  * Figma `1311:432` Hours-reminder (Nudge) email HTML.
  *
- * Table + inline CSS only — Gmail/Outlook strip `<style>` blocks, SVG, and
- * webfonts. Body (Sanchez), hours (Noto Sans Bold), and Open App (Sanchez)
- * are rasterized PNGs. Support and footer reuse the Forgot Password 14px
- * Noto Sans PNGs (links wrap those images). Lottie cannot play in mail
- * clients; the bell is a hosted GIF. Placeholder-first: name and hours use
- * Figma sample copy until a real volunteer value is present. Do not invent
- * missing data.
+ * Table + inline CSS only. All copy is live HTML with system font stacks
+ * (Georgia ≈ Sanchez, Trebuchet MS ≈ Noto Sans). Hosted `@font-face` for
+ * clients that load webfonts (Apple Mail). Logo + bell GIF are the only
+ * raster assets. Placeholder-first: name and hours use Figma sample copy
+ * until a real volunteer value is present. Do not invent missing data.
  */
 
 export type HoursReminderEmailInput = {
@@ -15,18 +13,10 @@ export type HoursReminderEmailInput = {
   currentHours?: number | null;
   /** Override hosted asset origin (preview uses a file:// path). */
   assetBase?: string | null;
-  /** Override type PNG URLs (CID or file://). Defaults to `${assetBase}/hours-reminder-*.png`. */
-  typeUrls?: {
-    body?: string;
-    bodyMobile?: string;
-    hours?: string;
-    hoursMobile?: string;
-    button?: string;
-  };
 };
 
 export const HOURS_REMINDER_PLACEHOLDERS = {
-  firstName: 'Alex',
+  firstName: 'Volunteer',
   currentHours: 'XXX',
 } as const;
 
@@ -40,52 +30,28 @@ export const HOURS_REMINDER_OPEN_APP_URL = 'https://cleanupgiveback.org/';
 /** Hosted on the production admin deploy — Resend needs a public image URL. */
 export const HOURS_REMINDER_ASSET_BASE = 'https://cleanupgiveback-web-app.vercel.app/email';
 
-export const HOURS_REMINDER_TYPE_FILES = {
-  body: 'hours-reminder-body.png',
-  bodyMobile: 'hours-reminder-body-mobile.png',
-  hours: 'hours-reminder-hours.png',
-  hoursMobile: 'hours-reminder-hours-mobile.png',
-  button: 'hours-reminder-button.png',
-} as const;
-
-/** Shared 14px Noto Sans chrome (same assets as Forgot Password). */
-export const HOURS_REMINDER_CHROME_FILES = {
-  support: 'forgot-password-support.png',
-  supportMobile: 'forgot-password-support-mobile.png',
-  contact: 'forgot-password-contact-us.png',
-  privacy: 'forgot-password-privacy.png',
-  unsubscribe: 'forgot-password-unsubscribe.png',
-  nonprofit: 'forgot-password-nonprofit.png',
-} as const;
-
-export const HOURS_REMINDER_CHROME_SIZES = {
-  support: { width: 402, height: 36 },
-  supportMobile: { width: 310, height: 52 },
-  contact: { width: 76, height: 23 },
-  privacy: { width: 92, height: 23 },
-  unsubscribe: { width: 85, height: 23 },
-  nonprofit: { width: 376, height: 23 },
-} as const;
-
 export const HOURS_REMINDER_BELL_SIZE = 120;
-
-/** Desktop body + hours (matches other transactional emails). Phone uses 24px. */
-export const HOURS_REMINDER_TYPE_FONT_SIZE = 16;
-export const HOURS_REMINDER_TYPE_FONT_SIZE_MOBILE = 24;
 
 /** Amber on deep green so hours stay an accent and meet WCAG AA (~5.3:1). */
 export const HOURS_REMINDER_HOURS_FG = '#fcab29';
 export const HOURS_REMINDER_HOURS_BG = '#004d21';
 
-export const HOURS_REMINDER_TYPE_SIZES = {
-  body: { width: 560, height: 80 },
-  bodyMobile: { width: 320, height: 240 },
-  hours: { width: 560, height: 40 },
-  hoursMobile: { width: 320, height: 48 },
-  button: { width: 180, height: 55 },
-} as const;
-
 const SUPPORT_EMAIL = 'donnaadam@cleanupgiveback.org';
+
+const FONT_HEADING = "Georgia, 'Times New Roman', serif";
+const FONT_BODY = "'Trebuchet MS', Tahoma, Arial, Helvetica, sans-serif";
+const LETTER_SPACING = '0.02em';
+/** Figma `cream/50` / `color/bg/app` — not plain white. */
+const CARD_BG = '#fcf9f8';
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
 export function firstNameFromVolunteer(name: string | null | undefined): string | null {
   const token = name?.trim().split(/\s+/)[0];
@@ -121,38 +87,18 @@ export function hoursReminderHoursLine(currentHours?: number | null): string {
   return `Current hours: ${hours}`;
 }
 
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
 export function buildHoursReminderEmailHtml(input: HoursReminderEmailInput = {}): string {
   const headline = hoursReminderHeadline(input.volunteerName);
   const hoursLine = hoursReminderHoursLine(input.currentHours);
   const assetBase = (input.assetBase?.trim() || HOURS_REMINDER_ASSET_BASE).replace(/\/$/, '');
   const logoUrl = `${assetBase}/logo-mark.png`;
   const bellUrl = `${assetBase}/nudge-bell.gif`;
-  const bodyUrl = input.typeUrls?.body ?? `${assetBase}/${HOURS_REMINDER_TYPE_FILES.body}`;
-  const bodyMobileUrl = input.typeUrls?.bodyMobile ?? `${assetBase}/${HOURS_REMINDER_TYPE_FILES.bodyMobile}`;
-  const hoursUrl = input.typeUrls?.hours ?? `${assetBase}/${HOURS_REMINDER_TYPE_FILES.hours}`;
-  const hoursMobileUrl = input.typeUrls?.hoursMobile ?? `${assetBase}/${HOURS_REMINDER_TYPE_FILES.hoursMobile}`;
-  const buttonUrl = input.typeUrls?.button ?? `${assetBase}/${HOURS_REMINDER_TYPE_FILES.button}`;
+  const headerPixelUrl = `${assetBase}/header-pixel.png`;
+  const fontRegularUrl = `${assetBase}/fonts/NotoSans-Regular.ttf`;
+  const fontBoldUrl = `${assetBase}/fonts/NotoSans-Bold.ttf`;
+  const fontSanchezUrl = `${assetBase}/fonts/Sanchez-Regular.ttf`;
   const openHref = HOURS_REMINDER_OPEN_APP_URL;
-  const { body: bodySize, bodyMobile: bodyMobileSize, hours: hoursSize, hoursMobile: hoursMobileSize, button: buttonSize } =
-    HOURS_REMINDER_TYPE_SIZES;
-  const chrome = HOURS_REMINDER_CHROME_FILES;
-  const chromeSize = HOURS_REMINDER_CHROME_SIZES;
-  const supportUrl = `${assetBase}/${chrome.support}`;
-  const supportMobileUrl = `${assetBase}/${chrome.supportMobile}`;
-  const contactUrl = `${assetBase}/${chrome.contact}`;
-  const privacyUrl = `${assetBase}/${chrome.privacy}`;
-  const unsubscribeUrl = `${assetBase}/${chrome.unsubscribe}`;
-  const nonprofitUrl = `${assetBase}/${chrome.nonprofit}`;
-  const supportAlt = `Please do not reply to this email. For customer service, email ${SUPPORT_EMAIL}`;
+  const supportEmail = escapeHtml(SUPPORT_EMAIL);
   const bellSize = HOURS_REMINDER_BELL_SIZE;
 
   return `<!DOCTYPE html>
@@ -160,33 +106,90 @@ export function buildHoursReminderEmailHtml(input: HoursReminderEmailInput = {})
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light only">
+  <meta name="supported-color-schemes" content="light">
   <title>${escapeHtml(HOURS_REMINDER_SUBJECT)}</title>
   <style type="text/css">
+    :root {
+      color-scheme: light only;
+      supported-color-schemes: light;
+    }
+    html, body {
+      margin: 0 !important;
+      padding: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      background-color: #bdcaba !important;
+    }
+    .email-footer {
+      width: 100% !important;
+      min-width: 100% !important;
+    }
+    body, td, p, h1, a {
+      letter-spacing: 0.02em;
+    }
+    @font-face {
+      font-family: 'Sanchez';
+      font-style: normal;
+      font-weight: 400;
+      src: url('${fontSanchezUrl}') format('truetype');
+    }
+    @font-face {
+      font-family: 'Noto Sans';
+      font-style: normal;
+      font-weight: 400;
+      src: url('${fontRegularUrl}') format('truetype');
+    }
+    @font-face {
+      font-family: 'Noto Sans';
+      font-style: normal;
+      font-weight: 700;
+      src: url('${fontBoldUrl}') format('truetype');
+    }
+    .hr-body-text {
+      font-size: 16px;
+      line-height: 1.5;
+    }
+    .hr-hours-text {
+      font-size: 16px;
+    }
     @media only screen and (max-width: 600px) {
-      .hr-support-desktop,
-      .hr-type-desktop {
-        display: none !important;
-        max-height: 0 !important;
-        overflow: hidden !important;
-        mso-hide: all !important;
+      .hr-body-text {
+        font-size: 18px !important;
+        line-height: 1.45 !important;
       }
-      .hr-support-mobile,
-      .hr-type-mobile {
-        display: table !important;
-        width: auto !important;
-        max-height: none !important;
-        overflow: visible !important;
+      .hr-hours-text {
+        font-size: 18px !important;
       }
+    }
+    @media (prefers-color-scheme: dark) {
+      .hr-cta-cell {
+        background-color: #fcab29 !important;
+      }
+      .hr-cta-link {
+        color: #004d21 !important;
+      }
+    }
+    [data-ogsc] .hr-cta-cell,
+    [data-ogsb] .hr-cta-cell {
+      background-color: #fcab29 !important;
+    }
+    [data-ogsc] .hr-cta-link,
+    [data-ogsb] .hr-cta-link {
+      color: #004d21 !important;
     }
   </style>
 </head>
-<body style="margin:0;padding:0;background-color:#fcf9f8;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#fcf9f8;">
+<body style="margin:0;padding:0;width:100%;height:100%;background-color:#bdcaba;">
+<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">
+  ${escapeHtml(hoursLine)}
+</div>
+<table role="presentation" width="100%" height="100%" cellpadding="0" cellspacing="0" bgcolor="#bdcaba" style="width:100%;min-width:100%;height:100%;min-height:100%;background-color:#bdcaba;">
   <tr>
-    <td align="center" style="padding:0;">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background-color:#ffffff;font-family:Arial,Helvetica,sans-serif;">
+    <td align="center" bgcolor="${CARD_BG}" style="background-color:${CARD_BG};padding:0;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="${CARD_BG}" style="max-width:600px;background-color:${CARD_BG};font-family:${FONT_BODY};">
         <tr>
-          <td style="background-color:#009540;padding:16px 20px 40px;">
+          <td bgcolor="#009540" background="${headerPixelUrl}" style="background-color:#009540;background-image:url('${headerPixelUrl}');padding:16px 20px 40px;">
             <img src="${logoUrl}" width="32" height="42" alt="Clean Up Give Back" style="display:block;border:0;">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
               <tr>
@@ -195,46 +198,30 @@ export function buildHoursReminderEmailHtml(input: HoursReminderEmailInput = {})
                 </td>
               </tr>
               <tr>
-                <td align="center" style="padding-top:28px;font-size:0;line-height:0;">
-                  <table role="presentation" class="hr-type-desktop" cellpadding="0" cellspacing="0" align="center">
+                <td align="center" bgcolor="#009540" background="${headerPixelUrl}" style="padding-top:28px;background-color:#009540;background-image:url('${headerPixelUrl}');">
+                  <p class="hr-body-text" style="margin:0;font-family:'Sanchez',${FONT_HEADING};font-size:16px;font-weight:400;line-height:1.5;color:#ffffff;text-align:center;letter-spacing:${LETTER_SPACING};">${escapeHtml(headline)}</p>
+                </td>
+              </tr>
+              <tr>
+                <td align="center" style="padding-top:28px;">
+                  <table role="presentation" cellpadding="0" cellspacing="0" align="center" width="100%">
                     <tr>
-                      <td align="center">
-                        <img src="${escapeHtml(bodyUrl)}" width="${bodySize.width}" height="${bodySize.height}" alt="${escapeHtml(headline)}" style="display:block;border:0;margin:0 auto;max-width:100%;height:auto;">
-                      </td>
-                    </tr>
-                  </table>
-                  <table role="presentation" class="hr-type-mobile" cellpadding="0" cellspacing="0" align="center" style="display:none;max-height:0;overflow:hidden;mso-hide:all;width:0;">
-                    <tr>
-                      <td align="center">
-                        <img src="${escapeHtml(bodyMobileUrl)}" width="${bodyMobileSize.width}" height="${bodyMobileSize.height}" alt="${escapeHtml(headline)}" style="display:block;border:0;margin:0 auto;width:${bodyMobileSize.width}px;height:auto;max-width:100%;">
+                      <td align="center" bgcolor="${HOURS_REMINDER_HOURS_BG}" style="background-color:${HOURS_REMINDER_HOURS_BG};padding:10px 16px;">
+                        <p class="hr-hours-text" style="margin:0;font-family:'Noto Sans',${FONT_BODY};font-size:16px;font-weight:700;color:${HOURS_REMINDER_HOURS_FG};text-align:center;letter-spacing:${LETTER_SPACING};">${escapeHtml(hoursLine)}</p>
                       </td>
                     </tr>
                   </table>
                 </td>
               </tr>
               <tr>
-                <td align="center" style="padding-top:28px;font-size:0;line-height:0;">
-                  <table role="presentation" class="hr-type-desktop" cellpadding="0" cellspacing="0" align="center">
+                <td align="center" style="padding-top:32px;">
+                  <table role="presentation" cellpadding="0" cellspacing="0" align="center">
                     <tr>
-                      <td align="center">
-                        <img src="${escapeHtml(hoursUrl)}" width="${hoursSize.width}" height="${hoursSize.height}" alt="${escapeHtml(hoursLine)}" style="display:block;border:0;margin:0 auto;max-width:100%;height:auto;">
+                      <td class="hr-cta-cell" align="center" bgcolor="#c2d832" style="background-color:#c2d832;border-radius:4px;">
+                        <a class="hr-cta-link" href="${escapeHtml(openHref)}" style="display:inline-block;padding:16px 37px;font-family:'Sanchez',${FONT_HEADING};font-size:18px;font-weight:400;color:#3e4a3d;text-decoration:none;line-height:1.2;letter-spacing:${LETTER_SPACING};">${escapeHtml(HOURS_REMINDER_CTA_LABEL)}</a>
                       </td>
                     </tr>
                   </table>
-                  <table role="presentation" class="hr-type-mobile" cellpadding="0" cellspacing="0" align="center" style="display:none;max-height:0;overflow:hidden;mso-hide:all;width:0;">
-                    <tr>
-                      <td align="center">
-                        <img src="${escapeHtml(hoursMobileUrl)}" width="${hoursMobileSize.width}" height="${hoursMobileSize.height}" alt="${escapeHtml(hoursLine)}" style="display:block;border:0;margin:0 auto;width:${hoursMobileSize.width}px;height:auto;max-width:100%;">
-                      </td>
-                    </tr>
-                  </table>
-                </td>
-              </tr>
-              <tr>
-                <td align="center" style="padding-top:32px;font-size:0;line-height:0;">
-                  <a href="${escapeHtml(openHref)}" style="display:inline-block;line-height:0;text-decoration:none;">
-                    <img src="${escapeHtml(buttonUrl)}" width="${buttonSize.width}" height="${buttonSize.height}" alt="${escapeHtml(HOURS_REMINDER_CTA_LABEL)}" style="display:block;border:0;width:${buttonSize.width}px;height:${buttonSize.height}px;">
-                  </a>
                 </td>
               </tr>
             </table>
@@ -242,50 +229,31 @@ export function buildHoursReminderEmailHtml(input: HoursReminderEmailInput = {})
         </tr>
         <tr>
           <td align="center" style="padding:32px 24px 28px;">
-            <table role="presentation" class="hr-support-desktop" cellpadding="0" cellspacing="0" align="center">
-              <tr>
-                <td align="center">
-                  <a href="mailto:${SUPPORT_EMAIL}" style="display:inline-block;line-height:0;text-decoration:none;">
-                    <img src="${supportUrl}" width="${chromeSize.support.width}" height="${chromeSize.support.height}" alt="${escapeHtml(supportAlt)}" style="display:block;border:0;margin:0 auto;max-width:100%;height:auto;">
-                  </a>
-                </td>
-              </tr>
-            </table>
-            <table role="presentation" class="hr-support-mobile" cellpadding="0" cellspacing="0" align="center" style="display:none;max-height:0;overflow:hidden;mso-hide:all;width:0;">
-              <tr>
-                <td align="center">
-                  <a href="mailto:${SUPPORT_EMAIL}" style="display:inline-block;line-height:0;text-decoration:none;">
-                    <img src="${supportMobileUrl}" width="${chromeSize.supportMobile.width}" height="${chromeSize.supportMobile.height}" alt="${escapeHtml(supportAlt)}" style="display:block;border:0;margin:0 auto;width:${chromeSize.supportMobile.width}px;height:auto;max-width:100%;">
-                  </a>
-                </td>
-              </tr>
-            </table>
+            <p style="margin:0;font-family:'Noto Sans',${FONT_BODY};font-size:14px;line-height:1.5;color:#5c5c5c;text-align:center;max-width:402px;letter-spacing:${LETTER_SPACING};">
+              Please do not reply to this email. For assistance, email
+              <a href="mailto:${supportEmail}" style="color:#009540;text-decoration:none;border-bottom:1px solid #009540;letter-spacing:${LETTER_SPACING};">${supportEmail}</a>
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+  <tr>
+    <td class="email-footer hr-footer" align="center" valign="top" width="100%" height="100%" bgcolor="#bdcaba" style="background-color:#bdcaba;width:100%;min-width:100%;height:100%;vertical-align:top;padding:28px 24px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;">
+        <tr>
+          <td align="center" style="font-family:'Noto Sans',${FONT_BODY};font-size:14px;line-height:1.4;letter-spacing:${LETTER_SPACING};">
+            <a href="mailto:${supportEmail}" style="color:#1c1b1b;text-decoration:none;border-bottom:1px solid #1c1b1b;letter-spacing:${LETTER_SPACING};">Contact Us</a>
+            &nbsp;&nbsp;&nbsp;
+            <a href="mailto:${supportEmail}?subject=Privacy%20Policy" style="color:#1c1b1b;text-decoration:none;border-bottom:1px solid #1c1b1b;letter-spacing:${LETTER_SPACING};">Privacy Policy</a>
+            &nbsp;&nbsp;&nbsp;
+            <a href="mailto:${supportEmail}?subject=Unsubscribe" style="color:#1c1b1b;text-decoration:none;border-bottom:1px solid #1c1b1b;letter-spacing:${LETTER_SPACING};">Unsubscribe</a>
           </td>
         </tr>
         <tr>
-          <td style="background-color:#bdcaba;padding:28px 24px;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-              <tr>
-                <td align="center">
-                  <a href="mailto:${SUPPORT_EMAIL}" style="display:inline-block;line-height:0;text-decoration:none;">
-                    <img src="${contactUrl}" width="${chromeSize.contact.width}" height="${chromeSize.contact.height}" alt="Contact Us" style="display:inline-block;border:0;width:${chromeSize.contact.width}px;height:${chromeSize.contact.height}px;">
-                  </a>
-                  &nbsp;&nbsp;&nbsp;
-                  <a href="mailto:${SUPPORT_EMAIL}?subject=Privacy%20Policy" style="display:inline-block;line-height:0;text-decoration:none;">
-                    <img src="${privacyUrl}" width="${chromeSize.privacy.width}" height="${chromeSize.privacy.height}" alt="Privacy Policy" style="display:inline-block;border:0;width:${chromeSize.privacy.width}px;height:${chromeSize.privacy.height}px;">
-                  </a>
-                  &nbsp;&nbsp;&nbsp;
-                  <a href="mailto:${SUPPORT_EMAIL}?subject=Unsubscribe" style="display:inline-block;line-height:0;text-decoration:none;">
-                    <img src="${unsubscribeUrl}" width="${chromeSize.unsubscribe.width}" height="${chromeSize.unsubscribe.height}" alt="Unsubscribe" style="display:inline-block;border:0;width:${chromeSize.unsubscribe.width}px;height:${chromeSize.unsubscribe.height}px;">
-                  </a>
-                </td>
-              </tr>
-              <tr>
-                <td align="center" style="padding-top:25px;">
-                  <img src="${nonprofitUrl}" width="${chromeSize.nonprofit.width}" height="${chromeSize.nonprofit.height}" alt="Clean Up - Give Back is a 501(c)(3) nonprofit organization" style="display:block;border:0;margin:0 auto;max-width:100%;height:auto;">
-                </td>
-              </tr>
-            </table>
+          <td align="center" style="padding-top:25px;font-family:'Noto Sans',${FONT_BODY};font-size:14px;line-height:1.4;color:#1c1b1b;letter-spacing:${LETTER_SPACING};">
+            Clean Up - Give Back is a 501(c)(3) nonprofit organization
+            <span style="display:none;max-height:0;overflow:hidden;"> ${escapeHtml(hoursLine)}</span>
           </td>
         </tr>
       </table>

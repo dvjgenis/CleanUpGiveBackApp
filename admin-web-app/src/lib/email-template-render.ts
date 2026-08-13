@@ -58,10 +58,10 @@ export { EMAIL_VARIABLE_LABELS, labelForVariable } from '@/lib/email-template-to
 export const EMAIL_TEMPLATE_SAMPLE_DATA: Record<EmailTemplateType, Record<string, string>> = {
   approved: { activity: 'Riverside Park Cleanup' },
   declined: { decline_reason: 'Photos submitted do not clearly show cleanup activity.', activity: 'Riverside Park Cleanup' },
-  shipped: { volunteer_name: 'Alex Johnson', tracking_number: '########', carrier: 'UPS' },
+  shipped: { volunteer_name: 'Volunteer Name', tracking_number: '########', carrier: 'UPS' },
   event_registration: { event_title: 'Lakefront Trail Cleanup', event_when: ' on Sat, Mar 14 · 9:00 AM' },
   hours_reminder: { volunteer_name: 'Jordan Rivera' },
-  order_placed: { volunteer_name: 'Alex Johnson' },
+  order_placed: { volunteer_name: 'Volunteer Name' },
 };
 
 export const DEFAULT_TEMPLATES: Record<EmailTemplateType, { subject: string; bodyHtml: string }> = {

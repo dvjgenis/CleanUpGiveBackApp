@@ -12,7 +12,7 @@ import { renderTemplate } from '@/lib/email-template-render';
 import { getResendClient, getFromAddress } from '@/lib/resend';
 import { logEmailSend } from '@/lib/email-log';
 import { sendExpoPush } from '@/lib/push';
-import { buildHoursReminderEmailForSend } from '@/lib/hours-reminder-type-png';
+import { buildHoursReminderEmailForSend } from '@/lib/hours-reminder-send';
 
 const MIN_IDLE_DAYS = 7;
 const MAX_IDLE_DAYS = 10;
@@ -146,7 +146,7 @@ export async function sendHoursReminders(now = new Date()): Promise<HoursReminde
 
     const templateVars = { volunteer_name: entry.name };
     const subject = renderTemplate(template.subject, templateVars);
-    const { html, attachments } = await buildHoursReminderEmailForSend({
+    const { html, attachments } = buildHoursReminderEmailForSend({
       volunteerName: entry.name,
       currentHours: completedHoursByUser.get(userId) ?? 0,
     });
