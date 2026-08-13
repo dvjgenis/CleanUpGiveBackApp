@@ -2,6 +2,18 @@
 
 ---
 
+## [2026-08-13] — Branded email polish + deploy (Vercel + GitHub)
+
+**End goal:** Document and ship live HTML email updates (cream cards, Gmail footer, placeholders, assistance copy) to GitHub and Vercel.
+
+**Shipped:** All three templates converted to live HTML; PNG rasterization removed; cream `#fcf9f8` cards; full-width sage footer; `$XX.XXX` order prices; `Volunteer`/`Volunteer Name`/`XXX` placeholders; “For assistance” support line; single-underline footer links; forgot-password bold green headline. Docs/specs synced.
+
+**Deploy:** Git push `main` → Vercel production (`admin-web-app`). Fly `backend/sessions` redeploy still needed for production order-placed mail.
+
+**Status:** Done.
+
+---
+
 ## [2026-08-13] — Forgot Password headline green + bold
 
 **End goal:** “Forgot Password?” is primary `#009540` and bold.
