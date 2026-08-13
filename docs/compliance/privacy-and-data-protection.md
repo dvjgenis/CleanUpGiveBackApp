@@ -10,7 +10,7 @@
 
 | Document | Purpose |
 |----------|---------|
-| [launch-checklist.md](launch-checklist.md) | Launch board (privacy, security, rights, store) — living checkboxes |
+| [launch-checklist.md](launch-checklist.md) | Launch board (privacy, security, rights, store) + §11 frameworks/audits/seals |
 | [mobile-app-privacy-policy-outline.md](mobile-app-privacy-policy-outline.md) | Teen-friendly policy outline (not final legal text) |
 | [figma-compliance-screen-gap-audit.md](figma-compliance-screen-gap-audit.md) | Figma audit + new screen specs |
 | [../backend/specs/privacy-and-data-rights.md](../backend/specs/privacy-and-data-rights.md) | Supabase deletion, export, retention |

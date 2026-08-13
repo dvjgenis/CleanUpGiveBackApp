@@ -2,6 +2,16 @@
 
 ---
 
+## [2026-08-13] — Launch checklist: frameworks, audits, seals
+
+**End goal:** Record which paid certifications/audits actually fit this app (GPS + selfies + court hours, 501(c)(3), under-13 blocked) so we do not buy a generic SaaS badge.
+
+**Shipped:** [`docs/compliance/launch-checklist.md`](compliance/launch-checklist.md) §11 — apply MASVS/ASVS/NIST internally; pay for counsel memo, DPIA, DPAs, pen test, optional Play **MASA AL2**; SOC 2/ISO/PCI only when a partner or Stripe requires them; skip COPPA Safe Harbor while we block under 13.
+
+**Status:** Done (docs). No vendor engagement started.
+
+---
+
 ## [2026-08-13] — Compliance launch checklist
 
 **End goal:** Capture a living, app-specific compliance/launch board (not a generic SaaS+ads+LLM list) so Privacy Policy gaps, unimplemented data rights, and store/legal blockers are tracked in `docs/`.

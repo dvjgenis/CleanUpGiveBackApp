@@ -237,6 +237,77 @@ Do **not** put these on the launch board unless the product changes:
 - AI spend caps, prompt-injection, LLM fallbacks (no model APIs in the app)
 - Subscription renewal reminders and cancel-symmetry (no recurring plans today)
 - GPC / do-not-sell **signal handling** until a website tracker exists (keep the policy sentence that we do not sell)
+- COPPA Safe Harbor seals (kidSAFE, PRIVO, iKeepSafe, CARU, ESRB Privacy Certified) **unless** the product starts collecting from children under 13
+- HIPAA (we do not handle protected health information)
+- SOC 2 / ISO 27001 **as a launch blocker** (optional later if courts/schools/partners demand an attestation)
+
+---
+
+## 11. Frameworks, audits, certifications, and seals
+
+There is **no single “this app is compliant” certificate**. Stores, Illinois, COPPA, and courts each care about different artifacts. Prefer **counsel + a real security report** over a paid website badge. This is not legal advice.
+
+### Apply internally (no vendor required)
+
+Use these as the engineering bar. They do not produce a public seal by themselves.
+
+| Framework | What it covers | How we use it |
+|-----------|----------------|---------------|
+| **OWASP MASVS** + **MASTG** | Mobile client security (storage, crypto, auth, platform APIs). OWASP itself does **not** certify apps. | Spec for iOS/Android review; give this to a pen-test lab. GPS + selfie evidence → treat as **high-sensitivity** profile, not a toy app. |
+| **OWASP ASVS** | Admin site + Fly API (authz, injection, session, headers). | Spec for `admin-web-app/` and `backend/sessions/`. |
+| **NIST CSF** (or CIS Controls IG1) | Org security: backups, access, incident response — not just code. | Lightweight ISMS for a small nonprofit; matches [privacy-and-data-protection.md](privacy-and-data-protection.md) §6. |
+| **Apple / Google store forms** | Privacy Nutrition Labels, Play Data Safety, `PrivacyInfo.xcprivacy`. | Required to ship. Not a certification, but the public “label” users see. |
+
+- [ ] Adopt MASVS (mobile) + ASVS (admin/API) as the security requirements list for the next hardening pass.
+- [ ] Complete store privacy labels so they match the published policy (section 0 / 9).
+
+### Pay for (high value for this product)
+
+Order these after Privacy/Terms are counsel-reviewed and deletion/export are real (or the policy no longer promises them).
+
+| Artifact | Who | Why it matters here | Typical shape |
+|----------|-----|---------------------|---------------|
+| **Privacy / product counsel memo** | Illinois-aware privacy counsel | COPPA block, teens 13–17 + GPS/selfies, **BIPA** (photos vs face templates), court-letter sharing, retention vs deletion | Written opinion + redlined policy/ToS. Highest ROI. |
+| **Data Protection Impact Assessment** | Counsel + engineering | Already outlined in privacy-and-data-protection.md §8; sign-off is unchecked | Internal DPIA, not a public seal |
+| **Processor DPAs** | Supabase, Fly, Vercel, Resend, map/geocode vendors; Stripe when live | Contractual processing terms | Signed DPAs, listed in accounts-and-access |
+| **Application penetration test** | CREST / similar firm; **open-book** (source + staging + volunteer + admin roles) | Independent report Donna can show courts/schools; finds RLS/admin-role issues a badge will not | Report + retest of criticals. Scope: Expo app, Fly API, admin, Storage |
+| **Google Play MASA (AL2)** | [App Defense Alliance](https://appdefensealliance.dev/masa) authorized lab | Only Play-visible **“Independent security review”** badge. Built on MASVS. Valid ~365 days. Does **not** certify Data Safety accuracy. | Lab test of the **store APK**. AL1 is self-scan only — no Play badge |
+
+- [ ] Counsel memo on COPPA / AADC / BIPA / court sharing *(not started)*
+- [ ] DPIA signed *(outline only)*
+- [ ] DPAs executed for live processors *(not started)*
+- [ ] External pen test of mobile + Fly + admin, with a written report *(not started)*
+- [ ] **When Play-listed:** MASA AL2 if we want the Independent security review badge *(when shipped)*
+
+Rough cost bands (USD, 2026, order-of-magnitude): counsel package often low-to-mid five figures; a scoped pen test similar; MASA AL2 is a lab engagement on top of that (ask authorized labs for a quote). Nonprofit discounts sometimes exist — ask.
+
+### Pay for only if a partner asks
+
+| Artifact | When it is worth it |
+|----------|---------------------|
+| **SOC 2 Type I then Type II** | A court program, school district, or insurer requires an attestation. Heavy (policies, evidence, auditor, 3–12 months). Tools like Vanta/Drata help collect evidence; they are **not** the certification. |
+| **ISO 27001** | International partners; usually overkill for a US 501(c)(3) volunteer app. |
+| **PCI DSS** | When Stripe ships: stay on Checkout / Payment Element so Stripe is the PCI merchant; our side is typically **SAQ A**. Do not store PAN. |
+| **WCAG 2.1 AA** | Accessibility audit (admin already has an internal axe pass). Optional third-party a11y report; not a privacy seal. |
+
+- [ ] SOC 2 / ISO **only** if a named partner requires it. *(deferred)*
+- [ ] Stripe PCI posture (SAQ A) when payments go live. *(when shipped)*
+
+### Usually skip (badge without the right coverage)
+
+| Program | Why skip for us now |
+|---------|---------------------|
+| **COPPA Safe Harbor** (FTC-approved: CARU, ESRB Privacy Certified, iKeepSafe, kidSAFE, PRIVO, TRUSTe) | Useful if you **collect from under-13s** with parental consent. We **block** under 13. Joining can imply we are a kids’ app. Revisit only if product allows under-13 with consent. |
+| **FERPA “school official” certs** (e.g. some iKeepSafe / 1EdTech products) | Only if a school district ingests student education records through us under a written agreement. Service type “School” alone is not FERPA. |
+| Generic **privacy seals** sold as homepage trust marks | Easy to overclaim; do not substitute for counsel or a pen test. |
+
+### Suggested sequence
+
+1. Counsel + hosted policy/ToS (section 0) — **before any seal**
+2. Build deletion/export/retention or stop promising them (section 3)
+3. Internal MASVS/ASVS pass + pen test
+4. Store labels; then MASA AL2 if we want a Play badge
+5. SOC 2 only if a court/school/insurer writes it into a contract
 
 ---
 
@@ -248,3 +319,4 @@ Do **not** put these on the launch board unless the product changes:
 4. Sentry, uptime, backup restore (section 7)
 5. Store labels + Always-location review (section 9)
 6. Stripe block (section 6) only when payments actually ship
+7. Pen test + optional MASA AL2 (section 11); SOC 2 only if a partner requires it

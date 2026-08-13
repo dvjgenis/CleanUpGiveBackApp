@@ -71,6 +71,7 @@ Living launch board: [compliance/launch-checklist.md](compliance/launch-checklis
 - [x] Core tracking audit — Kalman + adaptive sampling, Always-while-active background GPS (`expo-task-manager`), sync-failure banners, missed-checkpoint → `invalid`, list `photoCount` for Home stats (see [session-tracking-expo-go.md](frontend/specs/session-tracking-expo-go.md) AC-32–36)
 - [ ] CCPA deletion/export endpoints + admin audit log
 - [ ] DPIA completed and signed off
+- [ ] External security assessment path — see [launch-checklist.md](compliance/launch-checklist.md) §11 (MASVS/ASVS internally; pen test; MASA AL2 only if we want a Play badge; skip COPPA Safe Harbor while under-13 is blocked)
 
 ## References
 
