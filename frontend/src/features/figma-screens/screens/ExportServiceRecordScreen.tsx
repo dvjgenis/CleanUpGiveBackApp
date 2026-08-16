@@ -1,10 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useRouter, type Href } from 'expo-router';
+import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { SessionSetupTopAppBar } from '@/components/session-setup/SessionSetupTopAppBar';
+import { EmptyState } from '@/components/ui/EmptyState';
+import {
+  hydrateSessionStatsFromApi,
+  useSessionStats,
+} from '@/features/session-tracking/sessionStatsStore';
+import { countExportMatchingSessions } from '@/features/session-tracking/utils/homeDashboardStats';
 
 import { RadioCheckedIcon, RadioEmptyIcon } from '../components/AccountIcons';
 import { ExportDateField } from '../components/ExportDateField';
@@ -36,8 +42,10 @@ export function ExportServiceRecordScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const [startDate, setStartDate] = useState(() => toExportDate(new Date(2026, 0, 1)));
-  const [endDate, setEndDate] = useState(() => toExportDate(new Date(2026, 6, 10)));
+  const [startDate, setStartDate] = useState(() =>
+    toExportDate(new Date(new Date().getFullYear(), 0, 1)),
+  );
+  const [endDate, setEndDate] = useState(() => toExportDate(new Date()));
   const [statuses, setStatuses] = useState<Record<ExportStatus, boolean>>({
     approved: true,
     underReview: true,
@@ -45,6 +53,13 @@ export function ExportServiceRecordScreen() {
   });
   const [format, setFormat] = useState<ExportFormat>('pdf');
   const [courtMandated, setCourtMandated] = useState(false);
+  const sessionStats = useSessionStats();
+
+  useFocusEffect(
+    useCallback(() => {
+      void hydrateSessionStatsFromApi();
+    }, []),
+  );
 
   // Normalize leftover string state from earlier mock timeframe fields (Fast Refresh).
   useEffect(() => {
@@ -92,7 +107,29 @@ export function ExportServiceRecordScreen() {
     }
   }
 
+  const matchCount = useMemo(
+    () =>
+      countExportMatchingSessions(sessionStats, startDay, endDay, {
+        approved: statuses.approved,
+        pending: statuses.underReview,
+        declined: statuses.notApproved,
+      }),
+    [endDay, sessionStats, startDay, statuses],
+  );
+
+  function resetExportFilters() {
+    setCourtMandated(false);
+    setStatuses({
+      approved: true,
+      underReview: true,
+      notApproved: true,
+    });
+  }
+
   function handleExport() {
+    if (matchCount === 0) {
+      return;
+    }
     router.push(`/export-record-success?format=${format}` as Href);
   }
 
@@ -218,15 +255,39 @@ export function ExportServiceRecordScreen() {
             </AnimatedPressable>
           </View>
         </View>
+
+        {matchCount === 0 ? (
+          <EmptyState
+            title="No sessions match these filters"
+            body={
+              sessionStats.length === 0
+                ? 'Log a cleanup before exporting a service record.'
+                : 'Try a wider date range or include more session statuses.'
+            }
+            ctaLabel={sessionStats.length === 0 ? 'Log session?' : 'Reset filters'}
+            ctaAccessibilityLabel={sessionStats.length === 0 ? 'Log session' : 'Reset filters'}
+            onCtaPress={
+              sessionStats.length === 0
+                ? () => router.push('/session-setup-guide' as Href)
+                : resetExportFilters
+            }
+          />
+        ) : (
+          <Text style={s.matchCount}>
+            {matchCount} session{matchCount === 1 ? '' : 's'} will be included.
+          </Text>
+        )}
       </ScrollView>
 
       <View style={[s.footer, { paddingBottom: footerBottom }]}>
         <AnimatedPressable
           scaleTo={0.98}
           onPress={handleExport}
+          disabled={matchCount === 0}
           accessibilityRole="button"
           accessibilityLabel="Export Record"
-          style={s.exportBtn}
+          accessibilityState={{ disabled: matchCount === 0 }}
+          style={[s.exportBtn, matchCount === 0 ? s.exportBtnDisabled : null]}
         >
           <Text style={s.exportLabel}>Export Record</Text>
         </AnimatedPressable>
@@ -336,12 +397,22 @@ const s = StyleSheet.create({
     color: colors.textNavInactive,
     textAlign: 'center',
   },
+  matchCount: {
+    fontFamily: fontFamilies.notoSansRegular,
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.textNavInactive,
+    textAlign: 'center',
+  },
   exportBtn: {
     height: PRIMARY_FOOTER_BTN_HEIGHT,
     backgroundColor: colors.primary,
     borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  exportBtnDisabled: {
+    opacity: 0.45,
   },
   exportLabel: {
     fontFamily: fontFamilies.notoSansSemiBold,

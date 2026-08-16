@@ -50,6 +50,70 @@ export function formatDurationParts(elapsedSeconds: number): { hours: number; mi
   return { hours, minutes };
 }
 
+/** Whole minutes from seconds (rounded). */
+export function roundSecondsToMinutes(seconds: number): number {
+  return Math.max(0, Math.round(seconds / 60));
+}
+
+/** Whole minutes from fractional hours (rounded). */
+export function roundHoursToMinutes(hours: number): number {
+  return Math.max(0, Math.round(hours * 60));
+}
+
+/** Compact service duration — e.g. `36 min`, `2.5 hrs`. */
+export function formatServiceDurationCompactFromSeconds(seconds: number): string {
+  if (seconds < 3600) {
+    return `${roundSecondsToMinutes(seconds)} min`;
+  }
+
+  const hours = seconds / 3600;
+  const rounded = Math.round(hours * 10) / 10;
+  const display = Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+  return `${display} hrs`;
+}
+
+/** Compact service duration from chart/lifetime hours — e.g. `36 min`, `2.0 hrs`. */
+export function formatServiceDurationCompactFromHours(hours: number): string {
+  if (hours <= 0) {
+    return '0 min';
+  }
+
+  if (hours < 1) {
+    return `${roundHoursToMinutes(hours)} min`;
+  }
+
+  const rounded = Math.round(hours * 10) / 10;
+  return `${rounded.toFixed(1)} hrs`;
+}
+
+/** Sentence duration — e.g. `36 minutes`, `1 hour`. */
+export function formatServiceDurationPhraseFromHours(hours: number): string {
+  if (hours <= 0) {
+    return '0 minutes';
+  }
+
+  if (hours < 1) {
+    const minutes = roundHoursToMinutes(hours);
+    return `${minutes} ${minutes === 1 ? 'minute' : 'minutes'}`;
+  }
+
+  const rounded = Math.round(hours * 10) / 10;
+  const display = Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+  const unit = rounded === 1 ? 'hour' : 'hours';
+  return `${display} ${unit}`;
+}
+
+/** Session detail stat — value + unit label for the HOURS/MINUTES card. */
+export function formatSessionHoursStatValue(
+  seconds: number,
+): { value: string; unitLabel: 'HOURS' | 'MINUTES' } {
+  if (seconds < 3600) {
+    return { value: String(roundSecondsToMinutes(seconds)), unitLabel: 'MINUTES' };
+  }
+
+  return { value: (seconds / 3600).toFixed(1), unitLabel: 'HOURS' };
+}
+
 /** Submission detail — e.g. `5m`, `1h 24m`. Rounds up to 1m when >= 30s and < 60s. */
 export function formatSessionDurationLabel(totalSeconds: number): string {
   const { hours, minutes } = formatDurationParts(totalSeconds);
@@ -130,10 +194,9 @@ export function formatRecentSessionTimeLabel(startedAt: number, endedAt: number)
   return `${formatRecentSessionClock(startedAt, false)}-${formatRecentSessionClock(endedAt, true)}`;
 }
 
-/** Home recent-sessions card — e.g. `2.5 hrs`. */
+/** Home recent-sessions card — e.g. `36 min`, `2.5 hrs`. */
 export function formatRecentSessionDurationLabel(elapsedSeconds: number): string {
-  const hours = elapsedSeconds / 3600;
-  return `${hours.toFixed(1)} hrs`;
+  return formatServiceDurationCompactFromSeconds(elapsedSeconds);
 }
 
 export function formatCheckpointOrdinal(oneBasedIndex: number): string {

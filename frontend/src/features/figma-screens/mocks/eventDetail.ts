@@ -133,9 +133,9 @@ const EVENT_DETAILS: Record<string, EventDetail> = {
   },
 };
 
-export function getEventDetail(id: string | undefined): EventDetail {
+export function getEventDetail(id: string | undefined): EventDetail | null {
   if (id && EVENT_DETAILS[id]) {
     return EVENT_DETAILS[id];
   }
-  return downtownRiverfrontEvent;
+  return null;
 }

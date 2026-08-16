@@ -22,11 +22,54 @@ export const returningUserHomeDashboard: HomeDashboardData = {
     { day: 'Sat', value: 110 },
     { day: 'Sun', value: 180 },
   ],
-  impactStats: [
-    { id: 'miles', value: '12.5', label: 'MILES COVERED', icon: 'miles' },
-    { id: 'locations', value: '15.0', label: 'LOCATIONS CLEANED', icon: 'locations' },
-    { id: 'sessions', value: '20.3', label: 'SESSIONS COMPLETED', icon: 'sessions' },
-    { id: 'photos', value: '9.8', label: 'PHOTOS SUBMITTED', icon: 'photos' },
+  lifetimeServiceHoursValue: '48.5',
+  lifetimePlacesCopy: "You've cleaned up at Downtown Riverfront and Lake Park.",
+  impactMonthSummaries: [
+    {
+      monthKey: '2026-08',
+      monthLabel: 'August',
+      placeCount: 2,
+      hours: 0.6,
+    },
+    {
+      monthKey: '2026-07',
+      monthLabel: 'July',
+      placeCount: 1,
+      hours: 2.5,
+    },
+  ],
+  impactFeed: [
+    {
+      id: 'downtown-riverfront-progress-1',
+      sessionId: 'downtown-riverfront',
+      imageUri: 'https://images.unsplash.com/photo-1532996122724-e3c354a0b782?w=400&q=80',
+      sessionTitle: 'Downtown Riverfront Clean-up',
+      dateLabel: 'Jul 15',
+      timeLabel: '5:30 PM',
+      durationLabel: '2.5 hrs',
+      capturedAtMs: Date.parse('2026-07-15T17:30:00'),
+      status: 'approved',
+      routePreview: [
+        [-87.884, 42.033],
+        [-87.881, 42.035],
+        [-87.878, 42.034],
+      ],
+    },
+    {
+      id: 'lake-park-progress-1',
+      sessionId: 'lake-park',
+      imageUri: 'https://images.unsplash.com/photo-1618477388954-7859f99c8caa?w=400&q=80',
+      sessionTitle: 'Lake Park Cleanup',
+      dateLabel: 'Jun 3',
+      timeLabel: '10:00 AM',
+      durationLabel: '2.0 hrs',
+      capturedAtMs: Date.parse('2026-06-03T10:00:00'),
+      status: 'pending',
+      routePreview: [
+        [-87.89, 42.04],
+        [-87.888, 42.042],
+      ],
+    },
   ],
   recentSessions: [
     {

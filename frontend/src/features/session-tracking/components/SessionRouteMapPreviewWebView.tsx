@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 
 import { colors, radius } from '../tokens';
@@ -187,6 +187,7 @@ type Props = {
   routeCoordinates: RouteCoordinate[];
   mapLayer?: MapLayerType;
   replayProgress?: number;
+  interactive?: boolean;
   style?: object;
 };
 
@@ -195,6 +196,7 @@ export function SessionRouteMapPreviewWebView({
   routeCoordinates,
   mapLayer = DEFAULT_MAP_LAYER,
   replayProgress = 1,
+  interactive = true,
   style,
 }: Props) {
   const webRef = useRef<WebView>(null);
@@ -240,27 +242,45 @@ export function SessionRouteMapPreviewWebView({
     pushStyleUpdate();
   }, [mapLayer]);
 
+  const webView = (
+    <WebView
+      ref={webRef}
+      style={styles.webview}
+      originWhitelist={['*']}
+      javaScriptEnabled
+      domStorageEnabled
+      scrollEnabled={false}
+      nestedScrollEnabled={interactive}
+      pointerEvents={interactive ? 'auto' : 'none'}
+      source={{ html: buildHtml() }}
+      onMessage={(event) => {
+        if (event.nativeEvent.data === 'ready') {
+          readyRef.current = true;
+          if (mapLayer !== 'standard') {
+            pushStyleUpdate();
+          }
+          pushRouteUpdate();
+          if (!interactive && webRef.current) {
+            webRef.current.injectJavaScript(
+              'map.dragPan.disable(); map.scrollZoom.disable(); map.touchZoomRotate.disable(); map.doubleClickZoom.disable(); true;',
+            );
+          }
+        }
+      }}
+    />
+  );
+
+  if (!interactive) {
+    return (
+      <View style={[styles.container, style]} pointerEvents="none">
+        {webView}
+      </View>
+    );
+  }
+
   return (
     <MapInteractionContainer style={[styles.container, style]}>
-      <WebView
-        ref={webRef}
-        style={styles.webview}
-        originWhitelist={['*']}
-        javaScriptEnabled
-        domStorageEnabled
-        scrollEnabled={false}
-        nestedScrollEnabled
-        source={{ html: buildHtml() }}
-        onMessage={(event) => {
-          if (event.nativeEvent.data === 'ready') {
-            readyRef.current = true;
-            if (mapLayer !== 'standard') {
-              pushStyleUpdate();
-            }
-            pushRouteUpdate();
-          }
-        }}
-      />
+      {webView}
     </MapInteractionContainer>
   );
 }

@@ -1,6 +1,11 @@
-import type { ImpactStat, WeeklyHoursDatum } from '@/features/figma-screens/mocks/home.types';
+import type { ImpactMonthSummary, ImpactStat, WeeklyHoursDatum } from '@/features/figma-screens/mocks/home.types';
 import type { ApiSession } from '@/lib/sessionsApi';
 import { mapApiStatusToApproval } from '@/lib/mapApiSessions';
+import {
+  formatServiceDurationCompactFromHours,
+  formatServiceDurationPhraseFromHours,
+  roundHoursToMinutes,
+} from '@/features/session-tracking/utils/sessionFormat';
 
 import type { CompletedSessionSnapshot } from '../liveSessionStore';
 import { resolveSessionDurationSeconds } from './sessionFormat';
@@ -152,12 +157,7 @@ export function formatWeekServiceHoursTotal(
   stats: readonly SessionStatRecord[],
   weekStartIso: string,
 ): string {
-  const totalHours = sumWeeklyChartHours(stats, weekStartIso);
-  if (totalHours <= 0) {
-    return '0.0 hrs';
-  }
-
-  return `${totalHours.toFixed(1)} hrs`;
+  return formatServiceDurationCompactFromHours(sumWeeklyChartHours(stats, weekStartIso));
 }
 
 /** Current Monday-week hours at chart precision (0.1 hr). Not a consecutive-day streak. */
@@ -169,6 +169,16 @@ export function computeWeeklyStreakHours(
 }
 
 export function formatWeeklyHoursBadgeCopy(hours: number): string {
+  if (hours <= 0) {
+    return '0 minutes this week. Keep it up!';
+  }
+
+  if (hours < 1) {
+    const minutes = roundHoursToMinutes(hours);
+    const unit = minutes === 1 ? 'minute' : 'minutes';
+    return `${minutes} ${unit} this week. Keep it up!`;
+  }
+
   const rounded = Math.round(hours * 10) / 10;
   const display = Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
   const unit = rounded === 1 ? 'hour' : 'hours';
@@ -181,7 +191,227 @@ export function formatChartHourLabel(value: number): string {
     return '0';
   }
 
+  if (value < 1) {
+    return `${roundHoursToMinutes(value)} min`;
+  }
+
   return Number.isInteger(value) ? String(value) : value.toFixed(1);
+}
+
+/** True when the weekly chart should use a minute scale on the Y axis. */
+export function chartUsesMinuteScale(chartMaxHours: number): boolean {
+  return chartMaxHours > 0 && chartMaxHours < 1;
+}
+
+/** Sums completed session duration (pending + approved; excludes declined). */
+export function computeLifetimeServiceHours(stats: readonly SessionStatRecord[]): number {
+  const totalSeconds = stats
+    .filter((stat) => stat.status !== 'declined')
+    .reduce((sum, stat) => sum + stat.durationSeconds, 0);
+  return Math.round((totalSeconds / 3600) * 10) / 10;
+}
+
+/** Formats lifetime hours for the Home impact hero (one decimal). */
+export function formatLifetimeServiceHoursValue(stats: readonly SessionStatRecord[]): string {
+  const hours = computeLifetimeServiceHours(stats);
+  if (hours <= 0) {
+    return '0.0';
+  }
+  return hours.toFixed(1);
+}
+
+const SKIP_PLACE_KEYS = new Set(['unknown', '—', '-', '']);
+
+function shortPlaceName(label: string): string {
+  const trimmed = label.trim();
+  const firstSegment = trimmed.split(',')[0]?.trim() ?? trimmed;
+  return firstSegment;
+}
+
+/** One-line story of unique cleanup places (pending + approved). */
+export function formatImpactPlacesCopy(stats: readonly SessionStatRecord[]): string {
+  const names: string[] = [];
+  const seen = new Set<string>();
+
+  for (const stat of stats) {
+    if (stat.status === 'declined') {
+      continue;
+    }
+
+    const short = shortPlaceName(stat.locationLabel);
+    const key = short.toLowerCase();
+    if (SKIP_PLACE_KEYS.has(key) || seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    names.push(short);
+  }
+
+  if (names.length === 0) {
+    return '';
+  }
+
+  if (names.length === 1) {
+    return `You've cleaned up at ${names[0]}.`;
+  }
+
+  if (names.length === 2) {
+    return `You've cleaned up at ${names[0]} and ${names[1]}.`;
+  }
+
+  const extra = names.length - 2;
+  const other = extra === 1 ? '1 other place' : `${extra} other places`;
+  return `You've cleaned up at ${names[0]}, ${names[1]}, and ${other}.`;
+}
+
+export function monthKeyFromMs(ms: number): string {
+  const date = new Date(ms);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+
+export function countUniqueImpactPlaces(stats: readonly SessionStatRecord[]): number {
+  const seen = new Set<string>();
+
+  for (const stat of stats) {
+    if (stat.status === 'declined') {
+      continue;
+    }
+
+    const short = shortPlaceName(stat.locationLabel);
+    const key = short.toLowerCase();
+    if (SKIP_PLACE_KEYS.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+  }
+
+  return seen.size;
+}
+
+function formatImpactMonthName(monthKey: string): string {
+  const [yearText, monthText] = monthKey.split('-');
+  const year = Number(yearText);
+  const monthIndex = Number(monthText) - 1;
+  return new Date(year, monthIndex, 1).toLocaleString('en-US', { month: 'long' });
+}
+
+/** Hours phrase for the impact sentence (`36 minutes`, `1 hour`). */
+export function formatImpactHoursPhrase(hours: number): string {
+  return formatServiceDurationPhraseFromHours(hours);
+}
+
+export function formatImpactMonthSentence(summary: ImpactMonthSummary): string {
+  const year = Number(summary.monthKey.slice(0, 4));
+  const placeWord = summary.placeCount === 1 ? 'place' : 'places';
+  return `In ${summary.monthLabel} ${year}, you cleaned up ${summary.placeCount} ${placeWord} for a total of ${formatImpactHoursPhrase(summary.hours)}.`;
+}
+
+/** How far back the impact year picker goes (current year inclusive). */
+export const IMPACT_YEAR_SPAN = 100;
+
+/** Newest-first calendar years from the current year back through `IMPACT_YEAR_SPAN` years. Never includes future years. */
+export function buildImpactYearOptions(now: Date = new Date()): number[] {
+  const maxYear = now.getFullYear();
+  const minYear = maxYear - (IMPACT_YEAR_SPAN - 1);
+  const years: number[] = [];
+  for (let year = maxYear; year >= minYear; year -= 1) {
+    years.push(year);
+  }
+  return years;
+}
+
+/** All twelve calendar months for a year (January → December). */
+export function buildImpactMonthOptionsForYear(
+  year: number,
+): readonly { monthKey: string; monthLabel: string }[] {
+  return Array.from({ length: 12 }, (_, index) => {
+    const month = index + 1;
+    const monthKey = `${year}-${String(month).padStart(2, '0')}`;
+    return {
+      monthKey,
+      monthLabel: formatImpactMonthName(monthKey),
+    };
+  });
+}
+
+/** Parses typed month input (name, abbreviation, or 1–12). */
+export function parseImpactMonthInput(text: string): number | null {
+  const trimmed = text.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const numeric = Number(trimmed);
+  if (Number.isInteger(numeric) && numeric >= 1 && numeric <= 12) {
+    return numeric;
+  }
+
+  const lower = trimmed.toLowerCase();
+  for (let month = 1; month <= 12; month += 1) {
+    const date = new Date(2000, month - 1, 1);
+    const longName = date.toLocaleString('en-US', { month: 'long' }).toLowerCase();
+    const shortName = date.toLocaleString('en-US', { month: 'short' }).toLowerCase();
+    if (lower === longName || lower === shortName || (lower.length >= 3 && longName.startsWith(lower))) {
+      return month;
+    }
+  }
+
+  return null;
+}
+
+/** Parses typed year input within the allowed range (inclusive). */
+export function parseImpactYearInput(
+  text: string,
+  minYear: number,
+  maxYear: number,
+): number | null {
+  const trimmed = text.trim();
+  if (!/^\d{4}$/.test(trimmed)) {
+    return null;
+  }
+
+  const year = Number(trimmed);
+  if (!Number.isInteger(year) || year < minYear || year > maxYear) {
+    return null;
+  }
+
+  return year;
+}
+
+export function buildImpactMonthSummary(
+  stats: readonly SessionStatRecord[],
+  monthKey: string,
+): ImpactMonthSummary {
+  const monthStats = stats.filter(
+    (stat) => stat.status !== 'declined' && monthKeyFromMs(stat.startedAtMs) === monthKey,
+  );
+
+  return {
+    monthKey,
+    monthLabel: formatImpactMonthName(monthKey),
+    placeCount: countUniqueImpactPlaces(monthStats),
+    hours: computeLifetimeServiceHours(monthStats),
+  };
+}
+
+/** Months with session activity plus the current month, newest first. */
+export function buildImpactMonthSummaries(
+  stats: readonly SessionStatRecord[],
+  now: Date = new Date(),
+): ImpactMonthSummary[] {
+  const keys = new Set<string>([monthKeyFromMs(now.getTime())]);
+  for (const stat of stats) {
+    if (stat.status === 'declined') {
+      continue;
+    }
+    keys.add(monthKeyFromMs(stat.startedAtMs));
+  }
+
+  return [...keys]
+    .sort((a, b) => (a < b ? 1 : a > b ? -1 : 0))
+    .map((monthKey) => buildImpactMonthSummary(stats, monthKey));
 }
 
 export function buildImpactStats(stats: readonly SessionStatRecord[]): ImpactStat[] {
@@ -208,4 +438,40 @@ export function isDateInWeekIso(dateMs: number, weekStartIso: string): boolean {
   const weekEnd = addDays(weekStart, 6);
   const day = new Date(dateMs);
   return day >= weekStart && day <= weekEnd;
+}
+
+export type ExportStatusSelection = {
+  approved: boolean;
+  pending: boolean;
+  declined: boolean;
+};
+
+/** Inclusive start-of-day through inclusive end-of-day match count for export filters. */
+export function countExportMatchingSessions(
+  stats: readonly SessionStatRecord[],
+  startDay: Date,
+  endDay: Date,
+  statuses: ExportStatusSelection,
+): number {
+  const startMs = startDay.getTime();
+  const endMs = addDays(endDay, 1).getTime();
+
+  return stats.filter((stat) => {
+    if (stat.startedAtMs < startMs || stat.startedAtMs >= endMs) {
+      return false;
+    }
+
+    switch (stat.status) {
+      case 'approved':
+        return statuses.approved;
+      case 'pending':
+        return statuses.pending;
+      case 'declined':
+        return statuses.declined;
+      default: {
+        const _exhaustive: never = stat.status;
+        return _exhaustive;
+      }
+    }
+  }).length;
 }

@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { SessionSetupBackChevronIcon } from '@/components/session-setup/icons/SessionSetupBackChevronIcon';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { StatusPill } from '@/features/session-tracking/components/StatusPill';
 import { SessionRouteMapPanel } from '@/features/session-tracking/components/SessionRouteMapPanel';
 import { SessionNotesField } from '@/features/session-tracking/components/SessionNotesField';
@@ -273,23 +274,31 @@ export function SessionDetailScreen() {
         keyboardDismissMode="interactive"
         automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
       >
-        <View
-          style={[s.mapHero, { width: windowWidth, height: MAP_HEIGHT }]}
-          accessibilityLabel="Session walking path map"
-        >
-          <SessionRouteMapPanel
-            routeCoordinates={routeCoordinates}
-            replayOnce
-            initialMapLayer={detail.mapLayer}
-            style={s.mapPreview}
-          />
-        </View>
+        {!error ? (
+          <View
+            style={[s.mapHero, { width: windowWidth, height: MAP_HEIGHT }]}
+            accessibilityLabel="Session walking path map"
+          >
+            <SessionRouteMapPanel
+              routeCoordinates={routeCoordinates}
+              replayOnce
+              initialMapLayer={detail.mapLayer}
+              style={s.mapPreview}
+            />
+          </View>
+        ) : null}
 
         <View style={[s.mainCard, { width: contentWidth, alignSelf: 'center' }]}>
           {loading ? (
             <Text style={s.loadingText}>Loading session…</Text>
           ) : error ? (
-            <Text style={s.loadingText}>{error}</Text>
+            <EmptyState
+              title={error}
+              body="This session may have been deleted, or it could not be loaded."
+              ctaLabel="View sessions"
+              ctaAccessibilityLabel="View sessions"
+              onCtaPress={() => router.replace('/sessions-list' as Href)}
+            />
           ) : (
             <>
               <View style={s.eventDetails}>
@@ -303,7 +312,11 @@ export function SessionDetailScreen() {
                 </View>
 
                 <View style={s.statsRow}>
-                  <StatCard value={detail.hoursLabel} label="HOURS" icon={<SessionDetailHoursIcon />} />
+                  <StatCard
+                    value={detail.hoursLabel}
+                    label={detail.hoursUnitLabel}
+                    icon={<SessionDetailHoursIcon />}
+                  />
                   <StatCard value={detail.milesLabel} label="MILES" icon={<SessionDetailMilesIcon />} />
                   <StatCard
                     value={photosStatLabel}
@@ -323,7 +336,7 @@ export function SessionDetailScreen() {
             </>
           )}
 
-          <SessionNotesField sessionId={sessionId} scrollRef={scrollRef} />
+          {!error ? <SessionNotesField sessionId={sessionId} scrollRef={scrollRef} /> : null}
         </View>
       </ScrollView>
 
@@ -338,7 +351,7 @@ export function SessionDetailScreen() {
           >
             <Text style={s.newSessionLabel}>Go Home</Text>
           </AnimatedPressable>
-          {canDeleteSession ? (
+          {!error && canDeleteSession ? (
             <AnimatedPressable
               scaleTo={0.98}
               onPress={handleDeleteSession}

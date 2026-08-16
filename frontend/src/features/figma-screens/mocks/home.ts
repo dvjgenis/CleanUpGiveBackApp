@@ -1,7 +1,7 @@
-import type { HomeDashboardData, ImpactStat, RecentSessionSummary, UpcomingEventSummary } from './home.types';
+import type { HomeDashboardData, ImpactMonthSummary, ImpactStat, RecentSessionSummary, UpcomingEventSummary } from './home.types';
 import { getCurrentWeekMeta } from '../utils/weekCalendar';
 
-export type { HomeDashboardData, ImpactStat, RecentSessionSummary, UpcomingEventSummary };
+export type { HomeDashboardData, ImpactMonthSummary, ImpactStat, RecentSessionSummary, UpcomingEventSummary };
 
 /**
  * Mock location-mapped remote thumbnails (stand-in for Google Places photos).
@@ -36,7 +36,7 @@ export { eventImageForLocation };
 export const firstTimeHomeDashboard: HomeDashboardData = {
   homeUser: { firstName: 'Shivam' },
   weeklyStreakHours: 0,
-  serviceHoursTotalLabel: '0.0 hrs',
+  serviceHoursTotalLabel: '0 min',
   ...getCurrentWeekMeta(),
   weeklyHoursChart: [
     { day: 'Mon', value: 0 },
@@ -47,12 +47,17 @@ export const firstTimeHomeDashboard: HomeDashboardData = {
     { day: 'Sat', value: 0 },
     { day: 'Sun', value: 0 },
   ],
-  impactStats: [
-    { id: 'miles', value: '0.0', label: 'MILES COVERED', icon: 'miles' },
-    { id: 'locations', value: '0.0', label: 'LOCATIONS CLEANED', icon: 'locations' },
-    { id: 'sessions', value: '0.0', label: 'SESSIONS COMPLETED', icon: 'sessions' },
-    { id: 'photos', value: '0.0', label: 'PHOTOS SUBMITTED', icon: 'photos' },
+  lifetimeServiceHoursValue: '0.0',
+  lifetimePlacesCopy: '',
+  impactMonthSummaries: [
+    {
+      monthKey: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`,
+      monthLabel: new Date().toLocaleString('en-US', { month: 'long' }),
+      placeCount: 0,
+      hours: 0,
+    },
   ],
+  impactFeed: [],
   recentSessions: [],
   recentEvents: [
     {

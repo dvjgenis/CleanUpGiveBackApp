@@ -2,6 +2,7 @@ import { createContext, use, useEffect, useState, type ReactNode } from 'react';
 
 import { hydrateMapThemeSettings } from '@/features/session-tracking/mapThemeStore';
 import { hydrateRecentSessionsFromApi } from '@/features/session-tracking/recentSessionsStore';
+import { hydrateImpactFeedFromApi, hydrateImpactFeedFromStorage } from '@/features/session-tracking/impactFeedStore';
 import { hydrateVolunteerDeletedSessions } from '@/features/session-tracking/volunteerDeletedSessions';
 import { hydrateSessionNotesFromStorage } from '@/features/session-tracking/sessionNotesStore';
 import { hydrateSessionStatsFromApi, hydrateSessionStatsFromStorage } from '@/features/session-tracking/sessionStatsStore';
@@ -31,6 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     void hydrateVolunteerDeletedSessions();
     void hydrateSessionStatsFromStorage();
+    void hydrateImpactFeedFromStorage();
     void hydrateSessionNotesFromStorage();
   }, []);
 
@@ -47,6 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await hydrateVolunteerDeletedSessions();
         await hydrateRecentSessionsFromApi();
         await hydrateSessionStatsFromApi();
+        await hydrateImpactFeedFromApi();
       })
       .catch((error) => {
         console.warn('[auth] bootstrap failed:', error);

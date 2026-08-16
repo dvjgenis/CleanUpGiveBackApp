@@ -4,6 +4,7 @@ import { getCachedCompletedSession } from '@/features/session-tracking/completed
 import type { CompletedSessionSnapshot } from '@/features/session-tracking/liveSessionStore';
 import {
   formatSessionDateLabel,
+  formatSessionHoursStatValue,
   formatSessionTimeRange,
   resolveSessionDurationSeconds,
 } from '@/features/session-tracking/utils/sessionFormat';
@@ -32,6 +33,7 @@ export type SessionDetailData = {
   /** Session setup description (read-only on detail). */
   description: string;
   hoursLabel: string;
+  hoursUnitLabel: 'HOURS' | 'MINUTES';
   milesLabel: string;
   photosCountLabel: string;
   routeCoordinates: RouteCoordinate[];
@@ -51,6 +53,7 @@ const DEFAULT_DETAIL: SessionDetailData = {
   locationAddress: '600 E Algonquin Rd, Des Plaines, IL, 60018',
   description: 'Cleaned litter along the riverfront trail and surrounding park area.',
   hoursLabel: '2.5',
+  hoursUnitLabel: 'HOURS',
   milesLabel: '3.4',
   photosCountLabel: '4',
   routeCoordinates: [],
@@ -67,7 +70,8 @@ export function emptySessionDetail(id = ''): SessionDetailData {
     dateTimeLabel: '—',
     locationAddress: EMPTY_LOCATION,
     description: '',
-    hoursLabel: '0.0',
+    hoursLabel: '0',
+    hoursUnitLabel: 'MINUTES',
     milesLabel: '0.0',
     photosCountLabel: '0',
     routeCoordinates: [],
@@ -128,6 +132,8 @@ export function detailFromCompletedSnapshot(
     },
   );
 
+  const hoursStat = formatSessionHoursStatValue(durationSeconds);
+
   return {
     id,
     title: snapshot.setup.activity,
@@ -135,7 +141,8 @@ export function detailFromCompletedSnapshot(
     dateTimeLabel: `${formatSessionDateLabel(snapshot.startedAt)} · ${formatSessionTimeRange(snapshot.startedAt, snapshot.endedAt)}`,
     locationAddress: snapshot.setup.description?.trim() || EMPTY_LOCATION,
     description: snapshot.setup.description?.trim() || '',
-    hoursLabel: (durationSeconds / 3600).toFixed(1),
+    hoursLabel: hoursStat.value,
+    hoursUnitLabel: hoursStat.unitLabel,
     milesLabel: snapshot.distanceMiles.toFixed(1),
     photosCountLabel: String(evidencePhotos.length),
     routeCoordinates: snapshot.routeCoordinates,

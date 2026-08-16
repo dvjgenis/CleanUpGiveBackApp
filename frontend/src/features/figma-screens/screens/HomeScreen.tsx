@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -10,37 +10,37 @@ import {
   useLiveSessionNavChrome,
 } from '@/components/navigation/LiveSessionNavChrome';
 import { usePreferredName } from '@/features/onboarding/onboardingStore';
-import { useRecentSessions } from '@/features/session-tracking/recentSessionsStore';
 import {
   hydrateSessionStatsFromApi,
   useSessionStats,
 } from '@/features/session-tracking/sessionStatsStore';
 import {
-  buildImpactStats,
   buildWeeklyHoursChart,
   computeWeeklyStreakHours,
+  chartUsesMinuteScale,
   formatChartHourLabel,
+  formatLifetimeServiceHoursValue,
+  formatImpactPlacesCopy,
   formatWeekServiceHoursTotal,
   formatWeeklyHoursBadgeCopy,
+  type SessionStatRecord,
 } from '@/features/session-tracking/utils/homeDashboardStats';
+import { roundHoursToMinutes } from '@/features/session-tracking/utils/sessionFormat';
+import { useImpactFeed } from '@/features/session-tracking/impactFeedStore';
+
+import { EmptyState } from '@/components/ui/EmptyState';
 
 import { EventsViewAllModal } from '../components/EventsViewAllModal';
-import { RecentSessionCard } from '../components/RecentSessionCard';
+import { ImpactFeedSection } from '../components/ImpactFeedSection';
 import { UpcomingEventCard } from '../components/UpcomingEventCard';
 import { ServiceHoursWeekPicker } from '../components/ServiceHoursWeekPicker';
 import {
-  EventCalendarDayBadge,
-  EventLocationIcon,
-  EventOrganizationIcon,
-  ImpactStatIcon,
   NotificationIcon,
   StreakIcon,
-  TimeIcon,
 } from '../components/HomeIcons';
 import { firstTimeHomeDashboard } from '../mocks/home';
-import type { HomeDashboardData, ImpactStat, UpcomingEventSummary } from '../mocks/home.types';
+import type { HomeDashboardData, UpcomingEventSummary } from '../mocks/home.types';
 import { getTimeOfDayGreeting } from '../utils/getTimeOfDayGreeting';
-import { formatEventMonthLabel } from '../utils/eventFormat';
 import {
   formatWeekNumberLabel,
   formatWeekRangeLabel,
@@ -54,6 +54,8 @@ import {
 } from '@/lib/eventsApi';
 
 const CHART_H = 168;
+/** Headroom above bars when minute labels (e.g. `18 min`) render outside narrow columns. */
+const CHART_MINUTE_LABEL_BAND = 14;
 
 /**
  * Round up to an integer ceiling with 4 equal integer Y-axis steps
@@ -70,48 +72,67 @@ function buildYLabels(chartMax: number): number[] {
   return [chartMax, step * 3, step * 2, step, 0].map((v) => Math.round(v));
 }
 
-function yLabelTop(index: number, labelCount: number): number {
-  if (index === 0) return -6;
-  const anchor = (index / (labelCount - 1)) * CHART_H;
+function yLabelTop(index: number, labelCount: number, labelBand = 0, plotH = CHART_H): number {
+  if (index === 0) return labelBand - 6;
+  const anchor = labelBand + (index / (labelCount - 1)) * plotH;
   if (index === labelCount - 1) return anchor - 10;
   return anchor - 5;
 }
 
+function gridLineTop(index: number, labelCount: number, labelBand = 0, plotH = CHART_H): number {
+  return labelBand + (index / (labelCount - 1)) * plotH;
+}
+
 function BarChart({ weeklyHoursChart }: { weeklyHoursChart: HomeDashboardData['weeklyHoursChart'] }) {
-  const dataMax = Math.max(...weeklyHoursChart.map((d) => d.value), 0);
+  const dataMaxHours = Math.max(...weeklyHoursChart.map((d) => d.value), 0);
+  const useMinutes = chartUsesMinuteScale(dataMaxHours);
+  const dataMax = useMinutes ? roundHoursToMinutes(dataMaxHours) : dataMaxHours;
   const chartMax = niceMax(dataMax);
   const yLabels = buildYLabels(chartMax);
   const labelCount = yLabels.length;
+  const labelBand = useMinutes ? CHART_MINUTE_LABEL_BAND : 0;
+  const plotH = CHART_H - labelBand;
 
   return (
     <View style={chart.container}>
       <View style={chart.yAxis}>
         {yLabels.map((value, index) => (
-          <Text key={value} style={[chart.yLabel, { top: yLabelTop(index, labelCount) }]}>
+          <Text
+            key={value}
+            style={[chart.yLabel, { top: yLabelTop(index, labelCount, labelBand, plotH) }]}
+          >
             {value}
           </Text>
         ))}
       </View>
       <View style={chart.plotArea}>
-        <View style={chart.barsRow}>
+        <View style={[chart.barsRow, labelBand > 0 && { paddingTop: labelBand }]}>
           {yLabels.map((value, index) => {
             if (value <= 0 || value >= chartMax) return null;
-            const top = (index / (labelCount - 1)) * CHART_H;
+            const top = gridLineTop(index, labelCount, labelBand, plotH);
             return <View key={`grid-${value}`} style={[chart.gridLine, { top }]} />;
           })}
           {weeklyHoursChart.map(({ day, value }) => {
-            const barH = Math.round((value / chartMax) * CHART_H);
+            const plotValue = useMinutes ? roundHoursToMinutes(value) : value;
+            const barH = Math.round((plotValue / chartMax) * plotH);
             const label = formatChartHourLabel(value);
-            const labelAbove = value > 0 && barH <= 20;
-            const labelInside = value > 0 && barH > 20;
+            const minuteLabel = label.endsWith(' min');
+            const labelAbove = value > 0 && (minuteLabel || barH <= 20);
+            const labelInside = value > 0 && !labelAbove;
             return (
               <View key={day} style={chart.barColumn}>
                 {labelAbove && (
-                  <Text style={chart.barValueAbove}>{label}</Text>
+                  <Text style={chart.barValueAbove} numberOfLines={1}>
+                    {label}
+                  </Text>
                 )}
                 {value > 0 && (
                   <View style={[chart.bar, { height: Math.max(barH, 4) }]}>
-                    {labelInside && <Text style={chart.barValue}>{label}</Text>}
+                    {labelInside && (
+                      <Text style={chart.barValue} numberOfLines={1}>
+                        {label}
+                      </Text>
+                    )}
                   </View>
                 )}
               </View>
@@ -136,11 +157,15 @@ function ServiceHoursCard({
   weekRangeLabel,
   weekNumberLabel,
   weeklyHoursChart,
+  hasLifetimeHours,
+  onLogSession,
   onWeekStartChange,
 }: Pick<
   HomeDashboardData,
   'serviceHoursTotalLabel' | 'weekStartIso' | 'weekRangeLabel' | 'weekNumberLabel' | 'weeklyHoursChart'
 > & {
+  hasLifetimeHours: boolean;
+  onLogSession: () => void;
   onWeekStartChange: (weekStartIso: string) => void;
 }) {
   return (
@@ -158,137 +183,19 @@ function ServiceHoursCard({
       />
 
       <BarChart weeklyHoursChart={weeklyHoursChart} />
+
+      {!hasLifetimeHours ? (
+        <EmptyState
+          title="No service hours yet"
+          body="Tracking starts from the center Track button. Your weekly chart will fill in after your first session."
+          ctaLabel="Log session?"
+          ctaAccessibilityLabel="Log session"
+          onCtaPress={onLogSession}
+        />
+      ) : null}
     </View>
   );
 }
-
-function ImpactStatCard({ icon, value, label }: { icon: ImpactStat['icon']; value: string; label: string }) {
-  return (
-    <View style={s.impactStatCard}>
-      <View style={s.statValueRow}>
-        <ImpactStatIcon name={icon} />
-        <Text style={s.statValue}>{value}</Text>
-      </View>
-      <Text style={s.statLabel}>{label}</Text>
-    </View>
-  );
-}
-
-function ImpactSection({ impactStats }: { impactStats: ImpactStat[] }) {
-  const rows = [impactStats.slice(0, 2), impactStats.slice(2, 4)] as const;
-
-  return (
-    <View style={s.paddedSection}>
-      <Text style={s.sectionTitle}>Your Impact</Text>
-      <View style={s.impactGrid}>
-        {rows.map((row, rowIndex) => (
-          <View key={rowIndex} style={s.impactGridRow}>
-            {row.map((stat) => (
-              <ImpactStatCard key={stat.id} icon={stat.icon} value={stat.value} label={stat.label} />
-            ))}
-          </View>
-        ))}
-      </View>
-    </View>
-  );
-}
-
-function RecentSessionsSection({
-  recentSessions,
-  onSessionPress,
-  onViewAllPress,
-}: {
-  recentSessions: HomeDashboardData['recentSessions'];
-  onSessionPress?: (sessionId: string) => void;
-  onViewAllPress?: () => void;
-}) {
-  return (
-    <View style={s.paddedSection}>
-      <View style={s.sectionHeader}>
-        <Text style={s.sectionTitle}>Recent Sessions</Text>
-        {recentSessions.length > 0 && (
-          <View style={s.sectionHeaderActions}>
-            <AnimatedPressable
-              accessibilityRole="button"
-              accessibilityLabel="View all sessions"
-              onPress={onViewAllPress}
-              hitSlop={8}
-            >
-              <Text style={s.viewAllLink}>View All</Text>
-            </AnimatedPressable>
-          </View>
-        )}
-      </View>
-      {recentSessions.length > 0 ? (
-        <View style={s.sessionListGap}>
-          {recentSessions.map((session) => (
-            <RecentSessionCard
-              key={session.id}
-              session={session}
-              onPress={
-                onSessionPress
-                  ? () => onSessionPress(session.id)
-                  : undefined
-              }
-            />
-          ))}
-        </View>
-      ) : (
-        <Text style={s.emptySectionMessage}>No recent sessions yet.</Text>
-      )}
-    </View>
-  );
-}
-
-// ─── Legacy event card (preserved for easy revert) ───────────────────────────
-function EventCalendarBadge({ day, month, weekday }: { day: string; month: string; weekday: string }) {
-  return (
-    <View style={s.calBadgeRow}>
-      <EventCalendarDayBadge day={day} />
-      <View style={s.calMonthCol}>
-        <Text style={s.calMonth}>{formatEventMonthLabel(month)}</Text>
-        <Text style={s.calWeekday}>{weekday}</Text>
-      </View>
-    </View>
-  );
-}
-
-/** @deprecated Use EventCard instead. Kept as revert fallback. */
-function EventCardLegacy({
-  event,
-  onPress,
-}: {
-  event: HomeDashboardData['recentEvents'][number];
-  onPress: () => void;
-}) {
-  return (
-    <AnimatedPressable
-      scaleTo={0.98}
-      style={s.eventCard}
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={`Event on ${event.month} ${event.day} at ${event.location}`}
-    >
-      <EventCalendarBadge day={event.day} month={event.month} weekday={event.weekday} />
-      <View style={s.eventDetails}>
-        <View style={s.eventDetailRow}>
-          <EventLocationIcon />
-          <Text style={s.eventDetailText} numberOfLines={2}>{event.location}</Text>
-        </View>
-        <View style={s.eventDetailRow}>
-          <TimeIcon />
-          <Text style={s.eventDetailText}>{event.timeLabel}</Text>
-        </View>
-        <View style={s.eventDetailRow}>
-          <EventOrganizationIcon />
-          <Text style={s.eventDetailText}>{event.organization}</Text>
-        </View>
-      </View>
-    </AnimatedPressable>
-  );
-}
-// ─── New event card ───────────────────────────────────────────────────────────
-
 
 function RecentEventsSection({
   recentEvents,
@@ -305,32 +212,39 @@ function RecentEventsSection({
     router.push({ pathname: '/event-detail', params: { id: eventId } } as Href);
   }
 
-  if (recentEvents.length === 0) {
-    return null;
-  }
+  const hasCatalog = allEvents.length > 0;
 
   return (
-    <View style={s.paddedSection}>
+    <View style={s.eventsSection}>
       <View style={s.sectionHeader}>
         <Text style={s.sectionTitle}>Upcoming Events</Text>
-        <AnimatedPressable
-          accessibilityRole="button"
-          accessibilityLabel="View all events"
-          onPress={() => setViewAllVisible(true)}
-          hitSlop={8}
-        >
-          <Text style={s.viewAllLink}>View All</Text>
-        </AnimatedPressable>
+        {hasCatalog ? (
+          <AnimatedPressable
+            accessibilityRole="button"
+            accessibilityLabel="View all events"
+            onPress={() => setViewAllVisible(true)}
+            hitSlop={8}
+          >
+            <Text style={s.viewAllLink}>View All</Text>
+          </AnimatedPressable>
+        ) : null}
       </View>
-      <View style={s.listGap}>
-        {recentEvents.map((event) => (
-          <UpcomingEventCard
-            key={event.id}
-            event={event}
-            onPress={() => openEventDetail(event.id)}
-          />
-        ))}
-      </View>
+      {recentEvents.length > 0 ? (
+        <View style={s.listGap}>
+          {recentEvents.map((event) => (
+            <UpcomingEventCard
+              key={event.id}
+              event={event}
+              onPress={() => openEventDetail(event.id)}
+            />
+          ))}
+        </View>
+      ) : (
+        <EmptyState
+          title="No upcoming events yet"
+          body="Check back soon for community clean-ups near you."
+        />
+      )}
       <EventsViewAllModal
         visible={viewAllVisible}
         events={allEvents}
@@ -347,9 +261,11 @@ function RecentEventsSection({
  */
 export function HomeScreenWithData({
   data,
+  sessionStats = [],
   onWeekStartChange = () => {},
 }: {
   data: HomeDashboardData;
+  sessionStats?: readonly SessionStatRecord[];
   onWeekStartChange?: (weekStartIso: string) => void;
 }) {
   const router = useRouter();
@@ -360,6 +276,11 @@ export function HomeScreenWithData({
   const greeting = useMemo(() => getTimeOfDayGreeting(), []);
   const bottomInset = Math.max(insets.bottom, 0);
   const scrollBottomPad = bottomInset + layout.bottomNavHeight + barExtraHeight + 24;
+  const hasLifetimeHours = Number.parseFloat(data.lifetimeServiceHoursValue) > 0;
+
+  function openSessionSetup() {
+    router.push('/session-setup-guide' as Href);
+  }
 
   return (
     <View style={s.root}>
@@ -409,15 +330,18 @@ export function HomeScreenWithData({
           weekRangeLabel={data.weekRangeLabel}
           weekNumberLabel={data.weekNumberLabel}
           weeklyHoursChart={data.weeklyHoursChart}
+          hasLifetimeHours={hasLifetimeHours}
+          onLogSession={openSessionSetup}
           onWeekStartChange={onWeekStartChange}
         />
-        <ImpactSection impactStats={data.impactStats} />
-        <RecentSessionsSection
-          recentSessions={data.recentSessions}
-          onSessionPress={(sessionId) =>
+        <ImpactFeedSection
+          sessionStats={sessionStats}
+          feedItems={data.impactFeed}
+          onFeedItemPress={(sessionId) =>
             router.push(`/session-detail?id=${encodeURIComponent(sessionId)}` as Href)
           }
           onViewAllPress={() => router.push('/sessions-list' as Href)}
+          onLogSession={openSessionSetup}
         />
         <RecentEventsSection recentEvents={data.recentEvents} allEvents={data.allEvents} />
       </ScrollView>
@@ -453,9 +377,9 @@ export function HomeScreenWithData({
 
 /** First-time user home — session-driven stats, current calendar week. */
 export function HomeScreen() {
-  const recentSessions = useRecentSessions();
   const preferredName = usePreferredName();
   const sessionStats = useSessionStats();
+  const impactFeed = useImpactFeed();
   const [selectedWeekStartIso, setSelectedWeekStartIso] = useState(
     () => getCurrentWeekMeta().weekStartIso,
   );
@@ -472,11 +396,8 @@ export function HomeScreen() {
           fetchPublishedEventsCatalog(),
         ]);
         if (cancelled) return;
-        // Prefer live published events whenever Supabase returns any.
-        if (catalog.length > 0 || upcoming.length > 0) {
-          setLiveUpcomingEvents(upcoming);
-          setLiveAllEvents(catalog.length > 0 ? catalog : upcoming);
-        }
+        setLiveUpcomingEvents(upcoming);
+        setLiveAllEvents(catalog.length > 0 ? catalog : upcoming);
       })();
       return () => {
         cancelled = true;
@@ -486,8 +407,8 @@ export function HomeScreen() {
 
   const data = useMemo(() => {
     const selectedWeekStart = parseIsoDate(selectedWeekStartIso);
-    const recentEvents = liveUpcomingEvents ?? firstTimeHomeDashboard.recentEvents;
-    const allEvents = liveAllEvents ?? firstTimeHomeDashboard.allEvents;
+    const recentEvents = liveUpcomingEvents ?? [];
+    const allEvents = liveAllEvents ?? [];
 
     return {
       ...firstTimeHomeDashboard,
@@ -497,8 +418,9 @@ export function HomeScreen() {
       weeklyHoursChart: buildWeeklyHoursChart(sessionStats, selectedWeekStartIso),
       serviceHoursTotalLabel: formatWeekServiceHoursTotal(sessionStats, selectedWeekStartIso),
       weeklyStreakHours: computeWeeklyStreakHours(sessionStats),
-      impactStats: buildImpactStats(sessionStats),
-      recentSessions,
+      lifetimeServiceHoursValue: formatLifetimeServiceHoursValue(sessionStats),
+      lifetimePlacesCopy: formatImpactPlacesCopy(sessionStats),
+      impactFeed,
       recentEvents: recentEvents.slice(0, 3),
       allEvents,
       homeUser: {
@@ -509,13 +431,17 @@ export function HomeScreen() {
     liveAllEvents,
     liveUpcomingEvents,
     preferredName,
-    recentSessions,
+    impactFeed,
     selectedWeekStartIso,
     sessionStats,
   ]);
 
   return (
-    <HomeScreenWithData data={data} onWeekStartChange={setSelectedWeekStartIso} />
+    <HomeScreenWithData
+      data={data}
+      sessionStats={sessionStats}
+      onWeekStartChange={setSelectedWeekStartIso}
+    />
   );
 }
 
@@ -562,6 +488,7 @@ const chart = StyleSheet.create({
     paddingHorizontal: 2,
     gap: 1,
     position: 'relative',
+    overflow: 'visible',
   },
   barColumn: {
     flex: 1,
@@ -569,6 +496,7 @@ const chart = StyleSheet.create({
     justifyContent: 'flex-end',
     height: '100%',
     zIndex: 1,
+    overflow: 'visible',
   },
   bar: {
     width: '88%',
@@ -577,18 +505,25 @@ const chart = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-start',
     paddingTop: 4,
+    paddingHorizontal: 2,
     minHeight: 4,
   },
   barValue: {
     fontFamily: fontFamilies.ibmPlexSansMedium,
     fontSize: 11,
+    lineHeight: 13,
     color: colors.textOnPrimary,
+    textAlign: 'center',
   },
   barValueAbove: {
+    alignSelf: 'stretch',
     fontFamily: fontFamilies.ibmPlexSansMedium,
     fontSize: 11,
+    lineHeight: 13,
     color: colors.primary,
-    marginBottom: 2,
+    textAlign: 'center',
+    marginBottom: 4,
+    paddingHorizontal: 1,
   },
   xLabelsRow: {
     flexDirection: 'row',
@@ -691,9 +626,7 @@ const s = StyleSheet.create({
     paddingBottom: 19,
     gap: 20,
   },
-  paddedSection: {
-    paddingHorizontal: 14,
-    paddingVertical: 14,
+  eventsSection: {
     gap: 16,
   },
   sectionHeader: {
@@ -706,21 +639,10 @@ const s = StyleSheet.create({
     fontSize: 18,
     color: colors.textPrimary,
   },
-  sectionHeaderActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
   viewAllLink: {
     fontFamily: fontFamilies.notoSansMedium,
     fontSize: 14,
     color: colors.primary,
-  },
-  emptySectionMessage: {
-    fontFamily: fontFamilies.notoSansRegular,
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.textTertiary,
   },
   rowBetween: {
     flexDirection: 'row',
@@ -732,99 +654,8 @@ const s = StyleSheet.create({
     fontSize: 28,
     color: colors.primary,
   },
-  impactGrid: {
-    height: 246,
-    gap: 15,
-  },
-  impactGridRow: {
-    flex: 1,
-    flexDirection: 'row',
-    gap: 15,
-  },
-  impactStatCard: {
-    flex: 1,
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.borderOutline,
-    borderRadius: 12,
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  statValueRow: {
-    position: 'absolute',
-    left: 13,
-    top: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  statValue: {
-    fontFamily: fontFamilies.ibmPlexSansMedium,
-    fontSize: 32,
-    color: colors.primary,
-  },
-  statLabel: {
-    position: 'absolute',
-    left: 13,
-    top: 83,
-    fontFamily: fontFamilies.ibmPlexSansRegular,
-    fontSize: 9,
-    color: colors.textTertiary,
-    letterSpacing: 0.4,
-  },
   listGap: {
     gap: 20,
-  },
-  sessionListGap: {
-    gap: 10,
-  },
-  // Legacy event card (revert fallback)
-  eventCard: {
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.borderOutline,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 14,
-    minHeight: 111,
-    flexDirection: 'row',
-    gap: 10,
-  },
-  calBadgeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  calMonthCol: {
-    gap: 5,
-    width: 30,
-    alignItems: 'center',
-  },
-  calMonth: {
-    fontFamily: fontFamilies.notoSansMedium,
-    fontSize: 14,
-    color: colors.primary,
-  },
-  calWeekday: {
-    fontFamily: fontFamilies.notoSansRegular,
-    fontSize: 12,
-    color: colors.primary,
-  },
-  eventDetails: {
-    flex: 1,
-    gap: 10,
-  },
-  eventDetailRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 9,
-  },
-  eventDetailText: {
-    flex: 1,
-    fontFamily: fontFamilies.ibmPlexSansRegular,
-    fontSize: 12,
-    color: colors.textTertiary,
-    lineHeight: 16,
   },
   bottomStack: {
     position: 'absolute',

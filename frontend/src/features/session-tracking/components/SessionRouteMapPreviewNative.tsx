@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { Map, MapMarker, MapRoute } from '@/components/ui/map';
 
@@ -18,6 +18,7 @@ type Props = {
   routeCoordinates: RouteCoordinate[];
   mapLayer?: MapLayerType;
   replayProgress?: number;
+  interactive?: boolean;
   style?: object;
 };
 
@@ -26,6 +27,7 @@ export function SessionRouteMapPreviewNative({
   routeCoordinates,
   mapLayer = DEFAULT_MAP_LAYER,
   replayProgress = 1,
+  interactive = true,
   style,
 }: Props) {
   const displayRoute = useMemo(
@@ -47,9 +49,7 @@ export function SessionRouteMapPreviewNative({
       : null;
   const showFinalEnd = replayProgress >= 1;
   const mapStyle = getNativeMapStyle(mapLayer);
-
-  return (
-    <MapInteractionContainer style={[styles.container, style]}>
+  const map = (
       <Map
         key={mapLayer}
         styles={{ light: mapStyle, dark: mapStyle }}
@@ -79,6 +79,19 @@ export function SessionRouteMapPreviewNative({
           </MapMarker>
         )}
       </Map>
+  );
+
+  if (!interactive) {
+    return (
+      <View style={[styles.container, style]} pointerEvents="none">
+        {map}
+      </View>
+    );
+  }
+
+  return (
+    <MapInteractionContainer style={[styles.container, style]}>
+      {map}
     </MapInteractionContainer>
   );
 }

@@ -2,7 +2,11 @@ import {
   computeSessionDurationSeconds,
   formatDurationParts,
   formatRecentSessionDurationLabel,
+  formatServiceDurationCompactFromHours,
+  formatServiceDurationCompactFromSeconds,
+  formatServiceDurationPhraseFromHours,
   formatSessionDurationLabel,
+  formatSessionHoursStatValue,
   resolveSessionDurationSeconds,
 } from './sessionFormat';
 
@@ -65,12 +69,62 @@ describe('formatDurationParts', () => {
   });
 });
 
+describe('formatServiceDurationCompactFromSeconds', () => {
+  it('uses minutes below one hour', () => {
+    expect(formatServiceDurationCompactFromSeconds(2160)).toBe('36 min');
+  });
+
+  it('uses decimal hours at or above one hour', () => {
+    expect(formatServiceDurationCompactFromSeconds(9000)).toBe('2.5 hrs');
+  });
+
+  it('shows 0 min for zero seconds', () => {
+    expect(formatServiceDurationCompactFromSeconds(0)).toBe('0 min');
+  });
+});
+
+describe('formatServiceDurationCompactFromHours', () => {
+  it('uses minutes below one hour', () => {
+    expect(formatServiceDurationCompactFromHours(0.6)).toBe('36 min');
+  });
+
+  it('uses decimal hours at or above one hour', () => {
+    expect(formatServiceDurationCompactFromHours(2.5)).toBe('2.5 hrs');
+  });
+});
+
+describe('formatServiceDurationPhraseFromHours', () => {
+  it('uses minutes below one hour', () => {
+    expect(formatServiceDurationPhraseFromHours(0.6)).toBe('36 minutes');
+    expect(formatServiceDurationPhraseFromHours(1 / 60)).toBe('1 minute');
+  });
+
+  it('uses hours at or above one hour', () => {
+    expect(formatServiceDurationPhraseFromHours(1)).toBe('1 hour');
+    expect(formatServiceDurationPhraseFromHours(2)).toBe('2 hours');
+  });
+});
+
+describe('formatSessionHoursStatValue', () => {
+  it('uses MINUTES below one hour', () => {
+    expect(formatSessionHoursStatValue(2160)).toEqual({ value: '36', unitLabel: 'MINUTES' });
+  });
+
+  it('uses HOURS at or above one hour', () => {
+    expect(formatSessionHoursStatValue(9000)).toEqual({ value: '2.5', unitLabel: 'HOURS' });
+  });
+});
+
 describe('formatRecentSessionDurationLabel', () => {
-  it('formats decimal hours for home cards', () => {
+  it('formats sub-hour sessions in minutes', () => {
+    expect(formatRecentSessionDurationLabel(2160)).toBe('36 min');
+  });
+
+  it('formats hour-plus sessions in decimal hours', () => {
     expect(formatRecentSessionDurationLabel(9000)).toBe('2.5 hrs');
   });
 
-  it('shows 0.0 hrs for zero seconds', () => {
-    expect(formatRecentSessionDurationLabel(0)).toBe('0.0 hrs');
+  it('shows 0 min for zero seconds', () => {
+    expect(formatRecentSessionDurationLabel(0)).toBe('0 min');
   });
 });

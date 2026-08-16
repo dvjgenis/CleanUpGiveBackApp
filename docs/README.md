@@ -38,7 +38,8 @@ Living docs for the Clean Up - Give Back monorepo. Templates are copy-only.
 | [frontend/specs/](frontend/specs/) | All feature specs and PRDs |
 | [frontend/specs/session-tracking-expo-go.md](frontend/specs/session-tracking-expo-go.md) | Sessions + geolocation (Kalman, background-while-active, sync) |
 | [frontend/specs/free-hour-tracker-paywall.md](frontend/specs/free-hour-tracker-paywall.md) | Free-hour countdown, paywall, Pay Later → session detail, Go Home |
-| [frontend/specs/home-dashboard-session-stats.md](frontend/specs/home-dashboard-session-stats.md) | Home Service Hours + impact from `sessionStatsStore` |
+| [frontend/specs/home-dashboard-session-stats.md](frontend/specs/home-dashboard-session-stats.md) | Home Service Hours chart + **Your Impact** sentence/picker + Recent Cleanups feed |
+| [frontend/specs/mobile-empty-states.md](frontend/specs/mobile-empty-states.md) | Shared `EmptyState` coverage (Home, lists, not-found, export) |
 | [frontend/specs/session-route-replay.md](frontend/specs/session-route-replay.md) | Play / Pause / Replay on completed route maps |
 | [frontend/specs/service-letter-pdf.md](frontend/specs/service-letter-pdf.md) | Approved session service letter PDF (volunteer + admin) |
 | [frontend/specs/event-calendar-export.md](frontend/specs/event-calendar-export.md) | Event detail → Apple / Google / device calendar |

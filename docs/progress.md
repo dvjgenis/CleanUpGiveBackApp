@@ -2,6 +2,62 @@
 
 ---
 
+## [2026-08-16] — Your Impact month/year picker: list-only (no search)
+
+**End goal:** Month and year dropdowns in **Your Impact** should be pick-from-list only — no type-to-search field.
+
+**Shipped:**
+
+- Removed `TextInput` + **Go** from `ImpactFeedSection` picker sheet; selection is tap-only on the scrollable `FlatList`.
+- Dropped picker draft/error state, `KeyboardAvoidingView`, and `parseImpactMonthInput` / `parseImpactYearInput` imports from the component (helpers remain in `homeDashboardStats.ts` + unit tests for potential reuse).
+- Updated a11y hints on month/year chips (`Opens month picker` / `Opens year picker`).
+
+**Docs:** `docs/frontend/specs/home-dashboard-session-stats.md` (AC-4 + picker table), `components.md`, `app.md`, `current.md`.
+
+**Status:** Done.
+
+---
+
+## [2026-08-16] — Home chart minute bar-label spacing
+
+**End goal:** Sub-hour Service Hours bars (e.g. `18 min`, `12 min`) must not render flush inside narrow columns or clip the chart border.
+
+**Shipped:** Minute-scale weeks reserve a 14px label band, place `XX min` labels above bars with spacing, and realign grid/Y-axis to the reduced plot height. Spec AC-10 in `docs/frontend/specs/home-dashboard-session-stats.md`.
+
+**Status:** Done (code + docs).
+
+---
+
+## [2026-08-16] — Home Your Impact + Recent Cleanups
+
+**End goal:** Replace the lifetime-hours stat card with a month/year impact sentence and a map-first Recent Cleanups feed; polish picker UX (motion, scroll, layout).
+
+**Shipped:**
+
+- **Impact sentence** — two-row layout (`In {month} {year}, you cleaned up` / `{n} places for a total of {duration}.`); month + year chips with `ChevronDownIcon`; green semibold stats; sub-hour → minutes via `sessionFormat.ts`.
+- **Picker sheet** — full-width Reanimated bottom sheet (live-tracker / `MapTypesSheet` motion); list-only month/year selection (no type-to-search); 12 months × selected year; 100 years newest-first through today (`IMPACT_YEAR_SPAN`); bounded `FlatList` with dismiss scrim above sheet only; current year not clipped at open.
+- **Recent Cleanups** — map always fills tile; 56×56 photo thumb top-left; status badge top-right; title/time/duration overlay; data from `impactFeedStore`. Home hides Recent Sessions list.
+- **Chip styling pass, imported from Figma `1328:96`/`1328:142`** — layout iterated through several failed approaches before landing on the final one:
+  - A wrapping-paragraph layout (single `<Text>` with `flex:1` tail) broke because RN can't reflow a `View`/`Pressable` inline inside `Text` on this build; nested-`Text`-only spans wrap but can't reliably paint a background/border around a nested non-text icon child.
+  - `get_design_context` on the actual Figma node showed the design was never meant to wrap at all — it's two **fixed, single-line rows** (`heroRow` with `flexWrap: 'nowrap'`), so the real fix was matching that structure, not chasing paragraph reflow.
+  - Final chip (`monthChip`): `colors.chipSelectedBg` pill, `Sanchez` label, `ChevronDownIcon`, contents centered (`monthChipRow` `justifyContent: 'center'`, `marginTop: 3` nudge), 1px underline (`monthChipRule`) stretched edge-to-edge via a negative `marginHorizontal` matching the chip's padding (borders on nested `Text` don't render reliably, so this has to be a real `View`). Highlighted counts use `colors.statusApprovedText`; trailing period nested in a plain-text span so it doesn't inherit the green highlight color.
+  - Text sits at 16px/22 line-height — bumped from the Figma-literal 12px for legibility, with `heroRow` gap/`monthChip` padding trimmed tight specifically to keep the no-wrap row from overflowing on standard phone widths.
+- **Docs:** `docs/frontend/specs/home-dashboard-session-stats.md` (AC-4 detail section), `components.md`, `current.md`.
+
+**Status:** Done (code + docs). Spec test plan items 6–7 cover manual QA. Chip layout not yet visually verified on a real device/simulator — no wrap safety net remains on `heroRow`, so watch for clipping on very narrow screens or long month names.
+
+---
+
+## [2026-08-16] — Mobile empty states
+
+**End goal:** Every list/data surface that can be empty uses a shared `EmptyState` with a next step, including first-time Home and missing session/event records.
+
+**Shipped:** Home first-time Service Hours / Impact / Recent Sessions / Upcoming Events; Approval History live list; session + event not-found; export zero-match (disables Export); Shop category + Events View All + session photos aligned to `EmptyState`. Spec: `docs/frontend/specs/mobile-empty-states.md`.
+
+**Status:** Done (code + docs).
+
+---
+
 ## [2026-08-16] — Mobile session detail shows admin decline reason
 
 **End goal:** When Donna declines a session in admin with a volunteer-facing reason, that same text appears on the mobile session detail screen for that session.
@@ -8575,3 +8631,22 @@ useEffect(() => {
 - Reusing existing pure functions (`buildActivityPattern`, `buildCourtRisk`, `computeRedFlags`, `describeAuditChanges`) as building blocks kept 5 of the 7 admin features to mostly aggregation/rendering work rather than new business logic — the codebase's existing "pure function over already-fetched data" pattern (established by `session-red-flags.ts`) paid off directly here.
 - Splitting `email-template-render.ts` (pure, no server imports) from `email-templates.ts` (DB access) was necessary, not stylistic — a `"use client"` editor component importing anything that pulls in `next/headers`-based Supabase server clients fails to bundle; the pure/impure boundary has to be a real file boundary, not just a mental one.
 - **Switching an email body from `text:` to `html:` is a security-relevant change, not a cosmetic one** — plain-text interpolation of user-controlled strings is inert; the same interpolation into an HTML body is an injection vector. Any future template/rendering change that crosses that boundary needs an explicit escaping pass, not just a "did it compile" check.
+
+## [2026-08-16] — Mobile empty states rollout; Home Your Impact extracted into `ImpactFeedSection`
+
+**Session goal:** Ship shared `EmptyState` coverage across first-time Home, empty lists, and missing-record screens (spec: [mobile-empty-states.md](frontend/specs/mobile-empty-states.md)); extract Home's **Your Impact** block out of `HomeScreen.tsx` into a standalone `ImpactFeedSection` component backed by a new `impactFeedStore`, and align its month/year dropdown chips to the Figma design.
+
+### Tasks Completed
+
+| Task | File(s) | Status |
+|---|---|---|
+| `EmptyState` coverage | `ApprovalHistoryScreen.tsx`, `EventDetailScreen.tsx`, `ExportServiceRecordScreen.tsx`, `SessionDetailScreen.tsx`, `ShopScreen.tsx`, `EventsViewAllModal.tsx` | ✅ Missing/empty-filter states now show a CTA instead of a blank screen |
+| `ImpactFeedSection` extraction | `components/ImpactFeedSection.tsx` (new, ~417 lines moved out of `HomeScreen.tsx`), `session-tracking/impactFeedStore.ts` (new) | ✅ Month/year picker sheet, hero sentence, and Recent Cleanups map-first tiles now own their own component + store instead of living inline in `HomeScreen` |
+| `RoutePathThumbnail` | `components/RoutePathThumbnail.tsx` (new) | ✅ Lightweight `react-native-svg` polyline glyph for feed tiles — avoids mounting a MapLibre WebView per tile |
+| Month/year dropdown chip — Figma alignment | `components/ImpactFeedSection.tsx` (`monthChip`, `monthChipRule`, `heroRow` styles) | ✅ Matched Figma nodes `1328:143`/`1328:150`: 4px border radius, `overflow: 'hidden'` so the underline rule clips to the rounded corners, rule repositioned `absolute` (was a flow child with a negative-margin bleed) so it no longer adds to the chip's layout height, `heroRow` switched from `alignItems: 'center'` to `'flex-start'` so the chip's text stays pinned to the same top edge as the surrounding sentence regardless of the chip's own height — which is what let extra top/bottom chip padding (`paddingTop: 3` + `marginTop: -3`, `paddingBottom: 4`) get added afterward without shifting the chip label out of line with the rest of the sentence |
+| `homeDashboardStats` / `sessionFormat` extensions | `session-tracking/utils/homeDashboardStats.ts`, `session-tracking/utils/sessionFormat.ts` (+ new tests) | ✅ Supporting utilities for the extracted feed section |
+
+### Key Decisions
+
+- **Growing a flex-centered chip's padding without disturbing sibling text requires decoupling the axis, not just adding padding.** Adding `paddingBottom` alone to a flex child inside an `alignItems: 'center'` row shifts every sibling as the row's cross-axis size grows. Fixed by switching the row to `alignItems: 'flex-start'` (all children anchor to a shared top edge, independent of individual height) and, for top padding specifically, pairing `paddingTop: N` with `marginTop: -N` so the box grows upward while the text's on-screen position stays exactly where it was.
+- Positioning the chip's underline rule as `position: 'absolute'` (mirroring the Figma layer structure, where the divider line is absolutely positioned and doesn't consume flow height) instead of a normal flow sibling with a negative-margin bleed was the actual fix for the original text/sentence misalignment — not a font or line-height tweak.

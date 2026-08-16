@@ -11,6 +11,8 @@ type Props = {
   routeCoordinates: RouteCoordinate[];
   mapLayer?: MapLayerType;
   replayProgress?: number;
+  /** When false, the map ignores touches so parent scroll/press still work. */
+  interactive?: boolean;
   style?: object;
 };
 
@@ -42,6 +44,7 @@ export function SessionRouteMapPreview({
   routeCoordinates,
   mapLayer = DEFAULT_MAP_LAYER,
   replayProgress = 1,
+  interactive = true,
   style,
 }: Props) {
   // Resolve at render time — module-scope Constants can be wrong on first evaluate.
@@ -53,6 +56,7 @@ export function SessionRouteMapPreview({
         routeCoordinates={routeCoordinates}
         mapLayer={mapLayer}
         replayProgress={replayProgress}
+        interactive={interactive}
         style={style}
       />
     );
@@ -70,6 +74,7 @@ export function SessionRouteMapPreview({
       routeCoordinates={routeCoordinates}
       mapLayer={mapLayer}
       replayProgress={replayProgress}
+      interactive={interactive}
       style={style}
     />
   );

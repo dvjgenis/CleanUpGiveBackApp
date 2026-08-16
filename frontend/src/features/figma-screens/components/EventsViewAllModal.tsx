@@ -214,7 +214,10 @@ export function EventsViewAllModal({ visible, events, onClose, onSelectEvent }: 
             >
               {filteredEvents.length === 0 ? (
                 events.length === 0 ? (
-                  <Text style={s.emptyText}>No upcoming events yet — check back soon.</Text>
+                  <EmptyState
+                    title="No upcoming events yet"
+                    body="Check back soon for community clean-ups near you."
+                  />
                 ) : (
                   <EmptyState
                     title="No events match your date range."
@@ -298,14 +301,6 @@ const s = StyleSheet.create({
   },
   dateCol: {
     flex: 1,
-  },
-  emptyText: {
-    fontFamily: fontFamilies.notoSansRegular,
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.textNavInactive,
-    textAlign: 'center',
-    paddingVertical: 24,
   },
   scroll: {
     flexGrow: 0,

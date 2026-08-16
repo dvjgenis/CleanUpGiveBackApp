@@ -12,6 +12,7 @@ import { useRouter, type Href } from 'expo-router';
 
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { BottomNavBar } from '@/components/navigation/BottomNavBar';
+import { EmptyState } from '@/components/ui/EmptyState';
 import {
   LiveSessionMinimizedBar,
   useLiveSessionNavChrome,
@@ -321,10 +322,12 @@ function ProductGrid({
   products,
   onViewProduct,
   onAddProduct,
+  onShowAll,
 }: {
   products: Product[];
   onViewProduct: (productId: string) => void;
   onAddProduct: (product: Product) => void;
+  onShowAll: () => void;
 }) {
   const rows: Product[][] = [];
   for (let i = 0; i < products.length; i += 2) {
@@ -333,9 +336,13 @@ function ProductGrid({
 
   if (products.length === 0) {
     return (
-      <View style={s.emptyFilter}>
-        <Text style={s.emptyFilterText}>No products in this category yet.</Text>
-      </View>
+      <EmptyState
+        title="No products in this category yet."
+        body="Browse all gear or pick another filter."
+        ctaLabel="View all"
+        ctaAccessibilityLabel="View all products"
+        onCtaPress={onShowAll}
+      />
     );
   }
 
@@ -420,6 +427,7 @@ export function ShopScreen() {
               <CategoryTabs activeCategory={activeCategory} onSelect={setActiveCategory} />
               <ProductGrid
                 products={filteredProducts}
+                onShowAll={() => setActiveCategory('All')}
                 onViewProduct={(productId) => {
                   const detailId = SHOP_PRODUCT_TO_DETAIL_ID[productId];
                   if (detailId) {
@@ -839,15 +847,6 @@ const s = StyleSheet.create({
     fontFamily: fontFamilies.notoSansSemiBold,
     fontSize: 14,
     color: colors.white,
-  },
-  emptyFilter: {
-    paddingVertical: 32,
-    alignItems: 'center',
-  },
-  emptyFilterText: {
-    fontFamily: fontFamilies.notoSansRegular,
-    fontSize: 14,
-    color: colors.textNavInactive,
   },
 
   bottomStack: {

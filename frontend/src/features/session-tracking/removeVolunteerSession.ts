@@ -10,6 +10,7 @@ import {
   removeRecentSession,
 } from './recentSessionsStore';
 import { removeSessionStatsForSession } from './sessionStatsStore';
+import { removeImpactFeedForSession } from './impactFeedStore';
 import { markVolunteerSessionsDeleted } from './volunteerDeletedSessions';
 
 const LOCAL_SESSION_ID_PREFIX = 'session-';
@@ -69,9 +70,11 @@ export async function removeVolunteerSession(
   removeRecentSession(sessionId);
   removeCompletedSessionFromCache(sessionId);
   removeSessionStatsForSession(sessionId);
+  removeImpactFeedForSession(sessionId);
   if (cached?.remoteSessionId && cached.remoteSessionId !== sessionId) {
     removeRecentSession(cached.remoteSessionId);
     removeSessionStatsForSession(cached.remoteSessionId);
+    removeImpactFeedForSession(cached.remoteSessionId);
   }
 
   const tombstoneIds = new Set<string>([sessionId]);

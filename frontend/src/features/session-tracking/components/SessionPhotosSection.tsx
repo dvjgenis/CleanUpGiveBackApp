@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { PhotoEnlargeModal } from '@/components/ui/PhotoEnlargeModal';
 import { colors, fontFamilies } from '@/features/figma-screens/tokens';
 
@@ -165,9 +166,10 @@ export function SessionPhotosSection({ photos, style, headingStyle }: Props) {
           </View>
         </View>
       ) : (
-        <Text style={s.emptyPhotosText}>
-          No checkpoint photos were submitted for this session.
-        </Text>
+        <EmptyState
+          title="No checkpoint photos"
+          body="No checkpoint photos were submitted for this session."
+        />
       )}
 
       <PhotoEnlargeModal
@@ -217,13 +219,6 @@ const s = StyleSheet.create({
     lineHeight: 20,
     color: colors.textPrimary,
     marginBottom: 6,
-  },
-  emptyPhotosText: {
-    fontFamily: fontFamilies.notoSansRegular,
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.textTertiary,
-    includeFontPadding: false,
   },
   photosSection: {
     gap: 12,

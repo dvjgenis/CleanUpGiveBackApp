@@ -19,6 +19,7 @@ import {
 import { recordCompletedSession } from './recentSessionsStore';
 import { cacheCompletedSession } from './completedSessionCache';
 import { recordSessionStatFromSnapshot } from './sessionStatsStore';
+import { recordImpactFeedFromSnapshot } from './impactFeedStore';
 import { DEFAULT_MAP_LAYER, type MapLayerType } from './utils/mapStyles';
 import { computeSessionDurationSeconds } from './utils/sessionFormat';
 import {
@@ -1352,6 +1353,7 @@ export async function finalizeLiveSession(options?: {
   const synced = await persistFinalizeToRemote(completedSessionSnapshot, status);
   recordCompletedSession(completedSessionSnapshot);
   recordSessionStatFromSnapshot(completedSessionSnapshot);
+  recordImpactFeedFromSnapshot(completedSessionSnapshot);
   cacheCompletedSession(completedSessionSnapshot);
   endLiveSession();
   return synced;

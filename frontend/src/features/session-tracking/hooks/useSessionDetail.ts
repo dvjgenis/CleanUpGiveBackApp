@@ -16,6 +16,7 @@ import { toRouteCoordinates } from '../utils/geo';
 import { DEFAULT_MAP_LAYER } from '../utils/mapStyles';
 import {
   formatSessionDateLabel,
+  formatSessionHoursStatValue,
   formatSessionTimeRange,
   resolveSessionDurationSeconds,
 } from '../utils/sessionFormat';
@@ -162,6 +163,8 @@ export function useSessionDetail(sessionId?: string): SessionDetailState {
 
         const routeCoordinates = toRouteCoordinates(session.route);
 
+        const hoursStat = formatSessionHoursStatValue(durationSeconds);
+
         setState({
           detail: {
             id: session.id,
@@ -170,7 +173,8 @@ export function useSessionDetail(sessionId?: string): SessionDetailState {
             dateTimeLabel: formatDateTimeLabel(session.startedAt, session.endedAt),
             locationAddress: session.description?.trim() || '—',
             description: session.description?.trim() || '',
-            hoursLabel: (durationSeconds / 3600).toFixed(1),
+            hoursLabel: hoursStat.value,
+            hoursUnitLabel: hoursStat.unitLabel,
             milesLabel:
               session.distanceMiles != null ? Number(session.distanceMiles).toFixed(1) : '0.0',
             photosCountLabel: String(evidencePhotos.length),

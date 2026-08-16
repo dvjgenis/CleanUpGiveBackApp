@@ -1,7 +1,18 @@
 import {
   buildWeeklyHoursChart,
   computeWeeklyStreakHours,
+  countExportMatchingSessions,
   formatChartHourLabel,
+  formatLifetimeServiceHoursValue,
+  formatImpactPlacesCopy,
+  formatImpactHoursPhrase,
+  formatImpactMonthSentence,
+  buildImpactYearOptions,
+  buildImpactMonthOptionsForYear,
+  buildImpactMonthSummary,
+  parseImpactMonthInput,
+  parseImpactYearInput,
+  buildImpactMonthSummaries,
   formatWeekServiceHoursTotal,
   formatWeeklyHoursBadgeCopy,
   type SessionStatRecord,
@@ -63,7 +74,50 @@ describe('buildWeeklyHoursChart', () => {
   });
 });
 
+describe('formatLifetimeServiceHoursValue', () => {
+  it('sums non-declined session durations at one decimal place', () => {
+    const stats = [
+      stat({
+        id: 's1',
+        startedAtMs: Date.parse('2026-07-14T10:00:00'),
+        durationSeconds: 5400,
+      }),
+      stat({
+        id: 's2',
+        startedAtMs: Date.parse('2026-07-16T15:00:00'),
+        durationSeconds: 1800,
+        status: 'approved',
+      }),
+      stat({
+        id: 'declined',
+        startedAtMs: Date.parse('2026-07-15T10:00:00'),
+        durationSeconds: 3600,
+        status: 'declined',
+      }),
+    ];
+
+    expect(formatLifetimeServiceHoursValue(stats)).toBe('2.0');
+  });
+
+  it('returns 0.0 when there are no qualifying sessions', () => {
+    expect(formatLifetimeServiceHoursValue([])).toBe('0.0');
+  });
+});
+
 describe('formatWeekServiceHoursTotal', () => {
+  it('uses minutes below one hour', () => {
+    expect(formatWeekServiceHoursTotal(
+      [
+        stat({
+          id: 's1',
+          startedAtMs: Date.parse('2026-07-14T10:00:00'),
+          durationSeconds: 2160,
+        }),
+      ],
+      MONDAY_JULY_13_2026,
+    )).toBe('36 min');
+  });
+
   it('sums chart hours for the selected week', () => {
     const stats = [
       stat({
@@ -87,6 +141,10 @@ describe('formatChartHourLabel', () => {
     expect(formatChartHourLabel(2)).toBe('2');
     expect(formatChartHourLabel(1.5)).toBe('1.5');
     expect(formatChartHourLabel(0)).toBe('0');
+  });
+
+  it('uses minutes below one hour', () => {
+    expect(formatChartHourLabel(0.6)).toBe('36 min');
   });
 });
 
@@ -159,5 +217,284 @@ describe('formatWeeklyHoursBadgeCopy', () => {
     expect(formatWeeklyHoursBadgeCopy(1)).toBe('1 hour this week. Keep it up!');
     expect(formatWeeklyHoursBadgeCopy(1.5)).toBe('1.5 hours this week. Keep it up!');
     expect(formatWeeklyHoursBadgeCopy(2)).toBe('2 hours this week. Keep it up!');
+  });
+
+  it('uses minutes below one hour', () => {
+    expect(formatWeeklyHoursBadgeCopy(0.4)).toBe('24 minutes this week. Keep it up!');
+  });
+});
+
+describe('formatImpactPlacesCopy', () => {
+  it('returns empty when there are no named places', () => {
+    expect(formatImpactPlacesCopy([])).toBe('');
+    expect(
+      formatImpactPlacesCopy([
+        stat({
+          id: 'unknown',
+          startedAtMs: Date.parse('2026-07-14T10:00:00'),
+          durationSeconds: 3600,
+          locationLabel: 'Unknown',
+        }),
+      ]),
+    ).toBe('');
+  });
+
+  it('names one, two, and three-plus unique places', () => {
+    const lake = stat({
+      id: 's1',
+      startedAtMs: Date.parse('2026-07-14T10:00:00'),
+      durationSeconds: 3600,
+      locationLabel: 'Lake Park, Des Plaines, IL',
+    });
+    const river = stat({
+      id: 's2',
+      startedAtMs: Date.parse('2026-07-15T10:00:00'),
+      durationSeconds: 3600,
+      locationLabel: 'River Trail',
+    });
+    const oakton = stat({
+      id: 's3',
+      startedAtMs: Date.parse('2026-07-16T10:00:00'),
+      durationSeconds: 3600,
+      locationLabel: 'Oakton Park',
+    });
+
+    expect(formatImpactPlacesCopy([lake])).toBe("You've cleaned up at Lake Park.");
+    expect(formatImpactPlacesCopy([lake, river])).toBe(
+      "You've cleaned up at Lake Park and River Trail.",
+    );
+    expect(formatImpactPlacesCopy([lake, river, oakton])).toBe(
+      "You've cleaned up at Lake Park, River Trail, and 1 other place.",
+    );
+  });
+
+  it('skips declined sessions and duplicate labels', () => {
+    const stats = [
+      stat({
+        id: 's1',
+        startedAtMs: Date.parse('2026-07-14T10:00:00'),
+        durationSeconds: 3600,
+        locationLabel: 'Lake Park',
+      }),
+      stat({
+        id: 'dup',
+        startedAtMs: Date.parse('2026-07-15T10:00:00'),
+        durationSeconds: 3600,
+        locationLabel: 'lake park',
+      }),
+      stat({
+        id: 'declined',
+        startedAtMs: Date.parse('2026-07-16T10:00:00'),
+        durationSeconds: 3600,
+        locationLabel: 'Oakton Park',
+        status: 'declined',
+      }),
+    ];
+
+    expect(formatImpactPlacesCopy(stats)).toBe("You've cleaned up at Lake Park.");
+  });
+});
+
+describe('formatImpactHoursPhrase', () => {
+  it('pluralizes and keeps tenths', () => {
+    expect(formatImpactHoursPhrase(0)).toBe('0 minutes');
+    expect(formatImpactHoursPhrase(0.6)).toBe('36 minutes');
+    expect(formatImpactHoursPhrase(1)).toBe('1 hour');
+    expect(formatImpactHoursPhrase(2)).toBe('2 hours');
+  });
+});
+
+describe('formatImpactMonthSentence', () => {
+  it('builds the In {month} sentence', () => {
+    expect(
+      formatImpactMonthSentence({
+        monthKey: '2026-08',
+        monthLabel: 'August',
+        placeCount: 2,
+        hours: 0.6,
+      }),
+    ).toBe('In August 2026, you cleaned up 2 places for a total of 36 minutes.');
+    expect(
+      formatImpactMonthSentence({
+        monthKey: '2026-07',
+        monthLabel: 'July',
+        placeCount: 1,
+        hours: 1,
+      }),
+    ).toBe('In July 2026, you cleaned up 1 place for a total of 1 hour.');
+  });
+});
+
+describe('buildImpactYearOptions', () => {
+  const now = new Date(2026, 7, 16);
+
+  it('returns one hundred years newest-first, independent of session history', () => {
+    const years = buildImpactYearOptions(now);
+    expect(years).toHaveLength(100);
+    expect(years[0]).toBe(2026);
+    expect(years[years.length - 1]).toBe(1927);
+    expect(years.every((year) => year <= 2026)).toBe(true);
+    expect(years).not.toContain(2027);
+  });
+});
+
+describe('buildImpactMonthOptionsForYear', () => {
+  it('returns all twelve months for a year', () => {
+    const options = buildImpactMonthOptionsForYear(2026);
+    expect(options).toHaveLength(12);
+    expect(options[0]).toEqual({ monthKey: '2026-01', monthLabel: 'January' });
+    expect(options[11]).toEqual({ monthKey: '2026-12', monthLabel: 'December' });
+  });
+});
+
+describe('parseImpactMonthInput', () => {
+  it('accepts month numbers and names', () => {
+    expect(parseImpactMonthInput('8')).toBe(8);
+    expect(parseImpactMonthInput('August')).toBe(8);
+    expect(parseImpactMonthInput('aug')).toBe(8);
+  });
+
+  it('rejects invalid input', () => {
+    expect(parseImpactMonthInput('')).toBeNull();
+    expect(parseImpactMonthInput('13')).toBeNull();
+    expect(parseImpactMonthInput('NotAMonth')).toBeNull();
+  });
+});
+
+describe('parseImpactYearInput', () => {
+  it('accepts four-digit years in range', () => {
+    expect(parseImpactYearInput('2026', 2024, 2026)).toBe(2026);
+  });
+
+  it('rejects out-of-range or partial years', () => {
+    expect(parseImpactYearInput('2023', 2024, 2026)).toBeNull();
+    expect(parseImpactYearInput('26', 2024, 2026)).toBeNull();
+  });
+});
+
+describe('buildImpactMonthSummary', () => {
+  it('returns zero totals for months without sessions', () => {
+    expect(
+      buildImpactMonthSummary(
+        [
+          stat({
+            id: 'aug',
+            startedAtMs: Date.parse('2026-08-10T10:00:00'),
+            durationSeconds: 2160,
+            locationLabel: 'Lake Park',
+          }),
+        ],
+        '2026-01',
+      ),
+    ).toMatchObject({
+      monthKey: '2026-01',
+      monthLabel: 'January',
+      placeCount: 0,
+      hours: 0,
+    });
+  });
+});
+
+describe('buildImpactMonthSummaries', () => {
+  const now = new Date(2026, 7, 16);
+
+  it('includes the current month and aggregates places and hours newest first', () => {
+    const summaries = buildImpactMonthSummaries(
+      [
+        stat({
+          id: 'aug',
+          startedAtMs: Date.parse('2026-08-10T10:00:00'),
+          durationSeconds: 2160,
+          locationLabel: 'Lake Park',
+        }),
+        stat({
+          id: 'jul',
+          startedAtMs: Date.parse('2026-07-15T10:00:00'),
+          durationSeconds: 9000,
+          locationLabel: 'River Trail',
+        }),
+        stat({
+          id: 'declined',
+          startedAtMs: Date.parse('2026-07-20T10:00:00'),
+          durationSeconds: 3600,
+          locationLabel: 'Oakton Park',
+          status: 'declined',
+        }),
+      ],
+      now,
+    );
+
+    expect(summaries.map((summary) => summary.monthKey)).toEqual(['2026-08', '2026-07']);
+    expect(summaries[0]).toMatchObject({
+      monthLabel: 'August',
+      placeCount: 1,
+      hours: 0.6,
+    });
+    expect(summaries[1]).toMatchObject({
+      monthLabel: 'July',
+      placeCount: 1,
+      hours: 2.5,
+    });
+  });
+});
+
+describe('countExportMatchingSessions', () => {
+  const start = new Date(2026, 6, 1);
+  const end = new Date(2026, 6, 31);
+
+  it('counts sessions inside the inclusive date range with selected statuses', () => {
+    const stats = [
+      stat({
+        id: 'approved',
+        startedAtMs: Date.parse('2026-07-14T10:00:00'),
+        durationSeconds: 3600,
+        status: 'approved',
+      }),
+      stat({
+        id: 'pending',
+        startedAtMs: Date.parse('2026-07-20T10:00:00'),
+        durationSeconds: 3600,
+        status: 'pending',
+      }),
+      stat({
+        id: 'declined',
+        startedAtMs: Date.parse('2026-07-22T10:00:00'),
+        durationSeconds: 3600,
+        status: 'declined',
+      }),
+      stat({
+        id: 'outside',
+        startedAtMs: Date.parse('2026-08-02T10:00:00'),
+        durationSeconds: 3600,
+        status: 'approved',
+      }),
+    ];
+
+    expect(
+      countExportMatchingSessions(stats, start, end, {
+        approved: true,
+        pending: true,
+        declined: false,
+      }),
+    ).toBe(2);
+  });
+
+  it('returns 0 when no statuses are selected', () => {
+    const stats = [
+      stat({
+        id: 'approved',
+        startedAtMs: Date.parse('2026-07-14T10:00:00'),
+        durationSeconds: 3600,
+        status: 'approved',
+      }),
+    ];
+
+    expect(
+      countExportMatchingSessions(stats, start, end, {
+        approved: false,
+        pending: false,
+        declined: false,
+      }),
+    ).toBe(0);
   });
 });

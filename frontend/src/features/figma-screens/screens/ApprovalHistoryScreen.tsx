@@ -1,6 +1,6 @@
-import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useRouter, type Href } from 'expo-router';
+import React, { useCallback, useMemo, useState } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BottomNavBar } from '@/components/navigation/BottomNavBar';
@@ -9,10 +9,19 @@ import {
   useLiveSessionNavChrome,
 } from '@/components/navigation/LiveSessionNavChrome';
 import { SessionSetupTopAppBar } from '@/components/session-setup/SessionSetupTopAppBar';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { isApiConfigured } from '@/lib/api';
+import { listSessions } from '@/lib/sessionsApi';
+import {
+  hydrateSessionStatsFromApi,
+  useSessionStats,
+} from '@/features/session-tracking/sessionStatsStore';
 
 import {
-  defaultApprovalHistory,
-  defaultApprovalHistoryStats,
+  buildApprovalHistoryStats,
+  filterVisibleApprovalItems,
+  mapApiSessionToApprovalItem,
+  mapStatToApprovalItem,
   type ApprovalHistoryItem,
   type ApprovalHistoryStats,
   type ApprovalStatus,
@@ -98,8 +107,8 @@ function SessionCard({ item }: { item: ApprovalHistoryItem }) {
  * Approval History (Figma `approval_history`, node `854:294`).
  */
 export function ApprovalHistoryScreen({
-  stats = defaultApprovalHistoryStats,
-  sessions = defaultApprovalHistory,
+  stats: statsProp,
+  sessions: sessionsProp,
 }: {
   stats?: ApprovalHistoryStats;
   sessions?: ApprovalHistoryItem[];
@@ -108,6 +117,66 @@ export function ApprovalHistoryScreen({
   const insets = useSafeAreaInsets();
   const { isActive, onTrackPress, expandLiveSession, barStyle, barExtraHeight } =
     useLiveSessionNavChrome();
+  const sessionStats = useSessionStats();
+  const isControlled = sessionsProp !== undefined;
+  const [liveSessions, setLiveSessions] = useState<ApprovalHistoryItem[] | null>(
+    isControlled ? sessionsProp : null,
+  );
+  const [loadState, setLoadState] = useState<'loading' | 'ready'>(
+    isControlled || !isApiConfigured ? 'ready' : 'loading',
+  );
+
+  const loadSessions = useCallback(() => {
+    if (isControlled) {
+      setLiveSessions(sessionsProp);
+      setLoadState('ready');
+      return;
+    }
+
+    void hydrateSessionStatsFromApi();
+
+    if (!isApiConfigured) {
+      setLiveSessions(null);
+      setLoadState('ready');
+      return;
+    }
+
+    setLoadState('loading');
+    listSessions()
+      .then((sessions) => {
+        setLiveSessions(
+          filterVisibleApprovalItems(
+            sessions
+              .map(mapApiSessionToApprovalItem)
+              .filter((item): item is ApprovalHistoryItem => item !== null),
+          ),
+        );
+        setLoadState('ready');
+      })
+      .catch((error) => {
+        console.warn('[approval-history] list fetch failed:', error);
+        setLiveSessions((current) => current);
+        setLoadState('ready');
+      });
+  }, [isControlled, sessionsProp]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadSessions();
+    }, [loadSessions]),
+  );
+
+  const sessions = useMemo(() => {
+    if (isControlled) {
+      return filterVisibleApprovalItems(sessionsProp);
+    }
+    if (liveSessions && liveSessions.length > 0) {
+      return filterVisibleApprovalItems(liveSessions);
+    }
+    return filterVisibleApprovalItems(sessionStats.map(mapStatToApprovalItem));
+  }, [isControlled, liveSessions, sessionStats, sessionsProp]);
+
+  const stats = statsProp ?? buildApprovalHistoryStats(sessions);
 
   const bottomInset = Math.max(insets.bottom, 0);
   const scrollBottomPad = bottomInset + layout.bottomNavHeight + barExtraHeight + 32;
@@ -144,11 +213,26 @@ export function ApprovalHistoryScreen({
           </View>
         </View>
 
-        <View style={s.list}>
-          {sessions.map((item) => (
-            <SessionCard key={item.id} item={item} />
-          ))}
-        </View>
+        {loadState === 'loading' && sessions.length === 0 ? (
+          <View style={s.loadingWrap}>
+            <ActivityIndicator color={colors.primary} />
+            <Text style={s.loadingText}>Loading approval history…</Text>
+          </View>
+        ) : sessions.length === 0 ? (
+          <EmptyState
+            title="No sessions to review yet"
+            body="Log a cleanup and your approval status will show up here."
+            ctaLabel="Log session?"
+            ctaAccessibilityLabel="Log session"
+            onCtaPress={() => router.push('/session-setup-guide' as Href)}
+          />
+        ) : (
+          <View style={s.list}>
+            {sessions.map((item) => (
+              <SessionCard key={item.id} item={item} />
+            ))}
+          </View>
+        )}
       </ScrollView>
 
       <View style={[s.bottomStack, { paddingBottom: bottomInset }]}>
@@ -211,6 +295,16 @@ const s = StyleSheet.create({
     fontSize: 12,
     color: colors.textNavInactive,
     textAlign: 'center',
+  },
+  loadingWrap: {
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 24,
+  },
+  loadingText: {
+    fontFamily: fontFamilies.notoSansRegular,
+    fontSize: 14,
+    color: colors.textNavInactive,
   },
   list: {
     gap: 16,

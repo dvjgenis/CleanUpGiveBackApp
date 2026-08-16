@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { SessionSetupBackChevronIcon } from '@/components/session-setup/icons/SessionSetupBackChevronIcon';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 import { EventLocationMap } from '../components/EventLocationMap';
 import { EventRegistrationSuccessModal } from '../components/EventRegistrationSuccessModal';
@@ -122,7 +123,11 @@ export function EventDetailScreen() {
   const { width: windowWidth } = useWindowDimensions();
   const params = useLocalSearchParams<{ id?: string }>();
   const eventId = typeof params.id === 'string' ? params.id : undefined;
-  const [event, setEvent] = useState<EventDetail>(() => getEventDetail(eventId));
+  const [event, setEvent] = useState<EventDetail | null>(() => getEventDetail(eventId));
+  const [loadState, setLoadState] = useState<'loading' | 'ready' | 'missing'>(() => {
+    if (getEventDetail(eventId)) return 'ready';
+    return eventId ? 'loading' : 'missing';
+  });
 
   const [imageIndex, setImageIndex] = useState(0);
   const [registered, setRegistered] = useState(false);
@@ -134,9 +139,11 @@ export function EventDetailScreen() {
 
   useEffect(() => {
     let cancelled = false;
-    setEvent(getEventDetail(eventId));
+    const catalogEvent = getEventDetail(eventId);
+    setEvent(catalogEvent);
     setImageIndex(0);
     setRegistered(false);
+    setLoadState(catalogEvent ? 'ready' : eventId ? 'loading' : 'missing');
 
     if (!eventId) {
       return () => {
@@ -145,8 +152,15 @@ export function EventDetailScreen() {
     }
 
     void fetchPublishedEventById(eventId).then((remote) => {
-      if (!cancelled && remote) {
+      if (cancelled) return;
+      if (remote) {
         setEvent(remote);
+        setLoadState('ready');
+        return;
+      }
+      if (!catalogEvent) {
+        setEvent(null);
+        setLoadState('missing');
       }
     });
 
@@ -163,16 +177,18 @@ export function EventDetailScreen() {
 
   const handleHeroScroll = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      if (!event) return;
       const x = e.nativeEvent.contentOffset.x;
       const next = Math.round(x / windowWidth);
       if (next !== imageIndex && next >= 0 && next < event.headerImages.length) {
         setImageIndex(next);
       }
     },
-    [event.headerImages.length, imageIndex, windowWidth],
+    [event, imageIndex, windowWidth],
   );
 
   const handleShare = useCallback(async () => {
+    if (!event) return;
     try {
       await Share.share({
         message: `${event.title} — ${event.dateTimeLabel} at ${event.locationAddress}`,
@@ -180,9 +196,10 @@ export function EventDetailScreen() {
     } catch {
       // User dismissed or share unavailable.
     }
-  }, [event.dateTimeLabel, event.locationAddress, event.title]);
+  }, [event]);
 
   const handleCopyLink = useCallback(async () => {
+    if (!event) return;
     const link = mapsLinkForLocation(event.locationAddress, event.coordinate);
     try {
       await Clipboard.setStringAsync(link);
@@ -191,13 +208,15 @@ export function EventDetailScreen() {
     } catch {
       Alert.alert('Copy failed', 'Could not copy the link. Please try again.');
     }
-  }, [event.coordinate, event.locationAddress]);
+  }, [event]);
 
   const handleOpenMaps = useCallback(() => {
+    if (!event) return;
     void openLocationInMaps(event.locationAddress, event.coordinate);
-  }, [event.coordinate, event.locationAddress]);
+  }, [event]);
 
   const handleAddToCalendar = useCallback(() => {
+    if (!event) return;
     promptAddEventToCalendar(event);
   }, [event]);
 
@@ -206,6 +225,7 @@ export function EventDetailScreen() {
   }, []);
 
   const handleRegister = useCallback(() => {
+    if (!event) return;
     setRegistered(true);
     const email = getEmail().trim();
     if (!email) {
@@ -219,13 +239,45 @@ export function EventDetailScreen() {
     }).catch((err) => {
       console.warn('[event-detail] Failed to send registration email', err);
     });
-  }, [event.dateTimeLabel, event.title]);
+  }, [event]);
 
   const handleGoHome = useCallback(() => {
     setRegistered(false);
     requestHomeFadeIn();
     router.replace({ pathname: '/', params: { enter: 'fade' } } as Href);
   }, [router]);
+
+  if (loadState === 'missing' || (!event && loadState !== 'loading')) {
+    return (
+      <View style={s.root}>
+        <View style={s.topSection}>
+          <EventDetailTopBar onBack={() => router.back()} onShare={() => {}} />
+        </View>
+        <View style={[s.content, s.emptyWrap]}>
+          <EmptyState
+            title="Event not found"
+            body="This event may have ended or is no longer published."
+            ctaLabel="Go Home"
+            ctaAccessibilityLabel="Go home"
+            onCtaPress={handleGoHome}
+          />
+        </View>
+      </View>
+    );
+  }
+
+  if (!event) {
+    return (
+      <View style={s.root}>
+        <View style={s.topSection}>
+          <EventDetailTopBar onBack={() => router.back()} onShare={() => {}} />
+        </View>
+        <View style={[s.content, s.emptyWrap]}>
+          <Text style={s.loadingText}>Loading event…</Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={s.root}>
@@ -476,6 +528,17 @@ const s = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 18,
     gap: 30,
+  },
+  emptyWrap: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingBottom: 48,
+  },
+  loadingText: {
+    fontFamily: fontFamilies.notoSansRegular,
+    fontSize: 14,
+    color: colors.textNavInactive,
+    textAlign: 'center',
   },
   badgeBlock: {
     gap: 15,
