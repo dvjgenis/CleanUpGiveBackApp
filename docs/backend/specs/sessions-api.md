@@ -90,7 +90,7 @@ List caller's sessions (newest first).
 
 Session detail including checkpoints.
 
-- **Response:** `200 { "session": { … }, "checkpoints": [ … ] }`
+- **Response:** `200 { "session": { … }, "checkpoints": [ … ] }` — session includes `declineReason` when admin set one at decline time (volunteer-facing only)
 - **Validation:** session must belong to caller
 
 #### `PATCH /sessions/:id/approval`
@@ -157,6 +157,7 @@ Order-placed confirmation (Figma `1311:359`). Spec: [order-emails.md](order-emai
 | `distance_miles` | numeric | |
 | `route` | jsonb | `[[lng, lat], …]` polyline |
 | `status` | enum | `active` → `under_review` → `approved` / `not_approved` / `invalid` |
+| `decline_reason` | text | Volunteer-facing reason when admin declines (not private `admin_notes`) |
 | `adjusted_hours` | numeric | optional admin override (letter PDF hours) |
 | `letterhead_generated_at` | timestamptz | set when service letter PDF is generated |
 | `created_at` | timestamptz | |

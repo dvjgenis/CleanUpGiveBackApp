@@ -27,6 +27,8 @@ model Session {
   distanceMiles    Decimal?      @map("distance_miles") @db.Decimal
   route            Json?
   status           SessionStatus @default(active)
+  /** Volunteer-facing reason when admin declines (`admin/db/004_admin_refinements.sql`). */
+  declineReason    String?       @map("decline_reason")
   adjustedHours    Decimal?      @map("adjusted_hours") @db.Decimal
   letterheadGeneratedAt DateTime? @map("letterhead_generated_at") @db.Timestamptz(6)
   plausibilitySignal Json?       @map("plausibility_signal")

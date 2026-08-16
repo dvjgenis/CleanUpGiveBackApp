@@ -37,7 +37,7 @@ Auth: Supabase JWT verified via JWKS (ES256). Requires `SUPABASE_URL` + `DATABAS
 
 ## Data model
 
-- **`sessions`** — lifecycle, route jsonb polyline, duration (wall-clock `started_at` → `ended_at`), distance, status enum (`active` → `under_review` → `approved` / `not_approved` / `invalid`)
+- **`sessions`** — lifecycle, route jsonb polyline, duration (wall-clock `started_at` → `ended_at`), distance, status enum (`active` → `under_review` → `approved` / `not_approved` / `invalid`); **`decline_reason`** (text, volunteer-facing when admin declines — exposed to mobile as `declineReason`, not `admin_notes`)
 - **`sessions.plausibility_signal`** (jsonb, nullable) — server-computed GPS/speed signal from `computePlausibilitySignal()` (`backend/sessions/src/lib/sessionPlausibility.ts`), written at finalize. Advisory only — never gates `status`; feeds admin-web-app's red-flag badge in the session drawer. See `docs/agents/session-abuse-checklist.md` §1 and `admin/db/009_session_plausibility_signal.sql`.
 - **`checkpoints`** — selfie/progress Storage paths, `captured_at`, `submitted_early`
 - **`court_orders`** (Prisma `CourtOrder` model, added 2026-08-07) — maps the existing `court_orders` table (`admin/db/001_admin_portal_migration.sql`); admin-managed via `upsertCourtOrder` in admin-web-app, read here by `/me/court-progress` and the court-packet cover sheet

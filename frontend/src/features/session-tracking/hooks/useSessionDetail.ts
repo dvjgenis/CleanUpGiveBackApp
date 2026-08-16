@@ -179,6 +179,7 @@ export function useSessionDetail(sessionId?: string): SessionDetailState {
             // Fly API doesn't return a stored basemap layer; only the local
             // completed-session cache path (detailFromCompletedSnapshot) has one.
             mapLayer: DEFAULT_MAP_LAYER,
+            declineReason: session.declineReason?.trim() || null,
           },
           loading: false,
           error: null,

@@ -2,6 +2,16 @@
 
 ---
 
+## [2026-08-16] — Mobile session detail shows admin decline reason
+
+**End goal:** When Donna declines a session in admin with a volunteer-facing reason, that same text appears on the mobile session detail screen for that session.
+
+**Shipped:** Added `declineReason` to Prisma + Fly `GET /sessions` / `GET /sessions/:id` (maps existing `sessions.decline_reason`; private `admin_notes` stay admin-only). Mobile `SessionDetailScreen` shows a **Reason not approved** card when status is Declined and a reason exists. Deployed `cleanup-sessions` to Fly.
+
+**Status:** Done (code + docs + Fly deploy).
+
+---
+
 ## [2026-08-15] — Home weekly-hours pill contrast
 
 **End goal:** Keep the Figma lime greeting chip, but make it WCAG AA readable.

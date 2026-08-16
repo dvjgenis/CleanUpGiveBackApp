@@ -133,6 +133,7 @@ function serializeSession(session: {
   distanceMiles: Prisma.Decimal | null;
   route: Prisma.JsonValue;
   status: SessionStatus;
+  declineReason?: string | null;
   createdAt: Date;
   _count?: { checkpoints: number };
 }) {
@@ -150,6 +151,7 @@ function serializeSession(session: {
     distanceMiles: session.distanceMiles ? Number(session.distanceMiles) : null,
     route: session.route,
     status: session.status,
+    declineReason: session.declineReason?.trim() || null,
     createdAt: session.createdAt.toISOString(),
     checkpointCount,
     photoCount: checkpointCount * 2,

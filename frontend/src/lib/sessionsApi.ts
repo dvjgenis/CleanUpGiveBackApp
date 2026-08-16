@@ -19,6 +19,8 @@ export type ApiSession = {
   distanceMiles: number | null;
   route: number[][] | null;
   status: ApiSessionStatus;
+  /** Set when Donna declines — volunteer-facing; never includes private admin notes. */
+  declineReason?: string | null;
   createdAt: string;
   checkpointCount?: number;
   photoCount?: number;

@@ -119,6 +119,20 @@ function SessionDescriptionSection({ description }: { description: string }) {
   );
 }
 
+function SessionDeclineReasonSection({ reason }: { reason: string }) {
+  const body = reason.trim();
+  if (!body) {
+    return null;
+  }
+
+  return (
+    <View style={s.declineCard} accessibilityRole="text">
+      <Text style={s.declineCardTitle}>Reason not approved</Text>
+      <Text style={s.declineCardBody}>{body}</Text>
+    </View>
+  );
+}
+
 /**
  * Session detail (Figma `session_detail`, node `515:1848`).
  * Map resolves the completed walking path from local cache or the sessions API.
@@ -300,6 +314,10 @@ export function SessionDetailScreen() {
               </View>
 
               <SessionPhotosSection photos={sessionPhotos} />
+
+              {detail.status === 'declined' && detail.declineReason ? (
+                <SessionDeclineReasonSection reason={detail.declineReason} />
+              ) : null}
 
               <SessionDescriptionSection description={detail.description} />
             </>
@@ -503,6 +521,25 @@ const s = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     color: colors.textNavInactive,
+  },
+  declineCard: {
+    backgroundColor: colors.statusDeclinedBg,
+    borderWidth: 1,
+    borderColor: colors.statusDeclinedBorder,
+    borderRadius: 12,
+    padding: 16,
+    gap: 8,
+  },
+  declineCardTitle: {
+    fontFamily: fontFamilies.notoSansMedium,
+    fontSize: 16,
+    color: colors.statusDeclinedText,
+  },
+  declineCardBody: {
+    fontFamily: fontFamilies.notoSansRegular,
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.textPrimary,
   },
   footer: {
     position: 'absolute',

@@ -38,6 +38,8 @@ export type SessionDetailData = {
   evidencePhotos: SessionEvidencePhoto[];
   /** Basemap layer the user had selected when the session ended. */
   mapLayer: MapLayerType;
+  /** Volunteer-facing decline reason from admin review (when status is declined). */
+  declineReason?: string | null;
 };
 
 /** Figma `session_detail` (node `515:1848`) — default Downtown Riverfront mock. */
@@ -148,12 +150,18 @@ function detailFromMockListItem(id: string): SessionDetailData | null {
     return null;
   }
 
+  const declineReason =
+    listItem.status === 'declined'
+      ? 'Photos submitted do not clearly show cleanup activity.'
+      : null;
+
   return {
     ...DEFAULT_DETAIL,
     id: listItem.id,
     title: listItem.title,
     status: listItem.status,
     dateTimeLabel: `${listItem.dateLabel} · ${listItem.timeLabel}`,
+    declineReason,
   };
 }
 
