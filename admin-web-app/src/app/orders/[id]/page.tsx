@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { ChevronLeftIcon } from '@/components/ui/Icons';
 import { InfoRow } from '@/components/ui/InfoRow';
 import {
+  RECEIVING_METHOD_LABELS,
   ORDER_STATUS_CONFIG,
   formatOrderCents,
   formatOrderDate,
@@ -92,6 +93,7 @@ export default async function OrderDetailPage({
               {!useMock && (
                 <OrderFulfillmentForm
                   orderId={order.id}
+                  fulfillmentMethod={order.fulfillmentMethod}
                   currentStatus={normalizeOrderStatus(order.status)}
                   currentTracking={order.tracking}
                   currentCarrier={order.carrier}
@@ -101,47 +103,75 @@ export default async function OrderDetailPage({
               <section className="bg-bg-surface border border-border-outline rounded-md p-lg">
                 <div className="flex items-center justify-between mb-md">
                   <h2 className="font-heading text-[20px] leading-[28px] text-text-primary">
-                    Shipping
+                    {order.fulfillmentMethod === 'usps_ship'
+                      ? 'Shipping'
+                      : order.fulfillmentMethod === 'local_dropoff'
+                        ? 'Drop-off'
+                        : 'Pickup'}
                   </h2>
-                  <CopyAddressButton address={shippingText} />
+                  {order.fulfillmentMethod === 'usps_ship' || order.fulfillmentMethod === 'local_dropoff' ? (
+                    <CopyAddressButton address={shippingText} />
+                  ) : null}
                 </div>
                 <dl>
-                  <div className="flex flex-col sm:flex-row sm:items-start gap-xs sm:gap-md py-sm border-b border-border-outline">
-                    <dt className="font-data text-[11px] tracking-[0.88px] uppercase text-text-tertiary sm:w-40 shrink-0 pt-0.5">
-                      Ship to
-                    </dt>
-                    <dd className="font-body text-[14px] text-text-primary min-w-0 whitespace-pre-line">
-                      {shippingText}
-                    </dd>
-                  </div>
-                  {order.shipping.phone ? (
+                  <InfoRow label="Method" value={RECEIVING_METHOD_LABELS[order.fulfillmentMethod]} />
+                  <InfoRow label="Kit requested" value={order.includesKit ? 'Yes' : 'No'} />
+                  {order.fulfillmentMethod === 'usps_ship' ? (
+                    <div className="flex flex-col sm:flex-row sm:items-start gap-xs sm:gap-md py-sm border-b border-border-outline">
+                      <dt className="font-data text-[11px] tracking-[0.88px] uppercase text-text-tertiary sm:w-40 shrink-0 pt-0.5">
+                        Ship to
+                      </dt>
+                      <dd className="font-body text-[14px] text-text-primary min-w-0 whitespace-pre-line">
+                        {shippingText}
+                      </dd>
+                    </div>
+                  ) : order.fulfillmentMethod === 'local_dropoff' ? (
+                    <div className="flex flex-col sm:flex-row sm:items-start gap-xs sm:gap-md py-sm border-b border-border-outline">
+                      <dt className="font-data text-[11px] tracking-[0.88px] uppercase text-text-tertiary sm:w-40 shrink-0 pt-0.5">
+                        Drop-off at
+                      </dt>
+                      <dd className="font-body text-[14px] text-text-primary min-w-0 whitespace-pre-line">
+                        {shippingText || '—'}
+                      </dd>
+                    </div>
+                  ) : (
+                    <InfoRow
+                      label="Handoff"
+                      value="Volunteer picks up at the office"
+                    />
+                  )}
+                  {order.fulfillmentMethod === 'usps_ship' && order.shipping.phone ? (
                     <InfoRow label="Phone" value={order.shipping.phone} />
                   ) : null}
                   <InfoRow label="Status" value={cfg.label} />
-                  <InfoRow label="Carrier" value={order.carrier?.trim() || '—'} />
-                  <div className="flex flex-col sm:flex-row sm:items-baseline gap-xs sm:gap-md py-sm border-b border-border-outline last:border-0">
-                    <dt className="font-data text-[11px] tracking-[0.88px] uppercase text-text-tertiary sm:w-40 shrink-0">
-                      Tracking
-                    </dt>
-                    <dd className="font-body text-[14px] text-text-primary min-w-0">
-                      {order.tracking ? (
-                        trackHref ? (
-                          <a
-                            href={trackHref}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-primary hover:underline font-data text-[13px] break-all"
-                          >
-                            {order.tracking}
-                          </a>
-                        ) : (
-                          <span className="font-data text-[13px] break-all">{order.tracking}</span>
-                        )
-                      ) : (
-                        'Not added yet'
-                      )}
-                    </dd>
-                  </div>
+                  {order.fulfillmentMethod === 'usps_ship' ? (
+                    <>
+                      <InfoRow label="Carrier" value={order.carrier?.trim() || '—'} />
+                      <div className="flex flex-col sm:flex-row sm:items-baseline gap-xs sm:gap-md py-sm border-b border-border-outline last:border-0">
+                        <dt className="font-data text-[11px] tracking-[0.88px] uppercase text-text-tertiary sm:w-40 shrink-0">
+                          Tracking
+                        </dt>
+                        <dd className="font-body text-[14px] text-text-primary min-w-0">
+                          {order.tracking ? (
+                            trackHref ? (
+                              <a
+                                href={trackHref}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-primary hover:underline font-data text-[13px] break-all"
+                              >
+                                {order.tracking}
+                              </a>
+                            ) : (
+                              <span className="font-data text-[13px] break-all">{order.tracking}</span>
+                            )
+                          ) : (
+                            'Not added yet'
+                          )}
+                        </dd>
+                      </div>
+                    </>
+                  ) : null}
                 </dl>
               </section>
 

@@ -41,7 +41,7 @@ CleanUpGiveBackApp/
 - **Insights** (`/insights`): Data visualization and reports (no Enhanced Geocoding toggle; standard US heatmap only); header **Export** accordion (CSV + PDF)
 - **Feedback** (`/feedback`): Volunteer feedback; **Export** accordion
 - **Events** (`/events`): Event management and scheduling; **Export** accordion (+ New Event)
-- **Orders** (`/orders`): Shop order processing and fulfillment; **Export** accordion
+- **Orders** (`/orders`): Shop order processing (USPS ship vs office pickup / local drop-off; kit requested); **Export** accordion
 - **Payment** (`/payments`): Payment tracking; **Export** accordion
 - **Audit Log** (`/audit-log`): Plain-language before/after history; diffs render as a two-column `AuditDiffCard` (2026-08-07, replacing inline "field: from → to" text) with per-value Before/After tint (2026-08-07 fix) — a status's tone (e.g. "Declined" = red) drives the cell color, not column position, so a decline in the After column no longer renders the same green as an approval
 - **Emails** (`/emails`, 2026-08-09): **Compose** shows a read-only **From** line (`EMAIL_FROM` / default `noreply@cleanupgiveback.org`), unified To (volunteer search or typed email — no Volunteer/Custom tabs), optional Cc/Bcc (hidden until Add Cc / Add Bcc), font/size/color in the rich-text toolbar, Send or Schedule send. Schedule send and the Scheduled-tab edit drawer use a shared `ScheduleDateTimePicker` (native date input + custom 15-min-increment time dropdown, `TIME_OPTIONS`) instead of the browser's `datetime-local` UI, for consistent styling across browsers. Attachments are explicitly labeled optional; when Send/Schedule are disabled, an inline hint lists what's still missing (recipient/subject/message — attachments were never required). **Scheduled** tab lists queued mail with Edit / Send now / Cancel for `pending` rows. **Templates** uses everyday-language insert chips (e.g. “Volunteer name”) — Donna never types `{{brackets}}`. Apply `admin/db/013_scheduled_emails.sql`; set `CRON_SECRET` for `/api/cron/send-scheduled-emails` (`vercel.json` once daily on Hobby — use **Send now** for sooner delivery). **Forgot Password HTML** (Figma `1311:449`) lives in `src/lib/password-reset-email-html.ts` — preview/test scripts only; not in the Emails tab and not sent from Welcome yet. Card fill is cream `#fcf9f8` (`color/bg/app`). All copy is live HTML (Georgia / Trebuchet MS fallbacks; hosted `@font-face` where clients allow); only `logo-mark-green.png` is an image. Tracking is `letter-spacing: 0.02em` on Forgot Password, order, and hours-reminder. Spec: [backend/specs/password-reset-email.md](backend/specs/password-reset-email.md).
@@ -158,7 +158,7 @@ Several pages started as faithful, read-only ports of their `admin/app/(admin)/.
 
 2. **Content Development**:
    - Volunteer profile detail pages
-   - Order fulfillment workflow (tracking/carrier updates, currently read-only)
+   - ✅ Order status — USPS ship (paste tracking + shipped email) vs pickup/local (**Fulfilled**, no tracking)
    - ✅ Bulk session approve, admin notes, hours adjustment, and letterhead PDF generation — now wired (`/sessions` list checkboxes + `SessionPreviewDrawer.tsx`)
 
 3. **API Integration**:

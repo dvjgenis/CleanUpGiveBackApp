@@ -78,6 +78,7 @@ Living docs for the Clean Up - Give Back monorepo. Templates are copy-only.
 | [backend/specs/](backend/specs/) | Backend feature specs |
 | [backend/specs/sessions-api.md](backend/specs/sessions-api.md) | Sessions API contract (Fly + Supabase) |
 | [backend/specs/order-emails.md](backend/specs/order-emails.md) | Order placed + shipped Resend emails (Figma `1311:359`) |
+| [backend/specs/order-fulfillment.md](backend/specs/order-fulfillment.md) | Pickup vs USPS ship + optional kit (Donna Phase 1) |
 | [backend/specs/password-reset-email.md](backend/specs/password-reset-email.md) | Forgot Password Resend HTML (Figma `1311:449`; live HTML copy + logo PNG; send path not wired) |
 | [backend/specs/hours-reminder-email.md](backend/specs/hours-reminder-email.md) | Court-ordered inactivity nudge email (Figma Nudge `1311:432`; live on Vercel) |
 

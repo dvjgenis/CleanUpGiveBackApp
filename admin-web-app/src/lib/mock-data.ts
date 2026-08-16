@@ -307,14 +307,32 @@ export function formatCents(cents: number): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
 }
 
-export type OrderStatus = "pending" | "paid" | "shipped" | "cancelled";
+export type OrderStatus = "pending" | "paid" | "shipped" | "fulfilled" | "cancelled";
+
+export type FulfillmentMethod = "usps_ship" | "office_pickup" | "local_dropoff";
 
 /** Map legacy `delivered` (same as shipped) for display/filters. */
 export function normalizeOrderStatus(status: string): OrderStatus {
   if (status === "delivered" || status === "shipped") return "shipped";
+  if (status === "fulfilled") return "fulfilled";
   if (status === "pending" || status === "paid" || status === "cancelled") return status;
   return "pending";
 }
+
+export function normalizeFulfillmentMethod(
+  value: string | null | undefined,
+): FulfillmentMethod {
+  if (value === "office_pickup" || value === "local_dropoff" || value === "usps_ship") {
+    return value;
+  }
+  return "usps_ship";
+}
+
+export const RECEIVING_METHOD_LABELS: Record<FulfillmentMethod, string> = {
+  usps_ship: "USPS ship",
+  office_pickup: "Office pickup",
+  local_dropoff: "Local drop-off",
+};
 
 export type OrderLineItem = {
   name: string;
@@ -341,6 +359,8 @@ export type OrderRow = {
   lineItems: OrderLineItem[];
   totalCents: number;
   status: OrderStatus;
+  fulfillmentMethod: FulfillmentMethod;
+  includesKit: boolean;
   tracking: string | null;
   carrier: string | null;
   shipping: ShippingAddress;
@@ -379,6 +399,8 @@ export const MOCK_ORDERS: OrderRow[] = [
     ],
     totalCents: 3499,
     status: "shipped",
+    fulfillmentMethod: "usps_ship",
+    includesKit: true,
     tracking: "9400111202550035000000",
     carrier: "USPS",
     shipping: shipping("Jordan Kim", "1842 N Milwaukee Ave", "Chicago", "IL", "60647", {
@@ -394,6 +416,8 @@ export const MOCK_ORDERS: OrderRow[] = [
     lineItems: [{ name: "Tote Bag", qty: 2, unitCents: 1499 }],
     totalCents: 2998,
     status: "shipped",
+    fulfillmentMethod: "usps_ship",
+    includesKit: true,
     tracking: "1Z9999999999999999",
     carrier: "UPS",
     shipping: shipping("Devon Okafor", "4412 Ashford Dunwoody Rd", "Atlanta", "GA", "30346"),
@@ -407,6 +431,8 @@ export const MOCK_ORDERS: OrderRow[] = [
     lineItems: [{ name: "Cap", qty: 1, unitCents: 1499 }],
     totalCents: 1499,
     status: "paid",
+    fulfillmentMethod: "office_pickup",
+    includesKit: true,
     tracking: null,
     carrier: null,
     shipping: shipping("Sophia Chen", "800 Fifth Ave", "New York", "NY", "10065"),
@@ -426,6 +452,8 @@ export const MOCK_ORDERS: OrderRow[] = [
     tracking: null,
     carrier: null,
     shipping: shipping("Marcus Rivera", "1600 Pennsylvania Ave NW", "Washington", "DC", "20500"),
+    fulfillmentMethod: "usps_ship",
+    includesKit: true,
     createdAt: "2026-07-20T16:30:00Z",
   },
   {
@@ -439,6 +467,8 @@ export const MOCK_ORDERS: OrderRow[] = [
     tracking: "773901234567890123",
     carrier: "FedEx",
     shipping: shipping("Luna Martinez", "1 Hacker Way", "Menlo Park", "CA", "94025"),
+    fulfillmentMethod: "usps_ship",
+    includesKit: true,
     createdAt: "2026-07-16T11:10:00Z",
   },
   {
@@ -452,6 +482,8 @@ export const MOCK_ORDERS: OrderRow[] = [
     tracking: "9400111202550035000001",
     carrier: "USPS",
     shipping: shipping("Miguel Santos", "2100 Woodward Ave", "Detroit", "MI", "48201"),
+    fulfillmentMethod: "usps_ship",
+    includesKit: true,
     createdAt: "2026-07-10T08:45:00Z",
   },
   {
@@ -468,6 +500,8 @@ export const MOCK_ORDERS: OrderRow[] = [
     tracking: null,
     carrier: null,
     shipping: shipping("Fatima Hassan", "301 Fremont St", "Las Vegas", "NV", "89101"),
+    fulfillmentMethod: "usps_ship",
+    includesKit: true,
     createdAt: "2026-07-21T07:55:00Z",
   },
   {
@@ -481,14 +515,17 @@ export const MOCK_ORDERS: OrderRow[] = [
     tracking: null,
     carrier: null,
     shipping: shipping("Tyler Washington", "1 Microsoft Way", "Redmond", "WA", "98052"),
+    fulfillmentMethod: "usps_ship",
+    includesKit: true,
     createdAt: "2026-07-11T13:20:00Z",
   },
 ];
 
-export const ORDER_STATUS_CONFIG: Record<OrderStatus, { label: string; className: string }> = {
+export const ORDER_STATUS_CONFIG: Record<OrderStatus, { label: "Pending" | "Paid" | "Shipped" | "Fulfilled" | "Cancelled"; className: string }> = {
   pending: { label: "Pending", className: "bg-[#ffddb5] text-[#835400] border-[#fcab29]/40" },
   paid: { label: "Paid", className: "bg-[#f7fff1] text-primary border-primary/30" },
   shipped: { label: "Shipped", className: "bg-[#e8f4fe] text-[#1565c0] border-[#1565c0]/30" },
+  fulfilled: { label: "Fulfilled", className: "bg-[#e8f5e9] text-[#2e7d32] border-[#2e7d32]/30" },
   cancelled: { label: "Cancelled", className: "bg-[#ffd9de] text-[#ba1a1a] border-[#ba1a1a]/30" },
 };
 

@@ -7,7 +7,7 @@ export type PrivacySection = {
 export const PRIVACY_POLICY_EFFECTIVE_DATE = 'July 20, 2026';
 
 /** Last-updated date and time shown on the privacy policy index and detail screens. */
-export const PRIVACY_POLICY_LAST_UPDATED = 'July 23, 2026 at 5:17 PM CDT';
+export const PRIVACY_POLICY_LAST_UPDATED = 'August 15, 2026';
 
 export type PrivacyPolicyIndexRow = {
   title: string;
@@ -54,11 +54,15 @@ export const WHAT_WE_COLLECT_SECTIONS: PrivacySection[] = [
   },
   {
     title: 'Account details',
-    body: 'When you create an account, we collect your legal name, email address, phone number, and password (stored hashed). We also assign an anonymous account user ID. We use this information for profile creation, sign-in, account management, and official PDF service logs.',
+    body: 'When you create an account, we collect your legal name, email address, and phone number. The app currently signs you in using anonymous authentication tied to your device, not a password — if we add email/password sign-in later, we will update this policy before it ships. We use your name, email, and phone for profile creation, account management, official PDF service logs, and verification code (OTP) delivery when you change your email.',
   },
   {
     title: 'Service profile',
-    body: 'You may tell us whether your community service is court-ordered. We also collect activity type, session descriptions, and digital signatures when you complete work in the app. We use this for program matching, fraud prevention, and official service verification.',
+    body: 'We collect your service type (Court Ordered, Volunteering, School, or Other), activity type, session descriptions, session notes, and a digital signature image when you complete work in the app. Signature images may be printed on your official service-letter PDF. We use this for program matching, fraud prevention, and official service verification.',
+  },
+  {
+    title: 'Ratings and feedback',
+    body: 'If you rate or leave feedback about a session, we store that rating and comment. We use it to improve the program and follow up on issues.',
   },
   {
     title: 'Age screening',
@@ -66,27 +70,43 @@ export const WHAT_WE_COLLECT_SECTIONS: PrivacySection[] = [
   },
   {
     title: 'Precise location (GPS)',
-    body: 'While a cleanup session is active, we collect GPS route points. GPS means your phone shares your position so we can verify service time, distance, and route, and help prevent fraud. We only collect location during an active session — not while the app is idle or after you finalize or cancel a session.',
+    body: 'While a cleanup session is active, we collect GPS route points, plus the coordinates of any checkpoints you reach along the way. GPS means your phone shares your position so we can verify service time, distance, and route, and help prevent fraud. We only collect location during an active session — not while the app is idle or after you finalize or cancel a session.',
   },
   {
     title: 'Photos',
     body: 'During sessions you take live selfies and photos of collected trash or other proof of work. We use these to confirm you were present and completed community service. Authorized program and admin reviewers may see them to verify your hours. We do not use your photos for advertising.',
   },
   {
+    title: 'Session records',
+    body: 'We also record session metadata: timestamps, duration, distance, any missed checkpoints, the map layer you used, approval status, and — when an admin reviewer adjusts your hours, adds a note, or declines a session — that adjustment, note, or reason. This is how your submitted work becomes an approved, auditable service record.',
+  },
+  {
     title: 'Payment and shipping',
-    body: 'For shop orders, program fees, and voluntary donations, we may collect a mailing address. Payment card details are processed by Stripe. Full card numbers are never stored on our servers.',
+    body: 'If you place a shop order, pay a program fee, or make a voluntary donation, we collect what the transaction requires. A mailing address is only collected if you choose USPS shipping — office pickup and local drop-off do not require one. Payment is designed to run through Stripe, which never gives us your full card number; as of this policy, online checkout is still being built, and this section will be updated when it is live.',
   },
   {
     title: 'Device and diagnostic data',
-    body: 'We may collect your app version and operating system. Optional crash logs may go to Apple, Google, and/or Expo when system diagnostics are enabled. This helps us fix bugs and keep the app stable.',
+    body: 'We may collect your app version, operating system, and IP address as part of standard network requests to our servers and the mapping, weather, and infrastructure providers listed in "Who we share it with." Optional crash logs may go to Apple, Google, and/or Expo when system diagnostics are enabled. This helps us fix bugs and keep the app stable.',
   },
   {
     title: 'Communications',
-    body: 'If you opt in, we may store a push notification token so Expo can deliver session alerts and program updates. We also use your email for event registration confirmations, account notices, and verification codes (for example, email-change OTP). Transactional email is delivered by Resend.',
+    body: 'If you opt in, we store a push notification token so Expo can deliver session alerts and program updates, and we log the content of notifications we send you (for example, an hours reminder or session-status alert) so we can show you your notification history. We also use your email for event registration confirmations, account notices, and verification codes (for example, email-change OTP). Transactional email is delivered by Resend, and we keep a log of messages sent to you.',
+  },
+  {
+    title: 'Event registrations',
+    body: 'If you register for an event in the app, we store your registration so we can confirm your spot and send related updates.',
+  },
+  {
+    title: 'Company or program codes',
+    body: 'If you join through a partner organization, we store the company or program code associated with your account so your hours can be matched to that program.',
+  },
+  {
+    title: 'Court-order records',
+    body: 'If your service is court-ordered, program administrators may maintain court-order records tied to your account (for example, ordered hours and program dates) so verified hours can be matched against what a court or program requires.',
   },
   {
     title: 'Data on your device',
-    body: 'The app may store session drafts, preferences, and cached session records on your phone. This supports offline use and recovery if a session is interrupted. This local data is not shared with third parties.',
+    body: 'The app stores some data only on your phone, not on our servers: session notes you write, your map theme and other preferences, cached session records for offline viewing, whether you have unlocked paid tracker features, and a list of sessions you have deleted locally. This supports offline use. This local data is not shared with third parties.',
   },
   {
     title: 'Data promise',
@@ -98,7 +118,11 @@ export const WHAT_WE_COLLECT_SECTIONS: PrivacySection[] = [
   },
   {
     title: 'How long we keep your data',
-    body: 'We keep information only as long as needed for operations, verification, and legal requirements. GPS route paths are typically kept about 90 days after session verification. Photo evidence is typically kept about 1 year unless the law or a court order requires longer. Payment records may be kept up to 7 years for tax, accounting, and Stripe rules. Account information lasts while your account is active, plus a standard grace period after closure. Court-ordered logs are kept as required by applicable authorities and court programs.',
+    body: 'We aim to keep information only as long as needed for operations, verification, and legal requirements. Our targets: GPS route paths for about 90 days after session verification, photo evidence for about 1 year unless the law or a court order requires longer, and payment records up to 7 years for tax, accounting, and Stripe rules. These are targets we are actively building automated enforcement for — until that ships, deletion happens on request and on account closure rather than automatically on a schedule. Account information lasts while your account is active, plus a grace period of about 30 days after you request closure, before we permanently delete it. Court-ordered logs are kept as required by applicable authorities and court programs, and may not be deletable on request.',
+  },
+  {
+    title: 'Resources',
+    body: 'The diagnostic and crash-reporting partners named above publish their own privacy policies:\n\nApple:\nhttps://www.apple.com/legal/privacy/en-ww/\n\nGoogle:\nhttps://policies.google.com/privacy\n\nExpo:\nhttps://expo.dev/privacy\n\nEmail:\nprivacy@cleanupgiveback.org',
   },
 ];
 
@@ -121,7 +145,7 @@ export const HOW_WE_USE_IT_SECTIONS: PrivacySection[] = [
   },
   {
     title: 'Process payments',
-    body: 'Mailing address and payment details (via Stripe) let you complete shop orders, program fees, and donations. We do not store your full card number.',
+    body: 'Mailing address (for USPS shipping) and payment details (via Stripe) will let you complete shop orders, program fees, and donations. We do not store your full card number. Online checkout is still being built as of this policy.',
   },
   {
     title: 'Keep the app stable',
@@ -132,8 +156,8 @@ export const HOW_WE_USE_IT_SECTIONS: PrivacySection[] = [
     body: 'If you turn notifications on, we use your push token for real-time session and program alerts. We use email for registration confirmations, verification codes, and other account notices. You can change notification settings in the app.',
   },
   {
-    title: 'Offline drafts',
-    body: 'Session drafts and preferences stored on your device help you recover interrupted sessions and keep the app working offline.',
+    title: 'Offline use',
+    body: 'Session notes, preferences, and cached session records stored on your device let you view past sessions and keep parts of the app working offline.',
   },
   {
     title: 'Location tracking (session only)',
@@ -142,6 +166,10 @@ export const HOW_WE_USE_IT_SECTIONS: PrivacySection[] = [
   {
     title: 'What we do not do',
     body: 'We do not sell or rent your personal information. We do not use your photos or location for advertising. We do not collect more data than we need to run the app and verify your cleanup work.',
+  },
+  {
+    title: 'Resources',
+    body: 'See how these partners handle data:\n\nStripe:\nhttps://stripe.com/privacy\n\nExpo:\nhttps://expo.dev/privacy\n\nEmail:\nprivacy@cleanupgiveback.org',
   },
 ];
 
@@ -160,7 +188,7 @@ export const WHO_WE_SHARE_IT_WITH_SECTIONS: PrivacySection[] = [
   },
   {
     title: 'Stripe',
-    body: 'Stripe processes financial transactions, billing details, and identity checks for payment processing and anti-money laundering (AML) controls. Full payment card numbers are never stored on our servers.',
+    body: 'Stripe is designed to process financial transactions, billing details, and identity checks for payment processing and anti-money laundering (AML) controls. Full payment card numbers would never be stored on our servers. Online checkout is still being built as of this policy; this section will be updated when it goes live.',
   },
   {
     title: 'CARTO and Esri',
@@ -176,7 +204,7 @@ export const WHO_WE_SHARE_IT_WITH_SECTIONS: PrivacySection[] = [
   },
   {
     title: 'Resend',
-    body: 'Resend delivers transactional emails such as event registration confirmations, email-change verification codes, and other operational notices. Resend processes the recipient address and message content needed to send that email.',
+    body: 'Resend delivers transactional emails: account registration and approval/decline notices, hours-reminder emails, email-change verification codes, forgot-password emails, and shop order confirmations. Resend processes the recipient address and message content needed to send that email.',
   },
   {
     title: 'Expo',
@@ -187,8 +215,20 @@ export const WHO_WE_SHARE_IT_WITH_SECTIONS: PrivacySection[] = [
     body: 'Apple and Google manage system-level permissions, app delivery through their stores, and optional platform crash reporting.',
   },
   {
+    title: 'Vercel',
+    body: 'Vercel hosts our admin console, which authorized program staff use to review volunteer profiles, sessions, photos, and court-order records.',
+  },
+  {
+    title: 'OpenStreetMap, Photon, Nominatim, and US Census',
+    body: 'When staff generate a service-letter map or look up an address in the admin console, we may send that address or set of coordinates to OpenStreetMap (static maps), Photon or Nominatim (Komoot geocoding), or the US Census geocoder. We may also use Google Places for admin address search. These providers receive only the address or coordinates being looked up.',
+  },
+  {
     title: 'Authorized program administrators',
-    body: 'Trained staff and program reviewers may inspect session photos, routes, and logs solely to verify and approve community service hours.',
+    body: 'Trained staff and program reviewers may inspect session photos, routes, notes, signatures, and logs solely to verify and approve community service hours.',
+  },
+  {
+    title: 'Courts, probation offices, schools, and employers',
+    body: 'If your service is court-ordered or otherwise requires verification, we may share your service-letter PDF — which can include your name, completed hours, session dates, route maps, and photos — with the requesting court, probation office, school, or employer. We may not be able to delete these logs on request; see "How long we keep your data."',
   },
   {
     title: 'When the law requires it',
@@ -197,6 +237,10 @@ export const WHO_WE_SHARE_IT_WITH_SECTIONS: PrivacySection[] = [
   {
     title: 'We do not sell your data',
     body: 'We do not sell or monetize personal information. Geolocation and photo data are used only for service verification. Our processors may use your information only as needed to provide their services to Clean Up - Give Back — not to sell it or use it for their own advertising.',
+  },
+  {
+    title: 'Resources',
+    body: 'Privacy policies for the processors named above:\n\nSupabase:\nhttps://supabase.com/privacy\n\nFly.io:\nhttps://fly.io/legal/privacy-policy/\n\nStripe:\nhttps://stripe.com/privacy\n\nResend:\nhttps://resend.com/legal/privacy-policy\n\nExpo:\nhttps://expo.dev/privacy\n\nCARTO:\nhttps://carto.com/privacy/\n\nEsri:\nhttps://www.esri.com/en-us/privacy/overview\n\nOpen-Meteo:\nhttps://open-meteo.com/en/terms\n\nVercel:\nhttps://vercel.com/legal/privacy-policy\n\nOpenStreetMap Foundation:\nhttps://osmfoundation.org/wiki/Privacy_Policy\n\nApple:\nhttps://www.apple.com/legal/privacy/en-ww/\n\nGoogle:\nhttps://policies.google.com/privacy\n\nEmail:\nprivacy@cleanupgiveback.org',
   },
 ];
 
@@ -211,19 +255,19 @@ export const HOW_WE_PROTECT_IT_SECTIONS: PrivacySection[] = [
   },
   {
     title: 'How long we keep data',
-    body: 'GPS route paths are typically retained about 90 days after session verification. Photo evidence is typically retained about 1 year unless extended by law or court order. Payment records may be retained up to 7 years. Account information lasts for the life of an active account plus a standard grace period after closure. Court-ordered logs follow applicable legal and program requirements.',
+    body: 'We target about 90 days for GPS route paths after session verification, about 1 year for photo evidence unless extended by law or court order, and up to 7 years for payment records. We are still building automated jobs to enforce these targets; until then, deletion happens on request and on account closure. Account information lasts for the life of an active account plus about a 30-day grace period after closure. Court-ordered logs follow applicable legal and program requirements.',
   },
   {
     title: 'Your privacy rights',
-    body: 'Regardless of where you live, we extend core privacy rights to all app users. Access and portability: request a copy of your personal data or export verified service history as a PDF. Correction: ask us to update inaccurate or incomplete profile details. Deletion: request erasure of your account and associated personal data, subject to legal or court-mandated retention. Non-discrimination: we will not degrade app performance or treat you differently for exercising these rights. Do not sell: we do not sell or monetize personal information.',
+    body: 'Regardless of where you live, we extend core privacy rights to all app users. Access and portability: request a copy of your personal data, or export your approved sessions as a PDF service record directly in the app. Correction: update your name, email, or phone in the app (email changes require a verification code), or ask us to fix other inaccurate details. Deletion: request erasure of your account and associated personal data, subject to legal or court-mandated retention. Non-discrimination: we will not degrade app performance or treat you differently for exercising these rights. Do not sell: we do not sell or monetize personal information.',
   },
   {
     title: 'How to exercise your rights',
-    body: 'You can manage your data in the app under Account → Preferences → Privacy. You may also email our privacy team at privacy@cleanupgiveback.org.',
+    body: 'You can start an access, correction, or deletion request in the app under Account → Preferences → Privacy, or by emailing our privacy team at privacy@cleanupgiveback.org. Deletion and full data-export requests are currently reviewed and completed by our team rather than processed instantly — we log every request and its outcome, and we will tell you if any court-mandated records must be retained.',
   },
   {
     title: 'Your role',
-    body: "Use a strong password you do not reuse elsewhere. Do not share your login. Turn on your phone's screen lock. Contact us right away if you think someone else accessed your account.",
+    body: "Do not share your device or login access with others. Turn on your phone's screen lock. If we add email/password sign-in, use a strong password you do not reuse elsewhere. Contact us right away if you think someone else accessed your account.",
   },
   {
     title: 'If something goes wrong',
@@ -236,5 +280,9 @@ export const HOW_WE_PROTECT_IT_SECTIONS: PrivacySection[] = [
   {
     title: 'Contact us',
     body: 'Organization: Clean Up - Give Back. Email: privacy@cleanupgiveback.org. Mailing address: Clean Up - Give Back, Des Plaines, IL.',
+  },
+  {
+    title: 'Resources',
+    body: 'In the app:\nAccount → Preferences → Privacy\n\nWhat TLS 1.2/1.3 is:\nhttps://developer.mozilla.org/en-US/docs/Glossary/TLS\n\nWhat Row-Level Security (RLS) is:\nhttps://supabase.com/docs/guides/database/postgres/row-level-security\n\nEmail:\nprivacy@cleanupgiveback.org',
   },
 ];

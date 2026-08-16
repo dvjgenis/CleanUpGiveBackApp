@@ -79,6 +79,15 @@ const accountScreenOptions = ({ route }: { route: { params?: { enter?: string } 
   animation: route.params?.enter === 'fade' ? ('fade' as const) : ('none' as const),
 });
 
+/**
+ * Shop stays instant for BottomNav (`push('/shop')` with no params).
+ * Empty cart / order history Browse Shop CTAs pass `enter=fade` for a
+ * cross-fade instead of an instant cut.
+ */
+const shopScreenOptions = ({ route }: { route: { params?: { enter?: string } } }) => ({
+  animation: route.params?.enter === 'fade' ? ('fade' as const) : ('none' as const),
+});
+
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.bgApp }}>
@@ -130,7 +139,7 @@ export default function RootLayout() {
       <Stack.Screen name="submission-confirmation" />
       <Stack.Screen name="missed-checkpoint" options={{ presentation: 'transparentModal', headerShown: false, animation: 'fade' }} />
       <Stack.Screen name="notifications" />
-      <Stack.Screen name="shop" options={tabRootScreenOptions} />
+      <Stack.Screen name="shop" options={shopScreenOptions} />
       <Stack.Screen name="donate" />
       <Stack.Screen name="product-detail" />
       <Stack.Screen name="cart" />

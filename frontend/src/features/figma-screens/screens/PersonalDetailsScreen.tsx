@@ -59,7 +59,7 @@ function validateEmail(value: string): string | undefined {
 }
 
 /**
- * Account → Personal Details. Display name and email are editable (email
+ * Account → Personal Details. Preferred name and email are editable (email
  * requires a verification code); phone, birthday, and service type are read-only.
  */
 export function PersonalDetailsScreen() {
@@ -192,19 +192,19 @@ export function PersonalDetailsScreen() {
               </Text>
 
               <View style={s.fieldSection}>
-                <Text style={s.fieldLabel}>Display name</Text>
+                <Text style={s.fieldLabel}>Preferred name</Text>
                 <View>
                   <View style={s.textField}>
                     <TextInput
                       style={s.textInput}
                       value={name}
                       onChangeText={setName}
-                      placeholder="Display name"
+                      placeholder="Preferred name"
                       placeholderTextColor={colors.textNavInactive}
                       autoCorrect={false}
                       returnKeyType="done"
                       textContentType="name"
-                      accessibilityLabel="Display name"
+                      accessibilityLabel="Preferred name"
                     />
                   </View>
                 </View>

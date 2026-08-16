@@ -725,10 +725,11 @@ const s = StyleSheet.create({
     borderRadius: radius.md,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    fontFamily: fontFamilies.notoSansRegular,
+    fontFamily: fontFamilies.notoSansMedium,
     fontSize: 16,
     color: colors.textPrimary,
-    letterSpacing: 2,
+    letterSpacing: 1,
+    fontVariant: ['tabular-nums'],
   },
   companyCodeInputError: {
     borderColor: colors.statusDeclinedBorder,

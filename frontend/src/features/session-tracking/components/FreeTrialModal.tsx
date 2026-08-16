@@ -43,7 +43,7 @@ export function FreeTrialModal({ onContinue, onPayLater }: Props) {
             <View style={s.priceRow}>
               <View style={s.priceDescription}>
                 <Text style={s.priceLabel}>One-time</Text>
-                <Text style={s.priceSublabel}>Includes shipping and cleanup kit</Text>
+                <Text style={s.priceSublabel}>Unlimited tracking access</Text>
               </View>
               <Text style={s.priceValue}>$49.99</Text>
             </View>

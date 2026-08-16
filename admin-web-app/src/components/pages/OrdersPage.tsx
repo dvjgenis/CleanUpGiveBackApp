@@ -11,6 +11,7 @@
 import { Suspense, useState } from "react";
 import Link from "next/link";
 import {
+  RECEIVING_METHOD_LABELS,
   MOCK_ORDERS,
   ORDER_STATUS_CONFIG,
   formatOrderCents,
@@ -32,6 +33,7 @@ const STATUS_FILTERS: { value: "all" | OrderStatus; label: string }[] = [
   { value: "pending", label: "Pending" },
   { value: "paid", label: "Paid" },
   { value: "shipped", label: "Shipped" },
+  { value: "fulfilled", label: "Fulfilled" },
   { value: "cancelled", label: "Cancelled" },
 ];
 
@@ -80,6 +82,7 @@ function OrdersPageInner({ orders, isMock }: { orders: OrderRow[]; isMock: boole
     { key: "volunteer", label: "volunteer" },
     { key: "email", label: "email" },
     { key: "items", label: "items" },
+    { key: "receiving", label: "receiving" },
     { key: "status", label: "status" },
     { key: "total", label: "total" },
     { key: "createdAt", label: "created_at" },
@@ -89,6 +92,7 @@ function OrdersPageInner({ orders, isMock }: { orders: OrderRow[]; isMock: boole
     volunteer: o.volunteer,
     email: o.email,
     items: o.items,
+    receiving: RECEIVING_METHOD_LABELS[o.fulfillmentMethod],
     status: normalizeOrderStatus(o.status),
     total: formatOrderCents(o.totalCents),
     createdAt: o.createdAt,
@@ -101,7 +105,7 @@ function OrdersPageInner({ orders, isMock }: { orders: OrderRow[]; isMock: boole
           <div>
             <h1 className="font-heading text-[28px] leading-[36px] text-text-primary">Shop Orders</h1>
             <p className="mt-xs font-body text-[14px] text-text-tertiary">
-              Fulfillment and shop revenue for {rangeLabel}. Refunds stay in Stripe.
+              Shop orders and revenue for {rangeLabel}. Refunds stay in Stripe.
             </p>
           </div>
           <ExportMenu
@@ -194,6 +198,10 @@ function OrdersPageInner({ orders, isMock }: { orders: OrderRow[]; isMock: boole
                         {order.volunteer}
                       </p>
                       <p className="font-body text-[12px] text-text-tertiary">{order.email}</p>
+                      <p className="font-data text-[11px] text-text-tertiary mt-0.5">
+                        {RECEIVING_METHOD_LABELS[order.fulfillmentMethod]}
+                        {order.includesKit ? '' : ' · no kit'}
+                      </p>
                     </div>
                     <span className="font-data text-[13px] text-text-tertiary lg:whitespace-nowrap lg:truncate min-w-0">
                       <span className="lg:hidden text-text-tertiary/70">Items </span>

@@ -50,7 +50,7 @@ export async function updateOrderFulfillment({
 
   const { data: before, error: fetchError } = await supabase
     .from('shop_orders')
-    .select('user_id, status, tracking_number, carrier')
+    .select('user_id, status, tracking_number, carrier, fulfillment_method')
     .eq('id', orderId)
     .single();
 
@@ -67,7 +67,7 @@ export async function updateOrderFulfillment({
 
   await writeAuditLog(supabase, {
     adminUserId: user.id,
-    action: 'updated order fulfillment',
+    action: 'updated order status',
     targetTable: 'shop_orders',
     targetId: orderId,
     beforeValue: before,
@@ -76,7 +76,13 @@ export async function updateOrderFulfillment({
 
   // Only notify on the transition into 'shipped', not on every subsequent edit
   // (e.g. a tracking-number correction on an already-shipped order).
-  if (before.status !== 'shipped' && normalizedStatus === 'shipped' && before.user_id) {
+  const fulfillmentMethod = before.fulfillment_method ?? 'usps_ship';
+  if (
+    before.status !== 'shipped' &&
+    normalizedStatus === 'shipped' &&
+    fulfillmentMethod === 'usps_ship' &&
+    before.user_id
+  ) {
     await sendShopOrderEmail({
       supabase,
       orderId,

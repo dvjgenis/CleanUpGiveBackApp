@@ -824,6 +824,7 @@ const s = StyleSheet.create({
     flex: 1,
     fontFamily: fontFamilies.notoSansRegular,
     fontSize: 14,
+    lineHeight: 20,
     color: colors.textPrimary,
     paddingVertical: 0,
   },

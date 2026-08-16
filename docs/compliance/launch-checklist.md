@@ -55,63 +55,65 @@ Suggested work order is at the [bottom](#suggested-order-of-work).
 
 ### Remove or qualify over-claims
 
-- [ ] Remove **“transactional email is not utilized in this version”** (Resend is live).
-- [ ] Qualify **Stripe / card / mailing address** as *when Shop, Donate, or program fees are used* — or drop until payments ship.
-- [ ] Qualify **hashed password** until email/password auth ships (mobile is anonymous auth today).
-- [ ] Fix **local session drafts / interrupted-session recovery** (live-session resume was removed 2026-08-12). Disclose what *is* stored on-device: preferences, map theme, session notes, cached sessions, unlock flag, deleted-session ids.
-- [ ] Do not promise **Account → Privacy** deletion/export until those screens hit a backend.
-- [ ] Do not publish **90-day GPS / 1-year photo** retention unless jobs enforce it — or say “while the account is active, and as required by law/court programs.”
-- [ ] Treat **MapLibre** as on-device software, not a cloud processor.
+- [x] Remove **“transactional email is not utilized in this version”** (Resend is live). *(already gone from the draft before this pass)*
+- [x] Qualify **Stripe / card / mailing address** as *when Shop, Donate, or program fees are used* — mailing address only when the volunteer chooses **USPS ship** (pickup/local drop-off store no street address). *(2026-08-15: qualified in-draft; checkout is explicitly marked as still being built)*
+- [x] Qualify **hashed password** until email/password auth ships (mobile is anonymous auth today). *(2026-08-15: removed the password claim, states anonymous auth today)*
+- [x] Fix **local session drafts / interrupted-session recovery** (live-session resume was removed 2026-08-12). Disclose what *is* stored on-device: preferences, map theme, session notes, cached sessions, unlock flag, deleted-session ids. *(2026-08-15)*
+- [x] Do not promise **Account → Privacy** deletion/export until those screens hit a backend. *(2026-08-15: reworded — PDF export is real; full data-export/deletion now says team-reviewed, not instant)*
+- [x] Do not publish **90-day GPS / 1-year photo** retention unless jobs enforce it — or say “while the account is active, and as required by law/court programs.” *(2026-08-15: reworded as targets, notes automated jobs are not built yet)*
+- [x] Treat **MapLibre** as on-device software, not a cloud processor. *(already correct in the draft)*
 
 ### Disclose data actually collected
 
-- [ ] Volunteer **feedback** (rating + comment → `volunteer_feedback`)
-- [ ] **Service type:** Court Ordered / Volunteering / School / Other (`user_metadata.service_type`)
-- [ ] **Session notes** (on-device)
+- [x] Volunteer **feedback** (rating + comment → `volunteer_feedback`) *(2026-08-15)*
+- [x] **Service type:** Court Ordered / Volunteering / School / Other (`user_metadata.service_type`) *(2026-08-15)*
+- [x] **Session notes** (on-device) *(2026-08-15)*
 - [ ] **Calendar** permission when adding events (`expo-calendar`)
-- [ ] **Checkpoint lat/long** (in addition to the walking route)
-- [ ] Session metadata: timestamps, duration, distance, checkpoint misses, map layer, approval status, admin hours adjustments, admin notes, decline reasons
-- [ ] **Event registration** records
-- [ ] **Email log** (`email_log`) and **admin audit log**
-- [ ] **Court-order** records (admin-managed)
-- [ ] **Company codes**
-- [ ] Push **notification contents** (not only tokens)
-- [ ] **IP / network metadata** via hosts and tile/weather APIs
-- [ ] Whether **digital signature** images are stored and printed on PDFs
-- [ ] Approximate coordinates sent to **Open-Meteo**
+- [x] **Checkpoint lat/long** (in addition to the walking route) *(2026-08-15)*
+- [x] Session metadata: timestamps, duration, distance, checkpoint misses, map layer, approval status, admin hours adjustments, admin notes, decline reasons *(2026-08-15)*
+- [x] **Event registration** records *(2026-08-15)*
+- [x] **Email log** (`email_log`) — draft now discloses a message log; **admin audit log** still not separately disclosed
+- [x] **Court-order** records (admin-managed) *(2026-08-15)*
+- [x] **Company codes** *(2026-08-15)*
+- [x] Push **notification contents** (not only tokens) *(2026-08-15)*
+- [x] **IP / network metadata** via hosts and tile/weather APIs *(2026-08-15)*
+- [x] Whether **digital signature** images are stored and printed on PDFs *(2026-08-15)*
+- [x] Approximate coordinates sent to **Open-Meteo** *(was already disclosed)*
 
 ### Disclose recipients / processors actually used
 
 - [x] Supabase (Auth, Postgres, Storage) — in draft
 - [x] Fly.io (sessions API, US) — in draft
-- [ ] Resend — keep; list real message types (registration, approve/decline, hours reminder, OTP, shipped order)
+- [x] Resend — real message types now listed (registration/approve/decline, hours reminder, OTP, forgot-password, shop order) *(2026-08-15)*
 - [x] Expo (push + EAS) — in draft
 - [x] Apple / Google — in draft
 - [x] CARTO / Esri (map tiles) — in draft
 - [x] Open-Meteo — in draft
-- [ ] **Vercel** (admin console processes volunteer PII)
-- [ ] **OpenStreetMap** (service-letter static maps)
-- [ ] **Photon (Komoot), Nominatim, US Census**, optional **Google Places** (admin geocoding / place search)
+- [x] **Vercel** (admin console processes volunteer PII) *(2026-08-15)*
+- [x] **OpenStreetMap** (service-letter static maps) *(2026-08-15)*
+- [x] **Photon (Komoot), Nominatim, US Census**, optional **Google Places** (admin geocoding / place search) *(2026-08-15)*
 - [x] **Authorized reviewers** (Donna / program staff) — in draft; still too vague for courts
-- [ ] **Courts, probation, schools, employers** as categories of people who may receive service-letter PDFs (name, hours, maps, photos)
+- [x] **Courts, probation, schools, employers** as categories of people who may receive service-letter PDFs (name, hours, maps, photos) *(2026-08-15)*
 - [x] Explicit **no ads / no sale / no remarketing / no ad SDKs** — in draft; keep
 
 ### Add legal sections the draft lacks
 
-- [ ] **Controller identity** + complete contact
+- [ ] **Controller identity** + complete contact — needs counsel input, not drafted here
 - [x] **Background / Always location** — session-only, prominent indicator, stops on finalize/cancel *(keep; align with `app.json` purpose strings)*
-- [ ] **Sharing for official verification** — what is in a PDF, who can receive it, that deletion may be refused for court-mandated logs
-- [ ] **Teens 13–17** — GPS + selfies still collected; same high defaults; no under-13 accounts *(partial in draft)*
-- [ ] **Illinois BIPA** assessment: photos for human review vs face templates (do not call it facial recognition unless matching ships)
-- [ ] **Sensitive PI:** precise geolocation + face photos
-- [ ] **International transfers / storage region** (US: Supabase, Fly, Vercel)
-- [ ] **Breach notification** (Illinois PIPA + applicable state law)
-- [ ] **Grace period length** after account closure (spec draft: 30 days — pick one number)
+- [x] **Sharing for official verification** — added a "Courts, probation offices, schools, and employers" recipient entry describing PDF contents and that court-mandated logs may not be deletable *(2026-08-15)*
+- [ ] **Teens 13–17** — GPS + selfies still collected; same high defaults; no under-13 accounts *(still the same partial "Children and teens" section — not expanded into its own legal section)*
+- [ ] **Illinois BIPA** assessment: photos for human review vs face templates — needs counsel, not drafted here
+- [ ] **Sensitive PI:** precise geolocation + face photos — needs counsel framing
+- [ ] **International transfers / storage region** (US: Supabase, Fly, Vercel) — needs counsel
+- [ ] **Breach notification** (Illinois PIPA + applicable state law) — needs counsel
+- [x] **Grace period length** after account closure — picked **30 days**, now consistent everywhere in the draft *(2026-08-15)*
 - [ ] **Cookies** for the admin website (mobile has none)
 - [ ] **CCPA language:** “we honor these rights for all users” — do not claim you are a CCPA “business” unless counsel says so
 - [ ] **GDPR:** US-only + store geo, *or* real legal-bases / SCC section
 - [ ] **Incident reporting** contact and “notify as required by law”
 - [ ] Processor **DPAs** executed and listed (Supabase, Fly, Resend, Vercel, map/geocode vendors; Stripe when live)
+
+**Note (2026-08-15):** The in-app draft copy is now factually accurate to the current build (verified against code, not assumed). It is still a *draft* — the unchecked items above above are counsel-judgment calls (BIPA, GDPR, CCPA, breach notice, controller identity) or backend work (retention jobs, admin audit log disclosure, calendar permission copy), not remaining copy edits.
 
 ---
 

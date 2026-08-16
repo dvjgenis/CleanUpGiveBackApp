@@ -1,6 +1,6 @@
 /** Ported from `admin/components/ui/OrdersPreviewCard.tsx` (chevron omitted — header link stays clickable). */
 import Link from 'next/link';
-import { ORDER_STATUS_CONFIG, formatOrderCents, normalizeOrderStatus, type OrderRow } from '@/lib/mock-data';
+import { RECEIVING_METHOD_LABELS, ORDER_STATUS_CONFIG, formatOrderCents, normalizeOrderStatus, type OrderRow } from '@/lib/mock-data';
 
 /** Compact open-orders table preview for the Today commerce card. */
 export function OrdersPreviewCard({
@@ -53,7 +53,9 @@ export function OrdersPreviewCard({
                   >
                     <div className="min-w-0">
                       <p className="font-body text-[13px] font-medium text-text-primary truncate">{order.volunteer}</p>
-                      <p className="font-data text-[11px] text-text-tertiary truncate">{order.items}</p>
+                      <p className="font-data text-[11px] text-text-tertiary truncate">
+                        {RECEIVING_METHOD_LABELS[order.fulfillmentMethod]} · {order.items}
+                      </p>
                     </div>
                     <span className="font-data text-[12px] font-semibold text-text-primary whitespace-nowrap">
                       {formatOrderCents(order.totalCents)}

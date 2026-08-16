@@ -72,7 +72,7 @@ Shipped mail is sent from admin-web-app `updateOrderFulfillment` → `sendShopOr
 
 ## Data model
 
-Uses existing `shop_orders` (`items` jsonb, `shipping_address`, `total_cents`, `tracking_number`, `carrier`, `created_at`). No new columns. Migration `020` adds `order_placed` to `email_templates` / `email_log` check constraints.
+Uses existing `shop_orders` (`items` jsonb, `shipping_address`, `total_cents`, `tracking_number`, `carrier`, `created_at`) plus `fulfillment_method` from `022`. Shipped email still fires only on first `shipped` transition **and** only when `fulfillment_method = usps_ship`. Migration `020` adds `order_placed` to `email_templates` / `email_log` check constraints.
 
 ## Acceptance criteria
 

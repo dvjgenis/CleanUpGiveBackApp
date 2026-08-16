@@ -75,7 +75,7 @@ export function getTrackerPurchaseConfirmation(): PurchaseConfirmationData {
     donationAmount: 0,
     details: [
       ...getSharedPaymentDetails(),
-      { label: 'Estimated Shipping', value: '~2-3 days' },
+      { label: "How you'll receive it", value: 'Chosen at checkout' },
     ],
     totalImpact: summary.total,
   };

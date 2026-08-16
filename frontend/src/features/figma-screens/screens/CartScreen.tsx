@@ -257,7 +257,9 @@ export function CartScreen() {
               body="Browse the shop to add cleanup gear."
               ctaLabel="Browse Shop"
               ctaAccessibilityLabel="Go to shop"
-              onCtaPress={() => router.replace('/shop' as Href)}
+              onCtaPress={() =>
+                router.replace({ pathname: '/shop', params: { enter: 'fade' } } as Href)
+              }
             />
           ) : (
             items.map((item) => (

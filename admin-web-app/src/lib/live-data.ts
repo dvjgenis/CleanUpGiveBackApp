@@ -31,6 +31,7 @@ import {
   MOCK_FEEDBACK,
   MOCK_ORDERS,
   buildMockMonthlyRevenue,
+  normalizeFulfillmentMethod,
   normalizeOrderStatus,
   type MockSession,
   type FeedbackEntry,
@@ -195,6 +196,8 @@ type ShopOrderRow = {
   items: unknown;
   total_cents: number | null;
   status: string | null;
+  fulfillment_method?: string | null;
+  includes_kit?: boolean | null;
   shipping_address: unknown;
   tracking_number: string | null;
   carrier: string | null;
@@ -220,7 +223,7 @@ export async function loadLiveOrders(): Promise<LiveResult<OrderRow[]>> {
   const supabase = await createDataClient();
   const { data: rows } = await supabase
     .from('shop_orders')
-    .select('id, user_id, items, total_cents, status, created_at')
+    .select('id, user_id, items, total_cents, status, fulfillment_method, includes_kit, created_at')
     .order('created_at', { ascending: false });
 
   if (!rows || rows.length === 0) {
@@ -603,6 +606,8 @@ function transformOrderRow(o: ShopOrderRow, directory: VolunteerDirectory): Orde
     lineItems,
     totalCents: o.total_cents ?? 0,
     status: normalizeOrderStatus(o.status ?? 'pending'),
+    fulfillmentMethod: normalizeFulfillmentMethod(o.fulfillment_method),
+    includesKit: o.includes_kit !== false,
     tracking: o.tracking_number || null,
     carrier: o.carrier || null,
     shipping,

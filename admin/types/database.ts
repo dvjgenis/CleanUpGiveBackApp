@@ -2,7 +2,9 @@ export type SessionStatus = 'active' | 'under_review' | 'approved' | 'not_approv
 
 export type FeedbackRating = 'excited' | 'happy' | 'neutral' | 'sad' | 'very_sad';
 
-export type ShopOrderStatus = 'pending' | 'paid' | 'shipped' | 'delivered' | 'cancelled';
+export type ShopOrderStatus = 'pending' | 'paid' | 'shipped' | 'fulfilled' | 'delivered' | 'cancelled';
+
+export type ShopOrderFulfillmentMethod = 'usps_ship' | 'office_pickup' | 'local_dropoff';
 
 export interface Database {
   public: {
@@ -64,6 +66,8 @@ export interface Database {
           items: unknown;
           total_cents: number;
           status: ShopOrderStatus;
+          fulfillment_method: ShopOrderFulfillmentMethod;
+          includes_kit: boolean;
           shipping_address: unknown;
           tracking_number: string | null;
           carrier: string | null;

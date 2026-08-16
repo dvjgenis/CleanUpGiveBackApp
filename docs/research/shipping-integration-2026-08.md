@@ -136,14 +136,18 @@ At 20–100 packages/month, Phase 1 (Pirate Ship + manual paste) stays cheapest 
 
 ---
 
-## 8. Open questions for Donna
+## 8. Donna decisions (2026-08-14)
 
-1. **Ship-from address** — one permanent location for all kits?
-2. **Label printer** — 4×6 thermal printer, or print on paper overnight?
-3. **Preferred carriers** — USPS-first, or USPS + UPS as needed?
-4. **Who packs** — always Donna, or rotating volunteers?
-5. **When to automate** — stay on Pirate Ship until X packages/week?
-6. **Free shipping** — keep shipping free forever, or pass cost through later with Stripe?
+Answered in ops conversation; Phase 1 implemented per [order-fulfillment.md](../backend/specs/order-fulfillment.md).
+
+1. **Fulfillment** — pickup at the office, local drop-off, or USPS ship. Same price.
+2. **Kit** — optional; the $49.99 charge is app access, not the kit.
+3. **Carriers** — USPS-first, manual Pirate Ship labels. No FedEx/fulfillment warehouse.
+4. **Who packs** — Donna. Multi-chapter fulfillment is not practical.
+5. **Automation** — stay on Pirate Ship until paste volume hurts (Phase 2 Shippo).
+6. **Shipping cost** — keep shipping free at checkout for now.
+
+Still open (ops, not blockers): exact ship-from address, thermal vs paper labels.
 
 ---
 

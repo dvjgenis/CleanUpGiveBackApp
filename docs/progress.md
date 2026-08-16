@@ -2,6 +2,40 @@
 
 ---
 
+## [2026-08-15] — Local drop-off over 30 miles is blocked
+
+**End goal:** Volunteers cannot place a local drop-off order when the address is more than 30 miles from Clean Up Give Back.
+
+**Shipped:** Checkout shows “too far from the office — ship via USPS or contact Donna” with a `mailto:` to `donnaadam@cleanupgiveback.org`. Card fields stay hidden until they switch to Ship via USPS. Place Order is disabled. In-range addresses confirm Donna will contact them to arrange a time. Threshold is `MAX_LOCAL_DROPOFF_MILES` in `orgLocations.ts`.
+
+**Status:** Done (code + docs).
+
+---
+
+## [2026-08-15] — Rewrote in-app Privacy Policy copy against Dulf's launch checklist
+
+**End goal:** Dulf's `docs/compliance/launch-checklist.md` (2026-08-13) flagged the in-app Privacy Policy draft as over-claiming several things (password auth, live Stripe checkout, enforced retention jobs, instant deletion/export) and missing disclosures for data the app actually collects (feedback, service type, session notes, checkpoint coordinates, session/admin metadata, event registrations, company codes, court-order records, notification content, signature images) and processors it actually uses (Vercel, OSM/Photon/Nominatim/Census/Google Places, court/school/employer PDF recipients).
+
+**Shipped:** Rewrote all four sections in [`privacyPolicyContent.ts`](../frontend/src/features/figma-screens/content/privacyPolicyContent.ts) — verified each claim against the current codebase (anonymous auth, `backend/payments/` empty, AsyncStorage keys, checkout fulfillment options, `ServiceLetterPdf.tsx` signature usage) before writing it, rather than trusting either the old draft or the checklist blindly. Picked one grace-period number (30 days) and used it consistently. Bumped `PRIVACY_POLICY_LAST_UPDATED` to August 15, 2026. Checked off the corresponding items in `launch-checklist.md` §1 with dated notes; left counsel-judgment items (BIPA, GDPR, CCPA, breach notification, controller identity) and backend-only items (retention jobs, admin audit log disclosure) unchecked.
+
+**Not done:** Terms of Service, publishing the policy outside the app, signup acceptance checkbox, and everything else in the checklist outside §1 — out of scope for this pass.
+
+**Status:** In-app Privacy Policy content is now accurate to the current build. Still a draft pending counsel review before public traffic.
+
+---
+
+## [2026-08-15] — Pickup vs USPS ship fulfillment
+
+**End goal:** Match Donna’s ops — pickup/local or manual USPS, same $49.99 app-access price, optional kit.
+
+**Shipped:** `shop_orders.fulfillment_method` + `includes_kit` + `fulfilled` status (`022_order_fulfillment.sql`). Checkout fulfillment selector; tracker checkout now writes `shop_orders`. Admin ship vs pickup forms; shipped email gated to USPS ship. Live Order History + ship-only track link. Spec: [backend/specs/order-fulfillment.md](backend/specs/order-fulfillment.md).
+
+**Apply:** run `admin/db/022_order_fulfillment.sql` on Supabase before testing live rows.
+
+**Status:** Done (code + docs). Stripe still mock.
+
+---
+
 ## [2026-08-13] — Launch checklist: frameworks, audits, seals
 
 **End goal:** Record which paid certifications/audits actually fit this app (GPS + selfies + court hours, 501(c)(3), under-13 blocked) so we do not buy a generic SaaS badge.

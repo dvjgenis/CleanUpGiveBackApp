@@ -54,7 +54,7 @@ export function OrderFulfillmentForm({
   return (
     <div className="bg-bg-surface border border-border-outline rounded-md p-lg mb-xl">
       <h3 className="font-heading text-[16px] leading-[24px] text-text-primary mb-md">
-        Update Fulfillment
+        Update order status
       </h3>
       <form onSubmit={handleSubmit} className="flex flex-col gap-md">
         <div>

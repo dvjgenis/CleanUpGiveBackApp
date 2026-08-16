@@ -6,6 +6,8 @@
 import { supabase, getUserId } from './supabase';
 import type { CartLineItem, CartDonationAmount } from '@/features/figma-screens/mocks/cart';
 
+export type FulfillmentMethod = 'usps_ship' | 'office_pickup' | 'local_dropoff';
+
 export type ShippingInfo = {
   fullName: string;
   street: string;
@@ -17,8 +19,10 @@ export type ShippingInfo = {
 export type OrderCreateRequest = {
   items: CartLineItem[];
   donation: CartDonationAmount | null;
-  shipping: ShippingInfo;
+  shipping: ShippingInfo | null;
   tax: number;
+  fulfillmentMethod: FulfillmentMethod;
+  includesKit: boolean;
 };
 
 export type OrderCreateResult = {
@@ -28,6 +32,48 @@ export type OrderCreateResult = {
   success: false;
   error: string;
 };
+
+export type ShopOrderRow = {
+  id: string;
+  user_id: string | null;
+  items: unknown;
+  total_cents: number;
+  status: string;
+  fulfillment_method: FulfillmentMethod;
+  includes_kit: boolean;
+  shipping_address: unknown;
+  tracking_number: string | null;
+  carrier: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export function normalizeFulfillmentMethod(
+  value: string | null | undefined,
+): FulfillmentMethod {
+  if (value === 'office_pickup' || value === 'local_dropoff' || value === 'usps_ship') {
+    return value;
+  }
+  return 'usps_ship';
+}
+
+export const RECEIVING_METHOD_LABELS: Record<FulfillmentMethod, string> = {
+  usps_ship: 'USPS ship',
+  office_pickup: 'Office pickup',
+  local_dropoff: 'Local drop-off',
+};
+
+export function carrierTrackingUrl(
+  carrier: string | null | undefined,
+  tracking: string | null | undefined,
+): string | null {
+  if (!carrier || !tracking) return null;
+  const c = carrier.toLowerCase();
+  if (c.includes('usps')) return `https://tools.usps.com/go/TrackConfirmAction?tLabels=${tracking}`;
+  if (c.includes('ups')) return `https://www.ups.com/track?tracknum=${tracking}`;
+  if (c.includes('fedex')) return `https://www.fedex.com/fedextrack/?trknbr=${tracking}`;
+  return null;
+}
 
 /**
  * Creates a new shop order in the database.
@@ -76,35 +122,40 @@ export async function createShopOrder(request: OrderCreateRequest): Promise<Orde
     }
 
     // Calculate total in cents
-    const subtotalCents = request.items.reduce((sum, item) => 
+    const subtotalCents = request.items.reduce((sum, item) =>
       sum + Math.round(item.unitPrice * item.quantity * 100), 0
     );
     const donationCents = (typeof request.donation === 'number') ? request.donation * 100 : 0;
     const taxCents = Math.round(request.tax * 100);
     const totalCents = subtotalCents + donationCents + taxCents;
 
-    // Transform shipping info to database format
-    const shippingAddress = {
-      name: request.shipping.fullName,
-      line1: request.shipping.street,
-      line2: null,
-      city: request.shipping.city,
-      state: request.shipping.state,
-      postalCode: request.shipping.zip,
-      postal_code: request.shipping.zip, // Alias for compatibility
-      zip: request.shipping.zip, // Alias for compatibility
-      country: 'US',
-      phone: null, // Not collected in current checkout form
-    };
+    const fulfillmentMethod = normalizeFulfillmentMethod(request.fulfillmentMethod);
+    const shipping = request.shipping;
+    const shippingAddress =
+      (fulfillmentMethod === 'usps_ship' || fulfillmentMethod === 'local_dropoff') && shipping
+        ? {
+            name: shipping.fullName.trim() || null,
+            line1: shipping.street,
+            line2: null,
+            city: shipping.city,
+            state: shipping.state,
+            postalCode: shipping.zip,
+            postal_code: shipping.zip,
+            zip: shipping.zip,
+            country: 'US',
+            phone: null,
+          }
+        : null;
 
-    // Insert the order
     const { data, error } = await supabase
       .from('shop_orders')
       .insert({
         user_id: userId,
         items: itemsJson,
         total_cents: totalCents,
-        status: 'pending', // Orders start as pending
+        status: 'pending',
+        fulfillment_method: fulfillmentMethod,
+        includes_kit: request.includesKit,
         shipping_address: shippingAddress,
         tracking_number: null,
         carrier: null,
@@ -145,7 +196,11 @@ export async function createShopOrder(request: OrderCreateRequest): Promise<Orde
 /**
  * Get orders for the current user (for order history, etc.)
  */
-export async function getUserOrders() {
+export async function getUserOrders(): Promise<{
+  success: boolean;
+  error: string | null;
+  orders: ShopOrderRow[];
+}> {
   try {
     if (!supabase) {
       return { success: false, error: 'Database not configured', orders: [] };
@@ -167,14 +222,20 @@ export async function getUserOrders() {
       return { success: false, error: error.message, orders: [] };
     }
 
-    return { success: true, error: null, orders: data || [] };
+    const orders = ((data ?? []) as ShopOrderRow[]).map((row) => ({
+      ...row,
+      fulfillment_method: normalizeFulfillmentMethod(row.fulfillment_method),
+      includes_kit: row.includes_kit !== false,
+    }));
+
+    return { success: true, error: null, orders };
 
   } catch (error) {
     console.error('[shopOrders] Unexpected error fetching orders:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unexpected error occurred', 
-      orders: [] 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unexpected error occurred',
+      orders: [],
     };
   }
 }

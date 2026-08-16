@@ -62,8 +62,9 @@ export function FreeKitScreen({
         <View style={s.titleSection}>
           <Text style={s.title}>Free cleanup kit!</Text>
           <Text style={s.subtitle}>
-            {'After paying a one-time $49.99 fee, you will have access to unlimited tracking and '}
-            <Text style={s.subtitleBold}>we will ship you a free cleanup kit!</Text>
+            {'After paying a one-time $49.99 fee, you will have unlimited tracking. '}
+            <Text style={s.subtitleBold}>A cleanup kit is optional</Text>
+            {' — pick it up, have it dropped off locally, or we can ship it via USPS.'}
           </Text>
         </View>
 

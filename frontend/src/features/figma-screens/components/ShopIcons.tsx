@@ -141,6 +141,7 @@ export {
   ShopStripeLogo,
   ShopCheckoutBagIcon,
   ShopCheckoutTruckIcon,
+  ShopCheckoutDropoffLocationIcon,
   ShopCheckoutPaymentsIcon,
   ShopCheckoutCardIcon,
   ShopCheckoutShieldIcon,
