@@ -21,6 +21,7 @@ import {
   computeWeeklyStreakHours,
   formatChartHourLabel,
   formatWeekServiceHoursTotal,
+  formatWeeklyHoursBadgeCopy,
 } from '@/features/session-tracking/utils/homeDashboardStats';
 
 import { EventsViewAllModal } from '../components/EventsViewAllModal';
@@ -390,11 +391,14 @@ export function HomeScreenWithData({
             {greeting}, <Text style={s.greetingName}>{data.homeUser.firstName}!</Text>
           </Text>
           {data.weeklyStreakHours > 0 && (
-            <View style={s.streakBadge}>
-              <StreakIcon />
-              <Text style={s.streakText}>
-                {data.weeklyStreakHours} hour streak this week. Keep it up!
-              </Text>
+            <View
+              style={s.streakBadge}
+              accessible
+              accessibilityRole="text"
+              accessibilityLabel={formatWeeklyHoursBadgeCopy(data.weeklyStreakHours)}
+            >
+              <StreakIcon color={colors.textPrimary} />
+              <Text style={s.streakText}>{formatWeeklyHoursBadgeCopy(data.weeklyStreakHours)}</Text>
             </View>
           )}
         </View>
@@ -674,8 +678,8 @@ const s = StyleSheet.create({
   },
   streakText: {
     fontFamily: fontFamilies.notoSansSemiBold,
-    fontSize: 12,
-    color: colors.primary,
+    fontSize: 14,
+    color: colors.textPrimary,
   },
   serviceHoursCard: {
     backgroundColor: colors.white,

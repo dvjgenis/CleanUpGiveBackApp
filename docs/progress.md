@@ -2,6 +2,16 @@
 
 ---
 
+## [2026-08-15] — Home weekly-hours pill contrast
+
+**End goal:** Keep the Figma lime greeting chip, but make it WCAG AA readable.
+
+**Shipped:** Home streak pill now uses `textPrimary` 14px SemiBold on `accentLime` (10.78:1) instead of primary green at 12px (2.45:1). Copy is “N hours this week. Keep it up!” — grouped as one `accessibilityRole="text"` announcement. Flame stays decorative. Hours match the current-week chart total at 0.1 hr (no integer rounding).
+
+**Status:** Done (code + docs).
+
+---
+
 ## [2026-08-15] — Local drop-off over 30 miles is blocked
 
 **End goal:** Volunteers cannot place a local drop-off order when the address is more than 30 miles from Clean Up Give Back.

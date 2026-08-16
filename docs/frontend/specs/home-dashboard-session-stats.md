@@ -7,7 +7,7 @@
 
 ## Summary
 
-The Home dashboard Service Hours chart, total hours label, weekly streak badge, and Your Impact grid derive from completed session data via `sessionStatsStore` (local snapshots + Fly API hydration), not static mocks.
+The Home dashboard Service Hours chart, total hours label, weekly-hours lime pill, and Your Impact grid derive from completed session data via `sessionStatsStore` (local snapshots + Fly API hydration), not static mocks.
 
 ## User stories
 
@@ -24,6 +24,7 @@ The Home dashboard Service Hours chart, total hours label, weekly streak badge, 
 - [x] **AC-5:** Week picker changes recompute chart data for the selected week (not empty mock bars).
 - [x] **AC-7:** Recent Sessions **View All** navigates to `/sessions-list`.
 - [x] **AC-8:** When the selected week is not the current Monday-based week, the trailing Week N badge is replaced by a **This week** chip; tap restores the current week (chart + total + labels). Chip uses quiet styling (`chipBg`, soft primary border, primary label) so it stays secondary to the date range control. On the current week, Week N shows as before.
+- [x] **AC-9:** Weekly hours pill (shown when current-week hours > 0) uses lime fill + `textPrimary` 14px SemiBold (`N hour(s) this week. Keep it up!`), grouped as `accessibilityRole="text"` with the flame decorative. Does not use primary-green-on-lime (2.45:1 fail) or “streak” copy. Hours match the current-week Service Hours total at 0.1 hr precision (no integer `Math.round`).
 - [ ] **AC-6:** Stacked approval-status bars (Approved / In Review / Not Approved) — deferred; v1 uses single green bar per day.
 
 ## Out of scope

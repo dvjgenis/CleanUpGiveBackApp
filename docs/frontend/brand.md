@@ -91,7 +91,7 @@ Shadows are used **only for structural chrome** — navbar and section headers. 
 
 WCAG 2.1 AA is the primary standard. Designer-facing rules live on the Figma Design System page **§10 · Accessibility foundations** ([`742:382`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=742-382)) and in **§3 Color Usage Rules** ([`742:361`](https://www.figma.com/design/DrDcQH14n7ntDQ80F7au9S/CleanUpGiveBack?node-id=742-361)). Full audit: [`docs/a11y-audit-2026-06-30.md`](../a11y-audit-2026-06-30.md).
 
-Key rules: 44×44px minimum touch targets · `color/text/tertiary` as sole de-emphasized text · `green/500` not for normal-weight body text · `A11y/FocusRing` (2px primary, 2px offset) on all interactive Focus variants.
+Key rules: 44×44px minimum touch targets · `color/text/tertiary` as sole de-emphasized text · `green/500` not for normal-weight body text · lime fill (`accentLime`) uses `textPrimary` (near-black), never `primary` green — Home weekly-hours pill is the reference · `A11y/FocusRing` (2px primary, 2px offset) on all interactive Focus variants.
 
 ## Components
 

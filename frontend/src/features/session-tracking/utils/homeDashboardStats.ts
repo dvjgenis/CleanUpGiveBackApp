@@ -140,12 +140,19 @@ export function buildWeeklyHoursChart(
   return chart;
 }
 
+function sumWeeklyChartHours(stats: readonly SessionStatRecord[], weekStartIso: string): number {
+  const totalHours = buildWeeklyHoursChart(stats, weekStartIso).reduce(
+    (sum, day) => sum + day.value,
+    0,
+  );
+  return Math.round(totalHours * 10) / 10;
+}
+
 export function formatWeekServiceHoursTotal(
   stats: readonly SessionStatRecord[],
   weekStartIso: string,
 ): string {
-  const chart = buildWeeklyHoursChart(stats, weekStartIso);
-  const totalHours = chart.reduce((sum, day) => sum + day.value, 0);
+  const totalHours = sumWeeklyChartHours(stats, weekStartIso);
   if (totalHours <= 0) {
     return '0.0 hrs';
   }
@@ -153,13 +160,19 @@ export function formatWeekServiceHoursTotal(
   return `${totalHours.toFixed(1)} hrs`;
 }
 
-export function computeWeeklyStreakHours(stats: readonly SessionStatRecord[]): number {
-  const weekStartIso = toIsoDate(startOfWeekMonday(new Date()));
-  const totalHours = buildWeeklyHoursChart(stats, weekStartIso).reduce(
-    (sum, day) => sum + day.value,
-    0,
-  );
-  return Math.round(totalHours);
+/** Current Monday-week hours at chart precision (0.1 hr). Not a consecutive-day streak. */
+export function computeWeeklyStreakHours(
+  stats: readonly SessionStatRecord[],
+  now: Date = new Date(),
+): number {
+  return sumWeeklyChartHours(stats, toIsoDate(startOfWeekMonday(now)));
+}
+
+export function formatWeeklyHoursBadgeCopy(hours: number): string {
+  const rounded = Math.round(hours * 10) / 10;
+  const display = Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+  const unit = rounded === 1 ? 'hour' : 'hours';
+  return `${display} ${unit} this week. Keep it up!`;
 }
 
 /** Formats a chart bucket value (hours) for bar labels. */
