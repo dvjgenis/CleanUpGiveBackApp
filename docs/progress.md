@@ -2,6 +2,21 @@
 
 ---
 
+## [2026-08-17] — Audit log diff: stacked from→to pills
+
+**End goal:** Replace the audit log’s Before/After column grid with a scannable per-field transition layout Donna can read at a glance.
+
+**Shipped:**
+
+- `AuditDiffCard` now stacks each changed field as label + from pill → chevron → to pill (per-value tint unchanged — status tones follow the value, not column).
+- Wired on `/audit-log` and volunteer timeline (same component).
+
+**Docs:** `docs/admin-web-app.md`, `AGENTS.md` (learned fact).
+
+**Status:** Done.
+
+---
+
 ## [2026-08-16] — Your Impact month/year picker: list-only (no search)
 
 **End goal:** Month and year dropdowns in **Your Impact** should be pick-from-list only — no type-to-search field.
