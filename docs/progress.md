@@ -17,6 +17,20 @@
 
 ---
 
+## [2026-08-18] — Home calendar picker day spacing
+
+**End goal:** Service Hours calendar modal on Home — day circles should not touch when a week is highlighted or a day is selected.
+
+**Shipped:**
+
+- `ServiceHoursWeekPicker.tsx` — split day tap target (`dateCell` column wrapper) from visual disk (`dateCellInner` **36×36**, `borderRadius: full`); removed `flex: 1` + `aspectRatio: 1` + `maxHeight: 44` on the circle itself; added `marginBottom: 2` between date rows.
+
+**Docs:** `docs/frontend/context/components.md` (component row + Patterns), `docs/current.md`, this entry.
+
+**Status:** Code + docs.
+
+---
+
 ## [2026-08-18] — Mobile chrome polish (photo capture, app bar, week picker)
 
 **End goal:** Tighten volunteer-facing chrome on photo capture, Home/Shop app bars, event detail, and Service Hours week labels.

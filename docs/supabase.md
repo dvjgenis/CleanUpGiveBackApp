@@ -118,9 +118,11 @@ Store real values in `credentials.local.md` (gitignored) or a password manager �
 
 ## 4. Storage bucket `session-photos`
 
-- **Private** bucket; path convention: `{user_id}/{session_id}/{checkpoint_id}-selfie.jpg` and `…-progress.jpg`.
+- **Private** bucket; path conventions:
+  - Checkpoint photos: `{user_id}/{session_id}/{checkpoint_id}-selfie.jpg` and `…-progress.jpg`.
+  - **Account profile photo (2026-08-18):** `{user_id}/profile.jpg` — square JPEG (512×512 exported client-side); path mirrored in Auth `user_metadata.avatar_path`. Spec: [frontend/specs/account-profile-photo.md](frontend/specs/account-profile-photo.md).
 - Client uploads with the user's Supabase JWT; RLS policy restricts paths to the authenticated user's prefix.
-- Fly API stores **paths only** in `checkpoints` — photos are not proxied through Fly.
+- Fly API stores **paths only** in `checkpoints` — checkpoint photos are not proxied through Fly. Profile photos are mobile-client-only (not in Fly API).
 
 ---
 
