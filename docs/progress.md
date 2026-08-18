@@ -2,6 +2,21 @@
 
 ---
 
+## [2026-08-18] — Docs close-out: checkout, flash warning, impact picker, profile photo spec
+
+**End goal:** Living docs match shipped mobile behavior so the tree can push.
+
+**Shipped (docs only):**
+
+- `docs/frontend/specs/account-profile-photo.md` + index in `docs/README.md` + `docs/supabase.md` storage path.
+- Checkout / fulfillment: mobile UI is USPS + office pickup (hours + org-name copy); `local_dropoff` stays historical/admin-only — `docs/current.md`, `docs/frontend/context/app.md`, `components.md`, `docs/backend/specs/order-fulfillment.md`, `docs/backend/context/payments.md`.
+- Night flash warning + removed nighttime-ban copy — `app.md`, `components.md`, `current.md`.
+- Your Impact picker is activity-filtered — `app.md`, `components.md`, `home-dashboard-session-stats.md`, `current.md`.
+
+**Status:** Docs synced. Push to `origin/main`.
+
+---
+
 ## [2026-08-18] — Shop featured kit + sessions filter chip readability
 
 **End goal:** Fix clipped **Under Review** filter chip on Sessions; make Shop featured kit title, price, and Best Seller badge easier to read.

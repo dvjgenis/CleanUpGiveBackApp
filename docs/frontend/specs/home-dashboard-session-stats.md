@@ -48,7 +48,7 @@ Two fixed rows inside the white bordered card (`lifetimeHero`), matching Figma n
 
 ### Month / year picker sheet
 
-Full-width bottom sheet (same motion as live tracker minimize / `MapTypesSheet`). **List-only since 2026-08-16** — no text search / **Go** row (12 months and 100 years are short enough to scroll).
+Full-width bottom sheet (same motion as live tracker minimize / `MapTypesSheet`). **List-only since 2026-08-16** — no text search / **Go** row. **Activity-filtered since 2026-08-18** — year/month lists come from `buildActiveImpactYearOptions` / `buildActiveImpactMonthOptionsForYear` (session `startedAtMs` plus the current year/month as a floor).
 
 | Behavior | Implementation |
 |----------|----------------|
@@ -56,8 +56,8 @@ Full-width bottom sheet (same motion as live tracker minimize / `MapTypesSheet`)
 | Dismiss | Sheet slides down (`sheetDismissSpring` + drawer easing); scrim fades; then unmount |
 | Width | Edge-to-edge (`width: '100%'`, top corner radius only) |
 | Selection | Scrollable `FlatList` only — tap a month or year row to apply and dismiss |
-| Month list | All 12 months for the selected year (`buildImpactMonthOptionsForYear`) |
-| Year list | 100 calendar years newest-first through today (`IMPACT_YEAR_SPAN`, `buildImpactYearOptions`); no future years |
+| Month list | Months with session activity in the selected year, plus the current month when that year is current (`buildActiveImpactMonthOptionsForYear`) |
+| Year list | Years with session activity, newest-first, plus the current year (`buildActiveImpactYearOptions`); no future years |
 | Scroll | Bounded `FlatList` (~82% screen max height); dismiss hit area is **above** the sheet only (`pickerDismissHit`) so list pans are not stolen |
 | Initial scroll | Current selection scrolled into view; index `0` (current year) uses `scrollToOffset(0)` so **2026** is not clipped at open |
 
@@ -110,5 +110,5 @@ Home does **not** render a Recent Sessions list; sessions live on the Sessions t
 3. Navigate to a prior week with no sessions → chart shows zeros; week with sessions shows bars.
 4. From a non-current week, tap **This week** → date range, Week N (or chip hide), chart, and total hours return to the current week.
 5. Log two sub-hour sessions in the same week (e.g. 18 min + 12 min) → chart switches to minute scale; bar labels sit above bars with spacing (not clipped inside columns or flush against the chart border).
-6. **Your Impact** — tap month/year chips → sheet slides up full-width; scroll year list (100 years); current year fully visible at open; tap a month or year to update the sentence; months with no sessions show 0 places / 0 hours.
+6. **Your Impact** — tap month/year chips → sheet slides up full-width; year/month lists show activity plus the current year/month; current year fully visible at open; tap a month or year to update the sentence.
 7. **Recent Cleanups** — after a session with GPS + progress photo, tile shows large map, small photo top-left, status badge, tap opens session detail; **View All** → sessions list.
