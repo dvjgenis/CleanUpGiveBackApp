@@ -99,6 +99,8 @@ Native Figma-aligned screens import shared tokens from **`frontend/src/constants
 
 JSON mirrors of Figma collections live in [`frontend/design/figma/tokens/`](../../frontend/design/figma/tokens/). Prefer tokens over local hex palettes.
 
+**Radius (implementation):** `radius/sm` 8px — inputs and inline buttons on input rows; `radius/md` 16px — cards and full-width primary CTAs; `radius/full` — pills and FAB. See [`design.md`](../../frontend/design/figma/design.md) §7.
+
 Use `ThemedView`, `ThemedText`, and shared theme hooks (`useColorScheme`, `useThemeColor`) for template/chrome surfaces — `frontend/src/constants/theme.ts` is wired to Figma brand tokens. See [context/components.md](context/components.md).
 
 ## Copy tone

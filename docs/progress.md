@@ -2,6 +2,21 @@
 
 ---
 
+## [2026-08-18] — Doc pass: radius tiers, welcome gradient, profile photo
+
+**End goal:** Capture shipped mobile UI decisions in living docs (Decisions/Patterns/Ontology), not only inventory rows.
+
+**Shipped (docs only):**
+
+- `docs/frontend/context/components.md` — **Button radius tiers** pattern; profile photo editor pattern.
+- `docs/frontend/context/app.md` — welcome hero gradient stops; membership Apply `radius.sm` decision.
+- `docs/frontend/context/project.md` — Profile photo ontology + storage decision.
+- `docs/frontend/brand.md` — radius implementation summary pointing at `design.md` §7.
+
+**Status:** Docs only; follows commit `067d5f9`.
+
+---
+
 ## [2026-08-18] — Mobile chrome polish (photo capture, app bar, week picker)
 
 **End goal:** Tighten volunteer-facing chrome on photo capture, Home/Shop app bars, event detail, and Service Hours week labels.
@@ -11,7 +26,7 @@
 - `PhotoCaptureScreen` zoom pills rebuilt as inset-ring `ZoomPill`s (even 2px border; selected = gold ring + dark fill, white label, regular `×`); BeReal **Retake Photos** / **Submit** `paddingBottom` 48 → 20.
 - Shared `appBarChrome.ts`: bell 24px filled `textTertiary`; cart 28px filled `textTertiary` (optical match). `CartBadge` `cart` = primary, `notification` = tertiary.
 - Event detail **What to bring** heading uses `sectionBody` + 10px to the item card.
-- Service Hours date badge: `formatWeekRangeLabel` always uses short months (`Sep 14 - 20, 2026` / `Aug 31 - Sep 6, 2026`); badge stretches to **Week N** / **This week**; dropped extra chart `marginTop` that doubled the gap under the picker.
+- Service Hours date badge: `formatWeekRangeLabel` always uses short months (`Sep 14 - 20, 2026` / `Aug 31 - Sep 6, 2026`); badge stretches to **Week N** / **This week**; calendar modal day cells are centered **36×36** circles (not full-column `flex:1` disks that touch); dropped extra chart `marginTop` that doubled the gap under the picker.
 
 **Also in this tree (pre-session, shipping with the same commit):** Account profile photo crop (`ProfilePhotoCropModal`, `cropProfilePhoto.ts`, `profilePhoto.ts`), EmptyState radius, order/donation history mocks, WelcomeScreen, `app.json` / package bumps.
 
@@ -28,7 +43,7 @@
 **Shipped:**
 
 - `WelcomeScreen.tsx` — 5-stop `#009540` linear gradient overlay on hero (0%→0%, 35%→15%, 55%→55%, 72%→85%, 88%→100% opacity); removed extra dim layer and 0.9 opacity multiplier.
-- `ProfilePhotoCropModal.tsx` + `cropProfilePhoto.ts` + `profilePhoto.ts` — Account avatar tap → Take Photo / Choose from Library / Remove Photo; pan/pinch crop with Fill/Crop presets; upload `{user_id}/profile.jpg` to `session-photos`, sync `user_metadata.avatar_path`, local-uri cache; `expo-image-picker` + `expo-image-manipulator` deps; iOS/Android photo-library permission strings in `app.json`.
+- `ProfilePhotoCropModal.tsx` + `cropProfilePhoto.ts` + `profilePhoto.ts` — Account avatar tap → Take Photo / Choose from Library / Remove Photo; pan/pinch crop with Fill/Crop presets; upload `{user_id}/profile.jpg` to `session-photos`, sync `user_metadata.avatar_path`, local-uri cache; `expo-image-picker` + `expo-image-manipulator` deps; iOS/Android photo-library permission strings in `app.json`. **Spec:** [frontend/specs/account-profile-photo.md](../frontend/specs/account-profile-photo.md).
 - `AccountScreen.tsx` — profile photo hero, **Court Ordered** / **Volunteer** role pill under name, membership company-code input + **Apply** use `radius.sm` (8px) per DS Input row.
 - `appBarChrome.ts` + `CartBadge.tsx` — shared 24px bell / 28px cart icon sizing; notification badge uses tertiary fill; cart badge stays primary green; wired through Home/Shop/Product Detail/Cart/Checkout/Event Detail/Sessions/Request Data screens.
 - `EmptyState.tsx` — card + CTA `radius.md`; full-width 52px CTA (16px label) to match shop/order primary buttons.

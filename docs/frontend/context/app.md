@@ -103,6 +103,8 @@ Expo Router navigation and screen entry points.
 - `CheckoutScreen` form fields chain focus via `TextInput` refs + `returnKeyType="next"` / `onSubmitEditing` (Full Name → Street → City → State → ZIP → Card Number → Expiry → CVV → Name on Card); Name on Card is `returnKeyType="done"` and submits the order. CVV is capped at 3 digits (`maxLength={3}`, `slice(0, 3)`).
 - Session-guide Skip/Continue resolve the next real screen before navigating (avoid blank permission auto-skip hops). Photo Retake uses opacity cross-fade rather than slide — camera remount mid-slide looked janky.
 - **Live tracker location pill:** `LiveSessionScreen` absolutely centers the pill in the navbar row (back + compass stay tappable at `zIndex: 1`); divider uses symmetric `marginHorizontal: 10`; weather icon matches location pin at 18px; place label truncates when the 188px pill overflows.
+- **Welcome hero gradient:** Figma `112:6776` uses a vertical linear overlay on the hero photo — all stops `#009540` with opacities at 0%→0%, 35%→15%, 55%→55%, 72%→85%, 88%→100%. No extra black dim layer or global opacity multiplier on top.
+- **Membership company-code row:** Input and inline **Apply** both use `radius.sm` (8px) per DS §9.2 Input — not `radius.md` (16px), which is reserved for cards and full-width primary CTAs.
 
 ## Policies
 
