@@ -274,7 +274,7 @@ export function SessionDetailScreen() {
         keyboardDismissMode="interactive"
         automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
       >
-        {!error ? (
+        {!error && !loading ? (
           <View
             style={[s.mapHero, { width: windowWidth, height: MAP_HEIGHT }]}
             accessibilityLabel="Session walking path map"
@@ -289,9 +289,7 @@ export function SessionDetailScreen() {
         ) : null}
 
         <View style={[s.mainCard, { width: contentWidth, alignSelf: 'center' }]}>
-          {loading ? (
-            <Text style={s.loadingText}>Loading session…</Text>
-          ) : error ? (
+          {!loading && error ? (
             <EmptyState
               title={error}
               body="This session may have been deleted, or it could not be loaded."
@@ -299,7 +297,7 @@ export function SessionDetailScreen() {
               ctaAccessibilityLabel="View sessions"
               onCtaPress={() => router.replace('/sessions-list' as Href)}
             />
-          ) : (
+          ) : !loading ? (
             <>
               <View style={s.eventDetails}>
                 <View style={s.statusAndInfo}>
@@ -334,9 +332,14 @@ export function SessionDetailScreen() {
 
               <SessionDescriptionSection description={detail.description} />
             </>
-          )}
+          ) : loading ? (
+            <View style={s.loadingWrap}>
+              <ActivityIndicator color={colors.primary} />
+              <Text style={s.loadingLabel}>Loading session…</Text>
+            </View>
+          ) : null}
 
-          {!error ? <SessionNotesField sessionId={sessionId} scrollRef={scrollRef} /> : null}
+          {!loading && !error ? <SessionNotesField sessionId={sessionId} scrollRef={scrollRef} /> : null}
         </View>
       </ScrollView>
 
@@ -403,6 +406,16 @@ const s = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.bgApp,
   },
+  loadingWrap: {
+    paddingVertical: 48,
+    alignItems: 'center',
+    gap: 12,
+  },
+  loadingLabel: {
+    fontFamily: fontFamilies.notoSansRegular,
+    fontSize: 14,
+    color: colors.textNavInactive,
+  },
   topSection: {
     zIndex: 20,
     backgroundColor: colors.white,
@@ -453,13 +466,6 @@ const s = StyleSheet.create({
     marginTop: 12,
     gap: 20,
     paddingHorizontal: 0,
-  },
-  loadingText: {
-    fontFamily: fontFamilies.notoSansRegular,
-    fontSize: 14,
-    color: colors.textNavInactive,
-    textAlign: 'center',
-    paddingVertical: 24,
   },
   eventDetails: {
     gap: 16,

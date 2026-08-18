@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -109,11 +109,16 @@ export function OrderHistoryScreen({ orders: ordersProp }: { orders?: OrderHisto
         contentContainerStyle={[s.scrollContent, { paddingBottom: scrollBottomPad }]}
         showsVerticalScrollIndicator={false}
       >
+        {liveOrders === null ? (
+          <View style={s.loadingWrap}>
+            <ActivityIndicator color={colors.primary} />
+            <Text style={s.loadingLabel}>Loading order history…</Text>
+          </View>
+        ) : (
+          <>
         <Text style={s.intro}>Review your past equipment requests and purchases.</Text>
 
-        {liveOrders === null ? (
-          <Text style={s.intro}>Loading orders…</Text>
-        ) : orders.length === 0 ? (
+        {orders.length === 0 ? (
           <EmptyState
             title="No orders yet"
             body="Browse the shop to request cleanup gear."
@@ -129,6 +134,8 @@ export function OrderHistoryScreen({ orders: ordersProp }: { orders?: OrderHisto
               <OrderCard key={order.id} order={order} />
             ))}
           </View>
+        )}
+          </>
         )}
       </ScrollView>
 
@@ -166,6 +173,16 @@ const s = StyleSheet.create({
     fontFamily: fontFamilies.notoSansRegular,
     fontSize: 16,
     lineHeight: 22,
+    color: colors.textNavInactive,
+  },
+  loadingWrap: {
+    paddingVertical: 48,
+    alignItems: 'center',
+    gap: 12,
+  },
+  loadingLabel: {
+    fontFamily: fontFamilies.notoSansRegular,
+    fontSize: 14,
     color: colors.textNavInactive,
   },
   list: {

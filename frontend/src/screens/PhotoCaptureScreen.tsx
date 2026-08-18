@@ -44,6 +44,7 @@ import Svg, {
 
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { CoachmarkEnter } from '@/components/motion/CoachmarkEnter';
+import { BrandLoadingView, waitForBrandLoadingMinimum } from '@/components/ui/BrandLoadingView';
 import { useFadeUpEnter } from '@/components/motion/hooks';
 import { cancelSessionStartToHome } from '@/features/onboarding/homeEnterTransition';
 import { durations, easing, staggerDelay } from '@/motion';
@@ -842,6 +843,7 @@ export function PhotoCaptureScreen() {
   const [selfieUri, setSelfieUri] = useState<string | null>(null);
   const [progressUri, setProgressUri] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [savingSession, setSavingSession] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   /** Bumps on Retake so SequentialCapture resets front→back without relying on unmount timing. */
   const [captureEpoch, setCaptureEpoch] = useState(0);
@@ -979,8 +981,18 @@ export function PhotoCaptureScreen() {
           setSubmitError('Could not save end photos. Please try again.');
           return;
         }
-        await finalizeLiveSession({ status: 'under_review' });
-        router.replace('/submission-confirmation' as Href);
+        setSavingSession(true);
+        const startedAt = Date.now();
+        try {
+          await finalizeLiveSession({ status: 'under_review' });
+          await waitForBrandLoadingMinimum(startedAt);
+          router.replace('/submission-confirmation' as Href);
+        } catch {
+          setSavingSession(false);
+          setSubmitError('Could not save session. Please try again.');
+        } finally {
+          setIsSubmitting(false);
+        }
         return;
       }
 
@@ -1097,6 +1109,9 @@ export function PhotoCaptureScreen() {
             submitError={submitError}
           />
         </Animated.View>
+      ) : null}
+      {savingSession ? (
+        <BrandLoadingView visible message="Saving session…" />
       ) : null}
     </View>
   );

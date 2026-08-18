@@ -3,6 +3,7 @@ import {
   finalizeLiveSession,
   getCompletedSessionSnapshot,
 } from '@/features/session-tracking/liveSessionStore';
+import { BrandLoadingView, waitForBrandLoadingMinimum } from '@/components/ui/BrandLoadingView';
 import { colors } from '@/constants/tokens';
 import {
   NotoSans_400Regular,
@@ -11,7 +12,7 @@ import {
 import { Sanchez_400Regular } from '@expo-google-fonts/sanchez';
 import { useFonts } from 'expo-font';
 import { useRouter, type Href } from 'expo-router';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -25,6 +26,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 export default function FreeTrialDoneRoute() {
   const router = useRouter();
   const endingRef = useRef(false);
+  const [savingSession, setSavingSession] = useState(false);
   const [fontsLoaded] = useFonts({
     Sanchez_400Regular,
     NotoSans_400Regular,
@@ -36,9 +38,12 @@ export default function FreeTrialDoneRoute() {
       return;
     }
     endingRef.current = true;
+    setSavingSession(true);
+    const startedAt = Date.now();
 
     try {
       await finalizeLiveSession({ status: 'under_review' });
+      await waitForBrandLoadingMinimum(startedAt);
       const snapshot = getCompletedSessionSnapshot();
       const sessionId =
         snapshot?.remoteSessionId ??
@@ -59,6 +64,7 @@ export default function FreeTrialDoneRoute() {
       }
     } catch (error) {
       endingRef.current = false;
+      setSavingSession(false);
       console.error('[free-trial-done] Pay Later finalize failed:', error);
     }
   };
@@ -77,6 +83,7 @@ export default function FreeTrialDoneRoute() {
           void handlePayLater();
         }}
       />
+      {savingSession ? <BrandLoadingView visible message="Saving session…" /> : null}
     </SafeAreaProvider>
   );
 }

@@ -2,6 +2,77 @@
 
 ---
 
+## [2026-08-18] — Live tracker location pill layout
+
+**End goal:** Location + weather pill on the live tracker has even spacing around the divider and sits centered in the navbar (equidistant from content edges).
+
+**Shipped:**
+
+- `LiveSessionScreen` — pill width 203 → 188; divider `marginHorizontal: 10`; weather icon 18px (matches pin); place label ellipsize.
+- Navbar restructure: pill in `navbarPillCenter` (`absoluteFillObject` + center); back chevron + compass at `zIndex: 1`.
+
+**Docs:** `docs/frontend/context/app.md`.
+
+**Status:** Done.
+
+---
+
+## [2026-08-18] — Emoji broom artwork in sweep loader
+
+**End goal:** The loading broom matches the SVG Repo emoji broom, without the three dirt specks on the artwork.
+
+**Shipped:**
+
+- Replaced the simplified fan broom in `broom.svg` / `BroomSweepLoader` with the original SVG Repo paths. Removed the three circles from the source SVG. Flipped horizontally so bristles still face the dust dots.
+- Retinted to CUGB brand (`amber/700` handle, `lime/500` bristles, `gray/700` collar, `gray/900` stroke). Broom draw size reduced (~46% / ~34% of width vs prior ~55% / ~40%).
+
+**Docs:** `docs/frontend/context/components.md`, `assets.md`.
+
+**Status:** Done.
+
+---
+
+## [2026-08-18] — Physics broom-sweep loader
+
+**End goal:** Data-fetch loader uses a smaller brand-colored broom that sweeps, then kicks dots, then steps right until off-screen.
+
+**Shipped:**
+
+- `BroomSweepLoader` (~40% box size). Handle, collar, and wrap amber/700; bristles lime; shade gray/700.
+- Full-screen preview: cream sky, full-width forest-green ground from 55% of height, cream Sanchez “Loading sessions…” in the green band. HTML phone frame in `tidy-man-preview.html`.
+- Eight heavier dots; scatter on first contact; sleep when they land. Preview: `tidy-man-preview.html`.
+
+**Docs:** `docs/frontend/context/components.md`, `assets.md`, `app.md`, `docs/current.md`.
+
+**Status:** Done.
+
+---
+
+## [2026-08-17] — Tidy-man loading animation
+
+**End goal:** Data-fetch loader uses the ISO tidy-man pictogram, with the figure tossing trash into the bin.
+
+**Shipped:**
+
+- `frontend/assets/animations/tidy-man.json` (~2s loop: arm swing + three squares arcing into the bin). Replaces the broom-sweep experiment.
+- `BrandLoadingView` plays that Lottie at 160px; reduced motion still shows the label only.
+
+**Docs:** `docs/frontend/context/components.md`, `assets.md`, `docs/current.md`.
+
+**Status:** Done.
+
+---
+
+## [2026-08-17] — Branded broom-sweep loading animation
+
+**End goal:** Replace generic `ActivityIndicator` / “Loading …” copy on mobile data-fetch screens with a shared on-brand broom-sweep loader.
+
+**Shipped:** Superseded the same day by the tidy-man pictogram (`tidy-man.json`).
+
+**Status:** Superseded.
+
+---
+
 ## [2026-08-17] — Audit log diff: stacked from→to pills
 
 **End goal:** Replace the audit log’s Before/After column grid with a scannable per-field transition layout Donna can read at a glance.

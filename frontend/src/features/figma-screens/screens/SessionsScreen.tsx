@@ -633,7 +633,7 @@ export function SessionsScreen() {
         {loadState === 'loading' ? (
           <View style={s.loadingWrap}>
             <ActivityIndicator color={colors.primary} />
-            <Text style={s.emptyText}>Loading sessions…</Text>
+            <Text style={s.loadingLabel}>Loading sessions…</Text>
           </View>
         ) : filteredSessions.length === 0 ? (
           sessionSource.length === 0 ? (
@@ -675,7 +675,7 @@ export function SessionsScreen() {
           </View>
         )}
 
-        {showViewMore && (
+        {loadState !== 'loading' && showViewMore && (
           <AnimatedPressable
             scaleTo={0.98}
             onPress={handleViewMore}
@@ -808,6 +808,16 @@ const s = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 13,
+  },
+  loadingWrap: {
+    paddingVertical: 48,
+    alignItems: 'center',
+    gap: 12,
+  },
+  loadingLabel: {
+    fontFamily: fontFamilies.notoSansRegular,
+    fontSize: 14,
+    color: colors.textNavInactive,
   },
   searchBar: {
     flexDirection: 'row',
@@ -982,18 +992,6 @@ const s = StyleSheet.create({
   statusBadgeLabel: {
     fontFamily: fontFamilies.notoSansSemiBold,
     fontSize: 11,
-  },
-  emptyText: {
-    fontFamily: fontFamilies.notoSansRegular,
-    fontSize: 14,
-    color: colors.textNavInactive,
-    textAlign: 'center',
-    paddingVertical: 24,
-  },
-  loadingWrap: {
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 24,
   },
   viewMore: {
     alignItems: 'center',

@@ -178,6 +178,7 @@ export function ApprovalHistoryScreen({
 
   const stats = statsProp ?? buildApprovalHistoryStats(sessions);
 
+  const initialLoading = loadState === 'loading' && sessions.length === 0;
   const bottomInset = Math.max(insets.bottom, 0);
   const scrollBottomPad = bottomInset + layout.bottomNavHeight + barExtraHeight + 32;
 
@@ -190,6 +191,13 @@ export function ApprovalHistoryScreen({
         contentContainerStyle={[s.scrollContent, { paddingBottom: scrollBottomPad }]}
         showsVerticalScrollIndicator={false}
       >
+        {initialLoading ? (
+          <View style={s.loadingWrap}>
+            <ActivityIndicator color={colors.primary} />
+            <Text style={s.loadingLabel}>Loading approval history…</Text>
+          </View>
+        ) : (
+          <>
         <Text style={s.intro}>
           Review the approval status of your submitted clean-up sessions.
         </Text>
@@ -213,12 +221,7 @@ export function ApprovalHistoryScreen({
           </View>
         </View>
 
-        {loadState === 'loading' && sessions.length === 0 ? (
-          <View style={s.loadingWrap}>
-            <ActivityIndicator color={colors.primary} />
-            <Text style={s.loadingText}>Loading approval history…</Text>
-          </View>
-        ) : sessions.length === 0 ? (
+        {sessions.length === 0 ? (
           <EmptyState
             title="No sessions to review yet"
             body="Log a cleanup and your approval status will show up here."
@@ -232,6 +235,8 @@ export function ApprovalHistoryScreen({
               <SessionCard key={item.id} item={item} />
             ))}
           </View>
+        )}
+          </>
         )}
       </ScrollView>
 
@@ -271,6 +276,16 @@ const s = StyleSheet.create({
     lineHeight: 22,
     color: colors.textNavInactive,
   },
+  loadingWrap: {
+    paddingVertical: 48,
+    alignItems: 'center',
+    gap: 12,
+  },
+  loadingLabel: {
+    fontFamily: fontFamilies.notoSansRegular,
+    fontSize: 14,
+    color: colors.textNavInactive,
+  },
   statsRow: {
     flexDirection: 'row',
     gap: 12,
@@ -295,16 +310,6 @@ const s = StyleSheet.create({
     fontSize: 12,
     color: colors.textNavInactive,
     textAlign: 'center',
-  },
-  loadingWrap: {
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 24,
-  },
-  loadingText: {
-    fontFamily: fontFamilies.notoSansRegular,
-    fontSize: 14,
-    color: colors.textNavInactive,
   },
   list: {
     gap: 16,

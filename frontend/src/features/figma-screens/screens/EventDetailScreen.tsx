@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState, type ReactNode } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Linking,
   NativeScrollEvent,
@@ -272,8 +273,9 @@ export function EventDetailScreen() {
         <View style={s.topSection}>
           <EventDetailTopBar onBack={() => router.back()} onShare={() => {}} />
         </View>
-        <View style={[s.content, s.emptyWrap]}>
-          <Text style={s.loadingText}>Loading event…</Text>
+        <View style={s.loadingWrap}>
+          <ActivityIndicator color={colors.primary} />
+          <Text style={s.loadingLabel}>Loading event…</Text>
         </View>
       </View>
     );
@@ -457,6 +459,17 @@ const s = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.bgApp,
   },
+  loadingWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  loadingLabel: {
+    fontFamily: fontFamilies.notoSansRegular,
+    fontSize: 14,
+    color: colors.textNavInactive,
+  },
   topBar: {
     backgroundColor: colors.white,
     zIndex: 2,
@@ -533,12 +546,6 @@ const s = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     paddingBottom: 48,
-  },
-  loadingText: {
-    fontFamily: fontFamilies.notoSansRegular,
-    fontSize: 14,
-    color: colors.textNavInactive,
-    textAlign: 'center',
   },
   badgeBlock: {
     gap: 15,
