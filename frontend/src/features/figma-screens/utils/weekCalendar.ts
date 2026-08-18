@@ -106,10 +106,13 @@ export function isDateInWeek(day: Date, weekStart: Date): boolean {
 export function formatWeekRangeLabel(weekStart: Date): string {
   const start = startOfDay(weekStart);
   const end = addDays(start, 6);
+  const startMonth = MONTH_NAMES_SHORT[start.getMonth()];
+  const year = start.getFullYear();
   if (start.getMonth() === end.getMonth()) {
-    return `${MONTH_NAMES[start.getMonth()]} ${start.getDate()} - ${end.getDate()}, ${start.getFullYear()}`;
+    return `${startMonth} ${start.getDate()} - ${end.getDate()}, ${year}`;
   }
-  return `${MONTH_NAMES[start.getMonth()]} ${start.getDate()} - ${MONTH_NAMES[end.getMonth()]} ${end.getDate()}, ${end.getFullYear()}`;
+  const endMonth = MONTH_NAMES_SHORT[end.getMonth()];
+  return `${startMonth} ${start.getDate()} - ${endMonth} ${end.getDate()}, ${year}`;
 }
 
 export function formatWeekNumberLabel(weekStart: Date): string {

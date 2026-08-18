@@ -27,6 +27,7 @@ import Animated, {
   useSharedValue,
   withDelay,
   withTiming,
+  type SharedValue,
 } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, {
@@ -100,6 +101,18 @@ const ZOOM_ARC_SPAN_DEG = 80;
 // the caret to sit in without touching any tick line or label.
 const ZOOM_TICK_RIM_GAP = 48;
 const ZOOM_PILL_FACTORS = [0.5, 1, 3] as const;
+const ZOOM_PILL = {
+  height: 44,
+  border: 2,
+  minWidth: 56,
+  paddingH: 18,
+} as const;
+const ZOOM_PILL_RADIUS = ZOOM_PILL.height / 2;
+const ZOOM_PILL_INNER_RADIUS = ZOOM_PILL_RADIUS - ZOOM_PILL.border;
+const ZOOM_PILL_RING_IDLE = 'rgba(255,255,255,0.35)';
+const ZOOM_PILL_FILL_IDLE = 'rgba(0,0,0,0.45)';
+/** Same dark face when selected — gold ring alone marks the active preset. */
+const ZOOM_PILL_FILL_ACTIVE = ZOOM_PILL_FILL_IDLE;
 // Width of the gradient overlays that fade ticks near the screen edges,
 // standing in for a hard overflow:'hidden' clip as the dial rotates.
 const ZOOM_FADE_WIDTH = 64;
@@ -217,6 +230,58 @@ function buildZoomTicks(): ZoomTick[] {
 }
 
 const ZOOM_TICKS = buildZoomTicks();
+
+type ZoomPillProps = {
+  factor: number;
+  isActive: boolean;
+  gesture: ReturnType<typeof Gesture.Exclusive>;
+  pressed: SharedValue<number>;
+};
+
+/** Tap/drag zoom preset — inset ring (padding) draws an even 2px border on all sides. */
+function ZoomPill({ factor, isActive, gesture, pressed }: ZoomPillProps) {
+  const idleRingColor = isActive ? C.zoomAccent : ZOOM_PILL_RING_IDLE;
+
+  const containerAnim = useAnimatedStyle(() => ({
+    transform: [{ scale: withTiming(1 - 0.08 * pressed.value, { duration: 80 }) }],
+  }));
+
+  const ringAnim = useAnimatedStyle(
+    () => ({
+      backgroundColor: interpolateColor(
+        pressed.value,
+        [0, 1],
+        [idleRingColor, C.zoomAccent],
+      ),
+    }),
+    [idleRingColor],
+  );
+
+  return (
+    <GestureDetector gesture={gesture}>
+      <Animated.View
+        style={containerAnim}
+        accessibilityRole="button"
+        accessibilityLabel={`${factor}× zoom`}
+        accessibilityHint="Tap to zoom, drag to open wheel"
+      >
+        <Animated.View style={[s.zoomPillRing, ringAnim]}>
+          <View
+            style={[
+              s.zoomPillFace,
+              { backgroundColor: isActive ? ZOOM_PILL_FILL_ACTIVE : ZOOM_PILL_FILL_IDLE },
+            ]}
+          >
+            <Text style={[s.zoomPillLabel, isActive && s.zoomPillLabelActive]}>
+              {factor}
+              <Text style={s.zoomPillSuffix}>×</Text>
+            </Text>
+          </View>
+        </Animated.View>
+      </Animated.View>
+    </GestureDetector>
+  );
+}
 
 /**
  * Zoom control: three tap-to-zoom pills. Dragging any pill reveals the arc
@@ -378,23 +443,6 @@ function ZoomControl({
   // eslint-disable-next-line react-hooks/exhaustive-deps -- shared values stable
   }, [notifyChange]);
 
-  const pillPressedAnims = pillPressedSVs.map((pressed) =>
-    // eslint-disable-next-line react-hooks/rules-of-hooks -- fixed-length array (3 pills), stable across renders
-    useAnimatedStyle(() => ({
-      transform: [{ scale: withTiming(1 - 0.12 * pressed.value, { duration: 80 }) }],
-      backgroundColor: interpolateColor(
-        pressed.value,
-        [0, 1],
-        ['rgba(0,0,0,0.45)', 'rgba(245,197,24,0.35)'],
-      ),
-      borderColor: interpolateColor(
-        pressed.value,
-        [0, 1],
-        ['rgba(255,255,255,0.35)', C.zoomAccent],
-      ),
-    })),
-  );
-
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
@@ -519,23 +567,15 @@ function ZoomControl({
 
       {/* Pills — tap for instant zoom, drag to reveal wheel */}
       <Animated.View style={[s.zoomPillsRow, pillsAnim]} pointerEvents="box-none">
-        {(ZOOM_PILL_FACTORS as readonly number[]).map((factor, i) => {
-          const isActive = Math.abs(currentFactor - factor) < 0.2;
-          return (
-            <GestureDetector key={factor} gesture={pillGestures[i]!}>
-              <Animated.View
-                style={[s.zoomPill, isActive && s.zoomPillActive, pillPressedAnims[i]!]}
-                accessibilityRole="button"
-                accessibilityLabel={`${factor}× zoom`}
-                accessibilityHint="Tap to zoom, drag to open wheel"
-              >
-                <Text style={[s.zoomPillText, isActive && s.zoomPillTextActive]}>
-                  {factor}×
-                </Text>
-              </Animated.View>
-            </GestureDetector>
-          );
-        })}
+        {(ZOOM_PILL_FACTORS as readonly number[]).map((factor, i) => (
+          <ZoomPill
+            key={factor}
+            factor={factor}
+            isActive={Math.abs(currentFactor - factor) < 0.2}
+            gesture={pillGestures[i]!}
+            pressed={pillPressedSVs[i]!}
+          />
+        ))}
       </Animated.View>
     </View>
   );
@@ -1328,29 +1368,36 @@ const s = StyleSheet.create({
     gap: 14,
   },
 
-  zoomPill: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 24,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.35)',
-    backgroundColor: 'rgba(0,0,0,0.45)',
+  zoomPillRing: {
+    padding: ZOOM_PILL.border,
+    borderRadius: ZOOM_PILL_RADIUS,
+    minWidth: ZOOM_PILL.minWidth,
+    height: ZOOM_PILL.height,
   },
 
-  zoomPillActive: {
-    borderColor: C.zoomAccent,
-    backgroundColor: 'rgba(245,197,24,0.12)',
+  zoomPillFace: {
+    alignSelf: 'stretch',
+    minHeight: ZOOM_PILL.height - ZOOM_PILL.border * 2,
+    borderRadius: ZOOM_PILL_INNER_RADIUS,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: ZOOM_PILL.paddingH,
   },
 
-  zoomPillText: {
+  zoomPillLabel: {
     fontFamily: 'NotoSans_600SemiBold',
     fontSize: 16,
     color: 'rgba(255,255,255,0.9)',
     letterSpacing: 0.3,
   },
 
-  zoomPillTextActive: {
-    color: C.zoomAccent,
+  zoomPillSuffix: {
+    fontFamily: 'NotoSans_400Regular',
+    fontWeight: '400',
+  },
+
+  zoomPillLabelActive: {
+    color: C.textOnPrimary,
   },
 
   footer: {
@@ -1401,7 +1448,7 @@ const s = StyleSheet.create({
     right: 0,
     bottom: 0,
     paddingHorizontal: 16,
-    paddingBottom: 48,
+    paddingBottom: 20,
   },
 
   retakeBtn: {

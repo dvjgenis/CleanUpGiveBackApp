@@ -3,11 +3,6 @@ import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, Vi
 import { useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { BottomNavBar } from '@/components/navigation/BottomNavBar';
-import {
-  LiveSessionMinimizedBar,
-  useLiveSessionNavChrome,
-} from '@/components/navigation/LiveSessionNavChrome';
 import { SessionSetupTopAppBar } from '@/components/session-setup/SessionSetupTopAppBar';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { getUserOrders } from '@/lib/shopOrders';
@@ -17,24 +12,34 @@ import {
   mapShopOrderToHistoryItem,
   type OrderHistoryItem,
 } from '../mocks/orderHistory';
-import { layout, colors, fontFamilies, radius } from '../tokens';
+import { colors, fontFamilies, radius } from '../tokens';
 
+
+function formatHistoryTimestamp(dateLabel: string, timeLabel: string): string {
+  return timeLabel ? `${dateLabel} · ${timeLabel}` : dateLabel;
+}
 
 function OrderCard({ order }: { order: OrderHistoryItem }) {
   const muted = order.muted ?? false;
+  const timestampLabel = formatHistoryTimestamp(order.dateLabel, order.timeLabel);
 
   return (
     <View style={s.card}>
       <View style={s.cardHeader}>
         <View style={s.cardHeaderLeft}>
           <Text style={s.orderNumber}>{order.orderNumber}</Text>
-          <Text style={s.orderDate}>{order.dateLabel}</Text>
+          <View style={s.statusTag}>
+            <Text style={[s.statusLabel, muted ? s.statusLabelMuted : null]}>
+              {order.statusLabel}
+            </Text>
+          </View>
         </View>
-        <View style={s.statusTag}>
-          <Text style={[s.statusLabel, muted ? s.statusLabelMuted : null]}>
-            {order.statusLabel}
-          </Text>
-        </View>
+        <Text
+          style={s.timestamp}
+          accessibilityLabel={`Ordered ${timestampLabel}`}
+        >
+          {timestampLabel}
+        </Text>
       </View>
 
       <View style={s.divider} />
@@ -71,8 +76,6 @@ function OrderCard({ order }: { order: OrderHistoryItem }) {
 export function OrderHistoryScreen({ orders: ordersProp }: { orders?: OrderHistoryItem[] }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { isActive, onTrackPress, expandLiveSession, barStyle, barExtraHeight } =
-    useLiveSessionNavChrome();
   const [liveOrders, setLiveOrders] = useState<OrderHistoryItem[] | null>(
     ordersProp ?? null,
   );
@@ -98,7 +101,7 @@ export function OrderHistoryScreen({ orders: ordersProp }: { orders?: OrderHisto
 
   const orders = liveOrders ?? [];
   const bottomInset = Math.max(insets.bottom, 0);
-  const scrollBottomPad = bottomInset + layout.bottomNavHeight + barExtraHeight + 32;
+  const scrollBottomPad = bottomInset + 32;
 
   return (
     <View style={s.root}>
@@ -138,20 +141,6 @@ export function OrderHistoryScreen({ orders: ordersProp }: { orders?: OrderHisto
           </>
         )}
       </ScrollView>
-
-      <View style={[s.bottomStack, { paddingBottom: bottomInset }]}>
-        {isActive && (
-          <LiveSessionMinimizedBar barStyle={barStyle} onExpand={expandLiveSession} />
-        )}
-        <BottomNavBar
-          activeTab="profile"
-          onHomePress={() => router.replace('/')}
-          onShopPress={() => {}}
-          onTrackPress={onTrackPress}
-          onSessionsPress={() => {}}
-          onProfilePress={() => router.replace('/account' as Href)}
-        />
-      </View>
     </View>
   );
 }
@@ -202,7 +191,7 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
   },
   cardHeaderLeft: {
-    gap: 4,
+    gap: 8,
     flex: 1,
     paddingRight: 12,
   },
@@ -211,12 +200,17 @@ const s = StyleSheet.create({
     fontSize: 10,
     color: colors.textNavInactive,
   },
-  orderDate: {
+  timestamp: {
+    flexShrink: 0,
+    maxWidth: '52%',
     fontFamily: fontFamilies.notoSansRegular,
-    fontSize: 16,
-    color: colors.textPrimary,
+    fontSize: 12,
+    lineHeight: 16,
+    color: colors.textTertiary,
+    textAlign: 'right',
   },
   statusTag: {
+    alignSelf: 'flex-start',
     height: 32,
     backgroundColor: colors.statusApprovedBg,
     borderRadius: radius.sm,
@@ -277,12 +271,5 @@ const s = StyleSheet.create({
     fontFamily: fontFamilies.notoSansSemiBold,
     fontSize: 13,
     color: colors.white,
-  },
-  bottomStack: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: colors.white,
   },
 });

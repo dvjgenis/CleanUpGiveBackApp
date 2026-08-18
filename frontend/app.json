@@ -12,7 +12,8 @@
       "icon": "./assets/expo.icon",
       "bundleIdentifier": "com.shivpat.cleanupgiveback",
       "infoPlist": {
-        "NSCameraUsageDescription": "Allow Clean Up Give Back to use your camera for photo checkpoints during cleanup sessions.",
+        "NSCameraUsageDescription": "Allow Clean Up Give Back to use your camera for photo checkpoints during cleanup sessions and your profile photo.",
+        "NSPhotoLibraryUsageDescription": "Allow Clean Up Give Back to access your photo library so you can choose a profile photo.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
@@ -35,7 +36,8 @@
         "android.permission.READ_CALENDAR",
         "android.permission.WRITE_CALENDAR",
         "android.permission.POST_NOTIFICATIONS",
-        "android.permission.CAMERA"
+        "android.permission.CAMERA",
+        "android.permission.READ_MEDIA_IMAGES"
       ]
     },
     "web": {
@@ -95,7 +97,15 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow Clean Up Give Back to use your camera for photo checkpoints during cleanup sessions."
+          "cameraPermission": "Allow Clean Up Give Back to use your camera for photo checkpoints during cleanup sessions and your profile photo."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Clean Up Give Back to access your photo library so you can choose a profile photo.",
+          "cameraPermission": "Allow Clean Up Give Back to use your camera for your profile photo.",
+          "microphonePermission": false
         }
       ],
       [

@@ -41,7 +41,7 @@ const s = StyleSheet.create({
     backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.borderOutline,
-    borderRadius: 12,
+    borderRadius: radius.md,
     padding: 24,
     gap: 8,
     alignItems: 'center',
@@ -60,8 +60,10 @@ const s = StyleSheet.create({
     marginBottom: 8,
   },
   cta: {
-    height: 44,
-    paddingHorizontal: 20,
+    alignSelf: 'stretch',
+    width: '100%',
+    height: 52,
+    paddingHorizontal: 24,
     borderRadius: radius.md,
     backgroundColor: colors.primary,
     alignItems: 'center',
@@ -69,7 +71,7 @@ const s = StyleSheet.create({
   },
   ctaText: {
     fontFamily: fontFamilies.notoSansSemiBold,
-    fontSize: 14,
+    fontSize: 16,
     color: colors.textOnPrimary,
   },
 });

@@ -387,10 +387,12 @@ export function EventDetailScreen() {
           <View style={s.whatToBringSection}>
             <View style={s.section}>
               <SectionDivider />
-              <SectionTitle>What to bring</SectionTitle>
-              {event.whatToBringDescription ? (
-                <Text style={s.whatToBringDesc}>{event.whatToBringDescription}</Text>
-              ) : null}
+              <View style={s.sectionBody}>
+                <SectionTitle>What to bring</SectionTitle>
+                {event.whatToBringDescription ? (
+                  <Text style={s.whatToBringDesc}>{event.whatToBringDescription}</Text>
+                ) : null}
+              </View>
             </View>
             <View style={s.bringCard}>
               {event.whatToBring.map((item) => (
@@ -665,14 +667,13 @@ const s = StyleSheet.create({
     color: colors.primary,
   },
   whatToBringSection: {
-    gap: 15,
+    gap: 10,
   },
   whatToBringDesc: {
     fontFamily: fontFamilies.notoSansRegular,
     fontSize: 13,
     color: colors.textNavInactive,
     lineHeight: 18,
-    marginTop: 4,
   },
   bringCard: {
     backgroundColor: colors.white,

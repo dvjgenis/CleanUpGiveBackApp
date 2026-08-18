@@ -2,6 +2,27 @@
 
 ---
 
+## [2026-08-18] — Welcome hero gradient, account profile photo, app-bar polish, DS radius fixes
+
+**End goal:** Match Figma welcome hero gradient; ship account profile photo pick/crop/upload; align membership Apply + EmptyState CTAs with design-system radius; unify app-bar icon/badge chrome; polish Service Hours calendar + order/donation history timestamps; refine photo-capture zoom pills.
+
+**Shipped:**
+
+- `WelcomeScreen.tsx` — 5-stop `#009540` linear gradient overlay on hero (0%→0%, 35%→15%, 55%→55%, 72%→85%, 88%→100% opacity); removed extra dim layer and 0.9 opacity multiplier.
+- `ProfilePhotoCropModal.tsx` + `cropProfilePhoto.ts` + `profilePhoto.ts` — Account avatar tap → Take Photo / Choose from Library / Remove Photo; pan/pinch crop with Fill/Crop presets; upload `{user_id}/profile.jpg` to `session-photos`, sync `user_metadata.avatar_path`, local-uri cache; `expo-image-picker` + `expo-image-manipulator` deps; iOS/Android photo-library permission strings in `app.json`.
+- `AccountScreen.tsx` — profile photo hero, **Court Ordered** / **Volunteer** role pill under name, membership company-code input + **Apply** use `radius.sm` (8px) per DS Input row.
+- `appBarChrome.ts` + `CartBadge.tsx` — shared 24px bell / 28px cart icon sizing; notification badge uses tertiary fill; cart badge stays primary green; wired through Home/Shop/Product Detail/Cart/Checkout/Event Detail/Sessions/Request Data screens.
+- `EmptyState.tsx` — card + CTA `radius.md`; full-width 52px CTA (16px label) to match shop/order primary buttons.
+- `ServiceHoursWeekPicker.tsx` — week range short-month labels; date badge stretches to trailing chip; calendar day cells as centered 36×36 circles.
+- Order/donation history — date + time stamp labels via shared `sessionFormat` helpers; account subpages hide bottom tab bar where noted in `app.md`.
+- `PhotoCaptureScreen.tsx` — zoom preset pills extracted to `ZoomPill` with even 2px inset ring border.
+
+**Docs:** `docs/frontend/context/app.md`, `components.md`; `docs/current.md`; this entry.
+
+**Status:** `cd frontend && npx tsc --noEmit` clean.
+
+---
+
 ## [2026-08-18] — Nighttime flash warning, checkout drop-off removal, activity-based Impact dropdown
 
 **End goal:** 8-part mobile UX/business-logic batch: warn volunteers to enable flash at night before photo capture; remove stale "no nighttime cleanings" copy; drop the local drop-off checkout option; show pickup hours and use the org name (not "Donna") in pickup copy; make the Home "Your Impact" month/year picker show only years/months with real activity; and finish wiring the $59.99 tracker price / $10 shop-shipping model (landed concurrently by another session) into `CheckoutScreen.tsx`.

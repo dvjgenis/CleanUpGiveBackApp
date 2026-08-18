@@ -182,7 +182,11 @@ function FilterChip({
       accessibilityState={{ selected }}
       style={[s.chip, selected ? s.chipSelected : s.chipIdle]}
     >
-      <Text style={[s.chipLabel, selected ? s.chipLabelSelected : s.chipLabelIdle]}>{label}</Text>
+      <Text
+        style={[s.chipLabel, selected ? s.chipLabelSelected : s.chipLabelIdle]}
+      >
+        {label}
+      </Text>
     </AnimatedPressable>
   );
 }
@@ -492,11 +496,15 @@ export function SessionsScreen() {
     }
 
     const targets = selectedDeletableSessions;
-    const countLabel = targets.length === 1 ? '1 session' : `${targets.length} sessions`;
+    const deleteTitle = targets.length === 1 ? 'Delete session?' : 'Delete sessions?';
+    const deleteMessage =
+      targets.length === 1
+        ? 'Are you sure you want to delete this session? This action is irreversible.'
+        : 'Are you sure you want to delete these sessions? This action is irreversible.';
 
     Alert.alert(
-      'Delete sessions?',
-      `This removes ${countLabel} from your history and cancels admin review.`,
+      deleteTitle,
+      deleteMessage,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -845,15 +853,19 @@ const s = StyleSheet.create({
   },
   chipsRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
-    paddingRight: 8,
+    paddingVertical: 1,
   },
   chip: {
-    paddingHorizontal: 14,
+    flexShrink: 0,
+    paddingHorizontal: 16,
     paddingVertical: 6,
     borderRadius: R.full,
     borderWidth: 1,
     borderColor: colors.borderOutline,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   chipSelected: {
     backgroundColor: colors.chipSelectedBg,
@@ -864,6 +876,7 @@ const s = StyleSheet.create({
   chipLabel: {
     fontSize: 12,
     color: colors.textPrimary,
+    textAlign: 'center',
   },
   chipLabelSelected: {
     fontFamily: fontFamilies.notoSansSemiBold,
@@ -1000,6 +1013,7 @@ const s = StyleSheet.create({
   },
   viewMore: {
     alignItems: 'center',
+    marginTop: 8,
     paddingVertical: 4,
   },
   viewMoreLabel: {

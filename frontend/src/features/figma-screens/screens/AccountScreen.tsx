@@ -1,5 +1,7 @@
 import React, { useCallback, useState, type ReactNode } from 'react';
-import { Alert, Linking, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -16,7 +18,13 @@ import {
   markTrackerPaid,
   useTrackerHasPaid,
 } from '@/features/session-tracking/trackerPaymentStore';
-import { usePreferredName } from '@/features/onboarding/onboardingStore';
+import { usePersonalDetails, usePreferredName } from '@/features/onboarding/onboardingStore';
+import {
+  getCachedProfilePhotoUri,
+  loadProfilePhotoUrl,
+  removeProfilePhoto,
+  uploadProfilePhoto,
+} from '@/lib/profilePhoto';
 import { getServiceType } from '@/lib/supabase';
 import {
   isSessionNotificationPermissionGranted,
@@ -57,6 +65,7 @@ import {
   CompanyCodeUpgradeSuccessModal,
 } from '../components/CompanyCodeModals';
 import { PersonalDetailsIcon, PersonalDetailsRowIcon } from '../components/PersonalDetailsIcon';
+import { ProfilePhotoCropModal } from '../components/ProfilePhotoCropModal';
 import { defaultAccountProfile, type AccountProfile } from '../mocks/account';
 import { firstTimeHomeDashboard } from '../mocks/home';
 import { layout, colors, fontFamilies, radius, shadows } from '../tokens';
@@ -147,7 +156,42 @@ function AccountTopAppBar() {
   );
 }
 
-function ProfileHero({ profile }: { profile: AccountProfile }) {
+function ProfileRoleTag({ isCourtOrdered }: { isCourtOrdered: boolean }) {
+  const label = isCourtOrdered ? 'Court Ordered' : 'Volunteer';
+
+  return (
+    <View
+      style={[
+        s.roleTag,
+        isCourtOrdered ? s.roleTagCourtOrdered : s.roleTagVolunteer,
+      ]}
+      accessibilityRole="text"
+    >
+      <Text
+        style={[
+          s.roleTagLabel,
+          isCourtOrdered ? s.roleTagCourtOrderedLabel : s.roleTagVolunteerLabel,
+        ]}
+      >
+        {label}
+      </Text>
+    </View>
+  );
+}
+
+function ProfileHero({
+  profile,
+  photoUri,
+  isUploadingPhoto,
+  isCourtOrdered,
+  onAvatarPress,
+}: {
+  profile: AccountProfile;
+  photoUri: string | null;
+  isUploadingPhoto: boolean;
+  isCourtOrdered: boolean;
+  onAvatarPress: () => void;
+}) {
   return (
     <View style={s.profileHero}>
       {/* Figma ProfileHero leaves (569:917 / 569:918) — absolute, rotated, clipped by overflow */}
@@ -163,11 +207,34 @@ function ProfileHero({ profile }: { profile: AccountProfile }) {
       </View>
 
       <View style={s.profileTopRow}>
-        <View style={s.avatar}>
-          <Text style={s.avatarText}>{profile.initials}</Text>
-        </View>
+        <AnimatedPressable
+          scaleTo={0.98}
+          onPress={onAvatarPress}
+          disabled={isUploadingPhoto}
+          accessibilityRole="button"
+          accessibilityLabel="Change profile photo"
+          accessibilityHint="Opens options to take a photo or choose one from your library"
+          style={s.avatarButton}
+        >
+          <View style={s.avatar}>
+            {photoUri ? (
+              <Image source={{ uri: photoUri }} style={s.avatarImage} contentFit="cover" />
+            ) : (
+              <Text style={s.avatarText}>{profile.initials}</Text>
+            )}
+            {isUploadingPhoto ? (
+              <View style={s.avatarOverlay}>
+                <ActivityIndicator color={colors.white} />
+              </View>
+            ) : null}
+          </View>
+          <View style={s.avatarBadge} pointerEvents="none">
+            <CameraAccessIcon width={14} height={14} />
+          </View>
+        </AnimatedPressable>
         <View style={s.profileNameCol}>
           <Text style={s.profileName}>{profile.displayName}</Text>
+          <ProfileRoleTag isCourtOrdered={isCourtOrdered} />
         </View>
       </View>
 
@@ -199,7 +266,9 @@ export function AccountScreen({ profile = defaultAccountProfile }: { profile?: A
   const { isActive, onTrackPress, expandLiveSession, barStyle, barExtraHeight } =
     useLiveSessionNavChrome();
   const hasPaid = useTrackerHasPaid();
-  const [isCourtOrdered, setIsCourtOrdered] = useState(false);
+  const { serviceType: onboardingServiceType } = usePersonalDetails();
+  const [supabaseServiceType, setSupabaseServiceType] = useState<string | null>(null);
+  const isCourtOrdered = (supabaseServiceType ?? onboardingServiceType) === 'Court Ordered';
   const [cameraAccess, setCameraAccess] = useState(false);
   const [locationAccess, setLocationAccess] = useState(false);
   const [notificationsAccess, setNotificationsAccess] = useState(false);
@@ -207,6 +276,12 @@ export function AccountScreen({ profile = defaultAccountProfile }: { profile?: A
   const [companyCodeError, setCompanyCodeError] = useState<string | undefined>();
   const [confirmCodeVisible, setConfirmCodeVisible] = useState(false);
   const [upgradeSuccessVisible, setUpgradeSuccessVisible] = useState(false);
+  const [profilePhotoUri, setProfilePhotoUri] = useState<string | null>(null);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [cropModalVisible, setCropModalVisible] = useState(false);
+  const [cropSourceUri, setCropSourceUri] = useState<string | null>(null);
+  const [cropImageWidth, setCropImageWidth] = useState(0);
+  const [cropImageHeight, setCropImageHeight] = useState(0);
   const preferredName = usePreferredName();
 
   // Same name shown in the Home greeting, so Account stays in sync with it.
@@ -237,8 +312,22 @@ export function AccountScreen({ profile = defaultAccountProfile }: { profile?: A
         if (isMounted) setNotificationsAccess(granted);
       });
       void getServiceType().then((serviceType) => {
-        if (isMounted) setIsCourtOrdered(serviceType === 'Court Ordered');
+        if (isMounted) setSupabaseServiceType(serviceType);
       });
+      void (async () => {
+        const signedUrl = await loadProfilePhotoUrl();
+        if (!isMounted) {
+          return;
+        }
+        if (signedUrl) {
+          setProfilePhotoUri(signedUrl);
+          return;
+        }
+        const cachedUri = await getCachedProfilePhotoUri();
+        if (isMounted) {
+          setProfilePhotoUri(cachedUri);
+        }
+      })();
 
       return () => {
         isMounted = false;
@@ -256,6 +345,127 @@ export function AccountScreen({ profile = defaultAccountProfile }: { profile?: A
       ],
     );
   }, []);
+
+  const openProfilePhotoCrop = useCallback((uri: string, width: number, height: number) => {
+    setCropSourceUri(uri);
+    setCropImageWidth(width);
+    setCropImageHeight(height);
+    setCropModalVisible(true);
+  }, []);
+
+  const closeProfilePhotoCrop = useCallback(() => {
+    setCropModalVisible(false);
+    setCropSourceUri(null);
+    setCropImageWidth(0);
+    setCropImageHeight(0);
+  }, []);
+
+  const handleProfilePhotoSelected = useCallback(async (localUri: string) => {
+    setProfilePhotoUri(localUri);
+    setIsUploadingPhoto(true);
+
+    try {
+      const uploadedPath = await uploadProfilePhoto(localUri);
+      if (!uploadedPath) {
+        Alert.alert(
+          'Photo not saved',
+          'We could not upload your profile photo. Check your connection and try again.',
+        );
+        const signedUrl = await loadProfilePhotoUrl();
+        setProfilePhotoUri(signedUrl ?? (await getCachedProfilePhotoUri()));
+        return;
+      }
+
+      const signedUrl = await loadProfilePhotoUrl();
+      if (signedUrl) {
+        setProfilePhotoUri(signedUrl);
+      }
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  }, []);
+
+  const pickProfilePhotoFromLibrary = useCallback(async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      promptOpenSettings('Photo Library');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: false,
+      quality: 1,
+    });
+
+    if (result.canceled || !result.assets[0]?.uri) {
+      return;
+    }
+
+    const asset = result.assets[0];
+    openProfilePhotoCrop(asset.uri, asset.width ?? 1024, asset.height ?? 1024);
+  }, [openProfilePhotoCrop, promptOpenSettings]);
+
+  const takeProfilePhoto = useCallback(async () => {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      promptOpenSettings('Camera');
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: false,
+      quality: 1,
+    });
+
+    if (result.canceled || !result.assets[0]?.uri) {
+      return;
+    }
+
+    const asset = result.assets[0];
+    openProfilePhotoCrop(asset.uri, asset.width ?? 1024, asset.height ?? 1024);
+  }, [openProfilePhotoCrop, promptOpenSettings]);
+
+  const handleRemoveProfilePhoto = useCallback(async () => {
+    setIsUploadingPhoto(true);
+    try {
+      const removed = await removeProfilePhoto();
+      if (!removed) {
+        Alert.alert(
+          'Photo not removed',
+          'We could not remove your profile photo. Check your connection and try again.',
+        );
+        return;
+      }
+      setProfilePhotoUri(null);
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  }, []);
+
+  const handleAvatarPress = useCallback(() => {
+    const buttons: Array<{ text: string; style?: 'cancel' | 'destructive'; onPress?: () => void }> = [
+      { text: 'Take Photo', onPress: () => void takeProfilePhoto() },
+      { text: 'Choose from Library', onPress: () => void pickProfilePhotoFromLibrary() },
+    ];
+
+    if (profilePhotoUri) {
+      buttons.push({
+        text: 'Remove Photo',
+        style: 'destructive',
+        onPress: () => void handleRemoveProfilePhoto(),
+      });
+    }
+
+    buttons.push({ text: 'Cancel', style: 'cancel' });
+
+    Alert.alert('Profile Photo', 'Add or update the photo shown on your account.', buttons);
+  }, [
+    handleRemoveProfilePhoto,
+    pickProfilePhotoFromLibrary,
+    profilePhotoUri,
+    takeProfilePhoto,
+  ]);
 
   const handleCameraAccessChange = useCallback(
     async (value: boolean) => {
@@ -318,7 +528,13 @@ export function AccountScreen({ profile = defaultAccountProfile }: { profile?: A
         contentContainerStyle={[s.scrollContent, { paddingBottom: scrollBottomPad }]}
         showsVerticalScrollIndicator={false}
       >
-        <ProfileHero profile={heroProfile} />
+        <ProfileHero
+          profile={heroProfile}
+          photoUri={profilePhotoUri}
+          isUploadingPhoto={isUploadingPhoto}
+          isCourtOrdered={isCourtOrdered}
+          onAvatarPress={handleAvatarPress}
+        />
 
         {isCourtOrdered && (
           <View style={s.courtDisclaimer}>
@@ -543,6 +759,17 @@ export function AccountScreen({ profile = defaultAccountProfile }: { profile?: A
         visible={upgradeSuccessVisible}
         onDone={() => setUpgradeSuccessVisible(false)}
       />
+      <ProfilePhotoCropModal
+        visible={cropModalVisible}
+        imageUri={cropSourceUri}
+        imageWidth={cropImageWidth}
+        imageHeight={cropImageHeight}
+        onCancel={closeProfilePhotoCrop}
+        onConfirm={(croppedUri) => {
+          closeProfilePhotoCrop();
+          void handleProfilePhotoSelected(croppedUri);
+        }}
+      />
     </View>
   );
 }
@@ -629,11 +856,40 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: 16,
   },
+  avatarButton: {
+    position: 'relative',
+    width: 64,
+    height: 64,
+  },
   avatar: {
     width: 64,
     height: 64,
     borderRadius: 32,
     backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  avatarOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.35)',
+  },
+  avatarBadge: {
+    position: 'absolute',
+    right: -2,
+    bottom: -2,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.borderOutline,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -650,6 +906,33 @@ const s = StyleSheet.create({
     fontFamily: fontFamilies.sanchezRegular,
     fontSize: 18,
     color: colors.textPrimary,
+  },
+  roleTag: {
+    alignSelf: 'flex-start',
+    marginTop: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: radius.full,
+    borderWidth: 1,
+  },
+  roleTagCourtOrdered: {
+    backgroundColor: colors.statusPendingBg,
+    borderColor: colors.statusPendingBorder,
+  },
+  roleTagCourtOrderedLabel: {
+    color: colors.statusPendingText,
+  },
+  roleTagVolunteer: {
+    backgroundColor: colors.statusApprovedBg,
+    borderColor: colors.statusApprovedBorder,
+  },
+  roleTagVolunteerLabel: {
+    color: colors.statusApprovedText,
+  },
+  roleTagLabel: {
+    fontFamily: fontFamilies.notoSansSemiBold,
+    fontSize: 12,
+    lineHeight: 16,
   },
   profileEmail: {
     fontFamily: fontFamilies.notoSansRegular,
@@ -722,7 +1005,7 @@ const s = StyleSheet.create({
     flex: 1,
     borderWidth: 1,
     borderColor: colors.borderOutline,
-    borderRadius: radius.md,
+    borderRadius: radius.sm,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontFamily: fontFamilies.notoSansMedium,
@@ -736,7 +1019,7 @@ const s = StyleSheet.create({
   },
   companyCodeApply: {
     backgroundColor: colors.primary,
-    borderRadius: radius.md,
+    borderRadius: radius.sm,
     paddingHorizontal: 16,
     paddingVertical: 14,
   },

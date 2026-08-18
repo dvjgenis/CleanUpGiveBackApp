@@ -4,11 +4,16 @@ import {
   type FulfillmentMethod,
   type ShopOrderRow,
 } from '@/lib/shopOrders';
+import {
+  formatPhotoTimeLabel,
+  formatSessionDateLabel,
+} from '@/features/session-tracking/utils/sessionFormat';
 
 export type OrderHistoryItem = {
   id: string;
   orderNumber: string;
   dateLabel: string;
+  timeLabel: string;
   productName: string;
   priceLabel: string;
   statusLabel: string;
@@ -17,14 +22,15 @@ export type OrderHistoryItem = {
   muted?: boolean;
 };
 
-function formatOrderDate(iso: string): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return iso;
-  return date.toLocaleDateString('en-US', {
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-  });
+function formatOrderTimestamp(iso: string): { dateLabel: string; timeLabel: string } {
+  const orderedAtMs = new Date(iso).getTime();
+  if (Number.isNaN(orderedAtMs)) {
+    return { dateLabel: iso, timeLabel: '' };
+  }
+  return {
+    dateLabel: formatSessionDateLabel(orderedAtMs),
+    timeLabel: formatPhotoTimeLabel(orderedAtMs),
+  };
 }
 
 function statusLabel(status: string): string {
@@ -45,10 +51,12 @@ function productNameFromItems(items: unknown): string {
 export function mapShopOrderToHistoryItem(row: ShopOrderRow): OrderHistoryItem {
   const method: FulfillmentMethod = row.fulfillment_method;
   const canTrack = method === 'usps_ship';
+  const { dateLabel, timeLabel } = formatOrderTimestamp(row.created_at);
   return {
     id: row.id,
     orderNumber: `ORDER #${row.id.slice(0, 8).toUpperCase()}`,
-    dateLabel: formatOrderDate(row.created_at),
+    dateLabel,
+    timeLabel,
     productName: productNameFromItems(row.items),
     priceLabel: `$${(row.total_cents / 100).toFixed(2)}`,
     statusLabel: statusLabel(row.status),
@@ -66,6 +74,7 @@ export const defaultOrderHistory: OrderHistoryItem[] = [
     id: 'ord-49201',
     orderNumber: 'ORDER #49201',
     dateLabel: 'October 12, 2023',
+    timeLabel: '2:14 PM',
     productName: 'Trash Clean-up Kit',
     priceLabel: '$29.99',
     statusLabel: 'Shipped',
@@ -76,6 +85,7 @@ export const defaultOrderHistory: OrderHistoryItem[] = [
     id: 'ord-48892',
     orderNumber: 'ORDER #48892',
     dateLabel: 'September 28, 2023',
+    timeLabel: '11:30 AM',
     productName: 'Heavy Duty Gloves (Pair)',
     priceLabel: '$23.99',
     statusLabel: 'Fulfilled',
@@ -86,6 +96,7 @@ export const defaultOrderHistory: OrderHistoryItem[] = [
     id: 'ord-47105',
     orderNumber: 'ORDER #47105',
     dateLabel: 'July 05, 2023',
+    timeLabel: '4:05 PM',
     productName: 'Tote Bags',
     priceLabel: '$3.00',
     statusLabel: 'Cancelled',

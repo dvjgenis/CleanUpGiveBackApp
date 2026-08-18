@@ -30,6 +30,8 @@ import { useImpactFeed } from '@/features/session-tracking/impactFeedStore';
 
 import { EmptyState } from '@/components/ui/EmptyState';
 
+import { APP_BAR_ICON_SIZE, appBarIconWrap } from '../components/appBarChrome';
+import { CartBadge } from '../components/CartBadge';
 import { EventsViewAllModal } from '../components/EventsViewAllModal';
 import { ImpactFeedSection } from '../components/ImpactFeedSection';
 import { UpcomingEventCard } from '../components/UpcomingEventCard';
@@ -289,16 +291,12 @@ export function HomeScreenWithData({
         <AnimatedPressable
           accessibilityRole="button"
           accessibilityLabel={`Notifications, ${data.notificationCount} unread`}
-          style={s.notifWrap}
+          style={appBarIconWrap}
           onPress={() => router.push('/notifications')}
           hitSlop={8}
         >
-          <NotificationIcon size={20} color={colors.textPrimary} />
-          {data.notificationCount > 0 && (
-            <View style={s.notifBadge}>
-              <Text style={s.notifBadgeText}>{data.notificationCount}</Text>
-            </View>
-          )}
+          <NotificationIcon size={APP_BAR_ICON_SIZE} color={colors.textTertiary} />
+          <CartBadge count={data.notificationCount} />
         </AnimatedPressable>
       </View>
 
@@ -448,7 +446,6 @@ export function HomeScreen() {
 const chart = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    marginTop: 20,
     gap: 8,
     alignItems: 'flex-start',
   },
@@ -557,30 +554,6 @@ const s = StyleSheet.create({
     fontFamily: fontFamilies.sanchezRegular,
     fontSize: 16,
     color: colors.primary,
-  },
-  notifWrap: {
-    position: 'relative',
-    width: 28,
-    height: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  notifBadge: {
-    position: 'absolute',
-    top: -4,
-    right: -8,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: colors.accentLime,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 4,
-  },
-  notifBadgeText: {
-    fontFamily: fontFamilies.sanchezRegular,
-    fontSize: 12,
-    color: colors.textTertiary,
   },
   scroll: {
     flex: 1,

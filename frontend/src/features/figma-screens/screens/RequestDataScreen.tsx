@@ -4,15 +4,10 @@ import { useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
-import { BottomNavBar } from '@/components/navigation/BottomNavBar';
-import {
-  LiveSessionMinimizedBar,
-  useLiveSessionNavChrome,
-} from '@/components/navigation/LiveSessionNavChrome';
 import { SessionSetupTopAppBar } from '@/components/session-setup/SessionSetupTopAppBar';
 
 import { RadioCheckedIcon, RadioEmptyIcon } from '../components/AccountIcons';
-import { layout, colors, fontFamilies, radius } from '../tokens';
+import { colors, fontFamilies, radius } from '../tokens';
 
 
 type DataRequestOption = 'access' | 'delete' | 'download';
@@ -29,12 +24,10 @@ const OPTIONS: { id: DataRequestOption; label: string }[] = [
 export function RequestDataScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { isActive, onTrackPress, expandLiveSession, barStyle, barExtraHeight } =
-    useLiveSessionNavChrome();
   const [selected, setSelected] = useState<DataRequestOption>('access');
 
   const bottomInset = Math.max(insets.bottom, 0);
-  const scrollBottomPad = bottomInset + layout.bottomNavHeight + barExtraHeight + 32;
+  const scrollBottomPad = bottomInset + 32;
 
   function handleSubmit() {
     router.push('/request-data-sent' as Href);
@@ -94,20 +87,6 @@ export function RequestDataScreen() {
           </AnimatedPressable>
         </View>
       </ScrollView>
-
-      <View style={[s.bottomStack, { paddingBottom: bottomInset }]}>
-        {isActive && (
-          <LiveSessionMinimizedBar barStyle={barStyle} onExpand={expandLiveSession} />
-        )}
-        <BottomNavBar
-          activeTab="profile"
-          onHomePress={() => router.replace('/')}
-          onShopPress={() => {}}
-          onTrackPress={onTrackPress}
-          onSessionsPress={() => {}}
-          onProfilePress={() => router.replace('/account' as Href)}
-        />
-      </View>
     </View>
   );
 }
@@ -181,12 +160,5 @@ const s = StyleSheet.create({
     fontFamily: fontFamilies.ibmPlexSansSemiBold,
     fontSize: 16,
     color: colors.textOnPrimary,
-  },
-  bottomStack: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: colors.white,
   },
 });

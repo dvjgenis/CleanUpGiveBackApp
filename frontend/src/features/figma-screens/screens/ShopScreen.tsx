@@ -17,6 +17,7 @@ import {
   useLiveSessionNavChrome,
 } from '@/components/navigation/LiveSessionNavChrome';
 import { addCartItem } from '../cartStore';
+import { APP_BAR_CART_ICON_SIZE, appBarIconWrap } from '../components/appBarChrome';
 import { CartBadge } from '../components/CartBadge';
 import { EmptyCartToast, useCartIconPress } from '../components/EmptyCartToast';
 import {
@@ -93,9 +94,9 @@ function TopAppBar({
           accessibilityRole="button"
           accessibilityLabel={`Shopping cart, ${cartCount} item${cartCount === 1 ? '' : 's'}`}
         >
-          <View style={s.cartIconWrap}>
-            <ShopCartIcon width={24} height={24} />
-            <CartBadge count={cartCount} />
+          <View style={appBarIconWrap}>
+            <ShopCartIcon width={APP_BAR_CART_ICON_SIZE} height={APP_BAR_CART_ICON_SIZE} />
+            <CartBadge count={cartCount} variant="cart" />
           </View>
         </AnimatedPressable>
       </View>
@@ -185,7 +186,7 @@ function FeaturedItem({
             <View style={s.featuredNameCol}>
               <View style={s.bestSellerBadge}>
                 <Text style={s.bestSellerText}>Best Seller</Text>
-                <ShopStreakIcon width={14} height={14} />
+                <ShopStreakIcon width={16} height={16} />
               </View>
               <Text style={s.featuredName}>Trash Clean Up Kit</Text>
               <Text style={s.featuredStock}>In stock</Text>
@@ -430,11 +431,6 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cartIconWrap: {
-    width: 24,
-    height: 24,
-    overflow: 'visible',
-  },
 
   // Scroll — Figma Mission Statement 657:1275 (left 15, gap 20)
   scroll: { flex: 1 },
@@ -606,24 +602,25 @@ const s = StyleSheet.create({
   bestSellerBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 6,
     backgroundColor: colors.accentLime,
     borderRadius: 23,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
     alignSelf: 'flex-start',
-    minHeight: 20,
+    minHeight: 24,
     overflow: 'visible',
   },
   bestSellerText: {
     fontFamily: fontFamilies.ibmPlexSansSemiBold,
-    fontSize: 10,
+    fontSize: 12,
     color: colors.textNavInactive,
-    lineHeight: 12,
+    lineHeight: 14,
   },
   featuredName: {
-    fontFamily: fontFamilies.sanchezRegular,
-    fontSize: 18,
+    fontFamily: fontFamilies.notoSansBold,
+    fontSize: 20,
+    lineHeight: 28,
     color: colors.textPrimary,
   },
   featuredStock: {

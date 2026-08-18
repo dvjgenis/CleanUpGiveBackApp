@@ -197,7 +197,7 @@ export function ServiceHoursWeekPicker({
             <Text style={s.dateBadgeText} numberOfLines={1}>
               {weekRangeLabel}
             </Text>
-            <View style={s.dateBadgeIcon}>
+            <View style={s.dateBadgeIcon} pointerEvents="none">
               <CalendarIcon size={18} color={colors.textNavInactive} />
             </View>
             <Pressable
@@ -322,25 +322,29 @@ export function ServiceHoursWeekPicker({
                           accessibilityRole="button"
                           accessibilityLabel={`${day.toDateString()}${isToday ? ', today' : ''}${isSelected ? ', selected' : ''}${inCurrentMonth ? '' : ', outside current month'}`}
                           onPress={() => selectDay(day)}
-                          style={[
-                            s.dateCell,
-                            !inCurrentMonth && s.dateCellOutside,
-                            inActiveWeek && inCurrentMonth && s.dateCellInWeek,
-                            isToday && !isSelected && s.dateCellToday,
-                            isSelected && s.dateCellSelected,
-                          ]}
+                          style={s.dateCell}
                         >
-                          <Text
+                          <View
                             style={[
-                              s.dateCellText,
-                              !inCurrentMonth && s.dateCellTextOutside,
-                              inActiveWeek && inCurrentMonth && s.dateCellTextInWeek,
-                              isToday && !isSelected && s.dateCellTextToday,
-                              isSelected && s.dateCellTextSelected,
+                              s.dateCellInner,
+                              !inCurrentMonth && s.dateCellOutside,
+                              inActiveWeek && inCurrentMonth && s.dateCellInWeek,
+                              isToday && !isSelected && s.dateCellToday,
+                              isSelected && s.dateCellSelected,
                             ]}
                           >
-                            {day.getDate()}
-                          </Text>
+                            <Text
+                              style={[
+                                s.dateCellText,
+                                !inCurrentMonth && s.dateCellTextOutside,
+                                inActiveWeek && inCurrentMonth && s.dateCellTextInWeek,
+                                isToday && !isSelected && s.dateCellTextToday,
+                                isSelected && s.dateCellTextSelected,
+                              ]}
+                            >
+                              {day.getDate()}
+                            </Text>
+                          </View>
                         </Pressable>
                       );
                     })}
@@ -382,49 +386,51 @@ const s = StyleSheet.create({
   dateNavRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    width: '100%',
+    gap: 8,
   },
   dateNav: {
+    flex: 1,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    flexShrink: 1,
   },
   arrowBtnPressed: {
     opacity: 0.65,
   },
   // Badge: plain View so absolute children position relative to it reliably
   dateBadge: {
-    width: 184,
+    flex: 1,
+    minWidth: 0,
     height: 36,
     backgroundColor: colors.bgApp,
     borderWidth: 1,
     borderColor: colors.textNavInactive,
     borderRadius: 6,
-    overflow: 'hidden',
-    flexShrink: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingLeft: 10,
+    paddingRight: 9,
   },
   dateBadgeText: {
-    position: 'absolute',
-    left: 11,
-    top: 10,
-    right: 36,
+    flex: 1,
+    minWidth: 0,
     fontFamily: fontFamilies.notoSansSemiBold,
     fontSize: 12,
     color: colors.textNavInactive,
     lineHeight: 16,
   },
   dateBadgeIcon: {
-    position: 'absolute',
-    right: 14,
-    top: 9,
     width: 18,
     height: 18,
+    marginLeft: 8,
+    flexShrink: 0,
   },
   weekBadge: {
-    minWidth: 74,
+    minWidth: 68,
     height: 36,
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     backgroundColor: colors.chipBg,
     borderRadius: 6,
     overflow: 'hidden',
@@ -442,7 +448,6 @@ const s = StyleSheet.create({
     height: 36,
     minWidth: 72,
     paddingHorizontal: 8,
-    marginLeft: 8,
     borderRadius: 6,
     backgroundColor: colors.chipBg,
     borderWidth: 1,
@@ -560,11 +565,17 @@ const s = StyleSheet.create({
   },
   dateRow: {
     flexDirection: 'row',
+    marginBottom: 2,
   },
   dateCell: {
     flex: 1,
-    aspectRatio: 1,
-    maxHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 2,
+  },
+  dateCellInner: {
+    width: 36,
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: R.full,

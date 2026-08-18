@@ -58,10 +58,15 @@ export function WelcomeScreen() {
           transition={0}
           accessibilityLabel="Volunteers at a CleanUp Give Back event"
         />
-        <View style={s.heroDim} />
         <LinearGradient
-          colors={['rgba(0,149,64,0)', 'rgba(0,149,64,0.4)', C.primary]}
-          locations={[0, 0.5, 1]}
+          colors={[
+            'rgba(0,149,64,0)',
+            'rgba(0,149,64,0.15)',
+            'rgba(0,149,64,0.55)',
+            'rgba(0,149,64,0.85)',
+            'rgba(0,149,64,1)',
+          ]}
+          locations={[0, 0.35, 0.55, 0.72, 0.88]}
           style={s.heroGradient}
         />
         <SafeAreaView edges={['top']} style={s.logoWrap} pointerEvents="none">
@@ -185,13 +190,8 @@ const s = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  heroDim: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.1)',
-  },
   heroGradient: {
     ...StyleSheet.absoluteFillObject,
-    opacity: 0.9,
   },
   logoWrap: {
     position: 'absolute',

@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { SessionSetupBackChevronIcon } from '@/components/session-setup/icons/SessionSetupBackChevronIcon';
 
+import { APP_BAR_CART_ICON_SIZE, appBarIconWrap } from '../components/appBarChrome';
 import { CartBadge } from '../components/CartBadge';
 import { EmptyCartToast, useCartIconPress } from '../components/EmptyCartToast';
 import { ShopCartIcon, ShopFeaturedCartIcon, ShopStreakIcon } from '../components/ShopIcons';
@@ -67,9 +68,9 @@ function ProductTopBar({
           accessibilityRole="button"
           accessibilityLabel={`Shopping cart, ${cartCount} item${cartCount === 1 ? '' : 's'}`}
         >
-          <View style={s.cartIconWrap}>
-            <ShopCartIcon width={24} height={24} />
-            <CartBadge count={cartCount} />
+          <View style={appBarIconWrap}>
+            <ShopCartIcon width={APP_BAR_CART_ICON_SIZE} height={APP_BAR_CART_ICON_SIZE} />
+            <CartBadge count={cartCount} variant="cart" />
           </View>
         </AnimatedPressable>
       </View>
@@ -260,7 +261,7 @@ export function ProductDetailScreen() {
             {product.bestSeller ? (
               <View style={s.bestSellerBadge}>
                 <Text style={s.bestSellerText}>Best Seller</Text>
-                <ShopStreakIcon width={14} height={14} />
+                <ShopStreakIcon width={16} height={16} />
               </View>
             ) : null}
             <Text style={s.productName} accessibilityRole="header">
@@ -410,11 +411,6 @@ const s = StyleSheet.create({
     fontSize: 18,
     color: colors.textPrimary,
   },
-  cartIconWrap: {
-    width: 24,
-    height: 24,
-    overflow: 'visible',
-  },
   scroll: {
     flex: 1,
   },
@@ -434,17 +430,18 @@ const s = StyleSheet.create({
     alignSelf: 'flex-start',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 6,
     backgroundColor: colors.accentLime,
     borderRadius: 23,
-    minHeight: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
+    minHeight: 24,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
     overflow: 'visible',
   },
   bestSellerText: {
     fontFamily: fontFamilies.ibmPlexSansSemiBold,
-    fontSize: 10,
+    fontSize: 12,
+    lineHeight: 14,
     color: colors.textNavInactive,
   },
   productName: {

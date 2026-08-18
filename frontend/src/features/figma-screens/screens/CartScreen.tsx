@@ -17,6 +17,7 @@ import {
   ShopDonateIcon,
   ShopStripeLogo,
 } from '../components/ShopIcons';
+import { APP_BAR_CART_ICON_SIZE, appBarIconWrap } from '../components/appBarChrome';
 import { CartBadge } from '../components/CartBadge';
 import {
   removeCartItem,
@@ -68,9 +69,9 @@ function CartTopBar({
         </View>
 
         <View style={s.topBarIconBtnRight} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-          <View style={s.cartIconWrap}>
-            <ShopCartIcon width={24} height={24} />
-            <CartBadge count={cartCount} />
+          <View style={appBarIconWrap}>
+            <ShopCartIcon width={APP_BAR_CART_ICON_SIZE} height={APP_BAR_CART_ICON_SIZE} />
+            <CartBadge count={cartCount} variant="cart" />
           </View>
         </View>
       </View>
@@ -378,11 +379,6 @@ const s = StyleSheet.create({
     fontFamily: fontFamilies.sanchezRegular,
     fontSize: 18,
     color: colors.textPrimary,
-  },
-  cartIconWrap: {
-    width: 24,
-    height: 24,
-    overflow: 'visible',
   },
   scroll: {
     flex: 1,

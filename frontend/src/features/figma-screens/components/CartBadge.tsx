@@ -6,19 +6,22 @@ const BADGE_SIZE = 16;
 
 type CartBadgeProps = {
   count: number;
+  /** Cart badges use brand primary; notification bell keeps tertiary. */
+  variant?: 'cart' | 'notification';
 };
 
 /**
- * Green cart count pill — number is optically centered in the badge.
+ * App-bar count pill — number is optically centered in the badge.
  * Hidden when count is 0.
  */
-export function CartBadge({ count }: CartBadgeProps) {
+export function CartBadge({ count, variant = 'notification' }: CartBadgeProps) {
   if (count <= 0) return null;
 
   const label = count > 99 ? '99+' : String(count);
+  const badgeStyle = variant === 'cart' ? s.badgeCart : s.badgeNotification;
 
   return (
-    <View style={[s.badge, count > 9 ? s.badgeWide : null]} pointerEvents="none">
+    <View style={[s.badge, badgeStyle, count > 9 ? s.badgeWide : null]} pointerEvents="none">
       <Text style={s.text} allowFontScaling={false}>
         {label}
       </Text>
@@ -34,9 +37,14 @@ const s = StyleSheet.create({
     minWidth: BADGE_SIZE,
     height: BADGE_SIZE,
     borderRadius: BADGE_SIZE / 2,
-    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  badgeNotification: {
+    backgroundColor: colors.textTertiary,
+  },
+  badgeCart: {
+    backgroundColor: colors.primary,
   },
   badgeWide: {
     paddingHorizontal: 4,

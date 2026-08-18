@@ -8,12 +8,14 @@ Shared UI components in `frontend/src/components/`.
 |-----------|------|------|
 | ThemedText | `themed-text.tsx` | Theme-aware text |
 | ThemedView | `themed-view.tsx` | Theme-aware container |
-| EmptyState | `ui/EmptyState.tsx` | Shared blank-state card (title/body/CTA) — Home first-time / empty sections, Sessions, Cart, Orders, Donations, Events, Approval History, session/event not-found, export zero-match, session photos |
+| EmptyState | `ui/EmptyState.tsx` | Shared blank-state card (title/body/CTA) — card + primary CTA use `radius.md` (16px) to match shop/order cards and Cart **Continue**; Home first-time / empty sections, Sessions, Cart, Orders, Donations, Events, Approval History, session/event not-found, export zero-match, session photos |
 | HomeTransitionCover | `navigation/HomeTransitionCover.tsx` | Always-mounted cream veil (optional; not used by session-start Cancel — that path uses `/hold-on`) |
 | HoldOnScreen | `screens/HoldOnScreen.tsx` (route `/hold-on`) | Session-start photo Cancel bridge — “Hold on for a moment” + progress bar (~1.6s, same track/fill pattern as `CreatingAccountScreen`); fades out then `replace('/?enter=fade')` + `requestHomeFadeIn` into Home |
 | CheckpointNotificationBootstrap | `CheckpointNotificationBootstrap.tsx` | Local notification presentation, foreground sound fallback, tap-through routing |
 | isExpoGoClient | `frontend/src/utils/isExpoGoClient.ts` | Expo Go detection (`StoreClient` **or** `appOwnership === 'expo'`) so MapLibre native is never required in Expo Go |
-| volunteerDeletedSessions | `frontend/src/features/session-tracking/volunteerDeletedSessions.ts` | AsyncStorage-backed tombstones so deleted session ids stay off Sessions list / Home hydrate across app restarts |
+| ProfilePhotoCropModal | `components/ProfilePhotoCropModal.tsx` | Full-screen profile photo editor — free pan/pinch inside circular crop frame; **Fill** (cover) and **Crop** (cover + slight zoom) presets; exports square JPEG via `cropProfilePhoto.ts` |
+| profilePhoto | `frontend/src/lib/profilePhoto.ts` | Account profile photo — upload/remove `{user_id}/profile.jpg` in `session-photos`, sync `user_metadata.avatar_path`, AsyncStorage local-uri cache, signed URL load |
+| cropProfilePhoto | `frontend/src/lib/cropProfilePhoto.ts` | Crop math + `expo-image-manipulator` export for profile photo editor |
 | ExternalLink | `external-link.tsx` | Opens URLs in in-app browser |
 | HintRow | `hint-row.tsx` | Hint / tip row |
 | WebBadge | `web-badge.tsx` | Web-only badge |
@@ -39,7 +41,7 @@ Shared UI components in `frontend/src/components/`.
 | SessionSetupGuideFooterActions | `session-setup/SessionSetupGuideFooterActions.tsx` | Shared Continue / Previous / (optional) Skip footer for session-setup guide screens — button styles match onboarding (`IBMPlexSans_600SemiBold` 18, `paddingVertical: 20`, `radius.md`); `hidePrevious` for guide step 1, `hideSkip` for finale, `continueLabel`/`skipLabel`/`disabled` for permission steps; coachmark/free-hour/free-kit **Skip** calls `skipSessionSetupGuideForward` |
 | SessionSetupGuideNavRow | `session-setup/SessionSetupGuideNavRow.tsx` | Shared header row for every session-setup guide screen (guide, step2–7, complete) — leftward `SessionSetupBackChevronIcon` (top-left, 24×24 tap target) + `OnboardingProgressPills` in one row (`gap: 20`); `onBack` on coachmarks/free-hour/free-kit exits via `exitSessionSetupGuideToTrackEntry` (pre-Track tab); permission steps use the same Previous target as the footer; `onBack` is omitted (chevron hidden, pills take the full row) on the finale (`SessionSetupCompleteScreen`); **all guide Previous** handlers use named `replace` targets (never `router.back()` after Skip/auto-skip — that popped to home) |
 | sessionSetupGuideNavigation | `utils/sessionSetupGuideNavigation.ts` | Guide stack helpers — pill progress, named Previous replaces, `resolveSessionSetupGuideSkipHref` / `skipSessionSetupGuideForward` / `continueFromSessionFreeKit` (one hop to location, camera, or finale) |
-| PhotoCaptureScreen | `screens/PhotoCaptureScreen.tsx` | Dual sequential capture + BeReal preview; **Retake** cross-fades preview → camera on a black host (mount camera under at opacity 0, fade preview out with slight scale, then fade camera in; reduced motion = instant swap); session-start / session-end / in-session modes |
+| PhotoCaptureScreen | `screens/PhotoCaptureScreen.tsx` | Dual sequential capture + BeReal preview; zoom presets are inset-ring `ZoomPill`s (2px padding border, regular `×`); preview **Retake Photos** / **Submit** sit closer to the bottom (`paddingBottom: 20`); **Retake** cross-fades preview → camera on a black host (mount camera under at opacity 0, fade preview out with slight scale, then fade camera in; reduced motion = instant swap); session-start / session-end / in-session modes |
 | SessionSetupTopAppBar | `session-setup/SessionSetupTopAppBar.tsx` | Figma `260:1392` — white top bar, drop shadow, back chevron + screen-centered Sanchez title |
 | SessionSetupBackChevronIcon | `session-setup/icons/SessionSetupBackChevronIcon.tsx` | Figma `260:1497` back chevron for TopAppBar |
 | SessionSetupCelebration | `session-setup/SessionSetupCelebration.tsx` | Setup-guide finale graphic: centered smiley + four stars with staggered fade/rotate entrance (Reanimated, Emil motion rules) |
@@ -68,7 +70,7 @@ Shared UI components in `frontend/src/components/`.
 
 | Component | File | Role |
 |-----------|------|------|
-| ServiceHoursWeekPicker | `components/ServiceHoursWeekPicker.tsx` | Service Hours week nav; calendar modal with month/year header + iOS-style month/year wheel on tap; off current week, trailing **This week** chip (`chipBg` + soft primary border, primary label) jumps to the current week |
+| ServiceHoursWeekPicker | `components/ServiceHoursWeekPicker.tsx` | Service Hours week nav; date badge stretches to the trailing **Week N** / **This week** chip so labels aren’t clipped; week ranges use short month names (`formatWeekRangeLabel`); calendar modal with month/year header + iOS-style month/year wheel on tap; calendar day cells are 36×36 circles centered in each column (gap between adjacent days); off current week, trailing **This week** chip (`chipBg` + soft primary border, primary label) jumps to the current week |
 | DateWheelPicker | `components/DateWheelPicker.tsx` | Snap wheel for month/year (home) or month/day/year when `includeDay` (export) |
 | WheelPickerColumn | `components/WheelPickerColumn.tsx` | Reusable snap-scroll column used by `DateWheelPicker` |
 | UpcomingEventCard | `components/UpcomingEventCard.tsx` | Home / View All event row — real photo thumb (`event.image`, 72×88, `contentFit="cover"`) + event title / time / date·location; optional press → `/event-detail` |
@@ -77,7 +79,7 @@ Shared UI components in `frontend/src/components/`.
 | SuccessConfirmationModal | `components/SuccessConfirmationModal.tsx` | Shared success overlay with checkmark + primary CTA; reused by `EventRegistrationSuccessModal` and `PersonalDetailsScreen` save confirmation |
 | EventRegistrationSuccessModal | `components/EventRegistrationSuccessModal.tsx` | Registration confirmation overlay (Figma `787:406`); thin wrapper over `SuccessConfirmationModal` with **Go Home** CTA |
 | RegisterButton | `components/RegisterButton.tsx` | Figma `RegisterButton` (`196:272`) — primary 50px CTA, radius 12, Noto Sans SemiBold 16 |
-| EventDetailScreen | `screens/EventDetailScreen.tsx` | Event detail; loads published Supabase event by `?id=` when available (else catalog mock `ev-1`…); unknown/unpublished id → `EmptyState` **Event not found** + **Go Home** (no default mock substitute); Register → Resend confirmation email + success modal; what-to-bring from event text / mocks |
+| EventDetailScreen | `screens/EventDetailScreen.tsx` | Event detail; loads published Supabase event by `?id=` when available (else catalog mock `ev-1`…); unknown/unpublished id → `EmptyState` **Event not found** + **Go Home** (no default mock substitute); Register → Resend confirmation email + success modal; what-to-bring heading uses `sectionBody` (10px) then 10px to the item card |
 | PersonalDetailsScreen | `screens/PersonalDetailsScreen.tsx` | Email-only editor with `EmailVerificationModal` OTP; other fields read-only / grayed; page notice to contact admin to change personal details |
 | EmailVerificationModal | `components/EmailVerificationModal.tsx` | 6-digit email-change confirmation modal |
 | CompanyCodeConfirmModal / CompanyCodeUpgradeSuccessModal | `components/CompanyCodeModals.tsx` | Account company-code confirm + upgraded success overlays |
@@ -93,7 +95,7 @@ Shared UI components in `frontend/src/components/`.
 | AccountIcons | `components/AccountIcons.tsx` | Account tab icons via `expo-image` + relative `require(.../assets/figma/account/*.svg)` |
 | LinkedPolicyText | `components/LinkedPolicyText.tsx` | Privacy policy body text with emails/URLs as tappable primary-green (`colors.primary`) links (`mailto:` / `https`) |
 | AccountDetailsScreen | `screens/AccountDetailsScreen.tsx` | Onboarding details step (Figma `112:6882`, step 3/5); birthday typed MM/YYYY + calendar-icon wheel picker (month/year only, `DateWheelPicker includeDay=false`); 2×2 radio service-type grid; COPPA age gate (`age < 13` → wipe onboarding PII + `/under-age`); inline validation (touched/submitted pattern) for birthday + service type; persists birthday + service type to `onboardingStore` only when age ≥ 13; picker modal from shared `BirthdayPickerModal`; colors from `figma-screens/tokens` |
-| AccountScreen | `screens/AccountScreen.tsx` | Account tab; Personal Details + company code upgrade; Records/Shop/Preferences/Permissions; footer © + “CleanUp Give Back is a 501(c)(3) nonprofit corporation.” |
+| AccountScreen | `screens/AccountScreen.tsx` | Account tab; Personal Details + company code upgrade (input + **Apply** use `radius.sm` per DS Input/button row); Records/Shop/Preferences/Permissions; **profile hero avatar** tappable — Take Photo / Choose from Library / Remove Photo → **`ProfilePhotoCropModal`** (pan/pinch + Fill/Crop presets); uploads to Supabase Storage `{user_id}/profile.jpg` + `user_metadata.avatar_path`; **role pill under name** — amber **Court Ordered** or green **Volunteer** from onboarding/Supabase `service_type`; footer © + “CleanUp Give Back is a 501(c)(3) nonprofit corporation.” |
 | PersonalDetailsIcon | `components/PersonalDetailsIcon.tsx` | ID card glyph (`personal-details.svg`) for Account "Personal Details" section header (`textPrimary`, 15×15); `PersonalDetailsRowIcon` keeps the original person glyph for the Edit Personal Details chevron row (`textTertiary`, 16×16) |
 | BirthdayPickerModal | `components/BirthdayPickerModal.tsx` | Shared MM/YYYY birthday sheet modal (`DateWheelPicker includeDay=false`) + `formatBirthdayDraft`/`formatBirthdayLabel`/`parseBirthdayDraft`/`ageFromBirthday` helpers; used by `AccountDetailsScreen` and `PersonalDetailsScreen` |
 | CountryPickerModal | `components/CountryPickerModal.tsx` | Shared country-code picker sheet modal + phone formatting/validation helpers (`digitsOnly`, `formatPhoneDisplay`, `phoneDisplayMaxLength`, `phonePlaceholder`, `validatePhone`) and `CountryChevronDownIcon`; used by `AccountPhoneScreen` and `PersonalDetailsScreen` |
@@ -101,9 +103,9 @@ Shared UI components in `frontend/src/components/`.
 | RequestDataScreen | `screens/RequestDataScreen.tsx` | Request your data (Figma `728:1385`); Access / Delete / Download radios + Submit → sent confirm |
 | RequestDataSentScreen | `screens/RequestDataSentScreen.tsx` | Data request sent (Figma `728:1648`); centered success card; Continue → Account |
 | EmailReceiptChip | `components/EmailReceiptChip.tsx` | Shared email confirmation chip for Order/Donation History (`colors.textNavInactive`; unaffected by muted order styling) |
-| OrderHistoryScreen | `screens/OrderHistoryScreen.tsx` | Order History (Figma `854:116`); Delivered cards + shared `EmailReceiptChip` |
+| OrderHistoryScreen | `screens/OrderHistoryScreen.tsx` | Order History (Figma `854:116`); order # + status left, date · time stamp top-right (`textTertiary`, 12px); shared `EmailReceiptChip` |
 | order history mock | `mocks/orderHistory.ts` | Mock order rows for `OrderHistoryScreen` |
-| DonationHistoryScreen | `screens/DonationHistoryScreen.tsx` | Donation History (Figma `854:205`); date + amount + shared `EmailReceiptChip` |
+| DonationHistoryScreen | `screens/DonationHistoryScreen.tsx` | Donation History (Figma `854:205`); date · time stamp top-right (`textTertiary`, 12px) + amount + shared `EmailReceiptChip` |
 | donation history mock | `mocks/donationHistory.ts` | Mock donation rows for `DonationHistoryScreen` |
 | ApprovalHistoryScreen | `screens/ApprovalHistoryScreen.tsx` | Approval History (Figma `854:294`); live `listSessions` + local stats; summary stats + status session cards; empty → `EmptyState` + **Log session?** |
 | approval history mock | `mocks/approvalHistory.ts` | Mock stats + session rows for `ApprovalHistoryScreen` |
@@ -115,7 +117,8 @@ Shared UI components in `frontend/src/components/`.
 | SessionDetailIcons | `components/SessionDetailIcons.tsx` | Share/hours/miles/photos via `expo-image` + `require('@/assets/figma/session-detail/*.svg')`; back chevron is `SessionSetupBackChevronIcon` on Session Detail top bar (not the unused `SessionDetailBackIcon` asset wrapper) |
 | SessionsIcons | `components/SessionsIcons.tsx` | Sessions list icons via `expo-image` + `require('@/assets/figma/sessions-list/*.svg')` |
 | ShopIcons | `components/ShopIcons.tsx` + `ShopAssetIcons.generated.tsx` | Shop/cart/checkout glyphs via `react-native-svg` (home cart/donate/streak + generated cart/checkout set) |
-| CartBadge | `components/CartBadge.tsx` | Centered green cart-count pill; shared by Shop/Product Detail/Cart/Checkout top bars |
+| CartBadge | `components/CartBadge.tsx` | App-bar count pill (`cart` = primary green, `notification` = tertiary); shared by Shop/Product Detail/Cart/Checkout cart icons and Home notification bell |
+| appBarChrome | `components/appBarChrome.ts` | Shared app-bar icon sizing — `APP_BAR_ICON_SIZE` (24) for bell, `APP_BAR_CART_ICON_SIZE` (28) for cart SVG optical match, `appBarIconWrap` touch frame |
 | EmptyCartToast | `components/EmptyCartToast.tsx` | Toast + `useCartIconPress` — empty cart icon tap alerts instead of navigating |
 | LinkCopiedToast | `components/LinkCopiedToast.tsx` | Toast confirming a location Maps link was copied (event detail) |
 | EventLocationMap | `components/EventLocationMap.tsx` (+ `EventLocationMapNative` / `EventLocationMapWebView`) | Event location live map pin (WebView MapLibre + Carto Voyager *raster* in Expo Go; native MapLibre in dev-client; web-app uses in-page `maplibre-gl` + same raster tiles); tap opens Apple/Google Maps; pin is the shared `EventLocationPinIcon` teardrop, anchored at its tip |

@@ -3,24 +3,30 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { BottomNavBar } from '@/components/navigation/BottomNavBar';
-import {
-  LiveSessionMinimizedBar,
-  useLiveSessionNavChrome,
-} from '@/components/navigation/LiveSessionNavChrome';
 import { SessionSetupTopAppBar } from '@/components/session-setup/SessionSetupTopAppBar';
 import { EmptyState } from '@/components/ui/EmptyState';
 
 import { DonateCardIcon } from '../components/AccountIcons';
 import { EmailReceiptChip } from '../components/EmailReceiptChip';
 import { defaultDonationHistory, type DonationHistoryItem } from '../mocks/donationHistory';
-import { layout, colors, fontFamilies, radius } from '../tokens';
+import { colors, fontFamilies, radius } from '../tokens';
 
 
 function DonationCard({ donation }: { donation: DonationHistoryItem }) {
+  const timestampLabel = donation.timeLabel
+    ? `${donation.dateLabel} · ${donation.timeLabel}`
+    : donation.dateLabel;
+
   return (
     <View style={s.card}>
-      <Text style={s.dateLabel}>{donation.dateLabel}</Text>
+      <View style={s.cardHeader}>
+        <Text
+          style={s.timestamp}
+          accessibilityLabel={`Donated ${timestampLabel}`}
+        >
+          {timestampLabel}
+        </Text>
+      </View>
 
       <View style={s.divider} />
 
@@ -47,11 +53,9 @@ export function DonationHistoryScreen({
 }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { isActive, onTrackPress, expandLiveSession, barStyle, barExtraHeight } =
-    useLiveSessionNavChrome();
 
   const bottomInset = Math.max(insets.bottom, 0);
-  const scrollBottomPad = bottomInset + layout.bottomNavHeight + barExtraHeight + 32;
+  const scrollBottomPad = bottomInset + 32;
 
   return (
     <View style={s.root}>
@@ -82,20 +86,6 @@ export function DonationHistoryScreen({
           </View>
         )}
       </ScrollView>
-
-      <View style={[s.bottomStack, { paddingBottom: bottomInset }]}>
-        {isActive && (
-          <LiveSessionMinimizedBar barStyle={barStyle} onExpand={expandLiveSession} />
-        )}
-        <BottomNavBar
-          activeTab="profile"
-          onHomePress={() => router.replace('/')}
-          onShopPress={() => {}}
-          onTrackPress={onTrackPress}
-          onSessionsPress={() => {}}
-          onProfilePress={() => router.replace('/account' as Href)}
-        />
-      </View>
     </View>
   );
 }
@@ -130,10 +120,16 @@ const s = StyleSheet.create({
     padding: 24,
     gap: 16,
   },
-  dateLabel: {
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+  timestamp: {
     fontFamily: fontFamilies.notoSansRegular,
-    fontSize: 16,
-    color: colors.textPrimary,
+    fontSize: 12,
+    lineHeight: 16,
+    color: colors.textTertiary,
+    textAlign: 'right',
   },
   divider: {
     height: StyleSheet.hairlineWidth,
@@ -159,12 +155,5 @@ const s = StyleSheet.create({
     fontFamily: fontFamilies.ibmPlexSansMedium,
     fontSize: 28,
     color: colors.primary,
-  },
-  bottomStack: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: colors.white,
   },
 });

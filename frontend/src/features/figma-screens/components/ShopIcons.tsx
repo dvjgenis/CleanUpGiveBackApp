@@ -2,6 +2,7 @@ import type { DimensionValue, StyleProp, ViewStyle } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { SHOP_DONATE_HEART_PATH } from './ShopDonateHeartPath';
+import { APP_BAR_CART_ICON_SIZE } from './appBarChrome';
 import { colors } from '../tokens';
 
 type SvgIconProps = {
@@ -20,9 +21,9 @@ const SHOP_DONATE_ICON_PATH =
  * Uses the clean filled cart geometry from `510:1153` (stroke export path was malformed).
  */
 export function ShopCartIcon({
-  width = 24,
-  height = 24,
-  color = colors.textPrimary,
+  width = APP_BAR_CART_ICON_SIZE,
+  height = APP_BAR_CART_ICON_SIZE,
+  color = colors.textTertiary,
   style,
 }: SvgIconProps) {
   return (
