@@ -2,6 +2,25 @@
 
 ---
 
+## [2026-08-18] — Mobile chrome polish (photo capture, app bar, week picker)
+
+**End goal:** Tighten volunteer-facing chrome on photo capture, Home/Shop app bars, event detail, and Service Hours week labels.
+
+**Shipped:**
+
+- `PhotoCaptureScreen` zoom pills rebuilt as inset-ring `ZoomPill`s (even 2px border; selected = gold ring + dark fill, white label, regular `×`); BeReal **Retake Photos** / **Submit** `paddingBottom` 48 → 20.
+- Shared `appBarChrome.ts`: bell 24px filled `textTertiary`; cart 28px filled `textTertiary` (optical match). `CartBadge` `cart` = primary, `notification` = tertiary.
+- Event detail **What to bring** heading uses `sectionBody` + 10px to the item card.
+- Service Hours date badge: `formatWeekRangeLabel` always uses short months (`Sep 14 - 20, 2026` / `Aug 31 - Sep 6, 2026`); badge stretches to **Week N** / **This week**; dropped extra chart `marginTop` that doubled the gap under the picker.
+
+**Also in this tree (pre-session, shipping with the same commit):** Account profile photo crop (`ProfilePhotoCropModal`, `cropProfilePhoto.ts`, `profilePhoto.ts`), EmptyState radius, order/donation history mocks, WelcomeScreen, `app.json` / package bumps.
+
+**Docs:** `docs/frontend/context/app.md`, `docs/frontend/context/components.md`, `docs/current.md`, this entry.
+
+**Status:** Code + docs. Push to `origin/main`.
+
+---
+
 ## [2026-08-18] — Welcome hero gradient, account profile photo, app-bar polish, DS radius fixes
 
 **End goal:** Match Figma welcome hero gradient; ship account profile photo pick/crop/upload; align membership Apply + EmptyState CTAs with design-system radius; unify app-bar icon/badge chrome; polish Service Hours calendar + order/donation history timestamps; refine photo-capture zoom pills.

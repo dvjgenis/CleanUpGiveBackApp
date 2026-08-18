@@ -116,7 +116,7 @@ Shared UI components in `frontend/src/components/`.
 | SessionPhotosSection | `features/session-tracking/components/SessionPhotosSection.tsx` | Horizontal checkpoint Photos carousel + `PhotoEnlargeModal`; empty → shared `EmptyState`; shared by Session Detail and Submission Confirmation |
 | SessionDetailIcons | `components/SessionDetailIcons.tsx` | Share/hours/miles/photos via `expo-image` + `require('@/assets/figma/session-detail/*.svg')`; back chevron is `SessionSetupBackChevronIcon` on Session Detail top bar (not the unused `SessionDetailBackIcon` asset wrapper) |
 | SessionsIcons | `components/SessionsIcons.tsx` | Sessions list icons via `expo-image` + `require('@/assets/figma/sessions-list/*.svg')` |
-| ShopIcons | `components/ShopIcons.tsx` + `ShopAssetIcons.generated.tsx` | Shop/cart/checkout glyphs via `react-native-svg` (home cart/donate/streak + generated cart/checkout set) |
+| ShopIcons | `components/ShopIcons.tsx` + `ShopAssetIcons.generated.tsx` | Shop/cart/checkout glyphs via `react-native-svg`; app-bar `ShopCartIcon` defaults to `textTertiary` at 28px (`APP_BAR_CART_ICON_SIZE`) so it optically matches the 24px filled Home bell |
 | CartBadge | `components/CartBadge.tsx` | App-bar count pill (`cart` = primary green, `notification` = tertiary); shared by Shop/Product Detail/Cart/Checkout cart icons and Home notification bell |
 | appBarChrome | `components/appBarChrome.ts` | Shared app-bar icon sizing — `APP_BAR_ICON_SIZE` (24) for bell, `APP_BAR_CART_ICON_SIZE` (28) for cart SVG optical match, `appBarIconWrap` touch frame |
 | EmptyCartToast | `components/EmptyCartToast.tsx` | Toast + `useCartIconPress` — empty cart icon tap alerts instead of navigating |

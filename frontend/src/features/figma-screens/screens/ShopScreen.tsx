@@ -182,16 +182,16 @@ function FeaturedItem({
         </View>
 
         <View style={s.featuredDetails}>
-          <View style={s.featuredTitleRow}>
-            <View style={s.featuredNameCol}>
-              <View style={s.bestSellerBadge}>
-                <Text style={s.bestSellerText}>Best Seller</Text>
-                <ShopStreakIcon width={16} height={16} />
-              </View>
-              <Text style={s.featuredName}>Trash Clean Up Kit</Text>
-              <Text style={s.featuredStock}>In stock</Text>
+          <View style={s.featuredHeader}>
+            <View style={s.bestSellerBadge}>
+              <Text style={s.bestSellerText}>Best Seller</Text>
+              <ShopStreakIcon width={16} height={16} />
             </View>
+            <View style={s.featuredNamePriceRow}>
+              <Text style={s.featuredName}>Trash Clean Up Kit</Text>
               <Text style={s.featuredPrice}>$49.99</Text>
+            </View>
+            <Text style={s.featuredStock}>In stock</Text>
           </View>
 
           <View style={s.featuredBtnGroup}>
@@ -589,15 +589,14 @@ const s = StyleSheet.create({
     paddingBottom: 16,
     gap: 20,
   },
-  featuredTitleRow: {
+  featuredHeader: {
+    gap: 5,
+  },
+  featuredNamePriceRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
-  },
-  featuredNameCol: {
-    flex: 1,
-    gap: 5,
   },
   bestSellerBadge: {
     flexDirection: 'row',
@@ -618,6 +617,7 @@ const s = StyleSheet.create({
     lineHeight: 14,
   },
   featuredName: {
+    flex: 1,
     fontFamily: fontFamilies.notoSansBold,
     fontSize: 20,
     lineHeight: 28,
@@ -629,6 +629,7 @@ const s = StyleSheet.create({
     color: colors.textNavInactive,
   },
   featuredPrice: {
+    flexShrink: 0,
     fontFamily: fontFamilies.ibmPlexSansSemiBold,
     fontSize: 24,
     color: colors.primary,
