@@ -3,6 +3,8 @@
  * Frame name is `shop_checkout` but this is the cart screen (Continue → checkout).
  */
 
+import { CLEANUP_KIT_PRICE } from '@/constants/commerce';
+
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 export const CART_ASSETS = {
   kitThumb: require('@/assets/figma/shop/cart/cart-kit.png') as number,
@@ -29,7 +31,7 @@ export const DEFAULT_CART_ITEMS: CartLineItem[] = [
     id: 'cleanup-kit',
     name: 'Trash Cleanup Kit',
     description: 'Essential gear for safe\npickups',
-    unitPrice: 29.99,
+    unitPrice: CLEANUP_KIT_PRICE,
     quantity: 1,
     image: CART_ASSETS.kitThumb,
   },

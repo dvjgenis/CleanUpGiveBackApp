@@ -13,7 +13,7 @@ Org-owned accounts for this project. **Do not store secrets, API keys, or passwo
 | Map provider | Live session map tiles | **Carto Voyager / Dark Matter** (Standard light/dark) + **Esri** (Satellite / Hybrid) via MapLibre — no API key for v1 |
 | Weather | Live session navbar | **Open-Meteo** — no API key |
 | Google Cloud | — | Not used for session tracking v1; defer until push notifications or Google geocoding needed |
-| Resend | Transactional email | Domain `cleanupgiveback.org` **verified** (2026-08-03); smoke-tested. Local: `admin-web-app/.env.local` (`RESEND_API_KEY`, `EMAIL_FROM`, `DONNA_EMAIL`). Fly `cleanup-sessions`: same three secrets **deployed**. **Optional next:** add the same vars on Vercel (`cleanupgiveback-web-app`) for production admin emails. Runbook: [admin/dulf-resend-supabase-fly.md](admin/dulf-resend-supabase-fly.md). |
+| Resend | Transactional email | Domain `cleanupgiveback.org` **verified** (2026-08-03); smoke-tested. Local: `admin-web-app/.env.local` (`RESEND_API_KEY`, `EMAIL_FROM`, `DONNA_EMAIL`). Fly `cleanup-sessions`: same three secrets **deployed**. **Optional next:** add the same vars on Vercel (`cleanupgiveback-web-app`) for production admin emails. Volunteer support address in branded templates is `info@cleanupgiveback.org` (not Donna’s name). **BIMI / inbox avatar:** assets at `/email/bimi-logo.svg` + `/email/sender-avatar.png`; DNS + CMC/VMC **not published yet** — Donna briefing [reports/2026-08-18-inbox-sender-logo-donna.md](reports/2026-08-18-inbox-sender-logo-donna.md); ops [admin/dulf-resend-supabase-fly.md](admin/dulf-resend-supabase-fly.md) §2.2.1. |
 | Payments | Shop and donations | **Stripe — next up** (not implemented; UI/mock only; `backend/payments/` empty) |
 
 ## EAS development build

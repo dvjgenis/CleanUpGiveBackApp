@@ -11,27 +11,27 @@ import {
 import { Sanchez_400Regular } from '@expo-google-fonts/sanchez';
 import { useFonts } from 'expo-font';
 import { useRouter } from 'expo-router';
-import { Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
 
 const REASONS = [
   {
-    title: 'We protect younger users',
-    body: 'The app collects photos and precise location during cleanup sessions. An admin confirms it is okay before those features turn on.',
+    title: 'Federal privacy law (COPPA)',
+    body: `The Children's Online Privacy Protection Act (COPPA) requires special protections for children under 13. Our Privacy Policy follows this standard.`,
   },
   {
-    title: 'It is required by law',
-    body: 'U.S. privacy laws require extra steps before minors can use apps that collect personal information.',
+    title: 'Sensitive data during cleanups',
+    body: 'The app collects live photos and precise GPS routes while you track cleanup sessions. That kind of personal information cannot be collected from users under 13 without parental consent, which we do not offer.',
   },
   {
-    title: 'What stays off for now',
-    body: 'Camera, location tracking, and session logging remain off until your account is approved.',
+    title: 'What happens at signup',
+    body: 'If you are under 13, account creation is blocked and the signup details you entered are purged from your device. Nothing is stored on our servers.',
   },
   {
-    title: 'What to do next',
-    body: 'Click the button below to speak to an admin in order to use the app.',
+    title: 'Who can use the app',
+    body: 'You must be 13 or older to sign up. Users aged 13 and older receive the same high privacy defaults described in our Privacy Policy.',
   },
 ] as const;
 
@@ -82,10 +82,10 @@ export function UnderAgeLearnWhyScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={s.intro}>
-          <Text style={s.title}>Why admin approval is required</Text>
+          <Text style={s.title}>Why users under 13 cannot sign up</Text>
           <Text style={s.subtitle}>
-            Clean Up - Give Back needs an admin to approve accounts for younger users before tracking
-            can begin.
+            Clean Up - Give Back is not intended for children under 13. These are the privacy-policy
+            reasons account creation is blocked.
           </Text>
         </View>
 
@@ -102,11 +102,11 @@ export function UnderAgeLearnWhyScreen() {
       <View style={s.footer}>
         <AnimatedPressable
           style={s.contactBtn}
-          onPress={() => Linking.openURL('mailto:admin@cleanupgiveback.org')}
+          onPress={() => router.back()}
           accessibilityRole="button"
-          accessibilityLabel="Contact Admin"
+          accessibilityLabel="Okay"
         >
-          <Text style={s.contactBtnText}>Contact Admin</Text>
+          <Text style={s.contactBtnText}>Okay</Text>
         </AnimatedPressable>
       </View>
     </SafeAreaView>

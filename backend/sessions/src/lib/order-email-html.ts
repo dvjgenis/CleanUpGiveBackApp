@@ -40,6 +40,10 @@ export type OrderEmailInput = {
   items?: OrderEmailLineItem[] | null;
   trackingNumber?: string | null;
   carrier?: string | null;
+  /** True when the order includes a cleanup kit (tracker bundle or shop). */
+  includesKit?: boolean | null;
+  /** Shipping summary label — `FREE`, `$10.00`, `Office pickup`, etc. */
+  shippingLabel?: string | null;
 };
 
 export const ORDER_EMAIL_PLACEHOLDERS = {
@@ -64,20 +68,31 @@ export const ORDER_EMAIL_SUBJECTS: Record<OrderEmailVariant, string> = {
 /** Hosted on the production admin deploy — Resend needs a public image URL. */
 export const ORDER_EMAIL_ASSET_BASE = 'https://cleanupgiveback-web-app.vercel.app/email';
 
-const SUPPORT_EMAIL = 'donnaadam@cleanupgiveback.org';
+export const ORDER_EMAIL_SUPPORT_EMAIL = 'info@cleanupgiveback.org';
+const SUPPORT_EMAIL = ORDER_EMAIL_SUPPORT_EMAIL;
 
-const PRODUCT_IMAGE_BY_ID: Record<string, string> = {
-  'cleanup-kit': `${ORDER_EMAIL_ASSET_BASE}/cleanup-kit.png`,
-  'trash-grabber': `${ORDER_EMAIL_ASSET_BASE}/trash-grabber.png`,
-  'tote-bags': `${ORDER_EMAIL_ASSET_BASE}/tote-bags.png`,
-  'adult-safety-vest': `${ORDER_EMAIL_ASSET_BASE}/adult-safety-vest.png`,
-  'child-safety-vest': `${ORDER_EMAIL_ASSET_BASE}/child-safety-vest.png`,
+/** Primary green CTA with deep-green stroke — not lime. */
+export const ORDER_EMAIL_CTA_BG = '#009540';
+export const ORDER_EMAIL_CTA_FG = '#ffffff';
+export const ORDER_EMAIL_CTA_BORDER = '#004d21';
+
+export const ORDER_EMAIL_PRODUCT_FILES: Record<string, string> = {
+  'cleanup-kit': 'cleanup-kit.png',
+  'trash-grabber': 'trash-grabber.png',
+  'tote-bags': 'tote-bags.png',
+  'adult-safety-vest': 'adult-safety-vest.png',
+  'child-safety-vest': 'child-safety-vest.png',
 };
+
+const PRODUCT_IMAGE_BY_ID: Record<string, string> = Object.fromEntries(
+  Object.entries(ORDER_EMAIL_PRODUCT_FILES).map(([id, file]) => [id, `${ORDER_EMAIL_ASSET_BASE}/${file}`]),
+);
 
 const PLACEHOLDER_IMAGE = `${ORDER_EMAIL_ASSET_BASE}/product-placeholder.png`;
 const LOGO_MARK_URL = `${ORDER_EMAIL_ASSET_BASE}/logo-mark.png`;
 const HEADER_PIXEL_URL = `${ORDER_EMAIL_ASSET_BASE}/header-pixel.png`;
-const SHIPPING_ICON_URL = `${ORDER_EMAIL_ASSET_BASE}/shipping.gif?v=6`;
+export const ORDER_EMAIL_SHIPPING_GIF_QUERY = 'v=6';
+const SHIPPING_ICON_URL = `${ORDER_EMAIL_ASSET_BASE}/shipping.gif?${ORDER_EMAIL_SHIPPING_GIF_QUERY}`;
 const FONT_REGULAR_URL = `${ORDER_EMAIL_ASSET_BASE}/fonts/NotoSans-Regular.ttf`;
 const FONT_BOLD_URL = `${ORDER_EMAIL_ASSET_BASE}/fonts/NotoSans-Bold.ttf`;
 const FONT_SANCHEZ_URL = `${ORDER_EMAIL_ASSET_BASE}/fonts/Sanchez-Regular.ttf`;
@@ -120,8 +135,32 @@ export function formatOrderDisplayId(orderId: string | null | undefined): string
 }
 
 export function formatUsdFromCents(cents: number | null | undefined): string | null {
-  if (cents == null || !Number.isFinite(cents) || cents <= 0) return null;
+  if (cents == null || !Number.isFinite(cents) || cents < 0) return null;
   return `$${(cents / 100).toFixed(2)}`;
+}
+
+export function isTrackerAccessOrder(items: OrderEmailLineItem[] | null | undefined): boolean {
+  return (items ?? []).some((item) => item.id === 'tracker-access');
+}
+
+export function defaultShippingLabelForFulfillment(
+  fulfillmentMethod: string | null | undefined,
+  items: OrderEmailLineItem[] | null | undefined,
+): string | null {
+  if (isTrackerAccessOrder(items)) return 'FREE';
+  if (fulfillmentMethod === 'office_pickup') return 'Office pickup';
+  if (fulfillmentMethod === 'local_dropoff') return 'Local drop-off';
+  if (fulfillmentMethod === 'usps_ship') return '$10.00';
+  return null;
+}
+
+export function resolveOrderShippingLabel(
+  input: Pick<OrderEmailInput, 'shippingLabel' | 'items'>,
+): string | null {
+  const explicit = input.shippingLabel?.trim();
+  if (explicit) return explicit;
+  if (isTrackerAccessOrder(input.items)) return 'FREE';
+  return null;
 }
 
 export function formatOrderDate(value: string | Date | null | undefined): string | null {
@@ -255,12 +294,15 @@ export function buildOrderEmailHtml(input: OrderEmailInput): string {
   );
   const orderDate = resolveOrderEmailField(formatOrderDate(input.createdAt), ORDER_EMAIL_PLACEHOLDERS.orderDate);
 
-  const realItems = (input.items ?? []).filter((item) => item.name?.trim() || (item.unitCents != null && item.unitCents > 0));
+  const realItems = (input.items ?? []).filter(
+    (item) => item.name?.trim() || (item.unitCents != null && item.unitCents >= 0),
+  );
   const items = realItems.length > 0 ? realItems : PLACEHOLDER_LINE_ITEMS;
   const itemsTotal =
     realItems.length > 0
       ? resolveOrderEmailField(formatUsdFromCents(input.totalCents), ORDER_EMAIL_PLACEHOLDERS.itemsTotal)
       : ORDER_EMAIL_PLACEHOLDERS.itemsTotal;
+  const shippingLabel = resolveOrderShippingLabel(input);
 
   const isShipped = input.variant === 'shipped';
   const headline = 'Your order is on its way!';
@@ -274,8 +316,8 @@ export function buildOrderEmailHtml(input: OrderEmailInput): string {
     ? `<tr><td align="center" style="padding-top:12px;">
         <table role="presentation" cellpadding="0" cellspacing="0" align="center">
           <tr>
-            <td class="oe-cta-cell" align="center" bgcolor="#c2d832" style="background-color:#c2d832;border-radius:4px;">
-              <a class="oe-cta-link" href="${escapeHtml(trackHref)}" style="display:inline-block;padding:16px 37px;font-family:${EMAIL_SERIF};font-size:18px;font-weight:400;color:#004d21;text-decoration:none;line-height:1.2;letter-spacing:${LETTER_SPACING};">Track Order</a>
+            <td class="oe-cta-cell" align="center" bgcolor="${ORDER_EMAIL_CTA_BG}" style="background-color:${ORDER_EMAIL_CTA_BG};border:2px solid ${ORDER_EMAIL_CTA_BORDER};border-radius:4px;">
+              <a class="oe-cta-link" href="${escapeHtml(trackHref)}" style="display:inline-block;padding:16px 37px;font-family:${EMAIL_SERIF};font-size:18px;font-weight:400;color:${ORDER_EMAIL_CTA_FG};text-decoration:none;line-height:1.2;letter-spacing:${LETTER_SPACING};">Track Order</a>
             </td>
           </tr>
         </table>
@@ -340,22 +382,6 @@ export function buildOrderEmailHtml(input: OrderEmailInput): string {
         line-height: 1.45 !important;
       }
     }
-    @media (prefers-color-scheme: dark) {
-      .oe-cta-cell {
-        background-color: #fcab29 !important;
-      }
-      .oe-cta-link {
-        color: #004d21 !important;
-      }
-    }
-    [data-ogsc] .oe-cta-cell,
-    [data-ogsb] .oe-cta-cell {
-      background-color: #fcab29 !important;
-    }
-    [data-ogsc] .oe-cta-link,
-    [data-ogsb] .oe-cta-link {
-      color: #004d21 !important;
-    }
   </style>
 </head>
 <body style="margin:0;padding:0;width:100%;height:100%;background-color:#bdcaba;">
@@ -400,6 +426,7 @@ export function buildOrderEmailHtml(input: OrderEmailInput): string {
                   <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                     ${summaryRow('Address:', address)}
                     ${summaryRow('Payment Method:', paymentMethod)}
+                    ${shippingLabel ? summaryRow('Shipping:', shippingLabel) : ''}
                     ${summaryRow('Order Total:', orderTotal)}
                     ${summaryRow('Order #:', orderNumberSummary)}
                     ${summaryRow('Order Date:', orderDate)}

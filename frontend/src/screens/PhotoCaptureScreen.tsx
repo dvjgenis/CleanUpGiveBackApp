@@ -54,6 +54,8 @@ import {
   consumePendingSessionSetupForm,
 } from '@/features/session-tracking/pendingSessionSetup';
 import { persistCheckpointPhotos } from '@/features/session-tracking/utils/persistCheckpointPhotos';
+import { FlashWarningModal } from '@/features/session-tracking/components/FlashWarningModal';
+import { isNighttime } from '@/utils/sunTimes';
 import { colors as tokens } from '@/constants/tokens';
 
 const C = {
@@ -656,13 +658,33 @@ function SequentialCapture({
   const [flashMode, setFlashMode] = useState<FlashMode>('off');
   const [zoom, setZoom] = useState(() => factorToZoom(1));
   const cameraRef = useRef<CameraView>(null);
+  const [isNight, setIsNight] = useState(false);
+  const [nightWarningVisible, setNightWarningVisible] = useState(false);
+  const nightWarningShownRef = useRef(false);
+
+  // Best-effort GPS+date nighttime check; fails open (stays false) if location is unavailable.
+  useEffect(() => {
+    let cancelled = false;
+    void resolveCheckpointCaptureCoords().then(({ latitude, longitude }) => {
+      if (cancelled || latitude == null || longitude == null) return;
+      setIsNight(isNighttime(new Date(), latitude, longitude));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // `onCameraReady` fires once per mount; flipping `facing` does not re-fire it on iOS (AC-36).
   useEffect(() => {
     setCaptureError(null);
     setZoom(factorToZoom(1));
     // Flash is back-camera only; reset so a retake doesn't keep a surprise flash.
-    if (step === 'front') setFlashMode('off');
+    if (step === 'front') {
+      setFlashMode('off');
+    } else if (isNight && flashMode === 'off' && !nightWarningShownRef.current) {
+      setNightWarningVisible(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
 
   if (!permission) {
@@ -823,6 +845,22 @@ function SequentialCapture({
           />
         </View>
       </View>
+
+      {nightWarningVisible ? (
+        <View style={StyleSheet.absoluteFillObject}>
+          <FlashWarningModal
+            onEnableFlash={() => {
+              setFlashMode('on');
+              nightWarningShownRef.current = true;
+              setNightWarningVisible(false);
+            }}
+            onDismiss={() => {
+              nightWarningShownRef.current = true;
+              setNightWarningVisible(false);
+            }}
+          />
+        </View>
+      ) : null}
     </View>
   );
 }

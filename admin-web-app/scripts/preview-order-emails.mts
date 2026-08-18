@@ -32,17 +32,39 @@ const shippedTracked = buildOrderEmailHtml({
     country: 'US',
   },
   items: [
-    { id: 'cleanup-kit', name: 'Trash Clean Up Kit', qty: 1, unitCents: 2999 },
+    { id: 'cleanup-kit', name: 'Trash Clean Up Kit', qty: 1, unitCents: 4999 },
     { id: 'tote-bags', name: 'Reusable Earth and Ocean Tote Bags', qty: 2, unitCents: 300 },
   ],
   trackingNumber: '1Z999AA10123456784',
   carrier: 'UPS',
+  shippingLabel: '$10.00',
+});
+const trackerBundle = buildOrderEmailHtml({
+  variant: 'placed',
+  volunteerName: 'Jordan Rivera',
+  orderId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+  createdAt: '2026-08-12T12:00:00.000Z',
+  totalCents: 5999,
+  includesKit: true,
+  shippingLabel: 'FREE',
+  shippingAddress: {
+    line1: '600 E Algonquin Road',
+    city: 'Des Plaines',
+    state: 'IL',
+    postalCode: '60018',
+    country: 'US',
+  },
+  items: [
+    { id: 'tracker-access', name: 'Tracking access (one-time)', qty: 1, unitCents: 5999 },
+    { id: 'cleanup-kit', name: 'Trash Clean Up Kit', qty: 1, unitCents: 0 },
+  ],
 });
 
 mkdirSync(outDir, { recursive: true });
 writeFileSync(join(outDir, 'order-email-placed.html'), placed);
 writeFileSync(join(outDir, 'order-email-shipped.html'), shippedPlaceholder);
 writeFileSync(join(outDir, 'order-email-shipped-tracked.html'), shippedTracked);
+writeFileSync(join(outDir, 'order-email-tracker-bundle.html'), trackerBundle);
 
 function assertContains(html: string, needle: string, label: string): void {
   if (!html.includes(needle)) {
@@ -78,7 +100,7 @@ assertContains(placed, ORDER_EMAIL_PLACEHOLDERS.itemPrice, 'placed item price');
 assertContains(placed, ORDER_EMAIL_PLACEHOLDERS.itemsTotal, 'placed items total');
 assertMissing(placed, '$23.99', 'placed fake item price');
 assertMissing(placed, '$50.00', 'placed fake items total');
-assertContains(placed, 'donnaadam@cleanupgiveback.org', 'placed');
+assertContains(placed, 'info@cleanupgiveback.org', 'placed');
 assertContains(placed, 'For assistance, email', 'placed assistance copy');
 assertContains(placed, '501(c)(3)', 'placed');
 assertContains(placed, 'bgcolor="#bdcaba"', 'placed full-width footer');
@@ -106,8 +128,11 @@ assertContains(shippedTracked, '600 E Algonquin Road', 'shipped tracked');
 assertContains(shippedTracked, 'Trash Clean Up Kit', 'shipped tracked');
 assertContains(shippedTracked, '$50.00', 'shipped tracked');
 assertContains(shippedTracked, 'Track Order', 'shipped tracked');
-assertContains(shippedTracked, 'background-color:#c2d832', 'shipped tracked lime CTA');
-assertContains(shippedTracked, 'prefers-color-scheme: dark', 'shipped tracked dark CTA');
+assertContains(shippedTracked, 'background-color:#009540', 'shipped tracked primary CTA');
+assertContains(shippedTracked, 'border:2px solid #004d21', 'shipped tracked CTA stroke');
+assertContains(shippedTracked, 'color:#ffffff', 'shipped tracked CTA text');
+assertMissing(shippedTracked, 'background-color:#c2d832', 'shipped tracked no lime CTA');
+assertMissing(shippedTracked, 'prefers-color-scheme: dark', 'shipped tracked no dark CTA swap');
 assertMissing(shippedTracked, 'track-order-button.png', 'shipped tracked CTA PNG');
 const expectedTrack = trackingUrl('UPS', '1Z999AA10123456784');
 if (!expectedTrack || !shippedTracked.includes(expectedTrack)) {
@@ -117,7 +142,16 @@ if (!expectedTrack || !shippedTracked.includes(expectedTrack)) {
 assertMissing(placed, 'fonts.googleapis.com', 'placed');
 assertMissing(shippedTracked, 'fonts.googleapis.com', 'shipped tracked');
 
+assertContains(trackerBundle, 'Tracking access (one-time)', 'tracker bundle access line');
+assertContains(trackerBundle, 'Trash Clean Up Kit', 'tracker bundle kit line');
+assertContains(trackerBundle, '$0.00', 'tracker bundle free kit');
+assertContains(trackerBundle, '$59.99', 'tracker bundle total');
+assertContains(trackerBundle, 'Shipping:', 'tracker bundle shipping row');
+assertContains(trackerBundle, 'FREE', 'tracker bundle free shipping');
+assertContains(trackerBundle, 'info@cleanupgiveback.org', 'tracker bundle support');
+
 console.log(`Wrote ${outDir}/order-email-placed.html`);
 console.log(`Wrote ${outDir}/order-email-shipped.html`);
 console.log(`Wrote ${outDir}/order-email-shipped-tracked.html`);
+console.log(`Wrote ${outDir}/order-email-tracker-bundle.html`);
 console.log('preview-order-emails: ok');

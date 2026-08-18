@@ -12,7 +12,7 @@ Living docs for the Clean Up - Give Back monorepo. Templates are copy-only.
 | [implementation-plan.md](implementation-plan.md) | Planned work and milestones |
 | [accounts-and-access.md](accounts-and-access.md) | Org accounts (no secrets in repo) |
 | [supabase.md](supabase.md) | Supabase + Fly setup for sessions (schema, env vars) |
-| [reports/](reports/) | Session / decision reports (e.g. dual-cam App Store stance) |
+| [reports/](reports/) | Session / decision reports (e.g. dual-cam App Store stance; [inbox logo for Donna](reports/2026-08-18-inbox-sender-logo-donna.md)) |
 | [research/shipping-integration-2026-08.md](research/shipping-integration-2026-08.md) | Shipping/tracking research brief for Donna (Phase 1 Pirate Ship + Resend → Phase 2 Shippo) |
 | [admin-web-app.md](admin-web-app.md) | Production admin console (`admin-web-app/` on Vercel) |
 | [admin/admin-portal-prd-v3.md](admin/admin-portal-prd-v3.md) | **Current** admin web app PRD (shipped + near-term roadmap) |
@@ -79,7 +79,7 @@ Living docs for the Clean Up - Give Back monorepo. Templates are copy-only.
 | [backend/specs/](backend/specs/) | Backend feature specs |
 | [backend/specs/sessions-api.md](backend/specs/sessions-api.md) | Sessions API contract (Fly + Supabase) |
 | [backend/specs/order-emails.md](backend/specs/order-emails.md) | Order placed + shipped Resend emails (Figma `1311:359`) |
-| [backend/specs/order-fulfillment.md](backend/specs/order-fulfillment.md) | Pickup vs USPS ship + optional kit (Donna Phase 1) |
+| [backend/specs/order-fulfillment.md](backend/specs/order-fulfillment.md) | Pickup vs USPS ship; tracker $59.99 includes kit (Donna Phase 1) |
 | [backend/specs/password-reset-email.md](backend/specs/password-reset-email.md) | Forgot Password Resend HTML (Figma `1311:449`; live HTML copy + logo PNG; send path not wired) |
 | [backend/specs/hours-reminder-email.md](backend/specs/hours-reminder-email.md) | Court-ordered inactivity nudge email (Figma Nudge `1311:432`; live on Vercel) |
 

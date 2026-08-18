@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -12,7 +12,6 @@ import { useRouter, type Href } from 'expo-router';
 
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { BottomNavBar } from '@/components/navigation/BottomNavBar';
-import { EmptyState } from '@/components/ui/EmptyState';
 import {
   LiveSessionMinimizedBar,
   useLiveSessionNavChrome,
@@ -33,7 +32,6 @@ import { layout, colors, fontFamilies, radius as R, shadows } from '../tokens';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type DonationAmount = '$5' | '$10' | '$15' | 'Custom';
-type CategoryTab = 'All' | 'Kits' | 'Tools' | 'Safety' | 'Bags';
 
 function donateHref(amount: DonationAmount): Href {
   if (amount === 'Custom') return '/donate?amount=custom' as Href;
@@ -46,26 +44,15 @@ interface Product {
   price: string;
   image: number;
   inStock: boolean;
-  category: Exclude<CategoryTab, 'All'>;
 }
 
 const DONATION_AMOUNTS: DonationAmount[] = ['$5', '$10', '$15'];
 
-const CATEGORY_TABS: CategoryTab[] = ['All', 'Kits', 'Tools', 'Safety', 'Bags'];
-
 const PRODUCTS: Product[] = [
-  {
-    id: 'kit',
-    name: 'Trash Clean Up Kit',
-    price: '$29.99',
-    image: SHOP_HOME_ASSETS.featuredKit,
-    inStock: true,
-    category: 'Kits',
-  },
-  { id: '1', name: 'Reusable Tote Bags', price: '$3.00', image: SHOP_HOME_ASSETS.productToteBags, inStock: true, category: 'Bags' },
-  { id: '2', name: 'Trash Grabber', price: '$23.99', image: SHOP_HOME_ASSETS.productTrashGrabber, inStock: true, category: 'Tools' },
-  { id: '3', name: 'Child Safety Vest', price: '$9.99', image: SHOP_HOME_ASSETS.productChildVest, inStock: true, category: 'Safety' },
-  { id: '4', name: 'Adult Safety Vest', price: '$12.99', image: SHOP_HOME_ASSETS.productAdultVest, inStock: true, category: 'Safety' },
+  { id: '1', name: 'Reusable Tote Bags', price: '$3.00', image: SHOP_HOME_ASSETS.productToteBags, inStock: true },
+  { id: '2', name: 'Trash Grabber', price: '$23.99', image: SHOP_HOME_ASSETS.productTrashGrabber, inStock: true },
+  { id: '3', name: 'Child Safety Vest', price: '$9.99', image: SHOP_HOME_ASSETS.productChildVest, inStock: true },
+  { id: '4', name: 'Adult Safety Vest', price: '$12.99', image: SHOP_HOME_ASSETS.productAdultVest, inStock: true },
 ];
 
 
@@ -203,7 +190,7 @@ function FeaturedItem({
               <Text style={s.featuredName}>Trash Clean Up Kit</Text>
               <Text style={s.featuredStock}>In stock</Text>
             </View>
-            <Text style={s.featuredPrice}>$29.99</Text>
+              <Text style={s.featuredPrice}>$49.99</Text>
           </View>
 
           <View style={s.featuredBtnGroup}>
@@ -229,38 +216,6 @@ function FeaturedItem({
           </View>
         </View>
       </AnimatedPressable>
-    </View>
-  );
-}
-
-// ─── Category Tabs ────────────────────────────────────────────────────────────
-function CategoryTabs({
-  activeCategory,
-  onSelect,
-}: {
-  activeCategory: CategoryTab;
-  onSelect: (cat: CategoryTab) => void;
-}) {
-  return (
-    <View style={s.tabsRow}>
-      {CATEGORY_TABS.map((cat) => {
-        const active = cat === activeCategory;
-        return (
-          <TouchableOpacity
-            key={cat}
-            style={[s.tabChip, active ? s.tabChipActive : s.tabChipInactive]}
-            onPress={() => onSelect(cat)}
-            activeOpacity={0.8}
-            accessibilityRole="button"
-            accessibilityLabel={`Filter by ${cat}`}
-            accessibilityState={{ selected: active }}
-          >
-            <Text style={s.tabChipText} numberOfLines={1}>
-              {cat}
-            </Text>
-          </TouchableOpacity>
-        );
-      })}
     </View>
   );
 }
@@ -322,28 +277,14 @@ function ProductGrid({
   products,
   onViewProduct,
   onAddProduct,
-  onShowAll,
 }: {
   products: Product[];
   onViewProduct: (productId: string) => void;
   onAddProduct: (product: Product) => void;
-  onShowAll: () => void;
 }) {
   const rows: Product[][] = [];
   for (let i = 0; i < products.length; i += 2) {
     rows.push(products.slice(i, i + 2));
-  }
-
-  if (products.length === 0) {
-    return (
-      <EmptyState
-        title="No products in this category yet."
-        body="Browse all gear or pick another filter."
-        ctaLabel="View all"
-        ctaAccessibilityLabel="View all products"
-        onCtaPress={onShowAll}
-      />
-    );
   }
 
   return (
@@ -370,15 +311,9 @@ export function ShopScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { cartCount, onCartPress, toastVisible, toastKey } = useCartIconPress();
-  const [activeCategory, setActiveCategory] = useState<CategoryTab>('All');
   const bottomInset = Math.max(insets.bottom, 0);
   const { isActive, onTrackPress, expandLiveSession, barStyle, barExtraHeight } =
     useLiveSessionNavChrome();
-
-  const filteredProducts = useMemo(() => {
-    if (activeCategory === 'All') return PRODUCTS;
-    return PRODUCTS.filter((p) => p.category === activeCategory);
-  }, [activeCategory]);
 
   const addShopProduct = (product: Product) => {
     const detailId = SHOP_PRODUCT_TO_DETAIL_ID[product.id] ?? product.id;
@@ -424,10 +359,8 @@ export function ShopScreen() {
             </View>
 
             <View style={s.listingsBlock}>
-              <CategoryTabs activeCategory={activeCategory} onSelect={setActiveCategory} />
               <ProductGrid
-                products={filteredProducts}
-                onShowAll={() => setActiveCategory('All')}
+                products={PRODUCTS}
                 onViewProduct={(productId) => {
                   const detailId = SHOP_PRODUCT_TO_DETAIL_ID[productId];
                   if (detailId) {
@@ -730,37 +663,6 @@ const s = StyleSheet.create({
     fontFamily: fontFamilies.notoSansSemiBold,
     fontSize: 14,
     color: colors.white,
-  },
-
-  // Category tabs — Figma 498:836 (full-width row; no horizontal scroll)
-  tabsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 12,
-  },
-  tabChip: {
-    flex: 1,
-    paddingHorizontal: 8,
-    paddingVertical: 8,
-    borderRadius: R.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tabChipActive: {
-    backgroundColor: colors.chipBg,
-  },
-  tabChipInactive: {
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.borderOutline,
-  },
-  tabChipText: {
-    fontFamily: fontFamilies.notoSansRegular,
-    fontSize: 14,
-    lineHeight: 18,
-    color: colors.textPrimary,
-    textAlign: 'center',
   },
 
   // Product grid — Figma 515:1543 (gap 20)

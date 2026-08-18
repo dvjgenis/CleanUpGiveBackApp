@@ -68,7 +68,7 @@ export const PRODUCT_DETAILS: Record<ProductId, ProductDetail> = {
   'cleanup-kit': {
     id: 'cleanup-kit',
     name: 'Trash Clean Up Kit',
-    price: '$29.99',
+    price: '$49.99',
     inStock: true,
     bestSeller: true,
     figmaNode: '492:114',

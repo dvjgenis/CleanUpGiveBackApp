@@ -15,6 +15,9 @@ import {
   type CartDonationAmount,
   type CartLineItem,
 } from './cart';
+import { TRACKER_ACCESS_PRICE } from '@/constants/commerce';
+import { computeShippingFee, shippingFeeLabel } from '@/lib/shipping';
+import type { FulfillmentMethod } from '@/lib/shopOrders';
 
 export interface CheckoutOrderLine {
   id: string;
@@ -38,9 +41,11 @@ export interface CheckoutSummary {
 export function getCheckoutSummary(
   items: CartLineItem[],
   donation: CartDonationAmount | null = DEFAULT_DONATION,
+  fulfillmentMethod: FulfillmentMethod = 'usps_ship',
 ): CheckoutSummary {
   const donationAmount = donationValue(donation);
   const tax = items.length > 0 ? DEFAULT_CART_SUMMARY.tax : 0;
+  const shippingFee = computeShippingFee(items, fulfillmentMethod);
   return {
     lines: items.map((item) => ({
       id: item.id,
@@ -53,9 +58,9 @@ export function getCheckoutSummary(
     itemCount: cartItemCount(items),
     subtotal: cartSubtotal(items),
     donation: donationAmount,
-    shippingLabel: DEFAULT_CART_SUMMARY.shippingLabel,
+    shippingLabel: shippingFeeLabel(shippingFee),
     tax,
-    total: cartTotal(items, donation, tax),
+    total: cartTotal(items, donation, tax) + shippingFee,
   };
 }
 
@@ -64,9 +69,10 @@ export function getDefaultCheckoutSummary(): CheckoutSummary {
   return getCheckoutSummary(DEFAULT_CART_ITEMS);
 }
 
-const TRACKER_ACCESS_PRICE = 49.99;
-
-/** Fixed one-time tracker payment shown after the free hour expires. */
+/** Fixed one-time tracker payment shown after the free hour expires.
+ *  Always resolves to free shipping — tracker-mode checkout only ever
+ *  represents the tracker-access fee (which bundles the free kit) and
+ *  never contains another shop product. */
 export function getTrackerCheckoutSummary(): CheckoutSummary {
   return {
     lines: [
@@ -82,7 +88,7 @@ export function getTrackerCheckoutSummary(): CheckoutSummary {
     itemCount: 1,
     subtotal: TRACKER_ACCESS_PRICE,
     donation: 0,
-    shippingLabel: 'Included',
+    shippingLabel: 'FREE',
     tax: 0,
     total: TRACKER_ACCESS_PRICE,
   };

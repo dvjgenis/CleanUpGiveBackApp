@@ -13,6 +13,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { CourtBadge } from "@/components/ui/CourtBadge";
+import { VoluntaryBadge } from "@/components/ui/VoluntaryBadge";
 import { UserPreviewDrawer, type UserRow } from "@/components/ui/UserPreviewDrawer";
 import { SampleDataBanner } from "@/components/ui/SampleDataBanner";
 import { ExportMenu } from "@/components/ui/ExportMenu";
@@ -164,10 +165,8 @@ export function VolunteersPage({ users = [], isMock = false }: { users?: UserRow
                       <CourtBadge />
                     </div>
                   ) : (
-                    <div className="lg:flex lg:justify-center">
-                      <span className="font-data text-[11px] font-semibold px-sm py-xs rounded-sm bg-[#f7fff1] text-primary whitespace-nowrap w-fit">
-                        Voluntary
-                      </span>
+                    <div className="flex items-center gap-sm lg:justify-center min-w-0">
+                      <VoluntaryBadge />
                     </div>
                   )}
                   <span className="font-data text-[13px] text-text-tertiary whitespace-nowrap lg:text-center">

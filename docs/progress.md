@@ -2,6 +2,41 @@
 
 ---
 
+## [2026-08-18] — Nighttime flash warning, checkout drop-off removal, activity-based Impact dropdown
+
+**End goal:** 8-part mobile UX/business-logic batch: warn volunteers to enable flash at night before photo capture; remove stale "no nighttime cleanings" copy; drop the local drop-off checkout option; show pickup hours and use the org name (not "Donna") in pickup copy; make the Home "Your Impact" month/year picker show only years/months with real activity; and finish wiring the $59.99 tracker price / $10 shop-shipping model (landed concurrently by another session) into `CheckoutScreen.tsx`.
+
+**Shipped:**
+
+- `frontend/src/utils/sunTimes.ts` (new, `suncalc`-based `isNighttime(date, lat, lng)`) + `frontend/src/features/session-tracking/components/FlashWarningModal.tsx` (new) — gated in `PhotoCaptureScreen.tsx`'s `SequentialCapture`: resolves GPS via the existing `resolveCheckpointCaptureCoords()`, shows once per capture session on the back-camera step when it's nighttime and flash is off, fails open (skips silently) if location is unavailable. `suncalc`'s own bundled types (not `@types/suncalc`, which was installed then removed) type `sunrise`/`sunset` as nullable for polar day/night — handled explicitly.
+- Removed "Nighttime cleanings are not allowed." from `SessionSetupGuideScreen.tsx`, `FreeHourScreen.tsx`, `SessionSetupFormScreen.tsx` (copy only, no enforcement logic existed).
+- Removed the "Local drop-off" fulfillment option from mobile checkout UI only (`CheckoutScreen.tsx` `FULFILLMENT_OPTIONS`); `FulfillmentMethod`'s `'local_dropoff'` value stays in `frontend/src/lib/shopOrders.ts` since `admin-web-app` independently depends on it for historical orders. Full follow-up cleanup: deleted every drop-off-only state/effect/handler/JSX block (~600 lines: address-suggestion autocomplete, distance-to-office calculation, the `SuggestionMenu` component, associated styles) and the now-fully-orphaned `frontend/src/features/figma-screens/utils/dropoffOfficeDistance.ts` + its test, plus the `DONNA_CONTACT_EMAIL`/`MAX_LOCAL_DROPOFF_MILES` constants in `orgLocations.ts` (had zero remaining callers).
+- `PICKUP_HOURS_OF_OPERATION = '10am–5pm'` (new, `orgLocations.ts`) shown under the office address at checkout; pickup-specific copy changed from "Donna" to "Clean Up Give Back" per explicit instruction (the USPS-ship hint intentionally still says Donna — scoped to pickup only).
+- `frontend/src/features/session-tracking/utils/homeDashboardStats.ts`: added `buildActiveImpactYearOptions`/`buildActiveImpactMonthOptionsForYear` (derived from `SessionStatRecord.startedAtMs`, always floor the current year/month even with zero sessions) alongside the existing pure-calendar builders (kept for their own tests); wired into `ImpactFeedSection.tsx`'s year/month picker with a fallback effect if the selected month drops out of range.
+
+**Docs:** none yet outside this entry — `docs/frontend/context/app.md`/`components.md` follow-up still open (see Status).
+
+**Status:** Code done, `tsc --noEmit` clean across `frontend`, `admin-web-app`, `backend/sessions`; 139 existing frontend tests pass. Not yet reflected in `docs/frontend/context/app.md` (checkout/session screens) or `components.md` (new `FlashWarningModal`) — flagged for next session. Pre-existing, unrelated ESLint parse error in `frontend/src/screens/UnderAgeLearnWhyScreen.tsx:22` (from concurrent changes outside this session) still needs a look.
+
+---
+
+## [2026-08-18] — Volunteer email template refresh + tracker pricing
+
+**End goal:** Volunteer emails use brand-green CTAs, `info@` support, CID images, and tracker checkout is $59.99 with the kit included and free shipping.
+
+**Shipped:**
+
+- Order / hours-reminder / password-reset HTML: CTA `#009540` + `#004d21` stroke + white label; support `info@cleanupgiveback.org`; hours figure white on `#004d21`.
+- Order sends CID-inline logo, header pixel, shipping GIF, and product thumbs (`buildOrderEmailForSend` in admin-web-app + Fly `backend/sessions`).
+- Tracker checkout **$59.99** with kit always included and USPS **FREE**; standalone shop kit **$49.99** + `$10.00` USPS.
+- BIMI assets: `admin-web-app/public/email/bimi-logo.svg` + `sender-avatar.png`. Inbox chip stays the pink **N** until DNS + CMC/VMC (ops, not done).
+
+**Docs:** `docs/backend/specs/order-emails.md`, `hours-reminder-email.md`, `password-reset-email.md`, `order-fulfillment.md`, `docs/current.md`, `docs/admin/dulf-resend-supabase-fly.md` §2.2.1, Donna briefing `docs/reports/2026-08-18-inbox-sender-logo-donna.md`.
+
+**Status:** Code done. BIMI DNS / certificate still ops.
+
+---
+
 ## [2026-08-18] — Stationary session replay path fix
 
 **End goal:** Ending a session without moving must not draw an animated walking path on session-detail replay.

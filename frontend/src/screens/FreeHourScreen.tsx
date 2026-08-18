@@ -73,7 +73,7 @@ export function FreeHourScreen({
           <Text style={s.title}>One free hour!</Text>
           <Text style={s.subtitle}>
             When you start tracking, you get the chance to explore the tracker for 1 hour before
-            paying. Nighttime cleanings are not allowed.
+            paying.
           </Text>
         </View>
       </View>

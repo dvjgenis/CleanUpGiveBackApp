@@ -272,8 +272,7 @@ export function SessionSetupFormScreen() {
           <View style={s.introCard}>
             <Text style={s.introTitle}>Ready to Make an Impact?</Text>
             <Text style={s.introSubtitle}>
-              Fill out the details to start tracking your clean-up session. Nighttime cleanings are
-              not allowed.
+              Fill out the details to start tracking your clean-up session.
             </Text>
           </View>
         </Animated.View>

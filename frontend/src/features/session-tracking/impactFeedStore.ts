@@ -17,6 +17,7 @@ import {
 } from './utils/sessionFormat';
 import type { SessionStatRecord } from './utils/homeDashboardStats';
 import { toRouteCoordinates, type RouteCoordinate } from './utils/geo';
+import { collapseStationaryRoute } from './utils/routeFiltering';
 
 const STORAGE_KEY = '@cugb/impactFeedLocal';
 const MAX_FEED_ITEMS = 20;
@@ -104,6 +105,18 @@ function simplifyRoutePreview(coordinates: readonly RouteCoordinate[]): RouteCoo
   return preview;
 }
 
+/** Matches session-detail map collapse so jitter-only paths don't draw in feed tiles. */
+function buildRoutePreview(
+  coordinates: readonly RouteCoordinate[],
+  distanceMiles?: number | null,
+): RouteCoordinate[] {
+  const collapsed = collapseStationaryRoute(
+    coordinates.length > 0 ? [...coordinates] : [],
+    { distanceMiles },
+  );
+  return simplifyRoutePreview(collapsed);
+}
+
 function normalizeStoredFeedItem(value: unknown): ImpactFeedItem | null {
   if (!value || typeof value !== 'object') {
     return null;
@@ -122,7 +135,7 @@ function normalizeStoredFeedItem(value: unknown): ImpactFeedItem | null {
   }
 
   const routePreview = Array.isArray(item.routePreview)
-    ? simplifyRoutePreview(toRouteCoordinates(item.routePreview as number[][]))
+    ? buildRoutePreview(toRouteCoordinates(item.routePreview as number[][]))
     : EMPTY_ROUTE;
 
   return {
@@ -206,7 +219,7 @@ export function feedItemsFromSnapshot(snapshot: CompletedSessionSnapshot): Impac
       elapsedSeconds: snapshot.elapsedSeconds,
     }),
   );
-  const routePreview = simplifyRoutePreview(snapshot.routeCoordinates);
+  const routePreview = buildRoutePreview(snapshot.routeCoordinates, snapshot.distanceMiles);
 
   return snapshot.submittedCheckpoints.flatMap((checkpoint) => {
     if (!checkpoint.progressUri) {
@@ -287,7 +300,10 @@ async function feedItemsFromApiSession(sessionId: string): Promise<ImpactFeedIte
       }),
   );
   const status = mapApiStatusToApproval(data.session.status);
-  const routePreview = simplifyRoutePreview(toRouteCoordinates(data.session.route));
+  const routePreview = buildRoutePreview(
+    toRouteCoordinates(data.session.route ?? []),
+    data.session.distanceMiles,
+  );
 
   const storagePaths = data.checkpoints
     .map((checkpoint) => checkpoint.progressPath)

@@ -13,7 +13,6 @@ import { Sanchez_400Regular } from '@expo-google-fonts/sanchez';
 import { useFonts } from 'expo-font';
 import { useRouter } from 'expo-router';
 import {
-  Linking,
   StyleSheet,
   Text,
   View,
@@ -73,20 +72,21 @@ export function UnderAgeScreen() {
             <AlertTriangleIcon />
           </View>
 
-          <Text style={s.title}>Get in touch with an admin.</Text>
+          <Text style={s.title}>You must be 13 or older to use this app.</Text>
 
           <Text style={s.body}>
-            You can't use the app yet. Ask a parent, guardian, or program admin to contact your organization's admin.
+            Users under 13 are not allowed to create an account or use Clean Up - Give Back, as required
+            by the Children's Online Privacy Protection Act (COPPA) and our Privacy Policy.
           </Text>
 
           <View style={s.actions}>
             <AnimatedPressable
               style={s.contactBtn}
-              onPress={() => Linking.openURL('mailto:admin@cleanupgiveback.org')}
+              onPress={() => router.back()}
               accessibilityRole="button"
-              accessibilityLabel="Contact Admin"
+              accessibilityLabel="Okay"
             >
-              <Text style={s.contactBtnText}>Contact Admin</Text>
+              <Text style={s.contactBtnText}>Okay</Text>
             </AnimatedPressable>
 
             <AnimatedPressable

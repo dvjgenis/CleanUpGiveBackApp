@@ -1,7 +1,7 @@
 /** Canonical shop catalog — matches mobile `/shop` pricing. */
 
 export const SHOP_ITEM_CATALOG = [
-  { id: 'cleanup-kit', label: 'Trash Cleanup Kit', chartLabel: 'Kit', unitCents: 2999 },
+  { id: 'cleanup-kit', label: 'Trash Cleanup Kit', chartLabel: 'Kit', unitCents: 4999 },
   { id: 'tote-bags', label: 'Tote Bags', chartLabel: 'Tote', unitCents: 300 },
   { id: 'trash-grabber', label: 'Trash Grabber', chartLabel: 'Grabber', unitCents: 2399 },
   { id: 'adult-safety-vest', label: 'Adult Safety Vest', chartLabel: 'Adult vest', unitCents: 1299 },

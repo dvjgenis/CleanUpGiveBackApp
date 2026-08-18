@@ -8,5 +8,4 @@ export const CLEAN_UP_GIVE_BACK_LOCATION = {
   longitude: -87.9096899,
 } as const;
 
-export const DONNA_CONTACT_EMAIL = 'donnaadam@cleanupgiveback.org';
-export const MAX_LOCAL_DROPOFF_MILES = 30;
+export const PICKUP_HOURS_OF_OPERATION = '10am–5pm';

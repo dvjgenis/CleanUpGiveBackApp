@@ -4,7 +4,7 @@ Shop checkout and donation processing.
 
 ## Purpose
 
-Handles cart checkout, order history, tracker unlock ($49.99 app access), and donation flows. Checkout records `fulfillment_method` (USPS ship / office pickup / local drop-off) and `includes_kit`. Same price regardless of fulfillment. Mobile UI exists (`/checkout`, `/donate`, tracker paywall); **no live Stripe charges yet**.
+Handles cart checkout, order history, tracker unlock ($59.99 access + included kit, FREE shipping), and donation flows. Checkout records `fulfillment_method` (USPS ship / office pickup / local drop-off) and `includes_kit`. Standalone shop kit is $49.99 plus charged USPS shipping. Mobile UI exists (`/checkout`, `/donate`, tracker paywall); **no live Stripe charges yet**.
 
 ## Status (2026-08-03)
 

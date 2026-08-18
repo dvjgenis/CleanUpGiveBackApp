@@ -7,12 +7,13 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { logEmailSend } from '@/lib/email-log';
 import { getTemplate } from '@/lib/email-templates';
 import {
-  buildOrderEmailHtml,
+  defaultShippingLabelForFulfillment,
   ORDER_EMAIL_SUBJECTS,
   parseShopOrderAddress,
   parseShopOrderItems,
   type OrderEmailVariant,
 } from '@/lib/order-email-html';
+import { buildOrderEmailForSend } from '@/lib/order-email-send';
 import { getFromAddress, getResendClient } from '@/lib/resend';
 import { getVolunteerDirectory, isMockAddress } from '@/lib/volunteers';
 
@@ -25,6 +26,8 @@ type ShopOrderRow = {
   tracking_number: string | null;
   carrier: string | null;
   created_at: string;
+  includes_kit?: boolean | null;
+  fulfillment_method?: string | null;
 };
 
 function isGeneratedVolunteerName(name: string | null | undefined): boolean {
@@ -44,7 +47,7 @@ export async function sendShopOrderEmail({
 }): Promise<void> {
   const { data: order, error } = await supabase
     .from('shop_orders')
-    .select('id, user_id, items, total_cents, shipping_address, tracking_number, carrier, created_at')
+    .select('id, user_id, items, total_cents, shipping_address, tracking_number, carrier, created_at, includes_kit, fulfillment_method')
     .eq('id', orderId)
     .single();
 
@@ -63,16 +66,19 @@ export async function sendShopOrderEmail({
   const templateType = variant === 'placed' ? 'order_placed' : 'shipped';
   const template = await getTemplate(templateType);
   const volunteerName = isGeneratedVolunteerName(entry.name) ? null : entry.name;
-  const html = buildOrderEmailHtml({
+  const items = parseShopOrderItems(row.items);
+  const { html, attachments } = buildOrderEmailForSend({
     variant,
     volunteerName,
     orderId: row.id,
     createdAt: row.created_at,
     totalCents: row.total_cents,
     shippingAddress: parseShopOrderAddress(row.shipping_address),
-    items: parseShopOrderItems(row.items),
+    items,
     trackingNumber: row.tracking_number,
     carrier: row.carrier,
+    includesKit: row.includes_kit ?? null,
+    shippingLabel: defaultShippingLabelForFulfillment(row.fulfillment_method, items),
   });
   const subject = template.subject?.trim() || ORDER_EMAIL_SUBJECTS[variant];
 
@@ -84,6 +90,7 @@ export async function sendShopOrderEmail({
     to: entry.email,
     subject,
     html,
+    attachments,
   });
 
   await logEmailSend(supabase, {

@@ -1,6 +1,7 @@
 import { AnimatedPressable } from '@/components/motion/AnimatedPressable';
 import { PlayOnceLottie } from '@/components/ui/PlayOnceLottie';
 import { colors, fontFamilies, radius, spacing } from '@/constants/tokens';
+import { TRACKER_ACCESS_PRICE } from '@/constants/commerce';
 import { ShopStripeLogo } from '@/features/figma-screens/components/ShopAssetIcons.generated';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -43,9 +44,9 @@ export function FreeTrialModal({ onContinue, onPayLater }: Props) {
             <View style={s.priceRow}>
               <View style={s.priceDescription}>
                 <Text style={s.priceLabel}>One-time</Text>
-                <Text style={s.priceSublabel}>Unlimited tracking access</Text>
+                <Text style={s.priceSublabel}>Unlimited tracking access · Free shipping on your kit</Text>
               </View>
-              <Text style={s.priceValue}>$49.99</Text>
+              <Text style={s.priceValue}>${TRACKER_ACCESS_PRICE.toFixed(2)}</Text>
             </View>
           </View>
 

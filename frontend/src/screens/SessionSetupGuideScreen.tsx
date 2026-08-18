@@ -66,9 +66,6 @@ export function SessionSetupGuideScreen() {
             <Text style={s.headlineDark}>{'How does this work? '}</Text>
             <Text style={s.headlineGreen}>{"Let's walk through it."}</Text>
           </Text>
-          <Text style={s.nightNote}>
-            Nighttime cleanings are not allowed.
-          </Text>
         </CoachmarkEnter>
       </View>
 
@@ -126,13 +123,6 @@ const s = StyleSheet.create({
   headlineGreen: {
     fontFamily: 'Sanchez_400Regular',
     color: C.primary,
-  },
-  nightNote: {
-    marginTop: 12,
-    fontFamily: 'NotoSans_400Regular',
-    fontSize: 14,
-    lineHeight: 20,
-    color: C.textTertiary,
   },
 
   illustrationZone: {

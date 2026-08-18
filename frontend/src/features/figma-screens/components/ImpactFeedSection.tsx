@@ -28,9 +28,9 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { SessionRouteMapPreview } from '@/features/session-tracking/components/SessionRouteMapPreview';
 import type { RouteCoordinate } from '@/features/session-tracking/utils/geo';
 import {
-  buildImpactMonthOptionsForYear,
+  buildActiveImpactMonthOptionsForYear,
+  buildActiveImpactYearOptions,
   buildImpactMonthSummary,
-  buildImpactYearOptions,
   formatImpactHoursPhrase,
   formatImpactMonthSentence,
   type SessionStatRecord,
@@ -118,8 +118,8 @@ export function ImpactFeedSection({
 }: Props) {
   const now = useMemo(() => new Date(), []);
   const yearOptions = useMemo(
-    () => buildImpactYearOptions(now).filter((year) => year <= now.getFullYear()),
-    [now],
+    () => buildActiveImpactYearOptions(sessionStats, now),
+    [sessionStats, now],
   );
   const [selectedYear, setSelectedYear] = useState(() => now.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(() => now.getMonth() + 1);
@@ -195,9 +195,18 @@ export function ImpactFeedSection({
 
   const monthKey = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}`;
   const monthOptions = useMemo(
-    () => buildImpactMonthOptionsForYear(selectedYear),
-    [selectedYear],
+    () => buildActiveImpactMonthOptionsForYear(sessionStats, selectedYear, now),
+    [sessionStats, selectedYear, now],
   );
+
+  useEffect(() => {
+    if (!monthOptions.some((option) => option.monthKey === monthKey)) {
+      const fallbackMonth = monthOptions[0]
+        ? Number(monthOptions[0].monthKey.slice(5, 7))
+        : now.getMonth() + 1;
+      setSelectedMonth(fallbackMonth);
+    }
+  }, [monthKey, monthOptions, now]);
   const selectedSummary = useMemo(
     () => buildImpactMonthSummary(sessionStats, monthKey),
     [sessionStats, monthKey],

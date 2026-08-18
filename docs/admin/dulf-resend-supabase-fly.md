@@ -116,6 +116,34 @@ EMAIL_FROM=noreply@cleanupgiveback.org
 
 - No need to paste DKIM/SPF into app env — those stay at the DNS host.
 
+Do **not** change `EMAIL_FROM` to a personal mailbox to get a nicer avatar. The pink **N** in Gmail is the letter of `noreply@…`; the in-email `logo-mark.png` does not set the inbox chip.
+
+### 2.2.1 Inbox sender logo (BIMI) — ops not done
+
+Assets are in the repo and will ship on the next Vercel deploy of `admin-web-app`:
+
+- `https://cleanupgiveback-web-app.vercel.app/email/bimi-logo.svg` (SVG Tiny P/S, square, white mark on `#009540`)
+- `https://cleanupgiveback-web-app.vercel.app/email/sender-avatar.png` (256×256 raster of the same mark)
+
+The inbox avatar does **not** appear until DNS + mailbox-provider checks pass. From address stays `EMAIL_FROM` / `noreply@cleanupgiveback.org`. Do not change `DONNA_EMAIL`.
+
+**Checklist (publish at the DNS host, not in app env):**
+
+1. **DMARC** for `cleanupgiveback.org` must be `p=quarantine` or `p=reject` (not `p=none`). Confirm SPF + DKIM already align (done 2026-08-03).
+2. Host the SVG over HTTPS (Vercel path above after deploy).
+3. **Gmail** will ignore BIMI without a **CMC** (Common Mark Certificate — logo used 1+ year) or **VMC** (Verified Mark Certificate — trademark). Apple Mail / Yahoo are less strict but still need DMARC + the SVG.
+4. Add TXT:
+
+```text
+default._bimi.cleanupgiveback.org.  TXT  "v=BIMI1; l=https://cleanupgiveback-web-app.vercel.app/email/bimi-logo.svg;"
+```
+
+After a VMC/CMC is issued, append `a=https://…certificate.pem` to that TXT.
+
+**Optional faster chips (not BIMI):** Gravatar on `noreply@cleanupgiveback.org`; Apple Business Connect for Apple Mail. Gravatar does **not** change Gmail.
+
+**Donna briefing (2026-08-18):** everyday-language write-up for the Gmail pink-N inbox circle vs paid CMC/VMC — [reports/2026-08-18-inbox-sender-logo-donna.md](../reports/2026-08-18-inbox-sender-logo-donna.md).
+
 ### 2.3 Donna’s inbox (`DONNA_EMAIL`)
 
 Set to the address that should receive “new session for review” alerts, e.g.:

@@ -32,11 +32,16 @@ export const HOURS_REMINDER_ASSET_BASE = 'https://cleanupgiveback-web-app.vercel
 
 export const HOURS_REMINDER_BELL_SIZE = 120;
 
-/** Amber on deep green so hours stay an accent and meet WCAG AA (~5.3:1). */
-export const HOURS_REMINDER_HOURS_FG = '#fcab29';
+/** White hours on deep green for contrast on the forest-green header. */
+export const HOURS_REMINDER_HOURS_FG = '#ffffff';
 export const HOURS_REMINDER_HOURS_BG = '#004d21';
 
-const SUPPORT_EMAIL = 'donnaadam@cleanupgiveback.org';
+/** Primary green CTA with deep-green stroke — not lime. */
+export const HOURS_REMINDER_CTA_BG = '#009540';
+export const HOURS_REMINDER_CTA_FG = '#ffffff';
+export const HOURS_REMINDER_CTA_BORDER = '#004d21';
+
+const SUPPORT_EMAIL = 'info@cleanupgiveback.org';
 
 const FONT_HEADING = "Georgia, 'Times New Roman', serif";
 const FONT_BODY = "'Trebuchet MS', Tahoma, Arial, Helvetica, sans-serif";
@@ -162,22 +167,6 @@ export function buildHoursReminderEmailHtml(input: HoursReminderEmailInput = {})
         font-size: 18px !important;
       }
     }
-    @media (prefers-color-scheme: dark) {
-      .hr-cta-cell {
-        background-color: #fcab29 !important;
-      }
-      .hr-cta-link {
-        color: #004d21 !important;
-      }
-    }
-    [data-ogsc] .hr-cta-cell,
-    [data-ogsb] .hr-cta-cell {
-      background-color: #fcab29 !important;
-    }
-    [data-ogsc] .hr-cta-link,
-    [data-ogsb] .hr-cta-link {
-      color: #004d21 !important;
-    }
   </style>
 </head>
 <body style="margin:0;padding:0;width:100%;height:100%;background-color:#bdcaba;">
@@ -217,8 +206,8 @@ export function buildHoursReminderEmailHtml(input: HoursReminderEmailInput = {})
                 <td align="center" style="padding-top:32px;">
                   <table role="presentation" cellpadding="0" cellspacing="0" align="center">
                     <tr>
-                      <td class="hr-cta-cell" align="center" bgcolor="#c2d832" style="background-color:#c2d832;border-radius:4px;">
-                        <a class="hr-cta-link" href="${escapeHtml(openHref)}" style="display:inline-block;padding:16px 37px;font-family:'Sanchez',${FONT_HEADING};font-size:18px;font-weight:400;color:#3e4a3d;text-decoration:none;line-height:1.2;letter-spacing:${LETTER_SPACING};">${escapeHtml(HOURS_REMINDER_CTA_LABEL)}</a>
+                      <td class="hr-cta-cell" align="center" bgcolor="${HOURS_REMINDER_CTA_BG}" style="background-color:${HOURS_REMINDER_CTA_BG};border:2px solid ${HOURS_REMINDER_CTA_BORDER};border-radius:4px;">
+                        <a class="hr-cta-link" href="${escapeHtml(openHref)}" style="display:inline-block;padding:16px 37px;font-family:'Sanchez',${FONT_HEADING};font-size:18px;font-weight:400;color:${HOURS_REMINDER_CTA_FG};text-decoration:none;line-height:1.2;letter-spacing:${LETTER_SPACING};">${escapeHtml(HOURS_REMINDER_CTA_LABEL)}</a>
                       </td>
                     </tr>
                   </table>

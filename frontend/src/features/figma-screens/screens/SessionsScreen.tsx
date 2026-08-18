@@ -446,9 +446,14 @@ export function SessionsScreen() {
   const selectedCount = selectedIds.size;
   const showBulkActionBar =
     selectionMode && (selectedApprovedIds.length > 0 || selectedDeletableSessions.length > 0);
+  const showBulkDownload = selectedApprovedIds.length > 0;
+  const showBulkDelete = selectedDeletableSessions.length > 0;
+  const bulkActionCount = (showBulkDownload ? 1 : 0) + (showBulkDelete ? 1 : 0);
 
   const bottomInset = Math.max(insets.bottom, 0);
-  const bulkBarHeight = showBulkActionBar ? 56 : 0;
+  const bulkBarHeight = showBulkActionBar
+    ? 16 + bulkActionCount * 44 + (bulkActionCount > 1 ? 10 : 0)
+    : 0;
   const scrollBottomPad = bottomInset + layout.bottomNavHeight + bulkBarHeight + barExtraHeight + 24;
 
   const handleEnterSelection = useCallback(() => {
@@ -690,26 +695,26 @@ export function SessionsScreen() {
 
       <View style={[s.bottomStack, { paddingBottom: bottomInset }]}>
         {showBulkActionBar && (
-          <View style={s.bulkBar}>
-            {selectedApprovedIds.length > 0 ? (
+          <View style={[s.bulkBar, bulkActionCount > 1 && s.bulkBarStacked]}>
+            {showBulkDownload ? (
               <AnimatedPressable
                 scaleTo={0.98}
                 onPress={handleBulkDownloadPdf}
                 disabled={pdfDownloading}
                 accessibilityRole="button"
                 accessibilityLabel={`Download PDF for ${selectedApprovedIds.length} approved sessions`}
-                style={[s.bulkDownloadButton, pdfDownloading && s.bulkDeleteButtonDisabled]}
+                style={[s.bulkActionButton, s.bulkDownloadButton, pdfDownloading && s.bulkActionButtonDisabled]}
               >
                 {pdfDownloading ? (
                   <ActivityIndicator color={colors.white} />
                 ) : (
-                  <Text style={s.bulkDeleteLabel}>
+                  <Text style={s.bulkActionLabel}>
                     Download PDF ({selectedApprovedIds.length})
                   </Text>
                 )}
               </AnimatedPressable>
             ) : null}
-            {selectedDeletableSessions.length > 0 ? (
+            {showBulkDelete ? (
               <AnimatedPressable
                 scaleTo={0.98}
                 onPress={handleBulkDelete}
@@ -717,12 +722,12 @@ export function SessionsScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={`Delete ${selectedDeletableSessions.length} selected sessions`}
                 accessibilityState={{ disabled: bulkDeleting }}
-                style={[s.bulkDeleteButton, bulkDeleting && s.bulkDeleteButtonDisabled]}
+                style={[s.bulkActionButton, s.bulkDeleteButton, bulkDeleting && s.bulkActionButtonDisabled]}
               >
                 {bulkDeleting ? (
                   <ActivityIndicator color={colors.white} />
                 ) : (
-                  <Text style={s.bulkDeleteLabel}>
+                  <Text style={s.bulkActionLabel}>
                     Delete ({selectedDeletableSessions.length})
                   </Text>
                 )}
@@ -1020,29 +1025,31 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
   },
-  bulkDownloadButton: {
+  bulkBarStacked: {
+    flexDirection: 'column',
+  },
+  bulkActionButton: {
     flex: 1,
     minHeight: 44,
     borderRadius: R.sm,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 12,
-  },
-  bulkDeleteButton: {
-    flex: 1,
-    borderRadius: R.sm,
-    backgroundColor: colors.statusDeclinedText,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 16,
   },
-  bulkDeleteButtonDisabled: {
+  bulkDownloadButton: {
+    backgroundColor: colors.primary,
+  },
+  bulkDeleteButton: {
+    backgroundColor: colors.statusDeclinedText,
+  },
+  bulkActionButtonDisabled: {
     opacity: 0.7,
   },
-  bulkDeleteLabel: {
+  bulkActionLabel: {
     fontFamily: fontFamilies.notoSansSemiBold,
     fontSize: 15,
+    lineHeight: 20,
     color: colors.white,
+    textAlign: 'center',
   },
 });

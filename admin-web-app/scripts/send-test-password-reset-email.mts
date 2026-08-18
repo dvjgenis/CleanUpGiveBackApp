@@ -4,7 +4,7 @@
  *   npx tsx scripts/send-test-password-reset-email.mts --to=you@example.com
  *
  * Loads `admin-web-app/.env.local` for RESEND_API_KEY / EMAIL_FROM / DONNA_EMAIL.
- * HTML is all text except the hosted logo — no CID attachments.
+ * HTML is all text except the logo — test sends CID-inline `logo-mark-green.png` from `public/email/`.
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -14,6 +14,7 @@ import { Resend } from 'resend';
 
 import {
   buildPasswordResetEmailHtml,
+  PASSWORD_RESET_EMAIL_ASSET_BASE,
   PASSWORD_RESET_EMAIL_PLACEHOLDER_URL,
   PASSWORD_RESET_EMAIL_SUBJECT,
 } from '../src/lib/password-reset-email-html';
@@ -55,13 +56,28 @@ if (!to) {
 }
 
 const resend = new Resend(apiKey);
+const logoPath = join(here, '..', 'public', 'email', 'logo-mark-green.png');
+const hostedLogo = `${PASSWORD_RESET_EMAIL_ASSET_BASE}/logo-mark-green.png`;
 const html = buildPasswordResetEmailHtml({
   resetUrl: PASSWORD_RESET_EMAIL_PLACEHOLDER_URL,
-});
+}).replaceAll(hostedLogo, 'cid:logo-mark-green.png');
 const stamp = new Date().toISOString().slice(0, 16).replace('T', ' ');
 const subject = `[TEST] ${PASSWORD_RESET_EMAIL_SUBJECT} · ${stamp}`;
 
-const { data, error } = await resend.emails.send({ from, to, subject, html });
+const { data, error } = await resend.emails.send({
+  from,
+  to,
+  subject,
+  html,
+  attachments: [
+    {
+      filename: 'logo-mark-green.png',
+      content: readFileSync(logoPath),
+      contentType: 'image/png',
+      inlineContentId: 'logo-mark-green.png',
+    },
+  ],
+});
 if (error) {
   console.error('password-reset send failed:', error.message);
   process.exit(1);

@@ -76,7 +76,7 @@ Horizontal scroll of 220×220 tiles from `impactFeedStore` (local snapshots + AP
 
 | Layer | Role |
 |-------|------|
-| Background | Map always fills the tile (`SessionRouteMapPreview` native/Expo Go; `RoutePathThumbnail` on web). No full-bleed photo fallback. |
+| Background | Map always fills the tile (`SessionRouteMapPreview` native/Expo Go; `RoutePathThumbnail` on web). No full-bleed photo fallback. Route previews use the same **`collapseStationaryRoute`** rules as session detail (8 m span + optional `distanceMiles` &lt; 0.01 mi) so jitter-only sessions show a blank map, not a spurious path. |
 | Top-left | Small progress photo thumb (56×56, white border) when `imageUri` exists |
 | Top-right | **Approved** / **Under Review** status badge |
 | Bottom | Dark overlay — session title, date · time, duration |
@@ -98,7 +98,7 @@ Home does **not** render a Recent Sessions list; sessions live on the Sessions t
 |------------|---------|
 | `sessionStatsStore` | In-memory stats + AsyncStorage persistence + API hydration |
 | `homeDashboardStats.ts` | Week chart aggregation + impact month/year helpers |
-| `impactFeedStore.ts` | Recent Cleanups tiles (photos, route preview, status) |
+| `impactFeedStore.ts` | Recent Cleanups tiles (photos, route preview via `collapseStationaryRoute` + downsample, status) |
 | `sessionFormat.ts` | Sub-hour duration phrasing (`min` / `hours`) |
 | `liveSessionStore.finalizeLiveSession` | Records local snapshot on session end |
 | `recentSessionsStore` | Recent sessions list (separate from chart; Sessions tab only) |

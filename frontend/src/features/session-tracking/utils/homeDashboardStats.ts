@@ -336,6 +336,38 @@ export function buildImpactMonthOptionsForYear(
   });
 }
 
+/** Newest-first years the user actually has session activity in, plus the current year as a floor. */
+export function buildActiveImpactYearOptions(
+  sessionStats: readonly SessionStatRecord[],
+  now: Date = new Date(),
+): number[] {
+  const years = new Set(sessionStats.map((stat) => new Date(stat.startedAtMs).getFullYear()));
+  years.add(now.getFullYear());
+  return Array.from(years).sort((a, b) => b - a);
+}
+
+/** Newest-first months the user actually has session activity in for `year`, plus the current month as a floor when `year` is the current year. */
+export function buildActiveImpactMonthOptionsForYear(
+  sessionStats: readonly SessionStatRecord[],
+  year: number,
+  now: Date = new Date(),
+): readonly { monthKey: string; monthLabel: string }[] {
+  const months = new Set(
+    sessionStats
+      .filter((stat) => new Date(stat.startedAtMs).getFullYear() === year)
+      .map((stat) => new Date(stat.startedAtMs).getMonth() + 1),
+  );
+  if (year === now.getFullYear()) {
+    months.add(now.getMonth() + 1);
+  }
+  return Array.from(months)
+    .sort((a, b) => b - a)
+    .map((month) => {
+      const monthKey = `${year}-${String(month).padStart(2, '0')}`;
+      return { monthKey, monthLabel: formatImpactMonthName(monthKey) };
+    });
+}
+
 /** Parses typed month input (name, abbreviation, or 1–12). */
 export function parseImpactMonthInput(text: string): number | null {
   const trimmed = text.trim();

@@ -21,6 +21,7 @@ export type OrderCreateRequest = {
   donation: CartDonationAmount | null;
   shipping: ShippingInfo | null;
   tax: number;
+  shippingFee?: number;
   fulfillmentMethod: FulfillmentMethod;
   includesKit: boolean;
 };
@@ -127,7 +128,8 @@ export async function createShopOrder(request: OrderCreateRequest): Promise<Orde
     );
     const donationCents = (typeof request.donation === 'number') ? request.donation * 100 : 0;
     const taxCents = Math.round(request.tax * 100);
-    const totalCents = subtotalCents + donationCents + taxCents;
+    const shippingCents = Math.round((request.shippingFee ?? 0) * 100);
+    const totalCents = subtotalCents + donationCents + taxCents + shippingCents;
 
     const fulfillmentMethod = normalizeFulfillmentMethod(request.fulfillmentMethod);
     const shipping = request.shipping;

@@ -31,7 +31,7 @@ const FONT_REGULAR_URL = `${PASSWORD_RESET_EMAIL_ASSET_BASE}/fonts/NotoSans-Regu
 const FONT_BOLD_URL = `${PASSWORD_RESET_EMAIL_ASSET_BASE}/fonts/NotoSans-Bold.ttf`;
 const FONT_SANCHEZ_URL = `${PASSWORD_RESET_EMAIL_ASSET_BASE}/fonts/Sanchez-Regular.ttf`;
 
-const SUPPORT_EMAIL = 'donnaadam@cleanupgiveback.org';
+const SUPPORT_EMAIL = 'info@cleanupgiveback.org';
 
 /** Georgia/Times stand in for Sanchez where webfonts are stripped. */
 const FONT_HEADING = "Georgia, 'Times New Roman', serif";
@@ -116,22 +116,6 @@ export function buildPasswordResetEmailHtml(input: PasswordResetEmailInput): str
         line-height: 1.45 !important;
       }
     }
-    @media (prefers-color-scheme: dark) {
-      .pr-cta-cell {
-        background-color: #c2d832 !important;
-      }
-      .pr-cta-link {
-        color: #004d21 !important;
-      }
-    }
-    [data-ogsc] .pr-cta-cell,
-    [data-ogsb] .pr-cta-cell {
-      background-color: #c2d832 !important;
-    }
-    [data-ogsc] .pr-cta-link,
-    [data-ogsb] .pr-cta-link {
-      color: #004d21 !important;
-    }
   </style>
 </head>
 <body style="margin:0;padding:0;width:100%;height:100%;background-color:#bdcaba;">
@@ -158,8 +142,8 @@ export function buildPasswordResetEmailHtml(input: PasswordResetEmailInput): str
           <td align="center" style="padding:20px 24px 0;">
             <table role="presentation" cellpadding="0" cellspacing="0" align="center">
               <tr>
-                <td class="pr-cta-cell" align="center" bgcolor="#fcab29" style="background-color:#fcab29;border-radius:4px;">
-                  <a class="pr-cta-link" href="${safeUrl}" style="display:inline-block;padding:16px 37px;font-family:'Sanchez',${FONT_HEADING};font-size:18px;font-weight:400;color:#004d21;text-decoration:none;line-height:1.2;letter-spacing:${LETTER_SPACING};">${cta}</a>
+                <td class="pr-cta-cell" align="center" bgcolor="#009540" style="background-color:#009540;border:2px solid #004d21;border-radius:4px;">
+                  <a class="pr-cta-link" href="${safeUrl}" style="display:inline-block;padding:16px 37px;font-family:'Sanchez',${FONT_HEADING};font-size:18px;font-weight:400;color:#ffffff;text-decoration:none;line-height:1.2;letter-spacing:${LETTER_SPACING};">${cta}</a>
                 </td>
               </tr>
             </table>

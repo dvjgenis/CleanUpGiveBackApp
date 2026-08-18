@@ -4,8 +4,7 @@
  *   npx tsx scripts/send-test-order-email.mts --to=you@example.com
  *
  * Loads `admin-web-app/.env.local` for RESEND_API_KEY / EMAIL_FROM / DONNA_EMAIL.
- * CID-inlines the header pixel + shipping GIF (84KB) so this inbox shows the
- * local transparent truck without a Vercel deploy. Product thumbs stay hosted.
+ * CID-inlines logo, header pixel, shipping GIF, and product thumbs.
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -13,11 +12,8 @@ import { fileURLToPath } from 'node:url';
 
 import { Resend } from 'resend';
 
-import {
-  buildOrderEmailHtml,
-  ORDER_EMAIL_ASSET_BASE,
-  ORDER_EMAIL_SUBJECTS,
-} from '../src/lib/order-email-html';
+import { ORDER_EMAIL_SUBJECTS } from '../src/lib/order-email-html';
+import { buildOrderEmailForSend } from '../src/lib/order-email-send';
 
 function loadEnvFile(path: string): void {
   if (!existsSync(path)) return;
@@ -40,29 +36,6 @@ function loadEnvFile(path: string): void {
 
 const here = dirname(fileURLToPath(import.meta.url));
 loadEnvFile(join(here, '..', '.env.local'));
-const emailDir = join(here, '..', 'public', 'email');
-const assetBase = ORDER_EMAIL_ASSET_BASE.replace(/\/$/, '');
-
-const inlineAttachments = [
-  {
-    filename: 'header-pixel.png',
-    content: readFileSync(join(emailDir, 'header-pixel.png')),
-    contentType: 'image/png',
-    inlineContentId: 'header-pixel.png',
-  },
-  {
-    filename: 'shipping.gif',
-    content: readFileSync(join(emailDir, 'shipping.gif')),
-    contentType: 'image/gif',
-    inlineContentId: 'shipping.gif',
-  },
-];
-
-function htmlForSend(html: string): string {
-  return html
-    .replaceAll(`${assetBase}/header-pixel.png`, 'cid:header-pixel.png')
-    .replaceAll(`${assetBase}/shipping.gif?v=6`, 'cid:shipping.gif');
-}
 
 const toArg = process.argv.find((arg) => arg.startsWith('--to='))?.slice(5);
 const to = toArg || process.env.TEST_EMAIL_TO || process.env.DONNA_EMAIL;
@@ -80,32 +53,65 @@ if (!to) {
 
 const resend = new Resend(apiKey);
 
-const variants = [
-  { variant: 'placed' as const, html: buildOrderEmailHtml({ variant: 'placed' }) },
+const variants: Array<{
+  label: string;
+  subject: string;
+  payload: ReturnType<typeof buildOrderEmailForSend>;
+}> = [
   {
-    variant: 'shipped' as const,
-    html: buildOrderEmailHtml({
+    label: 'placed',
+    subject: ORDER_EMAIL_SUBJECTS.placed,
+    payload: buildOrderEmailForSend({ variant: 'placed' }),
+  },
+  {
+    label: 'shipped',
+    subject: ORDER_EMAIL_SUBJECTS.shipped,
+    payload: buildOrderEmailForSend({
       variant: 'shipped',
       trackingNumber: '1Z999AA10123456784',
       carrier: 'UPS',
+    }),
+  },
+  {
+    label: 'tracker-bundle',
+    subject: `${ORDER_EMAIL_SUBJECTS.placed} (tracker $59.99)`,
+    payload: buildOrderEmailForSend({
+      variant: 'placed',
+      volunteerName: 'Jordan Rivera',
+      orderId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+      createdAt: '2026-08-12T12:00:00.000Z',
+      totalCents: 5999,
+      includesKit: true,
+      shippingLabel: 'FREE',
+      shippingAddress: {
+        line1: '600 E Algonquin Road',
+        city: 'Des Plaines',
+        state: 'IL',
+        postalCode: '60018',
+        country: 'US',
+      },
+      items: [
+        { id: 'tracker-access', name: 'Tracking access (one-time)', qty: 1, unitCents: 5999 },
+        { id: 'cleanup-kit', name: 'Trash Clean Up Kit', qty: 1, unitCents: 0 },
+      ],
     }),
   },
 ];
 
 const stamp = new Date().toISOString().slice(0, 16).replace('T', ' ');
 
-for (const { variant, html } of variants) {
-  const subject = `[TEST] ${ORDER_EMAIL_SUBJECTS[variant]} · ${stamp}`;
+for (const { label, subject: templateSubject, payload } of variants) {
+  const subject = `[TEST] ${templateSubject} · ${stamp}`;
   const { data, error } = await resend.emails.send({
     from,
     to,
     subject,
-    html: htmlForSend(html),
-    attachments: inlineAttachments,
+    html: payload.html,
+    attachments: payload.attachments,
   });
   if (error) {
-    console.error(`${variant} send failed:`, error.message);
+    console.error(`${label} send failed:`, error.message);
     process.exit(1);
   }
-  console.log(`${variant} sent to ${to} id=${data?.id ?? 'unknown'}`);
+  console.log(`${label} sent to ${to} id=${data?.id ?? 'unknown'}`);
 }

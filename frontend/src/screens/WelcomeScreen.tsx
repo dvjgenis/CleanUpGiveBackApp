@@ -65,7 +65,7 @@ export function WelcomeScreen() {
           style={s.heroGradient}
         />
         <SafeAreaView edges={['top']} style={s.logoWrap} pointerEvents="none">
-          <WelcomeLogoMark width={29} height={38} />
+          <WelcomeLogoMark width={30} height={39} />
         </SafeAreaView>
       </View>
 
@@ -253,7 +253,7 @@ const s = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: C.borderOutline,
+    borderColor: C.bgApp,
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -265,7 +265,7 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: C.borderOutline,
+    borderColor: C.bgApp,
     borderRadius: 8,
   },
   passwordInput: {
@@ -306,12 +306,16 @@ const s = StyleSheet.create({
   orLine: {
     flex: 1,
     height: 1,
+    alignSelf: 'center',
     backgroundColor: C.borderOutline,
   },
   orText: {
     fontFamily: 'IBMPlexSans_400Regular',
-    fontSize: 12,
+    fontSize: 14,
+    lineHeight: 14,
     color: C.bgApp,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   createBtn: {
     backgroundColor: C.textPrimary,

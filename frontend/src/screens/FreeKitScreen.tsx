@@ -2,6 +2,7 @@ import { ONBOARDING_GRAPHICS } from '@/components/onboarding/onboardingGraphics'
 import { OnboardingInfoFooterActions } from '@/components/onboarding/OnboardingInfoFooterActions';
 import { OnboardingProgressPills } from '@/components/onboarding/OnboardingProgressPills';
 import { SessionSetupGuideNavRow } from '@/components/session-setup/SessionSetupGuideNavRow';
+import { TRACKER_ACCESS_PRICE } from '@/constants/commerce';
 import { colors as C } from '@/features/figma-screens/tokens';
 import { IBMPlexSans_600SemiBold } from '@expo-google-fonts/ibm-plex-sans';
 import {
@@ -25,7 +26,7 @@ type Props = {
   onBack?: () => void;
 };
 
-/** Figma `free_kit` (1126:451) — "$49.99 free cleanup kit" screen used in onboarding and session setup. */
+/** Figma `free_kit` (1126:451) — "free cleanup kit" screen used in onboarding and session setup. */
 export function FreeKitScreen({
   totalPills,
   activePills,
@@ -62,9 +63,9 @@ export function FreeKitScreen({
         <View style={s.titleSection}>
           <Text style={s.title}>Free cleanup kit!</Text>
           <Text style={s.subtitle}>
-            {'After paying a one-time $49.99 fee, you will have unlimited tracking. '}
-            <Text style={s.subtitleBold}>A cleanup kit is optional</Text>
-            {' — pick it up, have it dropped off locally, or we can ship it via USPS.'}
+            {`After paying a one-time $${TRACKER_ACCESS_PRICE.toFixed(2)} fee, you will have unlimited tracking and a free cleanup kit. `}
+            <Text style={s.subtitleBold}>Shipping is free</Text>
+            {' — pick it up, or we can ship it via USPS.'}
           </Text>
         </View>
 

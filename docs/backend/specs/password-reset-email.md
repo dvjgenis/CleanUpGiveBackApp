@@ -8,14 +8,14 @@
 
 Code-owned table HTML for the Forgot Password email (`buildPasswordResetEmailHtml` in `admin-web-app/src/lib/password-reset-email-html.ts`). Same 600px shell on **cream `#fcf9f8`** (`cream/50` / `color/bg/app`, not white), logo size (32×42), CTA (18px / `16px 37px`), support line, and a **full-width** sage footer (`width/min-width: 100%`, `height: 100%` so leftover preview height is `#bdcaba`). No drop shadow (Gmail mangles CSS and sliced-image shadows).
 
-**All copy is live HTML** — not rasterized type PNGs. Hosted `@font-face` (Sanchez + Noto Sans) is included for clients that load webfonts (Apple Mail). Gmail strips webfonts and falls back to Georgia (headline/CTA) and Trebuchet MS (body/footer; Arial last). The only image is forest-green `logo-mark-green.png` (white `logo-mark.png` is for the green order-email header).
+**All copy is live HTML** — not rasterized type PNGs. Hosted `@font-face` (Sanchez + Noto Sans) is included for clients that load webfonts (Apple Mail). Gmail strips webfonts and falls back to Georgia (headline/CTA) and Trebuchet MS (body/footer; Arial last). The only image is forest-green `logo-mark-green.png` (filled CUPGB mark on transparent; white `logo-mark.png` is for the green order-email header).
 
 | Face | Copy | HTML stack |
 |------|------|------------|
-| Sanchez | Headline `Forgot Password?` (24px, **bold** `#009540` primary); **Reset Password** CTA (18px) — light `#fcab29` amber, dark `#c2d832` lime | `'Sanchez', Georgia, 'Times New Roman', serif` |
+| Sanchez | Headline `Forgot Password?` (24px, **bold** `#009540` primary); **Reset Password** CTA (18px) — primary `#009540` fill, 2px `#004d21` stroke, white label | `'Sanchez', Georgia, 'Times New Roman', serif` |
 | Noto Sans | Body (16px laptop / 18px phone via `@media`), support line, footer links, nonprofit line (14px) | `'Noto Sans', 'Trebuchet MS', Tahoma, Arial, Helvetica, sans-serif` |
 
-The lime **Reset Password** CTA uses brand amber `#fcab29` in light mode and lime `#c2d832` in dark mode (`prefers-color-scheme: dark` plus Outlook `[data-ogsc]` / `[data-ogsb]`). Gmail often ignores this and keeps amber. Meta `color-scheme` / `supported-color-schemes` are `light only`, same as order and hours-reminder, so Apple Mail does not invert the dark headline/body on the cream card. All copy uses **`letter-spacing: 0.02em`** (head `<style>` plus inline on every text cell/link) so tracking matches order and hours-reminder.
+**Reset Password** is primary `#009540` with a 2px `#004d21` stroke and white label in light and dark mode (no lime/amber overrides). Support contact is `info@cleanupgiveback.org` — do not name Donna. Meta `color-scheme` / `supported-color-schemes` are `light only`, same as order and hours-reminder, so Apple Mail does not invert the dark headline/body on the cream card. All copy uses **`letter-spacing: 0.02em`** (head `<style>` plus inline on every text cell/link) so tracking matches order and hours-reminder.
 
 `resetUrl` is required. Preview/test scripts pass `https://cleanupgiveback.org/reset-password` until a Supabase recovery link is available.
 
@@ -42,7 +42,7 @@ No migration. Do not add `password_reset` to `email_templates` / `email_log` unt
 
 ## Acceptance criteria
 
-- [x] AC-1: Layout matches the order-shipped 600px shell (logo 32×42, 24px headline in bold primary `#009540`, 16px body on laptop / 18px on phone, 18px CTA — amber `#fcab29` light / lime `#c2d832` dark, support line, sage footer) — cream `#fcf9f8` card, no drop shadow
+- [x] AC-1: Layout matches the order-shipped 600px shell (logo 32×42, 24px headline in bold primary `#009540`, 16px body on laptop / 18px on phone, 18px CTA — primary `#009540` + `#004d21` stroke + white label, support `info@cleanupgiveback.org`, sage footer) — cream `#fcf9f8` card, no drop shadow
 - [x] AC-2: CTA href is the caller-supplied `resetUrl`
 - [x] AC-3: HTML interpolations are escaped
 - [x] AC-5: All copy is live HTML (headline/CTA/body/support/footer); only the logo is a PNG; tracking is `letter-spacing: 0.02em` (same as order and hours-reminder)

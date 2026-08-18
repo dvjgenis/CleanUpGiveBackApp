@@ -7,11 +7,12 @@ import type { AuthenticatedRequest } from '../auth.js';
 import { verifyAuth } from '../auth.js';
 import { getServiceSupabase } from '../letterhead/supabaseAdmin.js';
 import {
-  buildOrderEmailHtml,
+  defaultShippingLabelForFulfillment,
   ORDER_EMAIL_SUBJECTS,
   parseShopOrderAddress,
   parseShopOrderItems,
 } from '../lib/order-email-html.js';
+import { buildOrderEmailForSend } from '../lib/order-email-send.js';
 import { prisma } from '../prisma.js';
 
 type EventRegistrationBody = {
@@ -270,9 +271,11 @@ export async function registerEmailRoutes(app: FastifyInstance): Promise<void> {
           tracking_number: string | null;
           carrier: string | null;
           created_at: Date;
+          includes_kit: boolean | null;
+          fulfillment_method: string | null;
         }[]
       >`
-        SELECT id, user_id, items, total_cents, shipping_address, tracking_number, carrier, created_at
+        SELECT id, user_id, items, total_cents, shipping_address, tracking_number, carrier, created_at, includes_kit, fulfillment_method
         FROM public.shop_orders
         WHERE id = ${orderId}::uuid
         LIMIT 1
@@ -296,16 +299,19 @@ export async function registerEmailRoutes(app: FastifyInstance): Promise<void> {
       }
 
       const subject = await getOrderPlacedSubject();
-      const html = buildOrderEmailHtml({
+      const items = parseShopOrderItems(order.items);
+      const { html, attachments } = buildOrderEmailForSend({
         variant: 'placed',
         volunteerName: contact.name,
         orderId: order.id,
         createdAt: order.created_at,
         totalCents: order.total_cents,
         shippingAddress: parseShopOrderAddress(order.shipping_address),
-        items: parseShopOrderItems(order.items),
+        items,
         trackingNumber: order.tracking_number,
         carrier: order.carrier,
+        includesKit: order.includes_kit,
+        shippingLabel: defaultShippingLabelForFulfillment(order.fulfillment_method, items),
       });
 
       const { data, error } = await resend.emails.send({
@@ -313,6 +319,7 @@ export async function registerEmailRoutes(app: FastifyInstance): Promise<void> {
         to,
         subject,
         html,
+        attachments,
       });
 
       await logEmailSend({

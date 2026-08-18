@@ -58,6 +58,7 @@
     "react-native-web": "~0.21.0",
     "react-native-webview": "^13.15.0",
     "react-native-worklets": "0.5.1",
+    "suncalc": "^2.0.1",
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {

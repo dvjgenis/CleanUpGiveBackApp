@@ -9,6 +9,7 @@
 import { useEffect, useId, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { CourtBadge } from "@/components/ui/CourtBadge";
+import { VoluntaryBadge } from "@/components/ui/VoluntaryBadge";
 import { CloseIcon } from "@/components/ui/Icons";
 import { formatDate } from "@/lib/mock-data";
 
@@ -134,9 +135,7 @@ export function UserPreviewDrawer({
                       {display.courtOrdered ? (
                         <CourtBadge />
                       ) : (
-                        <span className="inline-flex font-data text-[11px] font-semibold px-sm py-xs rounded-xs bg-[#f7fff1] text-primary">
-                          Voluntary
-                        </span>
+                        <VoluntaryBadge />
                       )}
                     </div>
                   </div>
