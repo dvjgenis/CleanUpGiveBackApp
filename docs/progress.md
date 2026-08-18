@@ -2,6 +2,22 @@
 
 ---
 
+## [2026-08-18] — Shop featured kit + sessions filter chip readability
+
+**End goal:** Fix clipped **Under Review** filter chip on Sessions; make Shop featured kit title, price, and Best Seller badge easier to read.
+
+**Shipped:**
+
+- `SessionsScreen` — status filter chips use a horizontal `ScrollView` with content-sized pills (`flexShrink: 0`, 16px horizontal padding) instead of equal-width `flex: 1` chips that truncated **Under Review**.
+- `ShopScreen` — featured **Trash Clean Up Kit** title uses **Noto Sans Bold 20px** (matches grid product weight, larger than the 14px grid names); **$49.99** sits on the same row as the title (Best Seller badge above, **In stock** below); **Best Seller** badge bumped to 12px label + 16px flame icon.
+- `ProductDetailScreen` — cleanup-kit **Best Seller** badge matches the larger shop sizing (12px + 16px icon).
+
+**Docs:** `docs/current.md`, `docs/frontend/context/app.md`, `docs/frontend/context/components.md`, this entry.
+
+**Status:** Code on `main` (`067d5f9`, `fc44bc1`); docs committed + pushed.
+
+---
+
 ## [2026-08-18] — Doc pass: radius tiers, welcome gradient, profile photo
 
 **End goal:** Capture shipped mobile UI decisions in living docs (Decisions/Patterns/Ontology), not only inventory rows.
@@ -85,7 +101,7 @@
 
 **Docs:** none yet outside this entry — `docs/frontend/context/app.md`/`components.md` follow-up still open (see Status).
 
-**Status:** Code done, `tsc --noEmit` clean across `frontend`, `admin-web-app`, `backend/sessions`; 139 existing frontend tests pass. Not yet reflected in `docs/frontend/context/app.md` (checkout/session screens) or `components.md` (new `FlashWarningModal`) — flagged for next session. Pre-existing, unrelated ESLint parse error in `frontend/src/screens/UnderAgeLearnWhyScreen.tsx:22` (from concurrent changes outside this session) still needs a look.
+**Status:** Code done. Living docs synced 2026-08-18 (`app.md`, `components.md`, `current.md`, order-fulfillment / payments). Pre-existing, unrelated ESLint parse error in `frontend/src/screens/UnderAgeLearnWhyScreen.tsx:22` still needs a look if it returns.
 
 ---
 
