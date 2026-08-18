@@ -1,6 +1,9 @@
 import {
+  appendLiveTipToDisplayRoute,
+  collapseStationaryRoute,
   computeBearingDegrees,
   getMinMovementMeters,
+  getRouteSpanMeters,
   headingEmaAlpha,
   isAcceptableAccuracy,
   isCompassReadingUsable,
@@ -18,7 +21,6 @@ import {
   smoothCoordinateEma,
   smoothHeadingEma,
   smoothRouteForDisplay,
-  appendLiveTipToDisplayRoute,
   DISPLAY_COORDINATE_EMA_ALPHA,
   HEADING_EMA_ALPHA_MAX,
   HEADING_EMA_ALPHA_MIN,
@@ -83,6 +85,17 @@ describe('isStationary', () => {
         minMovementMeters: 1,
       }),
     ).toBe(false);
+  });
+
+  it('treats speedMps === 0 with sub-gate jitter as stationary', () => {
+    expect(
+      isStationary({
+        speedMps: 0,
+        deltaMeters: 4,
+        deltaMs: 4000,
+        minMovementMeters: 2.5,
+      }),
+    ).toBe(true);
   });
 
   it('allows movement when speed indicates walking', () => {
@@ -188,6 +201,24 @@ describe('shouldAppendRoutePoint', () => {
         lastRouteAppendTimestamp: sessionStartedAt + 5_000,
       }),
     ).toBe(true);
+  });
+
+  it('rejects jitter when the device reports stopped (speed 0)', () => {
+    expect(
+      shouldAppendRoutePoint({
+        lastRoutePoint: lastRoute,
+        prevRoutePoint: prevRoute,
+        candidate: [-87.6299, 41.88],
+        accuracyMeters: 8,
+        speedMps: 0,
+        deltaMetersFromRoute: 4,
+        deltaMetersFromLastFix: 4,
+        deltaMs: 4000,
+        sessionStartedAt,
+        sampleTimestamp: sessionStartedAt + 10_000,
+        lastRouteAppendTimestamp: sessionStartedAt + 5_000,
+      }),
+    ).toBe(false);
   });
 });
 
@@ -478,6 +509,34 @@ describe('shouldSkipDuplicateLocationSample', () => {
         lastProcessedCoordinate: base,
       }),
     ).toBe(false);
+  });
+});
+
+describe('collapseStationaryRoute', () => {
+  it('collapses routes whose points all sit within the jitter span', () => {
+    const route: RouteCoordinate[] = [
+      [-87.63, 41.88],
+      [-87.62995, 41.88002],
+    ];
+    expect(getRouteSpanMeters(route)).toBeLessThan(8);
+    expect(collapseStationaryRoute(route)).toEqual([route[0]]);
+  });
+
+  it('collapses long-span jitter when recorded distance is negligible', () => {
+    const route: RouteCoordinate[] = [
+      [-87.63, 41.88],
+      [-87.629, 41.88],
+    ];
+    expect(getRouteSpanMeters(route)).toBeGreaterThan(8);
+    expect(collapseStationaryRoute(route, { distanceMiles: 0.006 })).toEqual([route[0]]);
+  });
+
+  it('keeps real short walks when distance exceeds the collapse floor', () => {
+    const route: RouteCoordinate[] = [
+      [-87.63, 41.88],
+      [-87.629, 41.88],
+    ];
+    expect(collapseStationaryRoute(route, { distanceMiles: 0.02 })).toEqual(route);
   });
 });
 

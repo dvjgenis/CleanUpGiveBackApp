@@ -271,6 +271,7 @@ export function SubmissionConfirmationScreen() {
         <View style={s.mapCard} accessibilityLabel="Session route map">
           <SessionRouteMapPanel
             routeCoordinates={routeCoordinates}
+            distanceMiles={session?.distanceMiles}
             replayOnce
             initialMapLayer={session?.mapLayer}
             style={s.mapPreview}

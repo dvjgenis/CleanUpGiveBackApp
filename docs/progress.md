@@ -2,6 +2,21 @@
 
 ---
 
+## [2026-08-18] — Stationary session replay path fix
+
+**End goal:** Ending a session without moving must not draw an animated walking path on session-detail replay.
+
+**Shipped:**
+
+- `routeFiltering.ts` — when OS reports `speedMps === 0`, treat sub-gate GPS jitter as stationary (stop appending junk trail points); replay collapse also uses recorded `distanceMiles` &lt; 0.01 mi as a display safety net.
+- `SessionRouteMapPanel` — optional `distanceMiles` prop wired from submission confirmation + session detail.
+
+**Docs:** `docs/frontend/context/components.md`.
+
+**Status:** Done.
+
+---
+
 ## [2026-08-18] — Live tracker location pill layout
 
 **End goal:** Location + weather pill on the live tracker has even spacing around the divider and sits centered in the navbar (equidistant from content edges).

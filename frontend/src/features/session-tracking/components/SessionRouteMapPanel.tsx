@@ -21,6 +21,8 @@ import { SessionRouteMapPreview } from './SessionRouteMapPreview';
 
 type Props = {
   routeCoordinates: RouteCoordinate[];
+  /** Recorded session distance — helps collapse jitter-only paths on replay. */
+  distanceMiles?: number | null;
   /** Animate the route drawing once (grow line + tip marker) instead of showing it fully drawn. Expo Go / WebView only. */
   replayOnce?: boolean;
   /** Basemap layer to open on — e.g. the layer the user had selected when
@@ -42,6 +44,7 @@ function SessionRouteMapEmptyState() {
 /** Interactive route preview with pan/zoom and optional replay controls. */
 export function SessionRouteMapPanel({
   routeCoordinates,
+  distanceMiles,
   replayOnce = false,
   initialMapLayer = DEFAULT_MAP_LAYER,
   enableReplay = true,
@@ -59,8 +62,8 @@ export function SessionRouteMapPanel({
   /** Collapse to a single point when the user never actually moved, so replay never
    * draws a line or animates a marker for a stationary session. */
   const displayCoordinates = useMemo(
-    () => collapseStationaryRoute(routeCoordinates),
-    [routeCoordinates],
+    () => collapseStationaryRoute(routeCoordinates, { distanceMiles }),
+    [routeCoordinates, distanceMiles],
   );
 
   const replayDurationMs = useMemo(

@@ -116,6 +116,13 @@ export function isStationary({
   const impliedSpeed =
     deltaMs > 0 ? deltaMeters / (deltaMs / 1000) : 0;
 
+  // When the OS explicitly reports stopped (speed === 0), do not treat GPS
+  // jitter between fixes as walking — implied speed can exceed the record
+  // floor even while the volunteer stands still indoors or on a simulator.
+  if (speedMps != null && Number.isFinite(speedMps) && speedMps === 0) {
+    return deltaMeters < minMovementMeters * 2;
+  }
+
   // Trust device speed only when it reports a positive value. iOS/Android
   // often report speedMps === 0 while the user is walking outdoors, which
   // previously classified real movement as stationary and blocked the trail.
@@ -731,6 +738,9 @@ export function deltaMetersBetween(from: RouteCoordinate, to: RouteCoordinate): 
  */
 const STATIONARY_ROUTE_SPAN_METERS = 8;
 
+/** Recorded distance below this is treated as jitter-only for replay collapse (miles). */
+const STATIONARY_ROUTE_DISTANCE_MILES = 0.01;
+
 /** Max distance from the first point to any other point in the route. */
 export function getRouteSpanMeters(coordinates: RouteCoordinate[]): number {
   if (coordinates.length < 2) {
@@ -747,16 +757,36 @@ export function getRouteSpanMeters(coordinates: RouteCoordinate[]): number {
   return maxSpan;
 }
 
+export type CollapseStationaryRouteOptions = {
+  /** Session distance from the tracker — suppresses replay lines for jitter-only paths. */
+  distanceMiles?: number | null;
+};
+
 /**
  * Collapses a route to its single starting point when every recorded point is within
  * jitter distance of it, so replay UIs don't draw a line or animate a marker for a
  * session where the user never moved.
  */
-export function collapseStationaryRoute(coordinates: RouteCoordinate[]): RouteCoordinate[] {
+export function collapseStationaryRoute(
+  coordinates: RouteCoordinate[],
+  options?: CollapseStationaryRouteOptions,
+): RouteCoordinate[] {
   if (coordinates.length < 2) {
     return coordinates;
   }
-  return getRouteSpanMeters(coordinates) < STATIONARY_ROUTE_SPAN_METERS
-    ? [coordinates[0]]
-    : coordinates;
+
+  if (getRouteSpanMeters(coordinates) < STATIONARY_ROUTE_SPAN_METERS) {
+    return [coordinates[0]];
+  }
+
+  const distanceMiles = options?.distanceMiles;
+  if (
+    distanceMiles != null &&
+    Number.isFinite(distanceMiles) &&
+    Math.max(0, distanceMiles) < STATIONARY_ROUTE_DISTANCE_MILES
+  ) {
+    return [coordinates[0]];
+  }
+
+  return coordinates;
 }
