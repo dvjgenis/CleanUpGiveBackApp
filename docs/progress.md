@@ -2,6 +2,20 @@
 
 ---
 
+## [2026-08-19] — Sessions filter chip selected treatment
+
+**End goal:** Selected All / Approved / Under Review / Declined chips on Sessions use primary green with white text.
+
+**Shipped:**
+
+- `SessionsScreen` — selected filter chip fill `colors.primary`, border matches primary, label `textOnPrimary` (Noto Sans SemiBold). Idle chips unchanged (white + outline).
+
+**Docs:** `docs/current.md`, `docs/frontend/context/app.md`, `docs/frontend/context/components.md`, this entry.
+
+**Status:** Ready for review.
+
+---
+
 ## [2026-08-18] — Docs close-out: checkout, flash warning, impact picker, profile photo spec
 
 **End goal:** Living docs match shipped mobile behavior so the tree can push.

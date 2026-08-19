@@ -868,7 +868,8 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   chipSelected: {
-    backgroundColor: colors.chipSelectedBg,
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   chipIdle: {
     backgroundColor: colors.white,
@@ -880,6 +881,7 @@ const s = StyleSheet.create({
   },
   chipLabelSelected: {
     fontFamily: fontFamilies.notoSansSemiBold,
+    color: colors.textOnPrimary,
   },
   chipLabelIdle: {
     fontFamily: fontFamilies.notoSansRegular,

@@ -108,6 +108,7 @@ Expo Router navigation and screen entry points.
 - **Mobile checkout fulfillment:** Offer USPS ship and office pickup only. Do not re-add local drop-off to `CheckoutScreen` — `local_dropoff` stays on the stored `FulfillmentMethod` type for historical/admin orders.
 - **Night flash warning:** `FlashWarningModal` is once-per-capture on the back-camera step when `isNighttime` (GPS + `suncalc`) and flash is off. Fail open (skip) when location is unavailable. Do not treat nighttime as a session ban.
 - **Your Impact picker lists** come from `buildActiveImpactYearOptions` / `buildActiveImpactMonthOptionsForYear` (activity + current year/month floor), not a 100-year calendar span.
+- **Sessions list filter chips:** Selected chip is primary green + white text; idle stays white + outline. Do not revert selected to gray `chipSelectedBg`.
 
 ## Policies
 
