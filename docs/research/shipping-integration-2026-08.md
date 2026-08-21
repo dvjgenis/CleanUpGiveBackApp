@@ -3,7 +3,7 @@
 **Date:** 2026-08-04  
 **Audience:** Donna Adams (operations) + engineering  
 **Volume assumption:** ~20–100 packages/month  
-**Status:** Research only — not implemented yet
+**Status:** Phase 1 (Pirate Ship + paste tracking) is implemented. Phase 2 (Shippo) is **not** built. Deep dive for Donna: [shippo-vs-easypost-2026-08.md](shippo-vs-easypost-2026-08.md).
 
 ---
 

@@ -2,6 +2,36 @@
 
 ---
 
+## [2026-08-20] — Shippo vs EasyPost research (Donna handoff)
+
+**End goal:** Donna can compare Shippo and EasyPost (cost, volume, setup, order→USPS flow) without us wiring either vendor yet.
+
+**Shipped (docs only):**
+
+- `docs/research/shippo-vs-easypost-2026-08.md` — ops-first brief + engineering API appendix. Recommendation remains Pirate Ship now, Shippo for Phase 2 Buy label. Neither vendor is integrated.
+- Decision report for Donna: `docs/reports/2026-08-20-shippo-vs-easypost-donna.md` — Shippo plan: checkout rates, auto label on order, admin print, webhooks (A / B).
+- Index + pointers: `docs/README.md`, `shipping-integration-2026-08.md`, `payments.md`, `implementation-plan.md`.
+
+**Status:** Ready to hand to Donna.
+
+---
+
+## [2026-08-20] — Shop USPS shipping is 25% of product items
+
+**End goal:** Charge shipping as 25% of paid shop product totals; leave the free cleanup kit (tracker bundle) at FREE.
+
+**Shipped:**
+
+- `computeShippingFee` uses `PRODUCT_SHIPPING_RATE` (0.25) on paid product subtotal — ignores tracker access, $0 cleanup kit, donations, and tax.
+- Cart and checkout summaries show that fee for USPS; office pickup stays $0; tracker checkout stays FREE.
+- Order-email shipping labels compute the same 25% from line items (admin + Fly copies).
+
+**Docs:** `docs/current.md`, `docs/frontend/context/app.md`, `components.md`, `docs/backend/context/payments.md`, `docs/backend/specs/order-fulfillment.md`, `order-emails.md`, this entry.
+
+**Status:** Ready for review.
+
+---
+
 ## [2026-08-19] — Sessions filter chip selected treatment
 
 **End goal:** Selected All / Approved / Under Review / Declined chips on Sessions use primary green with white text.

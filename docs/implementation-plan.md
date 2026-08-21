@@ -49,6 +49,7 @@ Docs complete — see [ADR-004](adr/ADR-004-sessions-backend-supabase-fly.md), [
 - [ ] **Approve and modify existing screens** — see [figma-compliance-screen-gap-audit.md](compliance/figma-compliance-screen-gap-audit.md#existing-screens-pending-approval)
 - [x] Native session flow in `frontend/src/app/` — `expo-location`/`expo-camera` wired; GPS route + distance live in Expo Go
 - [ ] `backend/payments/` — shop checkout and donation processing (**Stripe next** after Resend; Resend domain + Fly/admin local mail done 2026-08-03)
+- [ ] Phase 2 shipping — Shippo (or EasyPost) **Buy label** in admin; not started. Research: [shippo-vs-easypost-2026-08.md](research/shippo-vs-easypost-2026-08.md). Stay on Pirate Ship until Donna is ready.
 - [ ] Replace remaining HTML prototype screens per [manifest.yaml](../frontend/design/figma/manifest.yaml) and [figma-to-native-handoff.md](frontend/specs/figma-to-native-handoff.md)
 - [x] Sequential checkpoint capture (`expo-camera`) — [photo-checkpoint-dual-capture.md](frontend/specs/photo-checkpoint-dual-capture.md) (simultaneous dual out of scope)
 - [x] Home dashboard session stats — chart + impact from `sessionStatsStore` — [home-dashboard-session-stats.md](frontend/specs/home-dashboard-session-stats.md)

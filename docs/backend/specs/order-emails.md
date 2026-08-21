@@ -50,7 +50,7 @@ Figma sample copy is the default. Real `shop_orders` / volunteer fields replace 
 
 **Support:** volunteer-facing contact is `info@cleanupgiveback.org`. Do not name Donna in these emails.
 
-**Pricing in HTML:** tracker-access orders show total **$59.99**, included kit at **$0.00**, and **Shipping: FREE** (USPS) / pickup method name. Standalone shop kit is **$49.99** plus charged USPS shipping (`$10.00`). `$0.00` is a valid formatted amount (kit line).
+**Pricing in HTML:** tracker-access orders show total **$59.99**, included kit at **$0.00**, and **Shipping: FREE** (USPS) / pickup method name. Shop USPS shipping is **25% of paid product-item subtotal** (standalone kit **$49.99** included; free kit line ignored). `$0.00` is a valid formatted amount (kit line).
 
 ## Hosted assets (production)
 

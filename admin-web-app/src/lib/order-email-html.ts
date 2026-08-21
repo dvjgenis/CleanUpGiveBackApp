@@ -42,7 +42,7 @@ export type OrderEmailInput = {
   carrier?: string | null;
   /** True when the order includes a cleanup kit (tracker bundle or shop). */
   includesKit?: boolean | null;
-  /** Shipping summary label — `FREE`, `$10.00`, `Office pickup`, etc. */
+  /** Shipping summary label — `FREE`, `$12.50`, `Office pickup`, etc. */
   shippingLabel?: string | null;
 };
 
@@ -143,6 +143,20 @@ export function isTrackerAccessOrder(items: OrderEmailLineItem[] | null | undefi
   return (items ?? []).some((item) => item.id === 'tracker-access');
 }
 
+/** Keep in sync with `frontend/src/constants/commerce.ts` `PRODUCT_SHIPPING_RATE`. */
+const PRODUCT_SHIPPING_RATE = 0.25;
+
+function shopUspsShippingCents(items: OrderEmailLineItem[] | null | undefined): number {
+  const productCents = (items ?? []).reduce((sum, item) => {
+    if (item.id === 'tracker-access') return sum;
+    const unitCents = item.unitCents ?? 0;
+    if (item.id === 'cleanup-kit' && unitCents <= 0) return sum;
+    if (unitCents <= 0) return sum;
+    return sum + unitCents * (item.qty ?? 1);
+  }, 0);
+  return Math.round(productCents * PRODUCT_SHIPPING_RATE);
+}
+
 export function defaultShippingLabelForFulfillment(
   fulfillmentMethod: string | null | undefined,
   items: OrderEmailLineItem[] | null | undefined,
@@ -150,7 +164,10 @@ export function defaultShippingLabelForFulfillment(
   if (isTrackerAccessOrder(items)) return 'FREE';
   if (fulfillmentMethod === 'office_pickup') return 'Office pickup';
   if (fulfillmentMethod === 'local_dropoff') return 'Local drop-off';
-  if (fulfillmentMethod === 'usps_ship') return '$10.00';
+  if (fulfillmentMethod === 'usps_ship') {
+    const shippingCents = shopUspsShippingCents(items);
+    return shippingCents <= 0 ? 'FREE' : formatUsdFromCents(shippingCents);
+  }
   return null;
 }
 

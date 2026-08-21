@@ -12,8 +12,9 @@ Living docs for the Clean Up - Give Back monorepo. Templates are copy-only.
 | [implementation-plan.md](implementation-plan.md) | Planned work and milestones |
 | [accounts-and-access.md](accounts-and-access.md) | Org accounts (no secrets in repo) |
 | [supabase.md](supabase.md) | Supabase + Fly setup for sessions (schema, env vars) |
-| [reports/](reports/) | Session / decision reports (e.g. dual-cam App Store stance; [inbox logo for Donna](reports/2026-08-18-inbox-sender-logo-donna.md)) |
+| [reports/](reports/) | Session / decision reports — [inbox logo](reports/2026-08-18-inbox-sender-logo-donna.md); [Shippo checkout + auto label for Donna](reports/2026-08-20-shippo-vs-easypost-donna.md) |
 | [research/shipping-integration-2026-08.md](research/shipping-integration-2026-08.md) | Shipping/tracking research brief for Donna (Phase 1 Pirate Ship + Resend → Phase 2 Shippo) |
+| [research/shippo-vs-easypost-2026-08.md](research/shippo-vs-easypost-2026-08.md) | Donna handoff: Shippo vs EasyPost costs, volume, order→USPS flow, setup, API (2026-08-20) |
 | [admin-web-app.md](admin-web-app.md) | Production admin console (`admin-web-app/` on Vercel) |
 | [admin/admin-portal-prd-v3.md](admin/admin-portal-prd-v3.md) | **Current** admin web app PRD (shipped + near-term roadmap) |
 | [admin/admin-portal-prd.md](admin/admin-portal-prd.md) | Historical v2 PRD (pre–`admin-web-app`; app `admin/` archived) |

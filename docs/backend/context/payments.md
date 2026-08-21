@@ -4,7 +4,7 @@ Shop checkout and donation processing.
 
 ## Purpose
 
-Handles cart checkout, order history, tracker unlock ($59.99 access + included kit, FREE shipping), and donation flows. Mobile checkout records `fulfillment_method` (`usps_ship` / `office_pickup`) and `includes_kit`; `local_dropoff` remains a stored enum for historical/admin orders. Standalone shop kit is $49.99 plus charged USPS shipping. Mobile UI exists (`/checkout`, `/donate`, tracker paywall); **no live Stripe charges yet**.
+Handles cart checkout, order history, tracker unlock ($59.99 access + included kit, FREE shipping), and donation flows. Mobile checkout records `fulfillment_method` (`usps_ship` / `office_pickup`) and `includes_kit`; `local_dropoff` remains a stored enum for historical/admin orders. Shop USPS shipping is **25% of paid product-item subtotal** (standalone kit $49.99 is included; the free tracker kit at $0 is ignored). Mobile UI exists (`/checkout`, `/donate`, tracker paywall); **no live Stripe charges yet**.
 
 ## Status (2026-08-03)
 
@@ -24,6 +24,7 @@ Handles cart checkout, order history, tracker unlock ($59.99 access + included k
 
 - **Stripe** — see [accounts-and-access.md](../../accounts-and-access.md)
 - Resend — order-placed (checkout) and order-shipped (admin fulfillment) emails live; payment receipts still wait on Stripe. Spec: [order-emails.md](../specs/order-emails.md)
+- **Shippo / EasyPost** — not connected. Label buy + live tracking research: [shippo-vs-easypost-2026-08.md](../../research/shippo-vs-easypost-2026-08.md). Phase 1 remains Pirate Ship paste tracking.
 
 ## Code
 

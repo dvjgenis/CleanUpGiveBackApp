@@ -70,9 +70,7 @@ export function getDefaultCheckoutSummary(): CheckoutSummary {
 }
 
 /** Fixed one-time tracker payment shown after the free hour expires.
- *  Always resolves to free shipping — tracker-mode checkout only ever
- *  represents the tracker-access fee (which bundles the free kit) and
- *  never contains another shop product. */
+ *  Always FREE shipping — do not apply the 25% product shipping rate to $59.99. */
 export function getTrackerCheckoutSummary(): CheckoutSummary {
   return {
     lines: [

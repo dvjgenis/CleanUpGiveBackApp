@@ -6,7 +6,7 @@
 
 ## Summary
 
-Volunteers choose **how they'll receive an order** in mobile checkout: **USPS ship** or **office pickup**. Local drop-off was removed from the mobile UI (2026-08-18); `local_dropoff` remains a stored `fulfillment_method` for historical/admin orders. Tracker access is **$59.99** and always includes the cleanup kit (USPS shipping **FREE**). Standalone shop kit is **$49.99** plus charged USPS shipping (`$10.00`). Donna still buys USPS labels on Pirate Ship and pastes tracking in admin. Pickup orders are marked **Fulfilled** with no tracking email.
+Volunteers choose **how they'll receive an order** in mobile checkout: **USPS ship** or **office pickup**. Local drop-off was removed from the mobile UI (2026-08-18); `local_dropoff` remains a stored `fulfillment_method` for historical/admin orders. Tracker access is **$59.99** and always includes the cleanup kit (USPS shipping **FREE**). Shop USPS shipping is **25% of paid product-item subtotal** (standalone kit **$49.99** counts; free tracker kit at $0 is ignored). Donna still buys USPS labels on Pirate Ship and pastes tracking in admin. Pickup orders are marked **Fulfilled** with no tracking email.
 
 Mobile checkout labels this **How you'll receive it**; admin shows **Pickup** vs **Shipping** sections.
 
@@ -42,7 +42,7 @@ Migration [`admin/db/022_order_fulfillment.sql`](../../../admin/db/022_order_ful
 - FedEx/UPS as offered carriers
 - Multi-chapter fulfillment
 - Separate prices for pickup vs ship
-- Live carrier-rate shopping (shop USPS uses a flat `$10.00`; tracker bundle is FREE)
+- Live carrier-rate shopping (shop USPS uses **25% of paid product subtotal**; tracker bundle is FREE)
 - Ready-for-pickup email (Donna coordinates in person)
 
 ## Test plan

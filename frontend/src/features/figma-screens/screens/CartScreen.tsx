@@ -37,6 +37,7 @@ import {
   type CartDonationAmount,
   type CartLineItem,
 } from '../mocks/cart';
+import { computeShippingFee, shippingFeeLabel } from '@/lib/shipping';
 import { layout, colors, fontFamilies, radius, shadows } from '../tokens';
 
 const FOOTER_PAD = 20;
@@ -232,9 +233,10 @@ export function CartScreen() {
   const subtotal = cartSubtotal(items);
   const donationAmount = donationValue(donation);
   const tax = items.length > 0 ? DEFAULT_CART_SUMMARY.tax : 0;
+  const shippingFee = computeShippingFee(items, 'usps_ship');
   const total = useMemo(
-    () => cartTotal(items, donation, tax),
-    [items, donation, tax],
+    () => cartTotal(items, donation, tax) + shippingFee,
+    [items, donation, tax, shippingFee],
   );
 
   return (
@@ -302,7 +304,7 @@ export function CartScreen() {
 
               <View style={s.summaryRow}>
                 <Text style={s.summaryMuted}>Shipping</Text>
-                <Text style={s.summaryMuted}>{DEFAULT_CART_SUMMARY.shippingLabel}</Text>
+                <Text style={s.summaryMuted}>{shippingFeeLabel(shippingFee)}</Text>
               </View>
 
               <View style={s.summaryRow}>
