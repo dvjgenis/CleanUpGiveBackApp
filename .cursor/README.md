@@ -23,3 +23,17 @@ Before calling any MCP tool, read its schema under the project MCP descriptors f
 ## Hooks
 
 [hooks.json](./hooks.json) runs [hooks/docs-backpressure.sh](./hooks/docs-backpressure.sh) after edits to remind agents to sync `docs/`.
+
+## UX Skills
+
+[UX Skills](https://github.com/Tranz007/ux-skills) (MIT) — agent skills for design critique, challenge, handoff, accessibility, and related UX work.
+
+| Location | Purpose |
+|----------|---------|
+| [`.agents/skills/`](../.agents/skills/) | Canonical skill files (installed via `npx skills add Tranz007/ux-skills --all`) |
+| [`skills/`](./skills/) | Cursor symlinks → `.agents/skills/` |
+| [`.ux/`](../.ux/) | Project context consumed by UX skills (`CONTEXT.md`, `DESIGN-SYSTEM.md`, `DECISIONS.md`) |
+
+**Refresh project context:** ask the agent to run **`setup-ux`** when product, design system, or decisions change materially.
+
+**Example prompts:** “Challenge this idea.” · “What am I missing?” · “Review this before engineering.” · “Get this ready for engineering.”
